@@ -103,13 +103,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 	// errors with provider-specific guidance.
 
 	if host == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("host"),
-			"Missing Vantage API Host",
-			"The provider cannot create the Vantage API client as there is a missing or empty value for the Vantage API host. "+
-				"Set the host value in the configuration or use the VANTAGE_HOST environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
+		host = "https://api.vantage.sh"
 	}
 
 	if apiToken == "" {
