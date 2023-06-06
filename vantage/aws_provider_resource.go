@@ -113,7 +113,7 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %s: %v", state.Id.ValueString(), err.Error()),
+			fmt.Sprintf("Could not delete AWS Provider ID %s: %v", state.Id.ValueString(), err.Error()),
 		)
 		return
 	}
