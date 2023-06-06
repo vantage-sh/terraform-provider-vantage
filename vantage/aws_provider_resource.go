@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -82,7 +83,7 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Convert from the API data model to the Terraform data model
 	// and set any unknown attribute values.
-	data.Id = types.StringValue(provider.Id)
+	data.Id = types.StringValue(strconv.Itoa(provider.Id))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -153,9 +154,21 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	id, err := strconv.Atoi(data.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update Resource",
+			"An unexpected error occurred while attempting to update the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+err.Error(),
+		)
+
+		return
+	}
+
 	// Convert from Terraform data model into API data model
 	updateRequest := AwsProviderResourceAPIModel{
-		Id:              data.Id.ValueString(),
+		Id:              id,
 		CrossAccountARN: data.CrossAccountARN.ValueString(),
 		BucketARN:       data.BucketARN.ValueString(),
 	}
@@ -174,7 +187,7 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Convert from the API data model to the Terraform data model
 	// and set any unknown attribute values.
-	data.Id = types.StringValue(provider.Id)
+	data.Id = types.StringValue(strconv.Itoa(provider.Id))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
