@@ -22,7 +22,7 @@ func NewAwsProviderResource() resource.Resource {
 type AwsProviderResourceModel struct {
 	CrossAccountARN types.String `tfsdk:"cross_account_arn"`
 	BucketARN       types.String `tfsdk:"bucket_arn"`
-	Id              types.Int64  `tfsdk:"id"`
+	Id              types.String  `tfsdk:"id"`
 }
 
 func (r *AwsProviderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -82,7 +82,7 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Convert from the API data model to the Terraform data model
 	// and set any unknown attribute values.
-	data.Id = types.Int64Value(int64(provider.Id))
+	data.Id = types.StringValue(provider.Id)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -96,11 +96,11 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	err := r.client.DeleteAwsProvider(int(state.Id.ValueInt64()))
+	err := r.client.DeleteAwsProvider(state.Id.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueInt64(), err.Error()),
+			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueString(), err.Error()),
 		)
 		return
 	}
@@ -114,11 +114,11 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	out, err := r.client.GetAwsProvider(int(state.Id.ValueInt64()))
+	out, err := r.client.GetAwsProvider(state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueInt64(), err.Error()),
+			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueString(), err.Error()),
 		)
 		return
 	}
@@ -155,7 +155,7 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Convert from Terraform data model into API data model
 	updateRequest := AwsProviderResourceAPIModel{
-		Id:              int(data.Id.ValueInt64()),
+		Id:              data.Id.ValueString(),
 		CrossAccountARN: data.CrossAccountARN.ValueString(),
 		BucketARN:       data.BucketARN.ValueString(),
 	}
@@ -174,7 +174,7 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Convert from the API data model to the Terraform data model
 	// and set any unknown attribute values.
-	data.Id = types.Int64Value(int64(provider.Id))
+	data.Id = types.StringValue(provider.Id)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
