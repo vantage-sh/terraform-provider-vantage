@@ -87,7 +87,7 @@ func (v *vantageClient) AwsProviderInfo() (*AwsProviderInfoResult, error) {
 
 // AwsProviderResourceAPIModel describes the API data model.
 type AwsProviderResourceAPIModel struct {
-	Id              string    `json:"id"`
+	Id              string `json:"id"`
 	CrossAccountARN string `json:"cross_account_arn"`
 	BucketARN       string `json:"bucket_arn"`
 }
@@ -130,7 +130,7 @@ func (v *vantageClient) AddAwsProvider(in AwsProviderResourceAPIModel) (*AwsProv
 }
 
 func (v *vantageClient) UpdateAwsProvider(in AwsProviderResourceAPIModel) (*AwsProviderResourceAPIModel, error) {
-	uri, err := url.JoinPath(v.host, fmt.Sprintf("/v1/integrations/aws/%d", in.Id))
+	uri, err := url.JoinPath(v.host, fmt.Sprintf("/v1/integrations/aws/%s", in.Id))
 	if err != nil {
 		return nil, err
 	}

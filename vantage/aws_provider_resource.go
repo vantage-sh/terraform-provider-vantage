@@ -22,7 +22,7 @@ func NewAwsProviderResource() resource.Resource {
 type AwsProviderResourceModel struct {
 	CrossAccountARN types.String `tfsdk:"cross_account_arn"`
 	BucketARN       types.String `tfsdk:"bucket_arn"`
-	Id              types.String  `tfsdk:"id"`
+	Id              types.String `tfsdk:"id"`
 }
 
 func (r *AwsProviderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -40,7 +40,7 @@ func (r AwsProviderResource) Schema(ctx context.Context, req resource.SchemaRequ
 				MarkdownDescription: "Bucket ARN for where CUR data is being stored.",
 				Optional:            true,
 			},
-			"id": schema.Int64Attribute{
+			"id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Service generated identifier for the the account access.",
 				//PlanModifiers: planmodifier.String{
@@ -100,7 +100,7 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueString(), err.Error()),
+			fmt.Sprintf("Could not read AWS Provider ID %s: %v", state.Id.ValueString(), err.Error()),
 		)
 		return
 	}
@@ -118,7 +118,7 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueString(), err.Error()),
+			fmt.Sprintf("Could not read AWS Provider ID %s: %v", state.Id.ValueString(), err.Error()),
 		)
 		return
 	}

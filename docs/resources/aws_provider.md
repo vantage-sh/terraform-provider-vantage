@@ -25,6 +25,6 @@ Manages an AWS Account Integration.
 
 ### Read-Only
 
-- `id` (Number) Service generated identifier for the the account access.
+- `id` (String) Service generated identifier for the the account access.
 
 
