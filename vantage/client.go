@@ -166,7 +166,7 @@ func (v *vantageClient) UpdateAwsProvider(in AwsProviderResourceAPIModel) (*AwsP
 	}
 }
 
-func (v *vantageClient) GetAwsProvider(id string) (*AwsProviderResourceAPIModel, error) {
+func (v *vantageClient) GetAwsProvider(id int) (*AwsProviderResourceAPIModel, error) {
 	uri, err := url.JoinPath(v.host, fmt.Sprintf("/v1/integrations/aws/%d", id))
 	if err != nil {
 		return nil, err
@@ -197,7 +197,7 @@ func (v *vantageClient) GetAwsProvider(id string) (*AwsProviderResourceAPIModel,
 	}
 }
 
-func (v *vantageClient) DeleteAwsProvider(id string) error {
+func (v *vantageClient) DeleteAwsProvider(id int) error {
 	uri, err := url.JoinPath(v.host, fmt.Sprintf("/v1/integrations/aws/%s", id))
 	if err != nil {
 		return err

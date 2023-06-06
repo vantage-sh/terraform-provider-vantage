@@ -97,7 +97,19 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	err := r.client.DeleteAwsProvider(state.Id.String())
+	id, err := strconv.Atoi(state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Delete Resource",
+			"An unexpected error occurred while attempting to delete the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+err.Error(),
+		)
+
+		return
+	}
+
+	err = r.client.DeleteAwsProvider(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
@@ -115,7 +127,19 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	out, err := r.client.GetAwsProvider(state.Id.ValueString())
+	id, err := strconv.Atoi(state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update Resource",
+			"An unexpected error occurred while attempting to update the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+err.Error(),
+		)
+
+		return
+	}
+
+	out, err := r.client.GetAwsProvider(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading AWS Provider",
