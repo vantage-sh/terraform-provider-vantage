@@ -75,8 +75,14 @@ func (v *vantageClient) AwsProviderInfo() (*AwsProviderInfoResult, error) {
 	}
 
 	out := AwsProviderInfoResult{}
-	err = json.NewDecoder(resp.Body).Decode(&out)
-	return &out, err
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		err = json.NewDecoder(resp.Body).Decode(&out)
+		return &out, err
+	default:
+		return nil, fmt.Errorf("failed to create provider credential: %d", resp.StatusCode)
+	}
 }
 
 // AwsProviderResourceAPIModel describes the API data model.
