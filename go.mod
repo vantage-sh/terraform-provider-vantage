@@ -1,4 +1,4 @@
-module terraform-provider-vantage
+module github.com/vantage-sh/terraform-provider-vantage
 
 go 1.20
 
