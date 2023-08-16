@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"terraform-provider-vantage/vantage"
+
+	"github.com/vantage-sh/terraform-provider-vantage/vantage"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )

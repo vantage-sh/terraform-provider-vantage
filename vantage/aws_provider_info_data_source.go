@@ -18,7 +18,7 @@ func NewAwsProviderInfoDataSource() datasource.DataSource {
 }
 
 type awsProviderInfoDataSource struct {
-	client *vantageClient
+	client *Client
 }
 
 type awsProviderInfoDataSourceModel struct {
@@ -63,8 +63,7 @@ func (d *awsProviderInfoDataSource) Read(ctx context.Context, req datasource.Rea
 	var state awsProviderInfoDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
-
-	out, err := d.client.AwsProviderInfo()
+	out, err := d.client.V1.Integrations.GetIntegrationsAWSInfo(nil, d.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Vantage AwsProviderInfo",
@@ -73,12 +72,20 @@ func (d *awsProviderInfoDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	state.ExternalID = types.StringValue(out.ExternalID)
-	state.IamRoleARN = types.StringValue(out.IamRoleARN)
-	state.RootPolicy = types.StringValue(out.Policies.Root)
-	state.AutopilotPolicy = types.StringValue(out.Policies.Autopilot)
-	state.CloudwatchMetricsPolicy = types.StringValue(out.Policies.Cloudwatch)
-	state.AdditionalResourcesPolicy = types.StringValue(out.Policies.Resources)
+	if !out.IsSuccess() {
+		resp.Diagnostics.AddError(
+			"Unable to Vantage AwsProviderInfo",
+			out.Error(),
+		)
+		return
+	}
+
+	state.ExternalID = types.StringValue(out.Payload.ExternalID)
+	state.IamRoleARN = types.StringValue(out.Payload.IamRoleArn)
+	state.RootPolicy = types.StringValue(out.Payload.Policies.Root)
+	state.AutopilotPolicy = types.StringValue(out.Payload.Policies.Autopilot)
+	state.CloudwatchMetricsPolicy = types.StringValue(out.Payload.Policies.Cloudwatch)
+	state.AdditionalResourcesPolicy = types.StringValue(out.Payload.Policies.Resources)
 
 	// Set state
 	diags := resp.State.Set(ctx, &state)
@@ -94,5 +101,5 @@ func (d *awsProviderInfoDataSource) Configure(_ context.Context, req datasource.
 		return
 	}
 
-	d.client = req.ProviderData.(*vantageClient)
+	d.client = req.ProviderData.(*Client)
 }

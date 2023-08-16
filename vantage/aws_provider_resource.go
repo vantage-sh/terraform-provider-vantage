@@ -2,15 +2,15 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	v1integrations "github.com/vantage-sh/vantage-go/vantagev1/vantage/integrations"
 )
 
 type AwsProviderResource struct {
-	client *vantageClient
+	client *Client
 }
 
 func NewAwsProviderResource() resource.Resource {
@@ -62,13 +62,10 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	// Convert from Terraform data model into API data model
-	createReq := AwsProviderResourceAPIModel{
-		CrossAccountARN: data.CrossAccountARN.ValueString(),
-		BucketARN:       data.BucketARN.ValueString(),
-	}
-
-	provider, err := r.client.AddAwsProvider(createReq)
+	params := v1integrations.NewCreateIntegrationsAWSParams()
+	params.SetCrossAccountArn(data.CrossAccountARN.ValueString())
+	params.SetBucketArn(strPtr(data.BucketARN.ValueString()))
+	out, err := r.client.V1.Integrations.CreateIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Resource",
@@ -76,13 +73,20 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 				"Please retry the operation or report this issue to the provider developers.\n\n"+
 				"API Error: "+err.Error(),
 		)
-
 		return
 	}
 
-	// Convert from the API data model to the Terraform data model
-	// and set any unknown attribute values.
-	data.Id = types.Int64Value(int64(provider.Id))
+	if !out.IsSuccess() {
+		resp.Diagnostics.AddError(
+			"Unable to Create Resource",
+			"An unexpected error occurred while attempting to create the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+out.Error(),
+		)
+		return
+	}
+
+	data.Id = types.Int64Value(int64(out.Payload.ID))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -96,11 +100,25 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	err := r.client.DeleteAwsProvider(int(state.Id.ValueInt64()))
+	params := v1integrations.NewDeleteIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
+	out, err := r.client.V1.Integrations.DeleteIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueInt64(), err.Error()),
+			"Unable to Delete Resource",
+			"An unexpected error occurred while attempting to delete the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+err.Error(),
+		)
+		return
+	}
+
+	if !out.IsSuccess() {
+		resp.Diagnostics.AddError(
+			"Unable to Delete Resource",
+			"An unexpected error occurred while attempting to delete the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+out.Error(),
 		)
 		return
 	}
@@ -114,26 +132,40 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	out, err := r.client.GetAwsProvider(int(state.Id.ValueInt64()))
+	params := v1integrations.NewGetIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
+	out, err := r.client.V1.Integrations.GetIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueInt64(), err.Error()),
+			"Unable to Get Resource",
+			"An unexpected error occurred while attempting to get the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+err.Error(),
 		)
 		return
 	}
 
-	if out == nil {
+	if !out.IsSuccess() {
+		resp.Diagnostics.AddError(
+			"Unable to Get Resource",
+			"An unexpected error occurred while attempting to get the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+out.Error(),
+		)
+		return
+	}
+
+	if out.Payload == nil {
 		diags = resp.State.Set(ctx, &state)
 		resp.Diagnostics.Append(diags...)
 		return
 	}
 
 	// Overwrite items with refreshed state
-	if out.BucketARN != "" {
-		state.BucketARN = types.StringValue(out.BucketARN)
+	if out.Payload.BucketArn != "" {
+		state.BucketARN = types.StringValue(out.Payload.BucketArn)
 	}
-	state.CrossAccountARN = types.StringValue(out.CrossAccountARN)
+	state.CrossAccountARN = types.StringValue(out.Payload.CrossAccountArn)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -153,14 +185,11 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	// Convert from Terraform data model into API data model
-	updateRequest := AwsProviderResourceAPIModel{
-		Id:              int(data.Id.ValueInt64()),
-		CrossAccountARN: data.CrossAccountARN.ValueString(),
-		BucketARN:       data.BucketARN.ValueString(),
-	}
-
-	provider, err := r.client.UpdateAwsProvider(updateRequest)
+	params := v1integrations.NewPutIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(data.Id.ValueInt64()))
+	params.SetCrossAccountArn(data.CrossAccountARN.ValueString())
+	params.SetBucketArn(strPtr(data.BucketARN.ValueString()))
+	out, err := r.client.V1.Integrations.PutIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Resource",
@@ -168,13 +197,20 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 				"Please retry the operation or report this issue to the provider developers.\n\n"+
 				"API Error: "+err.Error(),
 		)
-
 		return
 	}
 
-	// Convert from the API data model to the Terraform data model
-	// and set any unknown attribute values.
-	data.Id = types.Int64Value(int64(provider.Id))
+	if !out.IsSuccess() {
+		resp.Diagnostics.AddError(
+			"Unable to Update Resource",
+			"An unexpected error occurred while attempting to update the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"API Error: "+out.Error(),
+		)
+		return
+	}
+
+	data.Id = types.Int64Value(int64(out.Payload.ID))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -187,5 +223,5 @@ func (r *AwsProviderResource) Configure(_ context.Context, req resource.Configur
 		return
 	}
 
-	r.client = req.ProviderData.(*vantageClient)
+	r.client = req.ProviderData.(*Client)
 }
