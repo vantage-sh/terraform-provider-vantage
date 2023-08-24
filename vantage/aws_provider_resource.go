@@ -6,7 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	v1integrations "github.com/vantage-sh/vantage-go/vantagev1/vantage/integrations"
+	modelsv1 "github.com/vantage-sh/vantage-go/vantagev1/models"
+	integrationsv1 "github.com/vantage-sh/vantage-go/vantagev1/vantage/integrations"
 )
 
 type AwsProviderResource struct {
@@ -62,27 +63,15 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	params := v1integrations.NewCreateIntegrationsAWSParams()
-	params.SetCrossAccountArn(data.CrossAccountARN.ValueString())
-	params.SetBucketArn(strPtr(data.BucketARN.ValueString()))
+	params := integrationsv1.NewCreateIntegrationsAWSParams()
+	model := &modelsv1.PostIntegrationsAws{
+		CrossAccountArn: data.CrossAccountARN.ValueStringPointer(),
+		BucketArn:       data.BucketARN.ValueString(),
+	}
+	params.WithIntegrationsAws(model)
 	out, err := r.client.V1.Integrations.CreateIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Resource",
-			"An unexpected error occurred while attempting to create the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+err.Error(),
-		)
-		return
-	}
-
-	if !out.IsSuccess() {
-		resp.Diagnostics.AddError(
-			"Unable to Create Resource",
-			"An unexpected error occurred while attempting to create the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+out.Error(),
-		)
+		handleError("Create AWS Integration", &resp.Diagnostics, err)
 		return
 	}
 
@@ -100,26 +89,11 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	params := v1integrations.NewDeleteIntegrationsAWSParams()
+	params := integrationsv1.NewDeleteIntegrationsAWSParams()
 	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
-	out, err := r.client.V1.Integrations.DeleteIntegrationsAWS(params, r.client.Auth)
+	_, err := r.client.V1.Integrations.DeleteIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Delete Resource",
-			"An unexpected error occurred while attempting to delete the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+err.Error(),
-		)
-		return
-	}
-
-	if !out.IsSuccess() {
-		resp.Diagnostics.AddError(
-			"Unable to Delete Resource",
-			"An unexpected error occurred while attempting to delete the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+out.Error(),
-		)
+		handleError("Delete AWS Integration", &resp.Diagnostics, err)
 		return
 	}
 }
@@ -132,32 +106,15 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	params := v1integrations.NewGetIntegrationsAWSParams()
+	params := integrationsv1.NewGetIntegrationsAWSParams()
 	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
 	out, err := r.client.V1.Integrations.GetIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Resource",
-			"An unexpected error occurred while attempting to get the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+err.Error(),
-		)
-		return
-	}
-
-	if !out.IsSuccess() {
-		resp.Diagnostics.AddError(
-			"Unable to Get Resource",
-			"An unexpected error occurred while attempting to get the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+out.Error(),
-		)
-		return
-	}
-
-	if out.Payload == nil {
-		diags = resp.State.Set(ctx, &state)
-		resp.Diagnostics.Append(diags...)
+		if _, ok := err.(*integrationsv1.GetIntegrationsAWSNotFound); ok {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		handleError("Get AWS Integration", &resp.Diagnostics, err)
 		return
 	}
 
@@ -185,31 +142,18 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	params := v1integrations.NewPutIntegrationsAWSParams()
+	params := integrationsv1.NewPutIntegrationsAWSParams()
 	params.SetAccessCredentialID(int32(data.Id.ValueInt64()))
-	params.SetCrossAccountArn(data.CrossAccountARN.ValueString())
-	params.SetBucketArn(strPtr(data.BucketARN.ValueString()))
+	m := &modelsv1.PutIntegrationsAws{
+		CrossAccountArn: data.CrossAccountARN.ValueStringPointer(),
+		BucketArn:       *data.BucketARN.ValueStringPointer(),
+	}
+	params.WithIntegrationsAws(m)
 	out, err := r.client.V1.Integrations.PutIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Resource",
-			"An unexpected error occurred while attempting to update the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+err.Error(),
-		)
+		handleError("Update AWS Integration", &resp.Diagnostics, err)
 		return
 	}
-
-	if !out.IsSuccess() {
-		resp.Diagnostics.AddError(
-			"Unable to Update Resource",
-			"An unexpected error occurred while attempting to update the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+out.Error(),
-		)
-		return
-	}
-
 	data.Id = types.Int64Value(int64(out.Payload.ID))
 
 	// Save data into Terraform state

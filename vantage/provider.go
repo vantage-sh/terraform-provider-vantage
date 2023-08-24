@@ -147,5 +147,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewAwsProviderResource,
+		NewCostReportFolderResource,
+		NewCostReportResource,
 	}
 }
