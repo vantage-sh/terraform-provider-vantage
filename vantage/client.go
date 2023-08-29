@@ -8,6 +8,8 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	vantagev1 "github.com/vantage-sh/vantage-go/vantagev1/vantage"
 	vantagev2 "github.com/vantage-sh/vantage-go/vantagev2/vantage"
 )
@@ -48,4 +50,22 @@ func handleError(action string, d *diag.Diagnostics, err error) {
 			"Please retry the operation or report this issue to the provider developers.\n\n"+
 			"Connection Error: "+err.Error(),
 	)
+}
+
+func toStringsValue(s []string) []basetypes.StringValue {
+	out := []basetypes.StringValue{}
+	for _, str := range s {
+		out = append(out, types.StringValue(str))
+	}
+
+	return out
+}
+
+func fromStringsValue(s []types.String) []string {
+	out := []string{}
+	for _, str := range s {
+		out = append(out, str.ValueString())
+	}
+
+	return out
 }

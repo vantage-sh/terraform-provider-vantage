@@ -140,6 +140,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewAwsProviderInfoDataSource,
+		NewSavedFiltersDataSource,
 	}
 }
 
@@ -147,7 +148,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewAwsProviderResource,
-		NewCostReportFolderResource,
+		NewReportFolderResource,
 		NewCostReportResource,
 	}
 }

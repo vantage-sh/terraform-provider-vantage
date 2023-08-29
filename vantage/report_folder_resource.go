@@ -12,25 +12,26 @@ import (
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
-type CostReportFolderResource struct {
+type ReportFolderResource struct {
 	client *Client
 }
 
-func NewCostReportFolderResource() resource.Resource {
-	return &CostReportFolderResource{}
+func NewReportFolderResource() resource.Resource {
+	return &ReportFolderResource{}
 }
 
-type CostReportFolderResourceModel struct {
+type ReportFolderResourceModel struct {
 	Title             types.String `tfsdk:"title"`
 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
 	Token             types.String `tfsdk:"token"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 }
 
-func (r *CostReportFolderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_cost_report_folder"
+func (r *ReportFolderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_report_folder"
 }
 
-func (r CostReportFolderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r ReportFolderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"title": schema.StringAttribute{
@@ -40,6 +41,15 @@ func (r CostReportFolderResource) Schema(ctx context.Context, req resource.Schem
 			"parent_folder_token": schema.StringAttribute{
 				MarkdownDescription: "Token of the folder's parent folder",
 				Optional:            true,
+				Computed:            true,
+			},
+			"workspace_token": schema.StringAttribute{
+				MarkdownDescription: "Workspace token to add the cost report to.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -49,12 +59,12 @@ func (r CostReportFolderResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 		},
-		MarkdownDescription: "Manages a CostReportFolder.",
+		MarkdownDescription: "Manages a ReportFolder.",
 	}
 }
 
-func (r CostReportFolderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *CostReportFolderResourceModel
+func (r ReportFolderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data *ReportFolderResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -64,24 +74,28 @@ func (r CostReportFolderResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	params := costsv2.NewCreateCostReportFolderParams()
-	rf := &modelsv2.PostReportsFolders{
+	rf := &modelsv2.PostFolders{
 		Title:             data.Title.ValueStringPointer(),
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
+		//	WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
-	params.WithReportsFolders(rf)
+	params.WithFolders(rf)
 	out, err := r.client.V2.Costs.CreateCostReportFolder(params, r.client.Auth)
 	if err != nil {
-		handleError("Create Cost Report Folder Resource", &resp.Diagnostics, err)
+		handleError("Create Report Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.Title = types.StringValue(out.Payload.Title)
+	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
+	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r CostReportFolderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *CostReportFolderResourceModel
+func (r ReportFolderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state *ReportFolderResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -97,19 +111,20 @@ func (r CostReportFolderResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		}
 
-		handleError("Get Cost Report Folder Resource", &resp.Diagnostics, err)
+		handleError("Get Report Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
 	state.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
+	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.Title = types.StringValue(out.Payload.Title)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r CostReportFolderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *CostReportFolderResourceModel
+func (r ReportFolderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data *ReportFolderResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -117,32 +132,31 @@ func (r CostReportFolderResource) Update(ctx context.Context, req resource.Updat
 
 	params := costsv2.NewUpdateCostReportFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
-	model := &modelsv2.PutReportsFolders{
+	model := &modelsv2.PutFolders{
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		Title:             data.Title.ValueString(),
+		//WorkspaceToken:    data.Title.WorkspaceToken(),
 	}
-	params.WithReportsFolders(model)
+	params.WithFolders(model)
 	out, err := r.client.V2.Costs.UpdateCostReportFolder(params, r.client.Auth)
 	if err != nil {
-		handleError("Update Cost Report Folder Resource", &resp.Diagnostics, err)
+		handleError("Update Report Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 
-	pft := out.Payload.ParentFolderToken
-	if pft != "" {
-		data.ParentFolderToken = types.StringValue(pft)
-	}
+	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	data.Title = types.StringValue(out.Payload.Title)
+	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r CostReportFolderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r ReportFolderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	panic("not implemented")
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *CostReportFolderResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *ReportFolderResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
