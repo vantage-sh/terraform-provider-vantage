@@ -149,6 +149,7 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 	return []func() resource.Resource{
 		NewAwsProviderResource,
 		NewFolderResource,
+		NewSavedFilterResource,
 		NewCostReportResource,
 	}
 }
