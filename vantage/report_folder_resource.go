@@ -12,26 +12,26 @@ import (
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
-type ReportFolderResource struct {
+type FolderResource struct {
 	client *Client
 }
 
-func NewReportFolderResource() resource.Resource {
-	return &ReportFolderResource{}
+func NewFolderResource() resource.Resource {
+	return &FolderResource{}
 }
 
-type ReportFolderResourceModel struct {
+type FolderResourceModel struct {
 	Title             types.String `tfsdk:"title"`
 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
 	Token             types.String `tfsdk:"token"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 }
 
-func (r *ReportFolderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *FolderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_report_folder"
 }
 
-func (r ReportFolderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"title": schema.StringAttribute{
@@ -59,12 +59,12 @@ func (r ReportFolderResource) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 		},
-		MarkdownDescription: "Manages a ReportFolder.",
+		MarkdownDescription: "Manages a Folder.",
 	}
 }
 
-func (r ReportFolderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *ReportFolderResourceModel
+func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data *FolderResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -73,14 +73,14 @@ func (r ReportFolderResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	params := costsv2.NewCreateCostReportFolderParams()
+	params := costsv2.NewCreateFolderParams()
 	rf := &modelsv2.PostFolders{
 		Title:             data.Title.ValueStringPointer(),
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
-		//	WorkspaceToken:    data.WorkspaceToken.ValueString(),
+		WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
 	params.WithFolders(rf)
-	out, err := r.client.V2.Costs.CreateCostReportFolder(params, r.client.Auth)
+	out, err := r.client.V2.Costs.CreateFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Create Report Folder Resource", &resp.Diagnostics, err)
 		return
@@ -94,19 +94,19 @@ func (r ReportFolderResource) Create(ctx context.Context, req resource.CreateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r ReportFolderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *ReportFolderResourceModel
+func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state *FolderResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	params := costsv2.NewGetCostReportFolderParams()
+	params := costsv2.NewGetFolderParams()
 	params.SetFolderToken(state.Token.ValueString())
-	out, err := r.client.V2.Costs.GetCostReportFolder(params, r.client.Auth)
+	out, err := r.client.V2.Costs.GetFolder(params, r.client.Auth)
 	if err != nil {
-		if _, ok := err.(*costsv2.GetCostReportFolderNotFound); ok {
+		if _, ok := err.(*costsv2.GetFolderNotFound); ok {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -123,22 +123,22 @@ func (r ReportFolderResource) Read(ctx context.Context, req resource.ReadRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r ReportFolderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *ReportFolderResourceModel
+func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data *FolderResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	params := costsv2.NewUpdateCostReportFolderParams()
+	params := costsv2.NewUpdateFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
 	model := &modelsv2.PutFolders{
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		Title:             data.Title.ValueString(),
-		//WorkspaceToken:    data.Title.WorkspaceToken(),
+		// WorkspaceToken:    data.Title.WorkspaceToken(),
 	}
 	params.WithFolders(model)
-	out, err := r.client.V2.Costs.UpdateCostReportFolder(params, r.client.Auth)
+	out, err := r.client.V2.Costs.UpdateFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Report Folder Resource", &resp.Diagnostics, err)
 		return
@@ -151,12 +151,12 @@ func (r ReportFolderResource) Update(ctx context.Context, req resource.UpdateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r ReportFolderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r FolderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	panic("not implemented")
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *ReportFolderResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *FolderResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}

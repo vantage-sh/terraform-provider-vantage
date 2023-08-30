@@ -300,12 +300,16 @@ github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230823211529-5a94385c9503 h1
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230823211529-5a94385c9503/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230828234732-0d3e6976ab79 h1:JdmkcIkz5b+mpJJTaU4bVUysHJcoEC+Szl5q8+4yZTA=
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230828234732-0d3e6976ab79/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
+github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230830000026-29df380c9339 h1:ng6p2OTFyWcJS0sWGA8XdCkddGUylplofjd3UiCFlIc=
+github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230830000026-29df380c9339/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230823002521-7bf67eefaf55 h1:BqQzKwmyNetNAihbOsUp0cAC/9RWVgjPROD34UcyeOA=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230823002521-7bf67eefaf55/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230823211529-5a94385c9503 h1:s0JHJpC/8ORwQqK01iisJKhH5sihP53r4qM7W5/hqKY=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230823211529-5a94385c9503/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230828234732-0d3e6976ab79 h1:n4nHNvbT7367xwQP+bsSuRur3tXyg64yMHduBvwvIsc=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230828234732-0d3e6976ab79/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230830000026-29df380c9339 h1:Gzeedk0UouJkR62qy6on5sHkgdLOjFZnRW9djoug0iY=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230830000026-29df380c9339/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack/v4 v4.3.12/go.mod h1:gborTTJjAo/GWTqqRjrLCn9pgNN+NXzzngzBKDPIqw4=
 github.com/vmihailenco/msgpack/v5 v5.3.5 h1:5gO0H1iULLWGhs2H5tbAHIZTV8/cYafcFOr9znI5mJU=

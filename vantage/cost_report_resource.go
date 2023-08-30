@@ -211,7 +211,18 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 }
 
 func (r CostReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	panic("not implemented")
+	var state *CostReportResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	params := costsv2.NewDeleteCostReportParams()
+	params.SetCostReportToken(state.Token.ValueString())
+	_, err := r.client.V2.Costs.DeleteCostReport(params, r.client.Auth)
+	if err != nil {
+		handleError("Delete Cost Report Resource", &resp.Diagnostics, err)
+	}
 }
 
 // Configure adds the provider configured client to the data source.
