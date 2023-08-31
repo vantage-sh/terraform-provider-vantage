@@ -3,6 +3,7 @@ package vantage
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	vantagev1 "github.com/vantage-sh/vantage-go/vantagev1/vantage"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	vantagev2 "github.com/vantage-sh/vantage-go/vantagev2/vantage"
 )
 
@@ -49,6 +51,13 @@ func handleError(action string, d *diag.Diagnostics, err error) {
 		"An unexpected error occurred while attempting to contact the API. "+
 			"Please retry the operation or report this issue to the provider developers.\n\n"+
 			"Connection Error: "+err.Error(),
+	)
+}
+
+func handleBadRequest(action string, d *diag.Diagnostics, mErr *modelsv2.Errors) {
+	d.AddError(
+		"Unable to "+action,
+		"One or more of your fields contained invalid input.\n"+strings.Join(mErr.Errors, "\n"),
 	)
 }
 
