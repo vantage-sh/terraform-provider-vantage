@@ -152,7 +152,18 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 }
 
 func (r FolderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	panic("not implemented")
+	var state *FolderResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	params := costsv2.NewDeleteFolderParams()
+	params.SetFolderToken(state.Token.ValueString())
+	_, err := r.client.V2.Costs.DeleteFolder(params, r.client.Auth)
+	if err != nil {
+		handleError("Delete Folder Resource", &resp.Diagnostics, err)
+	}
 }
 
 // Configure adds the provider configured client to the data source.
