@@ -28,7 +28,7 @@ type FolderResourceModel struct {
 }
 
 func (r *FolderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_report_folder"
+	resp.TypeName = req.ProviderTypeName + "_folder"
 }
 
 func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -82,7 +82,7 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 	params.WithFolders(rf)
 	out, err := r.client.V2.Folders.CreateFolder(params, r.client.Auth)
 	if err != nil {
-		handleError("Create Report Folder Resource", &resp.Diagnostics, err)
+		handleError("Create Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			return
 		}
 
-		handleError("Get Report Folder Resource", &resp.Diagnostics, err)
+		handleError("Get Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	params.WithFolders(model)
 	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
 	if err != nil {
-		handleError("Update Report Folder Resource", &resp.Diagnostics, err)
+		handleError("Update Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 

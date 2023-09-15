@@ -116,11 +116,10 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 	params.SetSavedFilterToken(state.Token.ValueString())
 	out, err := r.client.V2.Filters.GetSavedFilter(params, r.client.Auth)
 	if err != nil {
-		//TODO(macb): Need a not found object
-		//if _, ok := err.(*filtersv2.GetSavedFilterNotFound); ok {
-		//resp.State.RemoveResource(ctx)
-		//return
-		//}
+		if _, ok := err.(*filtersv2.GetSavedFilterNotFound); ok {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 
 		handleError("Get Saved Filter Resource", &resp.Diagnostics, err)
 		return
