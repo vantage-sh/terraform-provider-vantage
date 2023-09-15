@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
+	filtersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/filters"
 )
 
 var (
@@ -68,8 +68,8 @@ func (d *savedFiltersDataSource) Read(ctx context.Context, req datasource.ReadRe
 	var state savedFiltersDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
-	params := costsv2.NewGetSavedFiltersParams()
-	out, err := d.client.V2.Costs.GetSavedFilters(params, d.client.Auth)
+	params := filtersv2.NewGetSavedFiltersParams()
+	out, err := d.client.V2.Filters.GetSavedFilters(params, d.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Get Vantage SavedFilters",

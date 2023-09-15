@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
+	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
 )
 
 type FolderResource struct {
@@ -73,14 +73,14 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	params := costsv2.NewCreateFolderParams()
+	params := foldersv2.NewCreateFolderParams()
 	rf := &modelsv2.PostFolders{
 		Title:             data.Title.ValueStringPointer(),
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
 	params.WithFolders(rf)
-	out, err := r.client.V2.Costs.CreateFolder(params, r.client.Auth)
+	out, err := r.client.V2.Folders.CreateFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Create Report Folder Resource", &resp.Diagnostics, err)
 		return
@@ -102,11 +102,11 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	params := costsv2.NewGetFolderParams()
+	params := foldersv2.NewGetFolderParams()
 	params.SetFolderToken(state.Token.ValueString())
-	out, err := r.client.V2.Costs.GetFolder(params, r.client.Auth)
+	out, err := r.client.V2.Folders.GetFolder(params, r.client.Auth)
 	if err != nil {
-		if _, ok := err.(*costsv2.GetFolderNotFound); ok {
+		if _, ok := err.(*foldersv2.GetFolderNotFound); ok {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -130,7 +130,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	params := costsv2.NewUpdateFolderParams()
+	params := foldersv2.NewUpdateFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
 	model := &modelsv2.PutFolders{
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
@@ -138,7 +138,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		// WorkspaceToken:    data.Title.WorkspaceToken(),
 	}
 	params.WithFolders(model)
-	out, err := r.client.V2.Costs.UpdateFolder(params, r.client.Auth)
+	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Report Folder Resource", &resp.Diagnostics, err)
 		return
@@ -158,9 +158,9 @@ func (r FolderResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	params := costsv2.NewDeleteFolderParams()
+	params := foldersv2.NewDeleteFolderParams()
 	params.SetFolderToken(state.Token.ValueString())
-	_, err := r.client.V2.Costs.DeleteFolder(params, r.client.Auth)
+	_, err := r.client.V2.Folders.DeleteFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Delete Folder Resource", &resp.Diagnostics, err)
 	}

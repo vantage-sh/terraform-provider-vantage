@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
+	filtersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/filters"
 )
 
 type SavedFilterResource struct {
@@ -76,14 +76,14 @@ func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	params := costsv2.NewCreateSavedFilterParams()
+	params := filtersv2.NewCreateSavedFilterParams()
 	body := &modelsv2.PostSavedFilters{
 		Title:  data.Title.ValueStringPointer(),
 		Filter: data.Filter.ValueString(),
 		//WorkspaceToken: data.WorkspaceToken.ValueString(),
 	}
 	params.WithSavedFilters(body)
-	out, err := r.client.V2.Costs.CreateSavedFilter(params, r.client.Auth)
+	out, err := r.client.V2.Filters.CreateSavedFilter(params, r.client.Auth)
 	if err != nil {
 		//TODO(macb): Surface 400 errors more clearly.
 		handleError("Create Saved Filter Resource", &resp.Diagnostics, err)
@@ -112,12 +112,12 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	params := costsv2.NewGetSavedFilterParams()
+	params := filtersv2.NewGetSavedFilterParams()
 	params.SetSavedFilterToken(state.Token.ValueString())
-	out, err := r.client.V2.Costs.GetSavedFilter(params, r.client.Auth)
+	out, err := r.client.V2.Filters.GetSavedFilter(params, r.client.Auth)
 	if err != nil {
 		//TODO(macb): Need a not found object
-		//if _, ok := err.(*costsv2.GetSavedFilterNotFound); ok {
+		//if _, ok := err.(*filtersv2.GetSavedFilterNotFound); ok {
 		//resp.State.RemoveResource(ctx)
 		//return
 		//}
@@ -147,7 +147,7 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	params := costsv2.NewUpdateSavedFilterParams()
+	params := filtersv2.NewUpdateSavedFilterParams()
 	params.WithSavedFilterToken(data.Token.ValueString())
 	model := &modelsv2.PutSavedFilters{
 		Title:  data.Title.ValueString(),
@@ -155,7 +155,7 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 		//WorkspaceToken: data.WorkspaceToken.ValueString(),
 	}
 	params.WithSavedFilters(model)
-	out, err := r.client.V2.Costs.UpdateSavedFilter(params, r.client.Auth)
+	out, err := r.client.V2.Filters.UpdateSavedFilter(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Saved Filter Resource", &resp.Diagnostics, err)
 		return
@@ -183,9 +183,9 @@ func (r SavedFilterResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	params := costsv2.NewDeleteSavedFilterParams()
+	params := filtersv2.NewDeleteSavedFilterParams()
 	params.SetSavedFilterToken(state.Token.ValueString())
-	_, err := r.client.V2.Costs.DeleteSavedFilter(params, r.client.Auth)
+	_, err := r.client.V2.Filters.DeleteSavedFilter(params, r.client.Auth)
 	if err != nil {
 		handleError("Delete Saved Filter Resource", &resp.Diagnostics, err)
 	}

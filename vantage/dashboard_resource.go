@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
+	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
 )
 
 type DashboardResource struct {
@@ -115,7 +115,7 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	params := costsv2.NewCreateDashboardParams()
+	params := dashboardsv2.NewCreateDashboardParams()
 	body := &modelsv2.PostDashboards{
 		Title:          data.Title.ValueStringPointer(),
 		WidgetTokens:   fromStringsValue(widgetTokens),
@@ -126,9 +126,9 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		WorkspaceToken: data.WorkspaceToken.ValueString(),
 	}
 	params.WithDashboards(body)
-	out, err := r.client.V2.Costs.CreateDashboard(params, r.client.Auth)
+	out, err := r.client.V2.Dashboards.CreateDashboard(params, r.client.Auth)
 	if err != nil {
-		if e, ok := err.(*costsv2.CreateDashboardBadRequest); ok {
+		if e, ok := err.(*dashboardsv2.CreateDashboardBadRequest); ok {
 			handleBadRequest("Create Dashboard Resource", &resp.Diagnostics, e.GetPayload())
 			return
 		}
@@ -155,11 +155,11 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	params := costsv2.NewGetDashboardParams()
+	params := dashboardsv2.NewGetDashboardParams()
 	params.SetDashboardToken(state.Token.ValueString())
-	out, err := r.client.V2.Costs.GetDashboard(params, r.client.Auth)
+	out, err := r.client.V2.Dashboards.GetDashboard(params, r.client.Auth)
 	if err != nil {
-		if _, ok := err.(*costsv2.GetDashboardNotFound); ok {
+		if _, ok := err.(*dashboardsv2.GetDashboardNotFound); ok {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -186,11 +186,69 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r DashboardResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	panic("not implemented")
+	var data *DashboardResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	widgetTokens := []types.String{}
+	if !data.WidgetTokens.IsNull() && !data.WidgetTokens.IsUnknown() {
+		widgetTokens = make([]types.String, 0, len(data.WidgetTokens.Elements()))
+		resp.Diagnostics.Append(data.WidgetTokens.ElementsAs(ctx, &widgetTokens, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	params := dashboardsv2.NewUpdateDashboardParams()
+	body := &modelsv2.PutDashboards{
+		Title:        data.Title.ValueString(),
+		WidgetTokens: fromStringsValue(widgetTokens),
+		DateBin:      data.DateBin.ValueString(),
+	}
+	if data.DateInterval.ValueString() == "" || data.DateInterval.ValueString() == "custom" {
+		body.StartDate = data.StartDate.ValueString()
+		body.EndDate = data.EndDate.ValueStringPointer()
+	} else {
+		body.DateInterval = data.DateInterval.ValueString()
+	}
+	params.WithDashboardToken(data.Token.ValueString())
+	params.WithDashboards(body)
+	out, err := r.client.V2.Dashboards.UpdateDashboard(params, r.client.Auth)
+	if err != nil {
+		if e, ok := err.(*dashboardsv2.UpdateDashboardBadRequest); ok {
+			handleBadRequest("Update Dashboard Resource", &resp.Diagnostics, e.GetPayload())
+			return
+		}
+		handleError("Create Dashboard Resource", &resp.Diagnostics, err)
+		return
+	}
+
+	data.Token = types.StringValue(out.Payload.Token)
+	data.Title = types.StringValue(out.Payload.Title)
+	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	data.StartDate = types.StringValue(out.Payload.StartDate)
+	data.EndDate = types.StringValue(out.Payload.EndDate)
+	data.DateBin = types.StringValue(out.Payload.DateBin)
+	data.DateInterval = types.StringValue(out.Payload.DateInterval)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r DashboardResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	panic("not implemented")
+	var state *DashboardResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	params := dashboardsv2.NewDeleteDashboardParams()
+	params.SetDashboardToken(state.Token.ValueString())
+	_, err := r.client.V2.Dashboards.DeleteDashboard(params, r.client.Auth)
+	if err != nil {
+		handleError("Delete Dashboard Resource", &resp.Diagnostics, err)
+	}
 }
 
 // Configure adds the provider configured client to the data source.

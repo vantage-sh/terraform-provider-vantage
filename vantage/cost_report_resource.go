@@ -185,8 +185,6 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		Title:             data.Title.ValueString(),
 		Filter:            data.Filter.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
-		//TODO(macb): missing field in update
-		//WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
 	params.WithCostReports(model)
 	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
