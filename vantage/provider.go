@@ -74,7 +74,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	if config.APIToken.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("password"),
+			path.Root("token"),
 			"Unknown Vantage API Token",
 			"The provider cannot create the Vantage API client as there is an unknown configuration value for the Vantage API token. "+
 				"Either target apply the source of the value first, set the value statically in the configuration, or use the VANTAGE_API_TOKEN environment variable.",
@@ -108,10 +108,10 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	if apiToken == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("password"),
-			"Missing Vantage API Password",
+			path.Root("token"),
+			"Missing Vantage API Token",
 			"The provider cannot create the Vantage API client as there is a missing or empty value for the Vantage API token. "+
-				"Set the password value in the configuration or use the VANTAGE_API_TOKEN environment variable. "+
+				"Set the Token value in the configuration or use the VANTAGE_API_TOKEN environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -120,9 +120,16 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	// Create a new Vantage client using the configuration values
-	client := newClient(host, apiToken)
+	client, err := NewClient(host, apiToken)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("host"),
+			"Failed to build API Client",
+			"The provider cannot create the Vantage API client, likely due to an error parsing the host configuration.  "+err.Error(),
+		)
 
+		return
+	}
 	// Make the Vantage client available during DataSource and Resource
 	// type Configure methods.
 	resp.DataSourceData = client
@@ -133,6 +140,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewAwsProviderInfoDataSource,
+		NewSavedFiltersDataSource,
 	}
 }
 
@@ -140,5 +148,9 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewAwsProviderResource,
+		NewFolderResource,
+		NewSavedFilterResource,
+		NewCostReportResource,
+		NewDashboardResource,
 	}
 }

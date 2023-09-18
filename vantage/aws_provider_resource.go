@@ -2,15 +2,16 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelsv1 "github.com/vantage-sh/vantage-go/vantagev1/models"
+	integrationsv1 "github.com/vantage-sh/vantage-go/vantagev1/vantage/integrations"
 )
 
 type AwsProviderResource struct {
-	client *vantageClient
+	client *Client
 }
 
 func NewAwsProviderResource() resource.Resource {
@@ -62,27 +63,19 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	// Convert from Terraform data model into API data model
-	createReq := AwsProviderResourceAPIModel{
-		CrossAccountARN: data.CrossAccountARN.ValueString(),
-		BucketARN:       data.BucketARN.ValueString(),
+	params := integrationsv1.NewCreateIntegrationsAWSParams()
+	model := &modelsv1.PostIntegrationsAws{
+		CrossAccountArn: data.CrossAccountARN.ValueStringPointer(),
+		BucketArn:       data.BucketARN.ValueString(),
 	}
-
-	provider, err := r.client.AddAwsProvider(createReq)
+	params.WithIntegrationsAws(model)
+	out, err := r.client.V1.Integrations.CreateIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Resource",
-			"An unexpected error occurred while attempting to create the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+err.Error(),
-		)
-
+		handleError("Create AWS Integration", &resp.Diagnostics, err)
 		return
 	}
 
-	// Convert from the API data model to the Terraform data model
-	// and set any unknown attribute values.
-	data.Id = types.Int64Value(int64(provider.Id))
+	data.Id = types.Int64Value(int64(out.Payload.ID))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -96,12 +89,11 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	err := r.client.DeleteAwsProvider(int(state.Id.ValueInt64()))
+	params := integrationsv1.NewDeleteIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
+	_, err := r.client.V1.Integrations.DeleteIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueInt64(), err.Error()),
-		)
+		handleError("Delete AWS Integration", &resp.Diagnostics, err)
 		return
 	}
 }
@@ -114,26 +106,23 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	out, err := r.client.GetAwsProvider(int(state.Id.ValueInt64()))
+	params := integrationsv1.NewGetIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
+	out, err := r.client.V1.Integrations.GetIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading AWS Provider",
-			fmt.Sprintf("Could not read AWS Provider ID %d: %v", state.Id.ValueInt64(), err.Error()),
-		)
-		return
-	}
-
-	if out == nil {
-		diags = resp.State.Set(ctx, &state)
-		resp.Diagnostics.Append(diags...)
+		if _, ok := err.(*integrationsv1.GetIntegrationsAWSNotFound); ok {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		handleError("Get AWS Integration", &resp.Diagnostics, err)
 		return
 	}
 
 	// Overwrite items with refreshed state
-	if out.BucketARN != "" {
-		state.BucketARN = types.StringValue(out.BucketARN)
+	if out.Payload.BucketArn != "" {
+		state.BucketARN = types.StringValue(out.Payload.BucketArn)
 	}
-	state.CrossAccountARN = types.StringValue(out.CrossAccountARN)
+	state.CrossAccountARN = types.StringValue(out.Payload.CrossAccountArn)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -153,28 +142,19 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	// Convert from Terraform data model into API data model
-	updateRequest := AwsProviderResourceAPIModel{
-		Id:              int(data.Id.ValueInt64()),
-		CrossAccountARN: data.CrossAccountARN.ValueString(),
-		BucketARN:       data.BucketARN.ValueString(),
+	params := integrationsv1.NewPutIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(data.Id.ValueInt64()))
+	m := &modelsv1.PutIntegrationsAws{
+		CrossAccountArn: data.CrossAccountARN.ValueStringPointer(),
+		BucketArn:       *data.BucketARN.ValueStringPointer(),
 	}
-
-	provider, err := r.client.UpdateAwsProvider(updateRequest)
+	params.WithIntegrationsAws(m)
+	out, err := r.client.V1.Integrations.PutIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Resource",
-			"An unexpected error occurred while attempting to update the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"API Error: "+err.Error(),
-		)
-
+		handleError("Update AWS Integration", &resp.Diagnostics, err)
 		return
 	}
-
-	// Convert from the API data model to the Terraform data model
-	// and set any unknown attribute values.
-	data.Id = types.Int64Value(int64(provider.Id))
+	data.Id = types.Int64Value(int64(out.Payload.ID))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -187,5 +167,5 @@ func (r *AwsProviderResource) Configure(_ context.Context, req resource.Configur
 		return
 	}
 
-	r.client = req.ProviderData.(*vantageClient)
+	r.client = req.ProviderData.(*Client)
 }
