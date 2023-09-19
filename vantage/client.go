@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strings"
 
 	"github.com/go-openapi/runtime"
@@ -31,7 +32,6 @@ func NewClient(host, token string) (*Client, error) {
 		return nil, err
 	}
 
-	//TODO(macb): Include provider version in user agent?
 	v1Cfg := vantagev1.DefaultTransportConfig()
 	v1Cfg.WithHost(parsedURL.Host)
 	v1Cfg.WithSchemes([]string{parsedURL.Scheme})
@@ -55,9 +55,25 @@ func NewClient(host, token string) (*Client, error) {
 }
 
 func userAgentTripper(inner http.RoundTripper, userAgent string) http.RoundTripper {
+	version := "unknown"
+	modified := false
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				version = s.Value[:7]
+			case "vcs.modified":
+				modified = s.Value == "true"
+			}
+		}
+	}
+	agent := userAgent + "/" + version
+	if modified {
+		agent = agent + "+"
+	}
 	return &roundtripper{
 		inner: inner,
-		agent: userAgent,
+		agent: agent,
 	}
 }
 
