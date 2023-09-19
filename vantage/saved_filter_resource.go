@@ -78,9 +78,9 @@ func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequ
 
 	params := filtersv2.NewCreateSavedFilterParams()
 	body := &modelsv2.PostSavedFilters{
-		Title:  data.Title.ValueStringPointer(),
-		Filter: data.Filter.ValueString(),
-		//WorkspaceToken: data.WorkspaceToken.ValueString(),
+		Title:          data.Title.ValueStringPointer(),
+		Filter:         data.Filter.ValueString(),
+		WorkspaceToken: data.WorkspaceToken.ValueString(),
 	}
 	params.WithSavedFilters(body)
 	out, err := r.client.V2.Filters.CreateSavedFilter(params, r.client.Auth)
@@ -151,7 +151,6 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 	model := &modelsv2.PutSavedFilters{
 		Title:  data.Title.ValueString(),
 		Filter: data.Filter.ValueString(),
-		//WorkspaceToken: data.WorkspaceToken.ValueString(),
 	}
 	params.WithSavedFilters(model)
 	out, err := r.client.V2.Filters.UpdateSavedFilter(params, r.client.Auth)
