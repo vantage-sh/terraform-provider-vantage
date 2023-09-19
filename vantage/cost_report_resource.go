@@ -48,7 +48,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 			"filter": schema.StringAttribute{
 				MarkdownDescription: "Filter query to apply to the Cost Report",
 				Optional:            true,
-				Computed:            true,
 			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
