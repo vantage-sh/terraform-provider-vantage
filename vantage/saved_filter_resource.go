@@ -21,11 +21,10 @@ func NewSavedFilterResource() resource.Resource {
 }
 
 type SavedFilterResourceModel struct {
-	Token            types.String `tfsdk:"token"`
-	Title            types.String `tfsdk:"title"`
-	Filter           types.String `tfsdk:"filter"`
-	WorkspaceToken   types.String `tfsdk:"workspace_token"`
-	CostReportTokens types.List   `tfsdk:"cost_report_tokens"`
+	Token          types.String `tfsdk:"token"`
+	Title          types.String `tfsdk:"title"`
+	Filter         types.String `tfsdk:"filter"`
+	WorkspaceToken types.String `tfsdk:"workspace_token"`
 }
 
 func (r *SavedFilterResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -51,11 +50,6 @@ func (r SavedFilterResource) Schema(ctx context.Context, req resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"cost_report_tokens": schema.ListAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "Cost report tokens associated with this saved filter.",
-				Computed:            true,
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -95,12 +89,6 @@ func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequ
 	// output is the same.
 	//data.Filter = types.StringValue(out.Payload.Filter)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.CostReportTokens)
-	if diag.HasError() {
-		resp.Diagnostics.Append(diag...)
-		return
-	}
-	data.CostReportTokens = costReportTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -129,12 +117,6 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.CostReportTokens)
-	if diag.HasError() {
-		resp.Diagnostics.Append(diag...)
-		return
-	}
-	state.CostReportTokens = costReportTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -164,12 +146,6 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 	data.Title = types.StringValue(out.Payload.Title)
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.CostReportTokens)
-	if diag.HasError() {
-		resp.Diagnostics.Append(diag...)
-		return
-	}
-	data.CostReportTokens = costReportTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

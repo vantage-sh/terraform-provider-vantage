@@ -26,7 +26,6 @@ Manages a SavedFilter.
 
 ### Read-Only
 
-- `cost_report_tokens` (List of String) Cost report tokens associated with this saved filter.
 - `token` (String) Unique saved filter identifier
 
 

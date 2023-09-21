@@ -22,7 +22,7 @@ resource "vantage_saved_filter" "demo_filter" {
 
 resource "vantage_cost_report" "demo_report" {
   folder_token        = vantage_folder.demo_folder.token
-  filter              = "(costs.provider = 'kubernetes')"
+  filter              = "costs.provider = 'kubernetes'"
   saved_filter_tokens = [vantage_saved_filter.demo_filter.token]
   title               = "Demo Report"
 }
