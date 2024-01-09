@@ -39,21 +39,34 @@ func (d *awsProviderInfoDataSource) Schema(_ context.Context, _ datasource.Schem
 		Attributes: map[string]schema.Attribute{
 			"iam_role_arn": schema.StringAttribute{
 				Computed: true,
+				Description: "The IAM role that Vantage assumes into your account.",
+				MarkdownDescription: "The IAM role that Vantage assumes into your account.",
 			},
 			"external_id": schema.StringAttribute{
 				Computed: true,
+				Description: "The Vantage external ID to authenticate your account.",
+				MarkdownDescription: "The Vantage external ID to authenticate your account.",
+				Sensitive: true,
 			},
 			"root_policy": schema.StringAttribute{
 				Computed: true,
+				Description: "The policy that allows Vantage to acces billing information.",
+				MarkdownDescription: "The policy that allows Vantage to manage autopilot.",
 			},
 			"autopilot_policy": schema.StringAttribute{
 				Computed: true,
+				Description: "The policy that allows Vantage to manage autopilot",
+				MarkdownDescription: "The policy that allows Vantage to manage autopilot.",
 			},
 			"cloudwatch_metrics_policy": schema.StringAttribute{
 				Computed: true,
+				Description: "The policy that allows Vantage to retrieve cloudwatch metrics from your AWS account.",
+				MarkdownDescription: "The policy that allows Vantage to retrieve cloudwatch metrics from your AWS account.",
 			},
 			"additional_resources_policy": schema.StringAttribute{
 				Computed: true,
+				Description: "The policy that allows Vantage to list and describe resources from your AWS account.",
+				MarkdownDescription: "The policy that allows Vantage to list and describe resources from your AWS account.",
 			},
 		},
 	}
