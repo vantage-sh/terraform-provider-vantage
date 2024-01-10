@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -44,24 +43,18 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Description of the team",
 				Optional:            true,
-				Computed:            true,
 			},
 			"workspace_tokens": schema.ListAttribute{
 				MarkdownDescription: "Workspace tokens to add the team to.",
-				ElementType: types.ListType{
-					ElemType: types.StringType,
-				},
-				Optional: true,
-				Computed: true,
-				// PlanModifiers: []planmodifier.String{
-				// 	stringplanmodifier.UseStateForUnknown(),
-				// },
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
 			},
 			"user_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "User emails.",
-				// Required:            true,
-				Optional: true,
+				MarkdownDescription: "User tokens.",
+				Optional:            true,
+				Computed:            true,
 			},
 			"user_emails": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -70,7 +63,7 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Unique folder identifier",
+				MarkdownDescription: "Unique team identifier",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -127,7 +120,6 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		WorkspaceTokens: fromStringsValue(workspaceTokens),
 	}
 
-	log.Println("got here")
 	params.WithTeams(rt)
 	out, err := r.client.V2.Teams.CreateTeam(params, r.client.Auth)
 	if err != nil {
@@ -143,12 +135,18 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 	data.Description = types.StringValue(out.Payload.Description)
-	// workspaceTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
-	// if diag.HasError() {
-	// 	resp.Diagnostics.Append(diag...)
-	// 	return
-	// }
-	// data.WorkspaceTokens = workspaceTokensValue
+	if out.Payload.WorkspaceTokens != nil {
+		workspaceTokensValue := make([]types.String, 0, len(out.Payload.WorkspaceTokens))
+		for _, token := range out.Payload.WorkspaceTokens {
+			workspaceTokensValue = append(workspaceTokensValue, types.StringValue(token))
+		}
+		list, diag := types.ListValueFrom(ctx, types.StringType, workspaceTokensValue)
+		if diag.HasError() {
+			resp.Diagnostics.Append(diag...)
+			return
+		}
+		data.WorkspaceTokens = list
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
