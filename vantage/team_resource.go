@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -49,17 +50,26 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "User tokens.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_emails": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "User emails.",
 				Optional:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -148,6 +158,32 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		data.WorkspaceTokens = list
 	}
 
+	if out.Payload.UserTokens != nil {
+		userTokensValue := make([]types.String, 0, len(out.Payload.UserTokens))
+		for _, token := range out.Payload.UserTokens {
+			userTokensValue = append(userTokensValue, types.StringValue(token))
+		}
+		list, diag := types.ListValueFrom(ctx, types.StringType, userTokensValue)
+		if diag.HasError() {
+			resp.Diagnostics.Append(diag...)
+			return
+		}
+		data.UserTokens = list
+	}
+
+	if out.Payload.UserEmails != nil {
+		userEmailsValue := make([]types.String, 0, len(out.Payload.UserEmails))
+		for _, token := range out.Payload.UserEmails {
+			userEmailsValue = append(userEmailsValue, types.StringValue(token))
+		}
+		list, diag := types.ListValueFrom(ctx, types.StringType, userEmailsValue)
+		if diag.HasError() {
+			resp.Diagnostics.Append(diag...)
+			return
+		}
+		data.UserEmails = list
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -175,6 +211,21 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
 	state.Description = types.StringValue(out.Payload.Description)
+
+	userTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	state.UserTokens = userTokens
+
+	userEmails, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserEmails)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	state.UserEmails = userEmails
+
 	workspaceTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
@@ -199,6 +250,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		resp.Diagnostics.Append(diag...)
 		return
 	}
+
 	var userTokens []string
 	userTokensList.ElementsAs(ctx, userTokens, false)
 
