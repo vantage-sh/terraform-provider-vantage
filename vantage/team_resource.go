@@ -51,7 +51,7 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
+					listplanmodifier.RequiresReplace(),
 				},
 			},
 			"user_tokens": schema.ListAttribute{
@@ -60,22 +60,23 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
+					listplanmodifier.RequiresReplace(),
 				},
 			},
 			"user_emails": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "User emails.",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
+					listplanmodifier.RequiresReplace(),
 				},
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Unique team identifier",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 		},
@@ -173,8 +174,8 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	if out.Payload.UserEmails != nil {
 		userEmailsValue := make([]types.String, 0, len(out.Payload.UserEmails))
-		for _, token := range out.Payload.UserEmails {
-			userEmailsValue = append(userEmailsValue, types.StringValue(token))
+		for _, email := range out.Payload.UserEmails {
+			userEmailsValue = append(userEmailsValue, types.StringValue(email))
 		}
 		list, diag := types.ListValueFrom(ctx, types.StringType, userEmailsValue)
 		if diag.HasError() {
