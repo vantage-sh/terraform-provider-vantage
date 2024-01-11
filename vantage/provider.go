@@ -152,5 +152,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewSavedFilterResource,
 		NewCostReportResource,
 		NewDashboardResource,
+		NewSegmentResource,
 	}
 }

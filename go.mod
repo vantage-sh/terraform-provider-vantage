@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.3.5
 	github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644
-	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20230919190050-ab8d2b0a3644
+	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240109125809-53d58864d5f5
 )
 
 require (
@@ -84,3 +84,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/vantage-sh/vantage-go/vantagev2 => ../vantage-go/vantagev2
