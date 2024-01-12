@@ -43,4 +43,5 @@ resource "vantage_team" "demo_team_2" {
   name = "Another Demo Team"
   description = "Demo Team Description"
   user_tokens = ["usr_36b848747e1683bc", "usr_899b013c355547db"]
+  workspace_tokens = ["wrkspc_47c3254c790e9351"]
 }
