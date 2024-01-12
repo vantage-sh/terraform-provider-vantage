@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -99,7 +100,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 		Title:              data.Title.ValueStringPointer(),
 		Filter:             data.Filter.ValueString(),
 		ParentSegmentToken: data.ParentSegmentToken.ValueString(),
-		Priority:           data.Priority.ValueInt64(),
+		Priority:           strconv.FormatInt(data.Priority.ValueInt64(), 10),
 		WorkspaceToken:     data.WorkspaceToken.ValueString(),
 		TrackUnallocated:   data.TrackUnallocated.ValueBool(),
 	}
@@ -142,11 +143,13 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder)
 	state.Filter = types.StringValue(out.Payload.Filter)
+	state.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -157,6 +160,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 
 	params := segmentsv2.NewUpdateSegmentParams()
 	params.SetSegmentToken(data.Token.ValueString())
@@ -170,6 +174,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 		TrackUnallocated:   data.TrackUnallocated.ValueBool(),
 	}
 	params.WithSegments(model)
+
 	out, err := r.client.V2.Segments.UpdateSegment(params, r.client.Auth)
 
 	if err != nil {
@@ -177,12 +182,17 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	if params.Segments.TrackUnallocated != out.Payload.TrackUnallocated {
+		panic("response from API doesn't match request")
+	}
+
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	data.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder) // FIXME(jaxxstorm): is this correct?
-	//data.Description = types.StringValue(out.Payload.Description)
+	data.Description = types.StringValue(out.Payload.Description)
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Title = types.StringValue(out.Payload.Title)
+	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
