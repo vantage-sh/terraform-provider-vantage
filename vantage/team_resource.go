@@ -38,11 +38,11 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Name of the team",
+				MarkdownDescription: "Name of the team.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Description of the team",
+				MarkdownDescription: "Description of the team.",
 				Optional:            true,
 			},
 			"workspace_tokens": schema.ListAttribute{
@@ -74,7 +74,7 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Unique team identifier",
+				MarkdownDescription: "Unique team identifier.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
