@@ -302,8 +302,6 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644 h1:KIj36a+2V8auoh+JUFNsq8aXMuE2Gb03mVRpJNr9fKI=
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240117154108-ee1cf623e9e3 h1:NF/QX4XfYVkCaBxViAakV8eO7CEBb0w+SWhWTkUnH2k=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240117154108-ee1cf623e9e3/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05 h1:Um7N8xmnYbodfySRIHaRkcw8/MF4hGsg+28YtqRuRjw=
 github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
