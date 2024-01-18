@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -100,9 +99,9 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 		Title:              data.Title.ValueStringPointer(),
 		Filter:             data.Filter.ValueString(),
 		ParentSegmentToken: data.ParentSegmentToken.ValueString(),
-		Priority:           strconv.FormatInt(data.Priority.ValueInt64(), 10),
+		Priority:           int32(data.Priority.ValueInt64()),
 		WorkspaceToken:     data.WorkspaceToken.ValueString(),
-		TrackUnallocated:   data.TrackUnallocated.ValueBool(),
+		TrackUnallocated:   data.TrackUnallocated.ValueBoolPointer(),
 	}
 
 	params.WithSegments(body)
@@ -114,9 +113,10 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder) // FIXME(jaxxstorm): is this correct?
+	data.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder)
 	data.Title = types.StringValue(out.Payload.Title)
 	data.Filter = types.StringValue(out.Payload.Filter)
+	data.Priority = types.Int64Value(int64(out.Payload.Priority))
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -149,6 +149,7 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder)
 	state.Filter = types.StringValue(out.Payload.Filter)
+	state.Priority = types.Int64Value(int64(out.Payload.Priority))
 	state.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -170,8 +171,8 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Filter:             data.Filter.ValueString(),
 		ParentSegmentToken: data.ParentSegmentToken.ValueString(),
 		Description:        data.Description.ValueString(),
-		//Priority:           data.Priority.ValueInt64(), FIXME: this is not supported in the API
-		TrackUnallocated:   data.TrackUnallocated.ValueBool(),
+		Priority:           int32(data.Priority.ValueInt64()),
+		TrackUnallocated:   data.TrackUnallocated.ValueBoolPointer(),
 	}
 	params.WithSegments(model)
 
@@ -180,10 +181,6 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if err != nil {
 		handleError("Update Segment Resource", &resp.Diagnostics, err)
 		return
-	}
-
-	if params.Segments.TrackUnallocated != out.Payload.TrackUnallocated {
-		panic("response from API doesn't match request")
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)

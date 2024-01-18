@@ -253,7 +253,6 @@ github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/pelletier/go-toml v1.7.0/go.mod h1:vwGMzjaWMwyfHwgIBhI2YUM4fB6nL6lVAvS1LBMMhTE=
-github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -265,13 +264,10 @@ github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSg
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.2.2/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
-github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
 github.com/rogpeppe/go-internal v1.11.0/go.mod h1:ddIwULY96R17DhadqLgMfk9H9tvdUzkipdSkR5nkCZA=
 github.com/russross/blackfriday v1.6.0 h1:KqfZb0pUVN2lYqZUYRddxF4OR8ZMURnJIG5Y3VRLtww=
 github.com/russross/blackfriday v1.6.0/go.mod h1:ti0ldHuxg49ri4ksnFxlkCfN+hvslNlmVHqNRXXJNAY=
-github.com/ryboe/q v1.0.20 h1:FDaGYR2WrXMrWFzklRXWJZvhAPQr07SMLVf3bCAGhVQ=
-github.com/ryboe/q v1.0.20/go.mod h1:IiqlbBPRrComXDcFXCKyIGle2yPqmgPKLJAMJQZjcgA=
 github.com/sebdah/goldie v1.0.0/go.mod h1:jXP4hmWywNEwZzhMuv2ccnqTSFpuq8iyQhtQdkkZBH4=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=
@@ -306,10 +302,10 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644 h1:KIj36a+2V8auoh+JUFNsq8aXMuE2Gb03mVRpJNr9fKI=
 github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240109125809-53d58864d5f5 h1:Kjv2OuAzkD/OFJFtKrmAPmm6nnAgB4Qki2NqQ5Vtub8=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240109125809-53d58864d5f5/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240111221141-32a3e121d962 h1:nqBcO/aTjl5rlXav03prTPQYRPtEj0PpmBaudHwOTec=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240111221141-32a3e121d962/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240117154108-ee1cf623e9e3 h1:NF/QX4XfYVkCaBxViAakV8eO7CEBb0w+SWhWTkUnH2k=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240117154108-ee1cf623e9e3/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05 h1:Um7N8xmnYbodfySRIHaRkcw8/MF4hGsg+28YtqRuRjw=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack/v4 v4.3.12/go.mod h1:gborTTJjAo/GWTqqRjrLCn9pgNN+NXzzngzBKDPIqw4=
 github.com/vmihailenco/msgpack/v5 v5.3.5 h1:5gO0H1iULLWGhs2H5tbAHIZTV8/cYafcFOr9znI5mJU=

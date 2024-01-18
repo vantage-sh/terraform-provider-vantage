@@ -9,9 +9,8 @@ require (
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.3.5
-	github.com/ryboe/q v1.0.20
 	github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644
-	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240111221141-32a3e121d962
+	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05
 )
 
 require (
@@ -54,8 +53,6 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
