@@ -9,8 +9,8 @@ require (
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.3.5
-	github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644
-	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05
+	github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20240118215504-bf8dae6cfb4c
+	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240119153622-3bfb4935d789
 )
 
 require (
