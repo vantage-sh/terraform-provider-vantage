@@ -17,11 +17,11 @@ description: |-
 
 ### Read-Only
 
-- `additional_resources_policy` (String)
-- `autopilot_policy` (String)
-- `cloudwatch_metrics_policy` (String)
-- `external_id` (String)
-- `iam_role_arn` (String)
-- `root_policy` (String)
+- `additional_resources_policy` (String) The policy that allows Vantage to list and describe resources from your AWS account.
+- `autopilot_policy` (String) The policy that allows Vantage to manage autopilot.
+- `cloudwatch_metrics_policy` (String) The policy that allows Vantage to retrieve cloudwatch metrics from your AWS account.
+- `external_id` (String, Sensitive) The Vantage external ID to authenticate your account.
+- `iam_role_arn` (String) The IAM role that Vantage assumes into your account.
+- `root_policy` (String) The policy that allows Vantage to manage autopilot.
 
 

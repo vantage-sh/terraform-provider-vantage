@@ -26,17 +26,17 @@ resource "vantage_team" "demo_team" {
 
 ### Required
 
-- `name` (String) Name of the team
+- `name` (String) Name of the team.
 
 ### Optional
 
-- `description` (String) Description of the team
+- `description` (String) Description of the team.
 - `user_emails` (List of String) User emails.
 - `user_tokens` (List of String) User tokens.
 - `workspace_tokens` (List of String) Workspace tokens to add the team to.
 
 ### Read-Only
 
-- `token` (String) Unique team identifier
+- `token` (String) Unique team identifier.
 
 
