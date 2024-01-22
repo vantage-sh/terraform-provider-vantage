@@ -45,8 +45,18 @@ resource "vantage_team" "demo_team_2" {
   user_tokens = ["usr_36b848747e1683bc", "usr_899b013c355547db"]
   workspace_tokens = ["wrkspc_47c3254c790e9351"]
 }
-
 resource "vantage_access_grant" "demo_access_grant" {
   team_token = vantage_team.demo_team.token
   resource_token = vantage_dashboard.demo_dashboard.token
+}
+
+data "vantage_users" "all_users" {
+}
+
+locals {
+  user_emails = [for user in data.vantage_users.all_users.users : user.email]
+}
+resource "vantage_team" "demo_team_3" {
+  name = "Team with emails from data source"
+  user_emails = local.user_emails
 }
