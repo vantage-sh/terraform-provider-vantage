@@ -142,6 +142,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewAwsProviderInfoDataSource,
 		NewSavedFiltersDataSource,
 		NewUsersDataSource,
+		NewCostReportsDataSource,
 	}
 }
 

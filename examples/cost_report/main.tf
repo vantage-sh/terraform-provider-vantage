@@ -60,3 +60,14 @@ resource "vantage_team" "demo_team_3" {
   name = "Team with emails from data source"
   user_emails = local.user_emails
 }
+
+data "vantage_cost_reports" "all_reports" {
+}
+output "report_tokens" {
+  value = data.vantage_cost_reports.all_reports.cost_reports[*].token
+  # value = [for report in data.vantage_cost_reports.all_reports.cost_reports : report.token]
+}
+
+output "reports" {
+  value = data.vantage_cost_reports.all_reports.cost_reports
+}

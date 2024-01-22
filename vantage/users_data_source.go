@@ -71,7 +71,7 @@ func (d *usersDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	out, err := d.client.V2.Users.GetUsers(params, d.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Useres",
+			"Unable to Get Vantage Users",
 			err.Error(),
 		)
 		return
