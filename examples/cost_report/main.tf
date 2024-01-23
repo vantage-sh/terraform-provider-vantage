@@ -50,24 +50,3 @@ resource "vantage_access_grant" "demo_access_grant" {
   resource_token = vantage_dashboard.demo_dashboard.token
 }
 
-data "vantage_users" "all_users" {
-}
-
-locals {
-  user_emails = [for user in data.vantage_users.all_users.users : user.email]
-}
-resource "vantage_team" "demo_team_3" {
-  name = "Team with emails from data source"
-  user_emails = local.user_emails
-}
-
-data "vantage_cost_reports" "all_reports" {
-}
-output "report_tokens" {
-  value = data.vantage_cost_reports.all_reports.cost_reports[*].token
-  # value = [for report in data.vantage_cost_reports.all_reports.cost_reports : report.token]
-}
-
-output "reports" {
-  value = data.vantage_cost_reports.all_reports.cost_reports
-}
