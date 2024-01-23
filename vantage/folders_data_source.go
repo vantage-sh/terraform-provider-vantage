@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &usersDataSource{}
-	_ datasource.DataSourceWithConfigure = &usersDataSource{}
+	_ datasource.DataSource              = &foldersDataSource{}
+	_ datasource.DataSourceWithConfigure = &foldersDataSource{}
 )
 
 func NewFoldersDataSource() datasource.DataSource {
@@ -23,8 +23,11 @@ type foldersDataSource struct {
 }
 
 type folderDataSourceModel struct {
-	Token types.String `tfsdk:"token"`
-	Title types.String `tfsdk:"title"`
+	Token             types.String `tfsdk:"token"`
+	Title             types.String `tfsdk:"title"`
+	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
+	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 }
 
 type foldersDataSourceModel struct {
@@ -45,6 +48,16 @@ func (d *foldersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed: true,
 						},
 						"title": schema.StringAttribute{
+							Computed: true,
+						},
+						"parent_folder_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"saved_filter_tokens": schema.ListAttribute{
+							ElementType: types.StringType,
+							Computed:    true,
+						},
+						"workspace_token": schema.StringAttribute{
 							Computed: true,
 						},
 					},
@@ -72,10 +85,18 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	folders := []folderDataSourceModel{}
 
-	for _, u := range out.Payload.Folders {
+	for _, f := range out.Payload.Folders {
+		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, f.SavedFilterTokens)
+		if diag.HasError() {
+			resp.Diagnostics.Append(diag...)
+			return
+		}
 		folders = append(folders, folderDataSourceModel{
-			Title: types.StringValue(u.Title),
-			Token: types.StringValue(u.Token),
+			Title:             types.StringValue(f.Title),
+			Token:             types.StringValue(f.Token),
+			ParentFolderToken: types.StringValue(f.ParentFolderToken),
+			SavedFilterTokens: savedFilterTokens,
+			WorkspaceToken:    types.StringValue(f.WorkspaceToken),
 		})
 	}
 	state.Folders = folders

@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &usersDataSource{}
-	_ datasource.DataSourceWithConfigure = &usersDataSource{}
+	_ datasource.DataSource              = &costReportsDataSource{}
+	_ datasource.DataSourceWithConfigure = &costReportsDataSource{}
 )
 
 func NewCostReportsDataSource() datasource.DataSource {
@@ -23,8 +23,12 @@ type costReportsDataSource struct {
 }
 
 type costReportDataSourceModel struct {
-	Token types.String `tfsdk:"token"`
-	Title types.String `tfsdk:"title"`
+	Token             types.String `tfsdk:"token"`
+	Title             types.String `tfsdk:"title"`
+	Filter            types.String `tfsdk:"filter"`
+	FolderToken       types.String `tfsdk:"folder_token"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 }
 
 type costReportsDataSourceModel struct {
@@ -45,6 +49,19 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							Computed: true,
 						},
 						"title": schema.StringAttribute{
+							Computed: true,
+						},
+						"filter": schema.StringAttribute{
+							Computed: true,
+						},
+						"folder_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"saved_filter_tokens": schema.ListAttribute{
+							ElementType: types.StringType,
+							Computed:    true,
+						},
+						"workspace_token": schema.StringAttribute{
 							Computed: true,
 						},
 					},
@@ -72,10 +89,19 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	costReports := []costReportDataSourceModel{}
 
-	for _, u := range out.Payload.CostReports {
+	for _, r := range out.Payload.CostReports {
+		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, r.SavedFilterTokens)
+		if diag.HasError() {
+			resp.Diagnostics.Append(diag...)
+			return
+		}
 		costReports = append(costReports, costReportDataSourceModel{
-			Title: types.StringValue(u.Title),
-			Token: types.StringValue(u.Token),
+			Title:             types.StringValue(r.Title),
+			Token:             types.StringValue(r.Token),
+			Filter:            types.StringValue(r.Filter),
+			FolderToken:       types.StringValue(r.FolderToken),
+			WorkspaceToken:    types.StringValue(r.WorkspaceToken),
+			SavedFilterTokens: savedFilterTokens,
 		})
 	}
 	state.CostReports = costReports
