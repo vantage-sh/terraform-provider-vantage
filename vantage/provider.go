@@ -145,6 +145,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewFoldersDataSource,
 		NewCostReportsDataSource,
 		NewAccessGrantsDataSource,
+		NewTeamsDataSource,
 	}
 }
 
