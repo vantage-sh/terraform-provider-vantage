@@ -24,7 +24,10 @@ description: |-
 
 Read-Only:
 
+- `parent_folder_token` (String)
+- `saved_filter_tokens` (List of String)
 - `title` (String)
 - `token` (String)
+- `workspace_token` (String)
 
 
