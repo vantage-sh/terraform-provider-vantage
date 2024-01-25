@@ -3,10 +3,12 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	accessgrantsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/access_grants"
@@ -32,6 +34,7 @@ func (r *AccessGrantResource) Metadata(_ context.Context, req resource.MetadataR
 }
 
 func (r AccessGrantResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_token": schema.StringAttribute{
@@ -43,12 +46,14 @@ func (r AccessGrantResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Required:            true,
 			},
 			"access": schema.StringAttribute{
-				// TODO(ac): Implement CustomType that validates "allowed" or "denied".
 				MarkdownDescription: "Access level of the grant. Must be either `allowed` or `denied`.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.OneOf("allowed", "denied"),
 				},
 			},
 			"token": schema.StringAttribute{
