@@ -141,6 +141,11 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 	return []func() datasource.DataSource{
 		NewAwsProviderInfoDataSource,
 		NewSavedFiltersDataSource,
+		NewUsersDataSource,
+		NewFoldersDataSource,
+		NewCostReportsDataSource,
+		NewAccessGrantsDataSource,
+		NewTeamsDataSource,
 	}
 }
 
@@ -154,5 +159,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewDashboardResource,
 		NewSegmentResource,
 		NewTeamResource,
+		NewAccessGrantResource,
 	}
 }

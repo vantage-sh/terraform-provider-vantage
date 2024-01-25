@@ -167,6 +167,8 @@ github.com/hashicorp/terraform-plugin-docs v0.14.1 h1:MikFi59KxrP/ewrZoaowrB9he5
 github.com/hashicorp/terraform-plugin-docs v0.14.1/go.mod h1:k2NW8+t113jAus6bb5tQYQgEAX/KueE/u8X2Z45V1GM=
 github.com/hashicorp/terraform-plugin-framework v1.3.5 h1:FJ6s3CVWVAxlhiF/jhy6hzs4AnPHiflsp9KgzTGl1wo=
 github.com/hashicorp/terraform-plugin-framework v1.3.5/go.mod h1:2gGDpWiTI0irr9NSTLFAKlTi6KwGti3AoU19rFqU30o=
+github.com/hashicorp/terraform-plugin-framework-validators v0.12.0 h1:HOjBuMbOEzl7snOdOoUfE2Jgeto6JOjLVQ39Ls2nksc=
+github.com/hashicorp/terraform-plugin-framework-validators v0.12.0/go.mod h1:jfHGE/gzjxYz6XoUwi/aYiiKrJDeutQNUtGQXkaHklg=
 github.com/hashicorp/terraform-plugin-go v0.18.0 h1:IwTkOS9cOW1ehLd/rG0y+u/TGLK9y6fGoBjXVUquzpE=
 github.com/hashicorp/terraform-plugin-go v0.18.0/go.mod h1:l7VK+2u5Kf2y+A+742GX0ouLut3gttudmvMgN0PA74Y=
 github.com/hashicorp/terraform-plugin-log v0.9.0 h1:i7hOA+vdAItN1/7UrfBqBwvYPQ9TFvymaRGZED3FCV0=
@@ -300,10 +302,10 @@ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644 h1:KIj36a+2V8auoh+JUFNsq8aXMuE2Gb03mVRpJNr9fKI=
-github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05 h1:Um7N8xmnYbodfySRIHaRkcw8/MF4hGsg+28YtqRuRjw=
-github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
+github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20240123214917-107e160b21df h1:0xhtKigC55pMCB4tDEPEruy6tUlh0a3A31GgSWRPutU=
+github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20240123214917-107e160b21df/go.mod h1:VnETgI0Ks9FfxbDkLjSOfibET7cSYqDtO/kHngwSFfc=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240123214917-107e160b21df h1:YLKiJahtst1bB/c2+tahaH0TAAAibzzzNjRP0yn6S3o=
+github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240123214917-107e160b21df/go.mod h1:Vd7Orkt/F7kQIyHSNVgwGvsC+kJlUJPfIMg8q8+n9zI=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack/v4 v4.3.12/go.mod h1:gborTTJjAo/GWTqqRjrLCn9pgNN+NXzzngzBKDPIqw4=
 github.com/vmihailenco/msgpack/v5 v5.3.5 h1:5gO0H1iULLWGhs2H5tbAHIZTV8/cYafcFOr9znI5mJU=

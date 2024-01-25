@@ -9,8 +9,8 @@ require (
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.3.5
-	github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20230919190050-ab8d2b0a3644
-	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240118182140-65ef80032d05
+	github.com/vantage-sh/vantage-go/vantagev1 v0.0.0-20240123214917-107e160b21df
+	github.com/vantage-sh/vantage-go/vantagev2 v0.0.0-20240123214917-107e160b21df
 )
 
 require (
@@ -45,6 +45,7 @@ require (
 	github.com/hashicorp/hc-install v0.5.0 // indirect
 	github.com/hashicorp/terraform-exec v0.18.1 // indirect
 	github.com/hashicorp/terraform-json v0.15.0 // indirect
+	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0
 	github.com/hashicorp/terraform-plugin-go v0.18.0 // indirect
 	github.com/hashicorp/terraform-plugin-log v0.9.0 // indirect
 	github.com/hashicorp/terraform-registry-address v0.2.2 // indirect
