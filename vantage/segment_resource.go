@@ -113,7 +113,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder)
+	data.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
 	data.Title = types.StringValue(out.Payload.Title)
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Priority = types.Int64Value(int64(out.Payload.Priority))
@@ -143,11 +143,10 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	state.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder)
+	state.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Priority = types.Int64Value(int64(out.Payload.Priority))
 	state.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
@@ -161,7 +160,6 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 
 	params := segmentsv2.NewUpdateSegmentParams()
 	params.SetSegmentToken(data.Token.ValueString())
@@ -185,7 +183,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.ParentSegmentToken = types.StringValue(out.Payload.ParentFolder) // FIXME(jaxxstorm): is this correct?
+	data.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
 	data.Description = types.StringValue(out.Payload.Description)
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Title = types.StringValue(out.Payload.Title)
