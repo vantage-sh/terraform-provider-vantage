@@ -5,7 +5,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
@@ -56,6 +58,8 @@ func (r SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"priority": schema.Int64Attribute{
 				MarkdownDescription: "The priority of the Segment.",
 				Optional:            true,
+				Computed:            true,
+				Default:             int64default.StaticInt64(100),
 			},
 			"workspace_token": schema.StringAttribute{
 				MarkdownDescription: "Workspace token to add the segment to.",
@@ -65,9 +69,12 @@ func (r SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+
 			"filter": schema.StringAttribute{
 				MarkdownDescription: "The filter query language to apply to the Segment. Additional documentation available at https://docs.vantage.sh/vql.",
 				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(""),
 			},
 			"track_unallocated": schema.BoolAttribute{
 				MarkdownDescription: "Whether or not to track unallocated resources in this Segment.",
