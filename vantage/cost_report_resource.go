@@ -111,9 +111,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
-	//TODO(macb): This value can be different than user input even though the
-	// output is the same.
-	//data.Filter = types.StringValue(out.Payload.Filter)
+	data.Filter = types.StringValue(out.Payload.Filter)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
@@ -150,6 +148,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
+	state.Filter = types.StringValue(out.Payload.Filter)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -194,8 +193,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 
 	data.Title = types.StringValue(out.Payload.Title)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
-	// TODO(macb): filter is weird.
-	//data.Filter = types.StringValue(out.Payload.Filter)
+	data.Filter = types.StringValue(out.Payload.Filter)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
