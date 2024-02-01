@@ -5,8 +5,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
@@ -24,9 +24,9 @@ func NewTeamResource() resource.Resource {
 type TeamResourceModel struct {
 	Name            types.String `tfsdk:"name"`
 	Description     types.String `tfsdk:"description"`
-	WorkspaceTokens types.List   `tfsdk:"workspace_tokens"`
-	UserTokens      types.List   `tfsdk:"user_tokens"`
-	UserEmails      types.List   `tfsdk:"user_emails"`
+	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
+	UserTokens      types.Set    `tfsdk:"user_tokens"`
+	UserEmails      types.Set    `tfsdk:"user_emails"`
 	Token           types.String `tfsdk:"token"`
 }
 
@@ -45,31 +45,31 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				MarkdownDescription: "Description of the team.",
 				Optional:            true,
 			},
-			"workspace_tokens": schema.ListAttribute{
+			"workspace_tokens": schema.SetAttribute{
 				MarkdownDescription: "Workspace tokens to add the team to.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
 				},
 			},
-			"user_tokens": schema.ListAttribute{
+			"user_tokens": schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "User tokens.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
 				},
 			},
-			"user_emails": schema.ListAttribute{
+			"user_emails": schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "User emails.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
 				},
 			},
 			"token": schema.StringAttribute{
@@ -151,12 +151,12 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		for _, token := range out.Payload.WorkspaceTokens {
 			workspaceTokensValue = append(workspaceTokensValue, types.StringValue(token))
 		}
-		list, diag := types.ListValueFrom(ctx, types.StringType, workspaceTokensValue)
+		set, diag := types.SetValueFrom(ctx, types.StringType, workspaceTokensValue)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		data.WorkspaceTokens = list
+		data.WorkspaceTokens = set
 	}
 
 	if out.Payload.UserTokens != nil {
@@ -164,12 +164,12 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		for _, token := range out.Payload.UserTokens {
 			userTokensValue = append(userTokensValue, types.StringValue(token))
 		}
-		list, diag := types.ListValueFrom(ctx, types.StringType, userTokensValue)
+		set, diag := types.SetValueFrom(ctx, types.StringType, userTokensValue)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		data.UserTokens = list
+		data.UserTokens = set
 	}
 
 	if out.Payload.UserEmails != nil {
@@ -177,12 +177,12 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		for _, email := range out.Payload.UserEmails {
 			userEmailsValue = append(userEmailsValue, types.StringValue(email))
 		}
-		list, diag := types.ListValueFrom(ctx, types.StringType, userEmailsValue)
+		set, diag := types.SetValueFrom(ctx, types.StringType, userEmailsValue)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		data.UserEmails = list
+		data.UserEmails = set
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -213,21 +213,21 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Name = types.StringValue(out.Payload.Name)
 	state.Description = types.StringValue(out.Payload.Description)
 
-	userTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
+	userTokens, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	state.UserTokens = userTokens
 
-	userEmails, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserEmails)
+	userEmails, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserEmails)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	state.UserEmails = userEmails
 
-	workspaceTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
+	workspaceTokensValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -288,21 +288,21 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	data.Name = types.StringValue(out.Payload.Name)
 	data.Description = types.StringValue(out.Payload.Description)
-	workspaceTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
+	workspaceTokensValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	data.WorkspaceTokens = workspaceTokensValue
 
-	userTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
+	userTokensValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	data.UserTokens = userTokensValue
 
-	userEmailsValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserEmails)
+	userEmailsValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserEmails)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
