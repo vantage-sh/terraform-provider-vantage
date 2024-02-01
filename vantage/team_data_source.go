@@ -22,9 +22,9 @@ type teamDataSourceModel struct {
 	Token           types.String `tfsdk:"token"`
 	Name            types.String `tfsdk:"name"`
 	Description     types.String `tfsdk:"description"`
-	WorkspaceTokens types.List   `tfsdk:"workspace_tokens"`
-	UserTokens      types.List   `tfsdk:"user_tokens"`
-	UserEmails      types.List   `tfsdk:"user_emails"`
+	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
+	UserTokens      types.Set    `tfsdk:"user_tokens"`
+	UserEmails      types.Set    `tfsdk:"user_emails"`
 }
 
 type teamsDataSourceModel struct {
@@ -65,19 +65,19 @@ func (d *teamsDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	teams := []teamDataSourceModel{}
 	for _, team := range out.Payload.Teams {
-		workspaceTokens, diag := types.ListValueFrom(ctx, types.StringType, team.WorkspaceTokens)
+		workspaceTokens, diag := types.SetValueFrom(ctx, types.StringType, team.WorkspaceTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
 
-		userTokens, diag := types.ListValueFrom(ctx, types.StringType, team.UserTokens)
+		userTokens, diag := types.SetValueFrom(ctx, types.StringType, team.UserTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
 
-		userEmails, diag := types.ListValueFrom(ctx, types.StringType, team.UserEmails)
+		userEmails, diag := types.SetValueFrom(ctx, types.StringType, team.UserEmails)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
@@ -117,15 +117,15 @@ func (d *teamsDataSource) Schema(ctx context.Context, req datasource.SchemaReque
 						"description": schema.StringAttribute{
 							Computed: true,
 						},
-						"workspace_tokens": schema.ListAttribute{
+						"workspace_tokens": schema.SetAttribute{
 							ElementType: types.StringType,
 							Computed:    true,
 						},
-						"user_tokens": schema.ListAttribute{
+						"user_tokens": schema.SetAttribute{
 							ElementType: types.StringType,
 							Computed:    true,
 						},
-						"user_emails": schema.ListAttribute{
+						"user_emails": schema.SetAttribute{
 							ElementType: types.StringType,
 							Computed:    true,
 						},
