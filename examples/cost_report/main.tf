@@ -18,6 +18,7 @@ resource "vantage_folder" "demo_folder_child" {
 resource "vantage_saved_filter" "demo_filter" {
   title  = "Demo Saved Filter"
   filter = "(costs.provider = 'aws')"
+  workspace_token = "wrkspc_47c3254c790e9351"
 }
 
 resource "vantage_cost_report" "demo_report" {
@@ -26,7 +27,6 @@ resource "vantage_cost_report" "demo_report" {
   saved_filter_tokens = [vantage_saved_filter.demo_filter.token]
   title               = "Demo Report"
 }
-
 resource "vantage_dashboard" "demo_dashboard" {
   widget_tokens = [vantage_cost_report.demo_report.token]
   title         = "Demo Dashboard"

@@ -27,8 +27,8 @@ Read-Only:
 - `description` (String)
 - `name` (String)
 - `token` (String)
-- `user_emails` (List of String)
-- `user_tokens` (List of String)
-- `workspace_tokens` (List of String)
+- `user_emails` (Set of String)
+- `user_tokens` (Set of String)
+- `workspace_tokens` (Set of String)
 
 
