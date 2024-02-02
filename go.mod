@@ -9,7 +9,7 @@ require (
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.3.5
-	github.com/vantage-sh/vantage-go v0.0.2
+	github.com/vantage-sh/vantage-go v0.0.3
 )
 
 require (

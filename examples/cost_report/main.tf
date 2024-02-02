@@ -18,6 +18,7 @@ resource "vantage_folder" "demo_folder_child" {
 resource "vantage_saved_filter" "demo_filter" {
   title  = "Demo Saved Filter"
   filter = "(costs.provider = 'aws')"
+  workspace_token = "wrkspc_47c3254c790e9351"
 }
 
 resource "vantage_cost_report" "demo_report" {
@@ -27,11 +28,19 @@ resource "vantage_cost_report" "demo_report" {
   title               = "Demo Report"
 }
 
-resource "vantage_dashboard" "demo_dashboard" {
-  widget_tokens = [vantage_cost_report.demo_report.token]
-  title         = "Demo Dashboard"
-  date_interval = "last_month"
+resource "vantage_report_notification" "test_notif" {
+  cost_report_token = vantage_cost_report.demo_report.token
+  title = "Test Notification"
+  user_tokens = ["usr_36b848747e1683bc", "usr_899b013c355547db"]
+  frequency = "daily"
+  change = "dollars"
+  workspace_token = "wrkspc_47c3254c790e9351"
 }
+# resource "vantage_dashboard" "demo_dashboard" {
+#   widget_tokens = [vantage_cost_report.demo_report.token]
+#   title         = "Demo Dashboard"
+#   date_interval = "last_month"
+# }
 
 resource "vantage_team" "demo_team" {
   name = "Demo Team"
@@ -45,8 +54,24 @@ resource "vantage_team" "demo_team_2" {
   user_tokens = ["usr_36b848747e1683bc", "usr_899b013c355547db"]
   workspace_tokens = ["wrkspc_47c3254c790e9351"]
 }
-resource "vantage_access_grant" "demo_access_grant" {
-  team_token = vantage_team.demo_team.token
-  resource_token = vantage_dashboard.demo_dashboard.token
+# resource "vantage_access_grant" "demo_access_grant" {
+#   team_token = vantage_team.demo_team.token
+#   resource_token = vantage_dashboard.demo_dashboard.token
+# }
+
+variable "workspaces" {
+  type = set(string)
+  default = ["wrkspc_47c3254c790e9351", "wrkspc_d135a8da2b750c2a"]
+}
+
+variable "user_tokens" {
+  type = set(string)
+  default = ["usr_36b848747e1683bc", "usr_899b013c355547db"]
+}
+resource "vantage_team" "demo_team_3" {
+  name = "Yet Another Demo Team"
+  description = "Demo Team Description"
+  user_tokens = var.user_tokens
+  workspace_tokens = ["wrkspc_d135a8da2b750c2a", "wrkspc_47c3254c790e9351"]
 }
 
