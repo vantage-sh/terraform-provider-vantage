@@ -3,6 +3,8 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -11,6 +13,8 @@ import (
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
 )
+
+var _ resource.ResourceWithConfigValidators = &FolderResource{}
 
 type FolderResource struct {
 	client *Client
@@ -173,4 +177,13 @@ func (r *FolderResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+func (r *FolderResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("parent_folder_token"),
+			path.MatchRoot("workspace_token"),
+		),
+	}
 }
