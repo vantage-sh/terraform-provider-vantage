@@ -45,7 +45,7 @@ func (r SavedFilterResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"workspace_token": schema.StringAttribute{
 				MarkdownDescription: "Workspace token to add the saved filter into.",
-				Optional:            true,
+				Required:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
