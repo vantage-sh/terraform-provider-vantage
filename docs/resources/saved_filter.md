@@ -25,11 +25,11 @@ resource "vantage_saved_filter" "demo_filter" {
 ### Required
 
 - `title` (String) Title of the Saved Filter
+- `workspace_token` (String) Workspace token to add the saved filter into.
 
 ### Optional
 
 - `filter` (String) VQL Query used for this saved filter.
-- `workspace_token` (String) Workspace token to add the saved filter into.
 
 ### Read-Only
 

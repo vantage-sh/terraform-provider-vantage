@@ -88,8 +88,7 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			"workspace_token": schema.StringAttribute{
 				MarkdownDescription: "The token for the Workspace the Dashboard is a part of.",
-				Optional:            true,
-				Computed:            true,
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
