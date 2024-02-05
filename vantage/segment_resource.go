@@ -3,6 +3,8 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -13,6 +15,8 @@ import (
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	segmentsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/segments"
 )
+
+var _ resource.ResourceWithConfigValidators = &SegmentResource{}
 
 type SegmentResource struct {
 	client *Client
@@ -221,4 +225,13 @@ func (r *SegmentResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+func (r *SegmentResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("workspace_token"),
+			path.MatchRoot("parent_segment_token"),
+		),
+	}
 }
