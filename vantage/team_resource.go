@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -44,6 +43,7 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Description of the team.",
 				Optional:            true,
+				Computed:            true,
 			},
 			"workspace_tokens": schema.SetAttribute{
 				MarkdownDescription: "Workspace tokens to add the team to.",
