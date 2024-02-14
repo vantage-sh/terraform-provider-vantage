@@ -31,6 +31,7 @@ type CostReportResourceModel struct {
 	Filter            types.String `tfsdk:"filter"`
 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	Groupings         types.String `tfsdk:"groupings"`
 }
 
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -51,6 +52,10 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"filter": schema.StringAttribute{
 				MarkdownDescription: "Filter query to apply to the Cost Report",
+				Optional:            true,
+			},
+			"groupings": schema.StringAttribute{
+				MarkdownDescription: "Grouping aggregations applied to the filtered data.",
 				Optional:            true,
 			},
 			"saved_filter_tokens": schema.ListAttribute{
@@ -103,6 +108,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		Title:             data.Title.ValueStringPointer(),
 		FolderToken:       data.FolderToken.ValueString(),
 		Filter:            data.Filter.ValueString(),
+		Groupings:         data.Groupings.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
 		WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
@@ -116,6 +122,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Filter = types.StringValue(out.Payload.Filter)
+	data.Groupings = types.StringValue(out.Payload.Groupings)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
@@ -153,6 +160,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.Filter = types.StringValue(out.Payload.Filter)
+	state.Groupings = types.StringValue(out.Payload.Groupings)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -187,6 +195,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		Title:             data.Title.ValueString(),
 		Filter:            data.Filter.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
+		Groupings:         data.Groupings.ValueString(),
 	}
 	params.WithCostReports(model)
 	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
@@ -198,6 +207,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	data.Title = types.StringValue(out.Payload.Title)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
 	data.Filter = types.StringValue(out.Payload.Filter)
+	data.Groupings = types.StringValue(out.Payload.Groupings)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {

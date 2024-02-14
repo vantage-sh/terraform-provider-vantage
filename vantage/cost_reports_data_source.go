@@ -29,6 +29,7 @@ type costReportDataSourceModel struct {
 	FolderToken       types.String `tfsdk:"folder_token"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
+	Groupings         types.String `tfsdk:"groupings"`
 }
 
 type costReportsDataSourceModel struct {
@@ -62,6 +63,9 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							Computed:    true,
 						},
 						"workspace_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"groupings": schema.StringAttribute{
 							Computed: true,
 						},
 					},
@@ -102,6 +106,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			FolderToken:       types.StringValue(r.FolderToken),
 			WorkspaceToken:    types.StringValue(r.WorkspaceToken),
 			SavedFilterTokens: savedFilterTokens,
+			Groupings:         types.StringValue(r.Groupings),
 		})
 	}
 	state.CostReports = costReports

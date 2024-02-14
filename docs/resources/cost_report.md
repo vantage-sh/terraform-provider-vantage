@@ -19,6 +19,7 @@ resource "vantage_cost_report" "demo_report" {
   filter              = "costs.provider = 'aws'"
   saved_filter_tokens = ["svd_fltr_e844a2ccace05933", "svd_fltr_1b4b80a380ef4ba2"]
   workspace_token = "wrkspc_47c3254c790e9351"
+
   # optionally, use folder_token instead of workspace_token
   # folder_token = "fldr_47c3254c790e9351"
 }
@@ -35,6 +36,7 @@ resource "vantage_cost_report" "demo_report" {
 
 - `filter` (String) Filter query to apply to the Cost Report
 - `folder_token` (String) Token of the folder this report resides in.
+- `groupings` (String) Grouping aggregations applied to the filtered data.
 - `saved_filter_tokens` (List of String) Saved filter tokens to be applied to the report.
 - `workspace_token` (String) Workspace token to add the cost report to.
 

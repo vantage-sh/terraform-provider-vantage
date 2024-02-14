@@ -26,6 +26,7 @@ Read-Only:
 
 - `filter` (String)
 - `folder_token` (String)
+- `groupings` (String)
 - `saved_filter_tokens` (List of String)
 - `title` (String)
 - `token` (String)
