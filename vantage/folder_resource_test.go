@@ -42,7 +42,7 @@ data "vantage_workspaces" "test" {}
 
 resource "vantage_folder" "test" {
   title = %[1]q
-	workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+  workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
 }
 `, folderTitle)
 }
