@@ -24,16 +24,6 @@ func NewCostReportResource() resource.Resource {
 	return &CostReportResource{}
 }
 
-type CostReportResourceModel struct {
-	Token             types.String `tfsdk:"token"`
-	Title             types.String `tfsdk:"title"`
-	FolderToken       types.String `tfsdk:"folder_token"`
-	Filter            types.String `tfsdk:"filter"`
-	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-	Groupings         types.String `tfsdk:"groupings"`
-}
-
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_cost_report"
 }
@@ -87,7 +77,7 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 }
 
 func (r CostReportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *CostReportResourceModel
+	var data *costReport
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -138,7 +128,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 }
 
 func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *CostReportResourceModel
+	var state *costReport
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -175,7 +165,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r CostReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *CostReportResourceModel
+	var data *costReport
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -222,7 +212,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 }
 
 func (r CostReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *CostReportResourceModel
+	var state *costReport
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

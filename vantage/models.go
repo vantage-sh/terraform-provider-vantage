@@ -13,3 +13,18 @@ type accessGrant struct {
 type accessGrants struct {
 	AccessGrants []accessGrant `tfsdk:"access_grants"`
 }
+
+// costReport is a struct that represents the cost report data model. Used in both resources and data sources.
+type costReport struct {
+	Token             types.String `tfsdk:"token"`
+	Title             types.String `tfsdk:"title"`
+	FolderToken       types.String `tfsdk:"folder_token"`
+	Filter            types.String `tfsdk:"filter"`
+	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	Groupings         types.String `tfsdk:"groupings"`
+}
+
+type costReports struct {
+	CostReports []costReport `tfsdk:"cost_reports"`
+}
