@@ -33,6 +33,7 @@ resource "vantage_dashboard" "demo_dashboard" {
   title           = "Demo Dashboard"
   date_interval   = "last_month"
   workspace_token = "wrkspc_47c3254c790e9351"
+  saved_filter_tokens = [vantage_saved_filter.demo_filter.token]
 }
 
 resource "vantage_team" "demo_team" {

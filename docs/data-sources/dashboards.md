@@ -31,6 +31,7 @@ Read-Only:
 - `title` (String)
 - `token` (String)
 - `widget_tokens` (List of String)
+- `saved_filter_tokens` (List of String)
 - `workspace_token` (String)
 
 
