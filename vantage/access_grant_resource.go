@@ -22,13 +22,6 @@ func NewAccessGrantResource() resource.Resource {
 	return &AccessGrantResource{}
 }
 
-type AccessGrantResourceModel struct {
-	Token         types.String `tfsdk:"token"`
-	ResourceToken types.String `tfsdk:"resource_token"`
-	TeamToken     types.String `tfsdk:"team_token"`
-	Access        types.String `tfsdk:"access"`
-}
-
 func (r *AccessGrantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_access_grant"
 }
@@ -70,7 +63,7 @@ func (r AccessGrantResource) Schema(ctx context.Context, req resource.SchemaRequ
 }
 
 func (r AccessGrantResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *AccessGrantResourceModel
+	var data *accessGrant
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -98,7 +91,7 @@ func (r AccessGrantResource) Create(ctx context.Context, req resource.CreateRequ
 }
 
 func (r AccessGrantResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *AccessGrantResourceModel
+	var state *accessGrant
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -127,7 +120,7 @@ func (r AccessGrantResource) Read(ctx context.Context, req resource.ReadRequest,
 }
 
 func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *AccessGrantResourceModel
+	var data *accessGrant
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -156,7 +149,7 @@ func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequ
 }
 
 func (r AccessGrantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *AccessGrantResourceModel
+	var state *accessGrant
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
