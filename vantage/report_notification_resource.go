@@ -21,16 +21,6 @@ func NewReportNotificationResource() resource.Resource {
 	return &ReportNotificationResource{}
 }
 
-type ReportNotificationResourceModel struct {
-	Title           types.String `tfsdk:"title"`
-	Token           types.String `tfsdk:"token"`
-	CostReportToken types.String `tfsdk:"cost_report_token"`
-	WorkspaceToken  types.String `tfsdk:"workspace_token"`
-	UserTokens      types.Set    `tfsdk:"user_tokens"`
-	Frequency       types.String `tfsdk:"frequency"`
-	Change          types.String `tfsdk:"change"`
-}
-
 func (r *ReportNotificationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_report_notification"
 }
@@ -79,7 +69,7 @@ func (r ReportNotificationResource) Schema(ctx context.Context, req resource.Sch
 }
 
 func (r *ReportNotificationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *ReportNotificationResourceModel
+	var data *reportNotification
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -139,7 +129,7 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 }
 
 func (r *ReportNotificationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *ReportNotificationResourceModel
+	var state *reportNotification
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -175,7 +165,7 @@ func (r *ReportNotificationResource) Read(ctx context.Context, req resource.Read
 }
 
 func (r *ReportNotificationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *ReportNotificationResourceModel
+	var data *reportNotification
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -228,7 +218,7 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 }
 
 func (r *ReportNotificationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *ReportNotificationResourceModel
+	var state *reportNotification
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -55,3 +55,13 @@ type folder struct {
 type folders struct {
 	Folders []folder `tfsdk:"folders"`
 }
+
+type reportNotification struct {
+	Title           types.String `tfsdk:"title"`
+	Token           types.String `tfsdk:"token"`
+	CostReportToken types.String `tfsdk:"cost_report_token"`
+	WorkspaceToken  types.String `tfsdk:"workspace_token"`
+	UserTokens      types.Set    `tfsdk:"user_tokens"`
+	Frequency       types.String `tfsdk:"frequency"`
+	Change          types.String `tfsdk:"change"`
+}
