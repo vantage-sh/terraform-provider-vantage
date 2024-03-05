@@ -28,3 +28,18 @@ type costReport struct {
 type costReports struct {
 	CostReports []costReport `tfsdk:"cost_reports"`
 }
+
+type dashboard struct {
+	Token          types.String `tfsdk:"token"`
+	Title          types.String `tfsdk:"title"`
+	WidgetTokens   types.List   `tfsdk:"widget_tokens"`
+	DateBin        types.String `tfsdk:"date_bin"`
+	DateInterval   types.String `tfsdk:"date_interval"`
+	StartDate      types.String `tfsdk:"start_date"`
+	EndDate        types.String `tfsdk:"end_date"`
+	WorkspaceToken types.String `tfsdk:"workspace_token"`
+}
+
+type dashboards struct {
+	Dashboards []dashboard `tfsdk:"dashboards"`
+}

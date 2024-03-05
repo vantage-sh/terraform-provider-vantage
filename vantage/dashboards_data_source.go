@@ -18,21 +18,6 @@ func NewDashboardsDataSource() datasource.DataSource {
 	return &dashboardsDataSource{}
 }
 
-type dashboardDataSourceModel struct {
-	Token          types.String `tfsdk:"token"`
-	Title          types.String `tfsdk:"title"`
-	WidgetTokens   types.List   `tfsdk:"widget_tokens"`
-	DateBin        types.String `tfsdk:"date_bin"`
-	DateInterval   types.String `tfsdk:"date_interval"`
-	StartDate      types.String `tfsdk:"start_date"`
-	EndDate        types.String `tfsdk:"end_date"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
-}
-
-type dashboardsDataSourceModel struct {
-	Dashboards []dashboardDataSourceModel `tfsdk:"dashboards"`
-}
-
 type dashboardsDataSource struct {
 	client *Client
 }
@@ -50,7 +35,7 @@ func (d *dashboardsDataSource) Metadata(_ context.Context, req datasource.Metada
 }
 
 func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state dashboardsDataSourceModel
+	var state dashboards
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := dashboardsv2.NewGetDashboardsParams()
 	out, err := d.client.V2.Dashboards.GetDashboards(params, d.client.Auth)
@@ -62,18 +47,18 @@ func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	for _, dashboard := range out.Payload.Dashboards {
+	for _, d := range out.Payload.Dashboards {
 
-		var dashboardModel dashboardDataSourceModel
-		dashboardModel.Token = types.StringValue(dashboard.Token)
-		dashboardModel.Title = types.StringValue(dashboard.Title)
-		dashboardModel.DateBin = types.StringValue(dashboard.DateBin)
-		dashboardModel.DateInterval = types.StringValue(dashboard.DateInterval)
-		dashboardModel.StartDate = types.StringValue(dashboard.StartDate)
-		dashboardModel.EndDate = types.StringValue(dashboard.EndDate)
-		dashboardModel.WorkspaceToken = types.StringValue(dashboard.WorkspaceToken)
+		var dashboardModel dashboard
+		dashboardModel.Token = types.StringValue(d.Token)
+		dashboardModel.Title = types.StringValue(d.Title)
+		dashboardModel.DateBin = types.StringValue(d.DateBin)
+		dashboardModel.DateInterval = types.StringValue(d.DateInterval)
+		dashboardModel.StartDate = types.StringValue(d.StartDate)
+		dashboardModel.EndDate = types.StringValue(d.EndDate)
+		dashboardModel.WorkspaceToken = types.StringValue(d.WorkspaceToken)
 
-		widgetTokens, diag := types.ListValueFrom(ctx, types.StringType, dashboard.WidgetTokens)
+		widgetTokens, diag := types.ListValueFrom(ctx, types.StringType, d.WidgetTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
