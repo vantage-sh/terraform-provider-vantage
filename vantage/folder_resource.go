@@ -50,8 +50,9 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
+				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Tokens of the saved filters to apply to the cost report.",
+				MarkdownDescription: "Tokens of the saved filters to apply to any reports contained in this folder.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -103,6 +104,12 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 	data.Title = types.StringValue(out.Payload.Title)
 	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	data.SavedFilterTokens = savedFilterTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -132,7 +139,12 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.Title = types.StringValue(out.Payload.Title)
-
+	savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	state.SavedFilterTokens = savedFilterTokens
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -143,12 +155,21 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	sft := []types.String{}
+	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
+		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
+		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	params := foldersv2.NewUpdateFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
 	model := &modelsv2.PutFolders{
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		Title:             data.Title.ValueString(),
-		// WorkspaceToken:    data.Title.WorkspaceToken(),
+		SavedFilterTokens: fromStringsValue(sft),
 	}
 	params.WithFolders(model)
 	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
@@ -160,6 +181,12 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	data.Title = types.StringValue(out.Payload.Title)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	data.SavedFilterTokens = savedFilterTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -22,18 +22,6 @@ type foldersDataSource struct {
 	client *Client
 }
 
-// type folderDataSourceModel struct {
-// 	Token             types.String `tfsdk:"token"`
-// 	Title             types.String `tfsdk:"title"`
-// 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
-// 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-// 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-// }
-
-// type foldersDataSourceModel struct {
-// 	Folders []folderDataSourceModel `tfsdk:"folders"`
-// }
-
 func (d *foldersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_folders"
 }
