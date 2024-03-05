@@ -43,3 +43,15 @@ type dashboard struct {
 type dashboards struct {
 	Dashboards []dashboard `tfsdk:"dashboards"`
 }
+
+type folder struct {
+	Title             types.String `tfsdk:"title"`
+	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
+	Token             types.String `tfsdk:"token"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
+}
+
+type folders struct {
+	Folders []folder `tfsdk:"folders"`
+}

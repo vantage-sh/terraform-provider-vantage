@@ -22,17 +22,17 @@ type foldersDataSource struct {
 	client *Client
 }
 
-type folderDataSourceModel struct {
-	Token             types.String `tfsdk:"token"`
-	Title             types.String `tfsdk:"title"`
-	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
-	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-}
+// type folderDataSourceModel struct {
+// 	Token             types.String `tfsdk:"token"`
+// 	Title             types.String `tfsdk:"title"`
+// 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
+// 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
+// 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+// }
 
-type foldersDataSourceModel struct {
-	Folders []folderDataSourceModel `tfsdk:"folders"`
-}
+// type foldersDataSourceModel struct {
+// 	Folders []folderDataSourceModel `tfsdk:"folders"`
+// }
 
 func (d *foldersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_folders"
@@ -69,7 +69,7 @@ func (d *foldersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state foldersDataSourceModel
+	var state folders
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 
@@ -83,7 +83,7 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	folders := []folderDataSourceModel{}
+	folders := []folder{}
 
 	for _, f := range out.Payload.Folders {
 		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, f.SavedFilterTokens)
@@ -91,7 +91,7 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		folders = append(folders, folderDataSourceModel{
+		folders = append(folders, folder{
 			Title:             types.StringValue(f.Title),
 			Token:             types.StringValue(f.Token),
 			ParentFolderToken: types.StringValue(f.ParentFolderToken),
