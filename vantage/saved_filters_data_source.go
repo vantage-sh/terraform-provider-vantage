@@ -22,16 +22,16 @@ type savedFiltersDataSource struct {
 	client *Client
 }
 
-type savedFilterDataSourceModel struct {
-	Title            types.String `tfsdk:"title"`
-	CostReportTokens types.List   `tfsdk:"cost_report_tokens"`
-	Token            types.String `tfsdk:"token"`
-	WorkspaceToken   types.String `tfsdk:"workspace_token"`
-}
+// type savedFilterDataSourceModel struct {
+// 	Title            types.String `tfsdk:"title"`
+// 	CostReportTokens types.List   `tfsdk:"cost_report_tokens"`
+// 	Token            types.String `tfsdk:"token"`
+// 	WorkspaceToken   types.String `tfsdk:"workspace_token"`
+// }
 
-type savedFiltersDataSourceModel struct {
-	Filters []savedFilterDataSourceModel `tfsdk:"filters"`
-}
+// type savedFiltersDataSourceModel struct {
+// 	Filters []savedFilterDataSourceModel `tfsdk:"filters"`
+// }
 
 func (d *savedFiltersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_saved_filters"
@@ -65,7 +65,7 @@ func (d *savedFiltersDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 }
 
 func (d *savedFiltersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state savedFiltersDataSourceModel
+	var state savedFilters
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := filtersv2.NewGetSavedFiltersParams()
@@ -78,14 +78,14 @@ func (d *savedFiltersDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	filters := []savedFilterDataSourceModel{}
+	filters := []savedFilter{}
 	for _, f := range out.Payload.SavedFilters {
 		costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, f.CostReportTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		filter := savedFilterDataSourceModel{
+		filter := savedFilter{
 			Title:            types.StringValue(f.Title),
 			Token:            types.StringValue(f.Token),
 			WorkspaceToken:   types.StringValue(f.WorkspaceToken),

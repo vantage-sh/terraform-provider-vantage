@@ -65,3 +65,15 @@ type reportNotification struct {
 	Frequency       types.String `tfsdk:"frequency"`
 	Change          types.String `tfsdk:"change"`
 }
+
+type savedFilter struct {
+	Token            types.String `tfsdk:"token"`
+	Title            types.String `tfsdk:"title"`
+	Filter           types.String `tfsdk:"filter"`
+	WorkspaceToken   types.String `tfsdk:"workspace_token"`
+	CostReportTokens types.List   `tfsdk:"cost_report_tokens"`
+}
+
+type savedFilters struct {
+	Filters []savedFilter `tfsdk:"filters"`
+}
