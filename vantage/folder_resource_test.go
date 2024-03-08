@@ -32,6 +32,12 @@ func TestAccVantageFolder_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "title", rUpdatedTitle),
 				),
 			},
+			{
+				Config: testAccVantageFolderConfig_parent(rTitle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "parent_folder_token"),
+				),
+			},
 		},
 	})
 }
@@ -43,6 +49,17 @@ data "vantage_workspaces" "test" {}
 resource "vantage_folder" "test" {
   title = %[1]q
   workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+}
+`, folderTitle)
+}
+
+func testAccVantageFolderConfig_parent(folderTitle string) string {
+	return fmt.Sprintf(`
+data "vantage_folders" "test" {}
+
+resource "vantage_folder" "test" {
+  title = %[1]q
+  parent_folder_token = element(data.vantage_folders.test.folders, 0).token
 }
 `, folderTitle)
 }
