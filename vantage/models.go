@@ -92,3 +92,16 @@ type segment struct {
 type segments struct {
 	Segments []segment `tfsdk:"segments"`
 }
+
+type team struct {
+	Name            types.String `tfsdk:"name"`
+	Description     types.String `tfsdk:"description"`
+	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
+	UserTokens      types.Set    `tfsdk:"user_tokens"`
+	UserEmails      types.Set    `tfsdk:"user_emails"`
+	Token           types.String `tfsdk:"token"`
+}
+
+type teams struct {
+	Teams []team `tfsdk:"teams"`
+}

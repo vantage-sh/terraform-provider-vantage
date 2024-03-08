@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -20,14 +21,14 @@ func NewTeamResource() resource.Resource {
 	return &TeamResource{}
 }
 
-type TeamResourceModel struct {
-	Name            types.String `tfsdk:"name"`
-	Description     types.String `tfsdk:"description"`
-	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
-	UserTokens      types.Set    `tfsdk:"user_tokens"`
-	UserEmails      types.Set    `tfsdk:"user_emails"`
-	Token           types.String `tfsdk:"token"`
-}
+// type TeamResourceModel struct {
+// 	Name            types.String `tfsdk:"name"`
+// 	Description     types.String `tfsdk:"description"`
+// 	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
+// 	UserTokens      types.Set    `tfsdk:"user_tokens"`
+// 	UserEmails      types.Set    `tfsdk:"user_emails"`
+// 	Token           types.String `tfsdk:"token"`
+// }
 
 func (r *TeamResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_team"
@@ -85,7 +86,7 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 }
 
 func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *TeamResourceModel
+	var data *team
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -189,7 +190,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 }
 
 func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *TeamResourceModel
+	var state *team
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -238,7 +239,7 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *TeamResourceModel
+	var data *team
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -313,7 +314,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 }
 
 func (r TeamResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *TeamResourceModel
+	var state *team
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
