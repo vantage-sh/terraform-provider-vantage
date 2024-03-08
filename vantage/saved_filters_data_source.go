@@ -22,17 +22,6 @@ type savedFiltersDataSource struct {
 	client *Client
 }
 
-// type savedFilterDataSourceModel struct {
-// 	Title            types.String `tfsdk:"title"`
-// 	CostReportTokens types.List   `tfsdk:"cost_report_tokens"`
-// 	Token            types.String `tfsdk:"token"`
-// 	WorkspaceToken   types.String `tfsdk:"workspace_token"`
-// }
-
-// type savedFiltersDataSourceModel struct {
-// 	Filters []savedFilterDataSourceModel `tfsdk:"filters"`
-// }
-
 func (d *savedFiltersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_saved_filters"
 }

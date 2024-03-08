@@ -21,15 +21,6 @@ func NewTeamResource() resource.Resource {
 	return &TeamResource{}
 }
 
-// type TeamResourceModel struct {
-// 	Name            types.String `tfsdk:"name"`
-// 	Description     types.String `tfsdk:"description"`
-// 	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
-// 	UserTokens      types.Set    `tfsdk:"user_tokens"`
-// 	UserEmails      types.Set    `tfsdk:"user_emails"`
-// 	Token           types.String `tfsdk:"token"`
-// }
-
 func (r *TeamResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_team"
 }
