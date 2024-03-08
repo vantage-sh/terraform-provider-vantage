@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -18,13 +19,6 @@ type SavedFilterResource struct {
 
 func NewSavedFilterResource() resource.Resource {
 	return &SavedFilterResource{}
-}
-
-type SavedFilterResourceModel struct {
-	Token          types.String `tfsdk:"token"`
-	Title          types.String `tfsdk:"title"`
-	Filter         types.String `tfsdk:"filter"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
 }
 
 func (r *SavedFilterResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -50,6 +44,14 @@ func (r SavedFilterResource) Schema(ctx context.Context, req resource.SchemaRequ
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"cost_report_tokens": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Computed:            true,
+				MarkdownDescription: "Tokens of the cost reports this saved filter is applied to.",
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"token": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Unique saved filter identifier",
@@ -63,7 +65,7 @@ func (r SavedFilterResource) Schema(ctx context.Context, req resource.SchemaRequ
 }
 
 func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *SavedFilterResourceModel
+	var data *savedFilter
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -84,16 +86,24 @@ func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.Title = types.StringValue(out.Payload.Title)
 	//TODO(macb): This value can be different than user input even though the
 	// output is the same.
 	//data.Filter = types.StringValue(out.Payload.Filter)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 
+	costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.CostReportTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	data.CostReportTokens = costReportTokens
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *SavedFilterResourceModel
+	var state *savedFilter
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -116,12 +126,18 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.CostReportTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	state.CostReportTokens = costReportTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *SavedFilterResourceModel
+	var data *savedFilter
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -145,12 +161,18 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 	data.Title = types.StringValue(out.Payload.Title)
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.CostReportTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	data.CostReportTokens = costReportTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r SavedFilterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *SavedFilterResourceModel
+	var state *savedFilter
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

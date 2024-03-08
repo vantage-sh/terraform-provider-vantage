@@ -20,17 +20,6 @@ func NewDashboardResource() resource.Resource {
 	return &DashboardResource{}
 }
 
-type DashboardResourceModel struct {
-	Token          types.String `tfsdk:"token"`
-	Title          types.String `tfsdk:"title"`
-	WidgetTokens   types.List   `tfsdk:"widget_tokens"`
-	DateBin        types.String `tfsdk:"date_bin"`
-	DateInterval   types.String `tfsdk:"date_interval"`
-	StartDate      types.String `tfsdk:"start_date"`
-	EndDate        types.String `tfsdk:"end_date"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
-}
-
 func (r *DashboardResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_dashboard"
 }
@@ -99,7 +88,7 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 }
 
 func (r DashboardResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *DashboardResourceModel
+	var data *dashboard
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -147,7 +136,7 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 }
 
 func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *DashboardResourceModel
+	var state *dashboard
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -185,7 +174,7 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r DashboardResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *DashboardResourceModel
+	var data *dashboard
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -236,7 +225,7 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 }
 
 func (r DashboardResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *DashboardResourceModel
+	var state *dashboard
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

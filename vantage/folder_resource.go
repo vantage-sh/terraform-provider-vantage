@@ -24,13 +24,6 @@ func NewFolderResource() resource.Resource {
 	return &FolderResource{}
 }
 
-type FolderResourceModel struct {
-	Title             types.String `tfsdk:"title"`
-	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
-	Token             types.String `tfsdk:"token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-}
-
 func (r *FolderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_folder"
 }
@@ -55,6 +48,12 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"saved_filter_tokens": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Tokens of the saved filters to apply to any reports contained in this folder.",
+			},
 			"token": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Unique folder identifier",
@@ -68,7 +67,7 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 }
 
 func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *FolderResourceModel
+	var data *folder
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -77,12 +76,23 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	sft := []types.String{}
+	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
+		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
+		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	params := foldersv2.NewCreateFolderParams()
 	rf := &modelsv2.PostFolders{
 		Title:             data.Title.ValueStringPointer(),
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		WorkspaceToken:    data.WorkspaceToken.ValueString(),
+		SavedFilterTokens: fromStringsValue(sft),
 	}
+
 	params.WithFolders(rf)
 	out, err := r.client.V2.Folders.CreateFolder(params, r.client.Auth)
 	if err != nil {
@@ -94,12 +104,18 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 	data.Title = types.StringValue(out.Payload.Title)
 	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	data.SavedFilterTokens = savedFilterTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *FolderResourceModel
+	var state *folder
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -123,15 +139,29 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.Title = types.StringValue(out.Payload.Title)
-
+	savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	state.SavedFilterTokens = savedFilterTokens
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *FolderResourceModel
+	var data *folder
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	sft := []types.String{}
+	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
+		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
+		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	params := foldersv2.NewUpdateFolderParams()
@@ -139,7 +169,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	model := &modelsv2.PutFolders{
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		Title:             data.Title.ValueString(),
-		// WorkspaceToken:    data.Title.WorkspaceToken(),
+		SavedFilterTokens: fromStringsValue(sft),
 	}
 	params.WithFolders(model)
 	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
@@ -151,12 +181,18 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
 	data.Title = types.StringValue(out.Payload.Title)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	data.SavedFilterTokens = savedFilterTokens
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r FolderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *FolderResourceModel
+	var state *folder
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

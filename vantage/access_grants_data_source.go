@@ -18,17 +18,6 @@ func NewAccessGrantsDataSource() datasource.DataSource {
 	return &accessGrantsDataSource{}
 }
 
-type accessGrantDataSourceModel struct {
-	Token         types.String `tfsdk:"token"`
-	TeamToken     types.String `tfsdk:"team_token"`
-	ResourceToken types.String `tfsdk:"resource_token"`
-	Access        types.String `tfsdk:"access"`
-}
-
-type accessGrantsDataSourceModel struct {
-	AccessGrants []accessGrantDataSourceModel `tfsdk:"access_grants"`
-}
-
 type accessGrantsDataSource struct {
 	client *Client
 }
@@ -49,7 +38,7 @@ func (d *accessGrantsDataSource) Metadata(_ context.Context, req datasource.Meta
 
 // Read implements datasource.DataSource.
 func (d *accessGrantsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state accessGrantsDataSourceModel
+	var state accessGrants
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 
@@ -63,10 +52,10 @@ func (d *accessGrantsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	accessGrants := []accessGrantDataSourceModel{}
+	accessGrants := []accessGrant{}
 
 	for _, ag := range out.Payload.AccessGrants {
-		accessGrants = append(accessGrants, accessGrantDataSourceModel{
+		accessGrants = append(accessGrants, accessGrant{
 			Token:         types.StringValue(ag.Token),
 			TeamToken:     types.StringValue(ag.TeamToken),
 			ResourceToken: types.StringValue(ag.ResourceToken),

@@ -18,19 +18,6 @@ func NewTeamsDataSource() datasource.DataSource {
 	return &teamsDataSource{}
 }
 
-type teamDataSourceModel struct {
-	Token           types.String `tfsdk:"token"`
-	Name            types.String `tfsdk:"name"`
-	Description     types.String `tfsdk:"description"`
-	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
-	UserTokens      types.Set    `tfsdk:"user_tokens"`
-	UserEmails      types.Set    `tfsdk:"user_emails"`
-}
-
-type teamsDataSourceModel struct {
-	Teams []teamDataSourceModel `tfsdk:"teams"`
-}
-
 type teamsDataSource struct {
 	client *Client
 }
@@ -51,7 +38,7 @@ func (d *teamsDataSource) Metadata(ctx context.Context, req datasource.MetadataR
 
 // Read implements datasource.DataSource.
 func (d *teamsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state teamsDataSourceModel
+	var state teams
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := teamsv2.NewGetTeamsParams()
 	out, err := d.client.V2.Teams.GetTeams(params, d.client.Auth)
@@ -63,30 +50,30 @@ func (d *teamsDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	teams := []teamDataSourceModel{}
-	for _, team := range out.Payload.Teams {
-		workspaceTokens, diag := types.SetValueFrom(ctx, types.StringType, team.WorkspaceTokens)
+	teams := []team{}
+	for _, t := range out.Payload.Teams {
+		workspaceTokens, diag := types.SetValueFrom(ctx, types.StringType, t.WorkspaceTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
 
-		userTokens, diag := types.SetValueFrom(ctx, types.StringType, team.UserTokens)
+		userTokens, diag := types.SetValueFrom(ctx, types.StringType, t.UserTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
 
-		userEmails, diag := types.SetValueFrom(ctx, types.StringType, team.UserEmails)
+		userEmails, diag := types.SetValueFrom(ctx, types.StringType, t.UserEmails)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
 
-		teams = append(teams, teamDataSourceModel{
-			Token:           types.StringValue(team.Token),
-			Name:            types.StringValue(team.Name),
-			Description:     types.StringValue(team.Description),
+		teams = append(teams, team{
+			Token:           types.StringValue(t.Token),
+			Name:            types.StringValue(t.Name),
+			Description:     types.StringValue(t.Description),
 			WorkspaceTokens: workspaceTokens,
 			UserTokens:      userTokens,
 			UserEmails:      userEmails,

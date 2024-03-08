@@ -22,20 +22,6 @@ type costReportsDataSource struct {
 	client *Client
 }
 
-type costReportDataSourceModel struct {
-	Token             types.String `tfsdk:"token"`
-	Title             types.String `tfsdk:"title"`
-	Filter            types.String `tfsdk:"filter"`
-	FolderToken       types.String `tfsdk:"folder_token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-	Groupings         types.String `tfsdk:"groupings"`
-}
-
-type costReportsDataSourceModel struct {
-	CostReports []costReportDataSourceModel `tfsdk:"cost_reports"`
-}
-
 func (d *costReportsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_cost_reports"
 }
@@ -77,7 +63,7 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 }
 
 func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state costReportsDataSourceModel
+	var state costReports
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 
@@ -91,7 +77,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	costReports := []costReportDataSourceModel{}
+	costReports := []costReport{}
 
 	for _, r := range out.Payload.CostReports {
 		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, r.SavedFilterTokens)
@@ -99,7 +85,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		costReports = append(costReports, costReportDataSourceModel{
+		costReports = append(costReports, costReport{
 			Title:             types.StringValue(r.Title),
 			Token:             types.StringValue(r.Token),
 			Filter:            types.StringValue(r.Filter),
