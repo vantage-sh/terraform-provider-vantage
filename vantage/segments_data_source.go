@@ -18,21 +18,21 @@ func NewSegmentsDataSource() datasource.DataSource {
 	return &segmentsDataSource{}
 }
 
-type segmentDataSourceModel struct {
-	Token              types.String `tfsdk:"token"`
-	Title              types.String `tfsdk:"title"`
-	Description        types.String `tfsdk:"description"`
-	ParentFolder       types.String `tfsdk:"parent_folder"`
-	ParentSegmentToken types.String `tfsdk:"parent_segment_token"`
-	TrackUnallocated   types.Bool   `tfsdk:"track_unallocated"`
-	Priority           types.Int64  `tfsdk:"priority"`
-	WorkspaceToken     types.String `tfsdk:"workspace_token"`
-	Filter             types.String `tfsdk:"filter"`
-}
+// type segmentDataSourceModel struct {
+// 	Token              types.String `tfsdk:"token"`
+// 	Title              types.String `tfsdk:"title"`
+// 	Description        types.String `tfsdk:"description"`
+// 	ParentFolder       types.String `tfsdk:"parent_folder"`
+// 	ParentSegmentToken types.String `tfsdk:"parent_segment_token"`
+// 	TrackUnallocated   types.Bool   `tfsdk:"track_unallocated"`
+// 	Priority           types.Int64  `tfsdk:"priority"`
+// 	WorkspaceToken     types.String `tfsdk:"workspace_token"`
+// 	Filter             types.String `tfsdk:"filter"`
+// }
 
-type segmentsDataSourceModel struct {
-	Segments []segmentDataSourceModel `tfsdk:"segments"`
-}
+// type segmentsDataSourceModel struct {
+// 	Segments []segmentDataSourceModel `tfsdk:"segments"`
+// }
 
 type segmentsDataSource struct {
 	client *Client
@@ -53,7 +53,7 @@ func (d *segmentsDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Read implements datasource.DataSource.
 func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state segmentsDataSourceModel
+	var state segments
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := segmentsv2.NewGetSegmentsParams()
 	out, err := d.client.V2.Segments.GetSegments(params, d.client.Auth)
@@ -65,17 +65,17 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	for _, segment := range out.Payload.Segments {
+	for _, s := range out.Payload.Segments {
 
-		state.Segments = append(state.Segments, segmentDataSourceModel{
-			Token:              types.StringValue(segment.Token),
-			Title:              types.StringValue(segment.Title),
-			ParentSegmentToken: types.StringValue(segment.ParentSegmentToken),
-			Description:        types.StringValue(segment.Description),
-			TrackUnallocated:   types.BoolValue(segment.TrackUnallocated),
-			Priority:           types.Int64Value(int64(segment.Priority)),
-			Filter:             types.StringValue(segment.Filter),
-			WorkspaceToken:     types.StringValue(segment.WorkspaceToken),
+		state.Segments = append(state.Segments, segment{
+			Token:              types.StringValue(s.Token),
+			Title:              types.StringValue(s.Title),
+			ParentSegmentToken: types.StringValue(s.ParentSegmentToken),
+			Description:        types.StringValue(s.Description),
+			TrackUnallocated:   types.BoolValue(s.TrackUnallocated),
+			Priority:           types.Int64Value(int64(s.Priority)),
+			Filter:             types.StringValue(s.Filter),
+			WorkspaceToken:     types.StringValue(s.WorkspaceToken),
 		})
 	}
 
@@ -88,6 +88,38 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 func (d *segmentsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{},
+		Attributes: map[string]schema.Attribute{
+			"segments": schema.ListNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"token": schema.StringAttribute{
+							Computed: true,
+						},
+						"title": schema.StringAttribute{
+							Computed: true,
+						},
+						"description": schema.StringAttribute{
+							Computed: true,
+						},
+						"workspace_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"parent_segment_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"priority": schema.Int64Attribute{
+							Computed: true,
+						},
+						"track_unallocated": schema.BoolAttribute{
+							Computed: true,
+						},
+						"filter": schema.StringAttribute{
+							Computed: true,
+						},
+					},
+				},
+				Computed: true,
+			},
+		},
 	}
 }

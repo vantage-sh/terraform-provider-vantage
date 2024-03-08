@@ -26,17 +26,6 @@ func NewSegmentResource() resource.Resource {
 	return &SegmentResource{}
 }
 
-type SegmentResourceModel struct {
-	Title              types.String `tfsdk:"title"`
-	Description        types.String `tfsdk:"description"`
-	Priority           types.Int64  `tfsdk:"priority"`
-	WorkspaceToken     types.String `tfsdk:"workspace_token"`
-	Filter             types.String `tfsdk:"filter"`
-	ParentSegmentToken types.String `tfsdk:"parent_segment_token"`
-	Token              types.String `tfsdk:"token"`
-	TrackUnallocated   types.Bool   `tfsdk:"track_unallocated"`
-}
-
 func (r *SegmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_segment"
 }
@@ -96,7 +85,7 @@ func (r SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest,
 }
 
 func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *SegmentResourceModel
+	var data *segment
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -134,7 +123,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 }
 
 func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *SegmentResourceModel
+	var state *segment
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -166,7 +155,7 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *SegmentResourceModel
+	var data *segment
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,7 +193,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 }
 
 func (r SegmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *SegmentResourceModel
+	var state *segment
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

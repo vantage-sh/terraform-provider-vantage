@@ -77,3 +77,18 @@ type savedFilter struct {
 type savedFilters struct {
 	Filters []savedFilter `tfsdk:"filters"`
 }
+
+type segment struct {
+	Title              types.String `tfsdk:"title"`
+	Description        types.String `tfsdk:"description"`
+	Priority           types.Int64  `tfsdk:"priority"`
+	WorkspaceToken     types.String `tfsdk:"workspace_token"`
+	Filter             types.String `tfsdk:"filter"`
+	ParentSegmentToken types.String `tfsdk:"parent_segment_token"`
+	Token              types.String `tfsdk:"token"`
+	TrackUnallocated   types.Bool   `tfsdk:"track_unallocated"`
+}
+
+type segments struct {
+	Segments []segment `tfsdk:"segments"`
+}
