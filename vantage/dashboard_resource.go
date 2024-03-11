@@ -21,14 +21,15 @@ func NewDashboardResource() resource.Resource {
 }
 
 type DashboardResourceModel struct {
-	Token          types.String `tfsdk:"token"`
-	Title          types.String `tfsdk:"title"`
-	WidgetTokens   types.List   `tfsdk:"widget_tokens"`
-	DateBin        types.String `tfsdk:"date_bin"`
-	DateInterval   types.String `tfsdk:"date_interval"`
-	StartDate      types.String `tfsdk:"start_date"`
-	EndDate        types.String `tfsdk:"end_date"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
+	Token          		types.String `tfsdk:"token"`
+	Title          		types.String `tfsdk:"title"`
+	WidgetTokens   		types.List   `tfsdk:"widget_tokens"`
+	DateBin        		types.String `tfsdk:"date_bin"`
+	DateInterval   		types.String `tfsdk:"date_interval"`
+	StartDate      		types.String `tfsdk:"start_date"`
+	EndDate        		types.String `tfsdk:"end_date"`
+	WorkspaceToken 		types.String `tfsdk:"workspace_token"`
+	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 }
 
 func (r *DashboardResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -93,6 +94,11 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"saved_filter_tokens": schema.ListAttribute{
+				ElementType:         types.StringType,
+				MarkdownDescription: "Tokens of the saved filters used in the Dashboard.",
+				Optional: 					 true,
+			},
 		},
 		MarkdownDescription: "Manages a Dashboard.",
 	}
@@ -114,15 +120,25 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
+	savedFilterTokens := []types.String{}
+	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
+		savedFilterTokens = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
+		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &savedFilterTokens, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	params := dashboardsv2.NewCreateDashboardParams()
 	body := &modelsv2.PostDashboards{
-		Title:          data.Title.ValueStringPointer(),
-		WidgetTokens:   fromStringsValue(widgetTokens),
-		DateBin:        data.DateBin.ValueString(),
-		DateInterval:   data.DateInterval.ValueString(),
-		StartDate:      data.StartDate.ValueString(),
-		EndDate:        data.EndDate.ValueStringPointer(),
-		WorkspaceToken: data.WorkspaceToken.ValueString(),
+		Title:          		data.Title.ValueStringPointer(),
+		WidgetTokens:   		fromStringsValue(widgetTokens),
+		DateBin:        		data.DateBin.ValueString(),
+		DateInterval:   		data.DateInterval.ValueString(),
+		StartDate:      		data.StartDate.ValueString(),
+		EndDate:        		data.EndDate.ValueStringPointer(),
+		WorkspaceToken: 		data.WorkspaceToken.ValueString(),
+		SavedFilterTokens:  fromStringsValue(savedFilterTokens),
 	}
 	params.WithDashboards(body)
 	out, err := r.client.V2.Dashboards.CreateDashboard(params, r.client.Auth)
@@ -180,6 +196,12 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	state.WidgetTokens = widgets
+	saved_filters, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
+	}
+	state.SavedFilterTokens = saved_filters
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -200,11 +222,21 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
+	savedFilterTokens := []types.String{}
+	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
+		savedFilterTokens = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
+		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &savedFilterTokens, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	params := dashboardsv2.NewUpdateDashboardParams()
 	body := &modelsv2.PutDashboards{
-		Title:        data.Title.ValueString(),
-		WidgetTokens: fromStringsValue(widgetTokens),
-		DateBin:      data.DateBin.ValueString(),
+		Title:        			data.Title.ValueString(),
+		WidgetTokens: 			fromStringsValue(widgetTokens),
+		SavedFilterTokens:  fromStringsValue(savedFilterTokens),
+		DateBin:      			data.DateBin.ValueString(),
 	}
 	if data.DateInterval.ValueString() == "" || data.DateInterval.ValueString() == "custom" {
 		body.StartDate = data.StartDate.ValueString()

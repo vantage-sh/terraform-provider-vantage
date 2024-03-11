@@ -36,6 +36,7 @@ resource "vantage_dashboard" "demo_dashboard" {
 - `date_interval` (String) Determines the date range in the Dashboard. Guaranteed to be set to 'custom' if 'start_date' and 'end_date' are set.
 - `end_date` (String) The end date for the date range for CostReports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.
 - `start_date` (String) The start date for the date range for CostReports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.
+- `saved_filter_tokens` (List of String) The tokens for SavedFilters that are applied to CostReports in the Dashboard.
 
 ### Read-Only
 

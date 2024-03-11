@@ -19,14 +19,15 @@ func NewDashboardsDataSource() datasource.DataSource {
 }
 
 type dashboardDataSourceModel struct {
-	Token          types.String `tfsdk:"token"`
-	Title          types.String `tfsdk:"title"`
-	WidgetTokens   types.List   `tfsdk:"widget_tokens"`
-	DateBin        types.String `tfsdk:"date_bin"`
-	DateInterval   types.String `tfsdk:"date_interval"`
-	StartDate      types.String `tfsdk:"start_date"`
-	EndDate        types.String `tfsdk:"end_date"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
+	Token          		types.String `tfsdk:"token"`
+	Title          		types.String `tfsdk:"title"`
+	WidgetTokens   		types.List   `tfsdk:"widget_tokens"`
+	DateBin        		types.String `tfsdk:"date_bin"`
+	DateInterval   		types.String `tfsdk:"date_interval"`
+	StartDate      		types.String `tfsdk:"start_date"`
+	EndDate        		types.String `tfsdk:"end_date"`
+	WorkspaceToken 		types.String `tfsdk:"workspace_token"`
+	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 }
 
 type dashboardsDataSourceModel struct {
@@ -79,6 +80,14 @@ func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			return
 		}
 		dashboardModel.WidgetTokens = widgetTokens
+
+		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, dashboard.SavedFilterTokens)
+		if diag.HasError() {
+			resp.Diagnostics.Append(diag...)
+			return
+		}
+		dashboardModel.SavedFilterTokens = savedFilterTokens
+
 		state.Dashboards = append(state.Dashboards, dashboardModel)
 	}
 
@@ -119,6 +128,10 @@ func (d *dashboardsDataSource) Schema(ctx context.Context, req datasource.Schema
 						},
 						"workspace_token": schema.StringAttribute{
 							Computed: true,
+						},
+						"saved_filter_tokens": schema.ListAttribute{
+							ElementType: types.StringType,
+							Computed:    true,
 						},
 					},
 				},
