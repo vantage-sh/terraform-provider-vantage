@@ -27,11 +27,11 @@ Read-Only:
 - `date_bin` (String)
 - `date_interval` (String)
 - `end_date` (String)
+- `saved_filter_tokens` (List of String)
 - `start_date` (String)
 - `title` (String)
 - `token` (String)
 - `widget_tokens` (List of String)
-- `saved_filter_tokens` (List of String)
 - `workspace_token` (String)
 
 
