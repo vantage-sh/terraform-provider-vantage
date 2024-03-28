@@ -88,6 +88,38 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 func (d *segmentsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{},
+		Attributes: map[string]schema.Attribute{
+			"segments": schema.ListNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"token": schema.StringAttribute{
+							Computed: true,
+						},
+						"title": schema.StringAttribute{
+							Computed: true,
+						},
+						"description": schema.StringAttribute{
+							Computed: true,
+						},
+						"parent_segment_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"track_unallocated": schema.BoolAttribute{
+							Computed: true,
+						},
+						"priority": schema.Int64Attribute{
+							Computed: true,
+						},
+						"workspace_token": schema.StringAttribute{
+							Computed: true,
+						},
+						"filter": schema.StringAttribute{
+							Computed: true,
+						},
+					},
+				},
+				Computed: true,
+			},
+		},
 	}
 }
