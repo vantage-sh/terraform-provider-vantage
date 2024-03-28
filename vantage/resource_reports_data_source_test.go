@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -32,8 +33,12 @@ func testAccVantageCheckReportsExist(resourceName string) resource.TestCheckFunc
 		if !ok {
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
+		numReports, err := strconv.Atoi(reports.Primary.Attributes["resource_reports.#"])
+		if err != nil {
+			return err
+		}
 
-		if len(reports.Primary.Attributes) > 0 {
+		if numReports > 0 {
 			return nil
 		}
 
