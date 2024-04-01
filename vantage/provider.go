@@ -149,6 +149,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewWorkspacesDataSource,
 		NewDashboardsDataSource,
 		NewSegmentsDataSource,
+		NewResourceReportsDataSource,
 	}
 }
 
