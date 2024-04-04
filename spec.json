@@ -99,6 +99,106 @@
 					}
 				]
 			}
+		},
+		{
+			"name": "kubernetes_efficiency_reports",
+			"schema": {
+				"attributes": [
+					{
+						"name": "kubernetes_efficiency_reports",
+						"list_nested": {
+							"computed_optional_required": "computed",
+							"nested_object": {
+								"attributes": [
+									{
+										"name": "aggregated_by",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "How costs are aggregated by. Possible values: idle_costs, amount."
+										}
+									},
+									{
+										"name": "created_at",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The date and time, in UTC, the report was created. ISO 8601 Formatted."
+										}
+									},
+									{
+										"name": "date_bucket",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "How costs are grouped and displayed in the KubernetesEfficiencyReport. Possible values: day, week, month."
+										}
+									},
+									{
+										"name": "date_interval",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The date range for the KubernetesEfficiencyReport. Only present if a custom date range is not specified."
+										}
+									},
+									{
+										"name": "default",
+										"bool": {
+											"computed_optional_required": "computed",
+											"description": "Indicates whether the KubernetesEfficiencyReport is the default report."
+										}
+									},
+									{
+										"name": "end_date",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The end date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted."
+										}
+									},
+									{
+										"name": "groupings",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The grouping aggregations applied to the filtered data."
+										}
+									},
+									{
+										"name": "start_date",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The start date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted."
+										}
+									},
+									{
+										"name": "title",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The title of the KubernetesEfficiencyReport."
+										}
+									},
+									{
+										"name": "token",
+										"string": {
+											"computed_optional_required": "computed"
+										}
+									},
+									{
+										"name": "user_token",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The token for the User who created this KubernetesEfficiencyReport."
+										}
+									},
+									{
+										"name": "workspace_token",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The token for the Workspace the KubernetesEfficiencyReport is a part of."
+										}
+									}
+								]
+							}
+						}
+					}
+				]
+			}
 		}
 	],
 	"provider": {

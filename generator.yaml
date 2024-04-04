@@ -11,3 +11,12 @@ data_sources:
         - limit
         - links
         - page
+  kubernetes_efficiency_reports:
+    read:
+      path: /kubernetes_efficiency_reports
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
