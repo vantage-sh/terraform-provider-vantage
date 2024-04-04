@@ -33,7 +33,7 @@ resource "vantage_dashboard" "demo_dashboard" {
   title           = "Demo Dashboard"
   date_interval   = "last_month"
   workspace_token = "wrkspc_47c3254c790e9351"
-  saved_filter_tokens = [vantage_saved_filter.demo_filter.token]
+  # saved_filter_tokens = [vantage_saved_filter.demo_filter.token]
 }
 
 resource "vantage_team" "demo_team" {
@@ -52,3 +52,12 @@ resource "vantage_access_grant" "demo_access_grant" {
   team_token     = vantage_team.demo_team.token
   resource_token = vantage_dashboard.demo_dashboard.token
 }
+
+data "vantage_financial_commitment_reports" "all" {
+}
+
+output "all_financial_commitment_reports" {
+  value = data.vantage_financial_commitment_reports.all
+}
+ 
+

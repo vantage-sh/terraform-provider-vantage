@@ -1,0 +1,13 @@
+provider:
+  name: vantage
+
+data_sources:
+  financial_commitment_reports:
+    read:
+      path: /financial_commitment_reports
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
