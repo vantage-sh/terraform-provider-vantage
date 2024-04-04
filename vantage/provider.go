@@ -154,6 +154,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewKubernetesEfficiencyReportsDataSource,
 		NewReportNotificationsDataSource,
 		NewAnomalyNotificationsDataSource,
+		NewVirtualTagConfigsDataSource,
 	}
 }
 
@@ -170,5 +171,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewAccessGrantResource,
 		NewReportNotificationResource,
 		NewAnomalyNotificationResource,
+		NewVirtualTagConfigResource,
 	}
 }
