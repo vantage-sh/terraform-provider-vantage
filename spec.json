@@ -199,10 +199,151 @@
 					}
 				]
 			}
+		},
+		{
+			"name": "report_notifications",
+			"schema": {
+				"attributes": [
+					{
+						"name": "report_notifications",
+						"list_nested": {
+							"computed_optional_required": "computed",
+							"nested_object": {
+								"attributes": [
+									{
+										"name": "change",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The type of change the ReportNotification is tracking."
+										}
+									},
+									{
+										"name": "cost_report_token",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The token for a CostReport the ReportNotification is applied to."
+										}
+									},
+									{
+										"name": "frequency",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The frequency the ReportNotification is sent."
+										}
+									},
+									{
+										"name": "recipient_channels",
+										"list": {
+											"computed_optional_required": "computed",
+											"element_type": {
+												"string": {}
+											},
+											"description": "The Slack or Microsoft Teams channels that receive the notification."
+										}
+									},
+									{
+										"name": "title",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The title of the ReportNotification."
+										}
+									},
+									{
+										"name": "token",
+										"string": {
+											"computed_optional_required": "computed"
+										}
+									},
+									{
+										"name": "user_tokens",
+										"list": {
+											"computed_optional_required": "computed",
+											"element_type": {
+												"string": {}
+											},
+											"description": "The Users that receive the notification."
+										}
+									}
+								]
+							}
+						}
+					}
+				]
+			}
 		}
 	],
 	"provider": {
 		"name": "vantage"
 	},
+	"resources": [
+		{
+			"name": "report_notification",
+			"schema": {
+				"attributes": [
+					{
+						"name": "change",
+						"string": {
+							"computed_optional_required": "required",
+							"description": "The type of change the ReportNotification is tracking. Possible values: percentage, dollars."
+						}
+					},
+					{
+						"name": "cost_report_token",
+						"string": {
+							"computed_optional_required": "required",
+							"description": "The CostReport token."
+						}
+					},
+					{
+						"name": "frequency",
+						"string": {
+							"computed_optional_required": "required",
+							"description": "The frequency the ReportNotification is sent. Possible values: daily, weekly, monthly."
+						}
+					},
+					{
+						"name": "recipient_channels",
+						"list": {
+							"computed_optional_required": "computed_optional",
+							"element_type": {
+								"string": {}
+							},
+							"description": "The Slack or Microsoft Teams channels that receive the notification."
+						}
+					},
+					{
+						"name": "title",
+						"string": {
+							"computed_optional_required": "required",
+							"description": "The title of the ReportNotification."
+						}
+					},
+					{
+						"name": "user_tokens",
+						"list": {
+							"computed_optional_required": "computed_optional",
+							"element_type": {
+								"string": {}
+							},
+							"description": "The Users that receive the notification."
+						}
+					},
+					{
+						"name": "workspace_token",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"description": "The token of the Workspace to add the ReportNotification to. Required if the API token is associated with multiple Workspaces."
+						}
+					},
+					{
+						"name": "token",
+						"string": {
+							"computed_optional_required": "computed"
+						}
+					}
+				]
+			}
+		}
+	],
 	"version": "0.1"
 }
