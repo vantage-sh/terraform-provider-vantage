@@ -68,4 +68,3 @@ resource "vantage_access_grant" "demo_access_grant" {
 # }
  
 
-

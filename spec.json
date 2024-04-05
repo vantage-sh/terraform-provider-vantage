@@ -1,6 +1,106 @@
 {
 	"datasources": [
 		{
+			"name": "anomaly_alerts",
+			"schema": {
+				"attributes": [
+					{
+						"name": "anomaly_alerts",
+						"list_nested": {
+							"computed_optional_required": "computed",
+							"nested_object": {
+								"attributes": [
+									{
+										"name": "alerted_at",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The date and time, in UTC, the AnomalyAlert is sent. ISO 8601 Formatted."
+										}
+									},
+									{
+										"name": "amount",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The amount observed."
+										}
+									},
+									{
+										"name": "category",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The category of the AnomalyAlert."
+										}
+									},
+									{
+										"name": "cost_report_token",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The token of the Report associated with the AnomalyAlert."
+										}
+									},
+									{
+										"name": "created_at",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The date and time, in UTC, the AnomalyAlert was created. ISO 8601 Formatted."
+										}
+									},
+									{
+										"name": "feedback",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The user-provided feedback of why alert was ignored/archived."
+										}
+									},
+									{
+										"name": "previous_amount",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The previous amount observed."
+										}
+									},
+									{
+										"name": "provider",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The provider of the service causing the AnomalyAlert."
+										}
+									},
+									{
+										"name": "service",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The provider service causing the AnomalyAlert."
+										}
+									},
+									{
+										"name": "seven_day_average",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The seven day average of the amount observed."
+										}
+									},
+									{
+										"name": "status",
+										"string": {
+											"computed_optional_required": "computed",
+											"description": "The status of the AnomalyAlert."
+										}
+									},
+									{
+										"name": "token",
+										"string": {
+											"computed_optional_required": "computed"
+										}
+									}
+								]
+							}
+						}
+					}
+				]
+			}
+		},
+		{
 			"name": "financial_commitment_reports",
 			"schema": {
 				"attributes": [

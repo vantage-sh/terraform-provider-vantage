@@ -2,6 +2,15 @@ provider:
   name: vantage
 
 data_sources:
+  anomaly_alerts:
+    read:
+      path: /anomaly_alerts
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
   financial_commitment_reports:
     read:
       path: /financial_commitment_reports
