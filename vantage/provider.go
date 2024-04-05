@@ -153,6 +153,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewFinancialCommitmentReportsDataSource,
 		NewKubernetesEfficiencyReportsDataSource,
 		NewReportNotificationsDataSource,
+		NewReportAlertsDataSource,
 	}
 }
 
@@ -168,5 +169,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewTeamResource,
 		NewAccessGrantResource,
 		NewReportNotificationResource,
+		NewReportAlertResource,
 	}
 }

@@ -6,4 +6,4 @@ generate:
 	@echo "Generating Terraform code from OpenAPI spec"
 	tfplugingen-framework generate resources --input spec.json --output vantage
 	tfplugingen-framework generate data-sources --input spec.json --output vantage
-	rm tmp.json
+	rm spec.json tmp.json
