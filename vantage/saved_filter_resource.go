@@ -70,12 +70,12 @@ func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	params := filtersv2.NewCreateSavedFilterParams()
-	body := &modelsv2.PostSavedFilters{
+	body := &modelsv2.CreateSavedFilter{
 		Title:          data.Title.ValueStringPointer(),
 		Filter:         data.Filter.ValueString(),
 		WorkspaceToken: data.WorkspaceToken.ValueString(),
 	}
-	params.WithSavedFilters(body)
+	params.WithCreateSavedFilter(body)
 	out, err := r.client.V2.Filters.CreateSavedFilter(params, r.client.Auth)
 	if err != nil {
 		//TODO(macb): Surface 400 errors more clearly.
@@ -129,11 +129,11 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	params := filtersv2.NewUpdateSavedFilterParams()
 	params.WithSavedFilterToken(data.Token.ValueString())
-	model := &modelsv2.PutSavedFilters{
+	model := &modelsv2.UpdateSavedFilter{
 		Title:  data.Title.ValueString(),
 		Filter: data.Filter.ValueString(),
 	}
-	params.WithSavedFilters(model)
+	params.WithUpdateSavedFilter(model)
 	out, err := r.client.V2.Filters.UpdateSavedFilter(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Saved Filter Resource", &resp.Diagnostics, err)

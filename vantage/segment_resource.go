@@ -106,7 +106,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	params := segmentsv2.NewCreateSegmentParams()
-	body := &modelsv2.PostSegments{
+	body := &modelsv2.CreateSegment{
 		Title:              data.Title.ValueStringPointer(),
 		Filter:             data.Filter.ValueString(),
 		ParentSegmentToken: data.ParentSegmentToken.ValueString(),
@@ -115,7 +115,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 		TrackUnallocated:   data.TrackUnallocated.ValueBoolPointer(),
 	}
 
-	params.WithSegments(body)
+	params.WithCreateSegment(body)
 	out, err := r.client.V2.Segments.CreateSegment(params, r.client.Auth)
 	if err != nil {
 		handleError("Create Segment Resource", &resp.Diagnostics, err)
@@ -175,7 +175,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 	params := segmentsv2.NewUpdateSegmentParams()
 	params.SetSegmentToken(data.Token.ValueString())
 
-	model := &modelsv2.PutSegments{
+	model := &modelsv2.UpdateSegment{
 		Title:              data.Title.ValueString(),
 		Filter:             data.Filter.ValueString(),
 		ParentSegmentToken: data.ParentSegmentToken.ValueString(),
@@ -183,7 +183,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Priority:           int32(data.Priority.ValueInt64()),
 		TrackUnallocated:   data.TrackUnallocated.ValueBoolPointer(),
 	}
-	params.WithSegments(model)
+	params.WithUpdateSegment(model)
 
 	out, err := r.client.V2.Segments.UpdateSegment(params, r.client.Auth)
 

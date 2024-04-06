@@ -106,7 +106,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	params := costsv2.NewCreateCostReportParams()
-	body := &modelsv2.PostCostReports{
+	body := &modelsv2.CreateCostReport{
 		Title:             data.Title.ValueStringPointer(),
 		FolderToken:       data.FolderToken.ValueString(),
 		Filter:            data.Filter.ValueString(),
@@ -114,7 +114,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		SavedFilterTokens: fromStringsValue(sft),
 		WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
-	params.WithCostReports(body)
+	params.WithCreateCostReport(body)
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
 	if err != nil {
 		//TODO(macb): Surface 400 errors more clearly.
@@ -192,14 +192,14 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 
 	params := costsv2.NewUpdateCostReportParams()
 	params.WithCostReportToken(data.Token.ValueString())
-	model := &modelsv2.PutCostReports{
+	model := &modelsv2.UpdateCostReport{
 		FolderToken:       data.FolderToken.ValueString(),
 		Title:             data.Title.ValueString(),
 		Filter:            data.Filter.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
 		Groupings:         data.Groupings.ValueString(),
 	}
-	params.WithCostReports(model)
+	params.WithUpdateCostReport(model)
 	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Cost Report Resource", &resp.Diagnostics, err)

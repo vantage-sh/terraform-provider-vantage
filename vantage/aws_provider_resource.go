@@ -64,11 +64,11 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	params := integrationsv1.NewCreateIntegrationsAWSParams()
-	model := &modelsv1.PostIntegrationsAws{
+	model := &modelsv1.CreateIntegrationsAWS{
 		CrossAccountArn: data.CrossAccountARN.ValueStringPointer(),
 		BucketArn:       data.BucketARN.ValueString(),
 	}
-	params.WithIntegrationsAws(model)
+	params.WithCreateIntegrationsAWS(model)
 	out, err := r.client.V1.Integrations.CreateIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
 		handleError("Create AWS Integration", &resp.Diagnostics, err)
@@ -144,11 +144,11 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	params := integrationsv1.NewPutIntegrationsAWSParams()
 	params.SetAccessCredentialID(int32(data.Id.ValueInt64()))
-	m := &modelsv1.PutIntegrationsAws{
+	m := &modelsv1.PutIntegrationsAWS{
 		CrossAccountArn: data.CrossAccountARN.ValueStringPointer(),
 		BucketArn:       *data.BucketARN.ValueStringPointer(),
 	}
-	params.WithIntegrationsAws(m)
+	params.WithPutIntegrationsAWS(m)
 	out, err := r.client.V1.Integrations.PutIntegrationsAWS(params, r.client.Auth)
 	if err != nil {
 		handleError("Update AWS Integration", &resp.Diagnostics, err)

@@ -68,14 +68,14 @@ func (r *reportAlertResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
-	postReportAlert := &modelsv2.PostReportAlerts{
+	createReportAlert := &modelsv2.CreateReportAlert{
 		CostReportToken:   data.CostReportToken.ValueStringPointer(),
 		Threshold:         int32(data.Threshold.ValueInt64()),
 		UserTokens:        fromStringsValue(userTokens),
 		RecipientChannels: fromStringsValue(recipientChannels),
 	}
 
-	params.WithReportAlerts(postReportAlert)
+	params.WithCreateReportAlert(createReportAlert)
 	out, err := r.client.V2.ReportAlerts.CreateReportAlert(params, r.client.Auth)
 
 	if err != nil {
@@ -153,13 +153,13 @@ func (r *reportAlertResource) Update(ctx context.Context, req resource.UpdateReq
 	var recipientChannels []string
 	recipientChannelsList.ElementsAs(ctx, recipientChannels, false)
 
-	putReportAlert := &modelsv2.PutReportAlerts{
+	updateReportAlert := &modelsv2.UpdateReportAlert{
 		Threshold:         int32(data.Threshold.ValueInt64()),
 		UserTokens:        userTokens,
 		RecipientChannels: recipientChannels,
 	}
 
-	params.WithReportAlerts(putReportAlert)
+	params.WithUpdateReportAlert(updateReportAlert)
 	out, err := r.client.V2.ReportAlerts.UpdateReportAlert(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Report Alert", &resp.Diagnostics, err)

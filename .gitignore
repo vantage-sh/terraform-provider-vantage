@@ -1,7 +1,11 @@
+.envrc
 .terraform
 .terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.backup
-.envrc
+spec.json
+tmp.json
+tmp-swagger.json
 **/dist
 **/bin
+

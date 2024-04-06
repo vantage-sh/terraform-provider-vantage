@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -123,7 +124,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 	}
 
-	rt := &modelsv2.PostTeams{
+	rt := &modelsv2.CreateTeam{
 		Name:            data.Name.ValueStringPointer(),
 		Description:     data.Description.ValueString(),
 		UserTokens:      fromStringsValue(userTokens),
@@ -131,7 +132,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		WorkspaceTokens: fromStringsValue(workspaceTokens),
 	}
 
-	params.WithTeams(rt)
+	params.WithCreateTeam(rt)
 	out, err := r.client.V2.Teams.CreateTeam(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*teamsv2.CreateTeamBadRequest); ok {
@@ -271,7 +272,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	var workspaceTokens []string
 	workspaceTokensList.ElementsAs(ctx, workspaceTokens, false)
 
-	model := &modelsv2.PutTeams{
+	model := &modelsv2.UpdateTeam{
 		Name:            data.Name.ValueString(),
 		Description:     data.Description.ValueString(),
 		UserTokens:      userTokens,
@@ -279,7 +280,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		WorkspaceTokens: workspaceTokens,
 	}
 
-	params.WithTeams(model)
+	params.WithUpdateTeam(model)
 	out, err := r.client.V2.Teams.UpdateTeam(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Team Resource", &resp.Diagnostics, err)
