@@ -152,6 +152,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewResourceReportsDataSource,
 		NewFinancialCommitmentReportsDataSource,
 		NewKubernetesEfficiencyReportsDataSource,
+		NewReportNotificationsDataSource,
 	}
 }
 

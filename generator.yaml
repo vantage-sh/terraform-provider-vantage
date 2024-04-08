@@ -2,6 +2,15 @@ provider:
   name: vantage
 
 data_sources:
+  report_notifications:
+    read:
+      path: /report_notifications
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
   financial_commitment_reports:
     read:
       path: /financial_commitment_reports
