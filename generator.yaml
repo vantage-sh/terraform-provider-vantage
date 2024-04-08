@@ -1,6 +1,28 @@
 provider:
   name: vantage
 
+resources:
+  report_alert:
+    create:
+      path: /report_alerts
+      method: POST
+    read:
+      path: /report_alerts/{report_alert_token}
+      method: GET
+    update:
+      path: /report_alerts/{report_alert_token}
+      method: PUT
+    delete:
+      path: /report_alerts/{report_alert_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the report alert
+        aliases:
+          report_alert_token: token
+
 data_sources:
   report_notifications:
     read:
@@ -23,6 +45,15 @@ data_sources:
   kubernetes_efficiency_reports:
     read:
       path: /kubernetes_efficiency_reports
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  report_alerts:
+    read:
+      path: /report_alerts
       method: GET
     schema:
       ignores:

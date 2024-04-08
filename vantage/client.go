@@ -1,6 +1,7 @@
 package vantage
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -119,4 +120,12 @@ func fromStringsValue(s []types.String) []string {
 	}
 
 	return out
+}
+
+func stringListFrom(in []string) (types.List, diag.Diagnostics) {
+	values := make([]types.String, 0, len(in))
+	for _, v := range in {
+		values = append(values, types.StringValue(v))
+	}
+	return types.ListValueFrom(context.Background(), types.StringType, values)
 }
