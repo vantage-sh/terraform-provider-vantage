@@ -5,24 +5,24 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_report_alert"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_anomaly_notification"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	reportalertsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_alerts"
+	anomalynotifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/anomaly_notifications"
 )
 
-var _ resource.Resource = (*reportAlertResource)(nil)
-var _ resource.ResourceWithConfigure = (*reportAlertResource)(nil)
+var _ resource.Resource = (*anomalyNotificationResource)(nil)
+var _ resource.ResourceWithConfigure = (*anomalyNotificationResource)(nil)
 
-func NewReportAlertResource() resource.Resource {
-	return &reportAlertResource{}
+func NewAnomalyNotificationResource() resource.Resource {
+	return &anomalyNotificationResource{}
 }
 
-type reportAlertResource struct {
+type anomalyNotificationResource struct {
 	client *Client
 }
 
 // Configure implements resource.ResourceWithConfigure.
-func (r *reportAlertResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *anomalyNotificationResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -30,16 +30,16 @@ func (r *reportAlertResource) Configure(_ context.Context, req resource.Configur
 	r.client = req.ProviderData.(*Client)
 }
 
-func (r *reportAlertResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_report_alert"
+func (r *anomalyNotificationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_anomaly_notification"
 }
 
-func (r *reportAlertResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = resource_report_alert.ReportAlertResourceSchema(ctx)
+func (r *anomalyNotificationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = resource_anomaly_notification.AnomalyNotificationResourceSchema(ctx)
 }
 
-func (r *reportAlertResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data resource_report_alert.ReportAlertModel
+func (r *anomalyNotificationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data resource_anomaly_notification.AnomalyNotificationModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -48,7 +48,7 @@ func (r *reportAlertResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	params := reportalertsv2.NewCreateReportAlertParams()
+	params := anomalynotifsv2.NewCreateAnomalyNotificationParams()
 
 	var userTokens []types.String
 	if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
@@ -68,23 +68,23 @@ func (r *reportAlertResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
-	createReportAlert := &modelsv2.CreateReportAlert{
+	createAnomalyNotification := &modelsv2.CreateAnomalyNotification{
 		CostReportToken:   data.CostReportToken.ValueStringPointer(),
 		Threshold:         int32(data.Threshold.ValueInt64()),
 		UserTokens:        fromStringsValue(userTokens),
 		RecipientChannels: fromStringsValue(recipientChannels),
 	}
 
-	params.WithCreateReportAlert(createReportAlert)
-	out, err := r.client.V2.ReportAlerts.CreateReportAlert(params, r.client.Auth)
+	params.WithCreateAnomalyNotification(createAnomalyNotification)
+	out, err := r.client.V2.AnomalyNotifications.CreateAnomalyNotification(params, r.client.Auth)
 
 	if err != nil {
-		if e, ok := err.(*reportalertsv2.CreateReportAlertBadRequest); ok {
-			handleBadRequest("Create Report Alert", &resp.Diagnostics, e.GetPayload())
+		if e, ok := err.(*anomalynotifsv2.CreateAnomalyNotificationBadRequest); ok {
+			handleBadRequest("Create Anomaly Notification", &resp.Diagnostics, e.GetPayload())
 			return
 		}
 
-		handleError("Create Report Alert", &resp.Diagnostics, err)
+		handleError("Create Anomaly Notification", &resp.Diagnostics, err)
 		return
 	}
 
@@ -94,8 +94,8 @@ func (r *reportAlertResource) Create(ctx context.Context, req resource.CreateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *reportAlertResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data resource_report_alert.ReportAlertModel
+func (r *anomalyNotificationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data resource_anomaly_notification.AnomalyNotificationModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -104,16 +104,16 @@ func (r *reportAlertResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	params := reportalertsv2.NewGetReportAlertParams()
-	params.SetReportAlertToken(data.Token.ValueString())
-	out, err := r.client.V2.ReportAlerts.GetReportAlert(params, r.client.Auth)
+	params := anomalynotifsv2.NewGetAnomalyNotificationParams()
+	params.SetAnomalyNotificationToken(data.Token.ValueString())
+	out, err := r.client.V2.AnomalyNotifications.GetAnomalyNotification(params, r.client.Auth)
 	if err != nil {
-		if _, ok := err.(*reportalertsv2.GetReportAlertNotFound); ok {
+		if _, ok := err.(*anomalynotifsv2.GetAnomalyNotificationNotFound); ok {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 
-		handleError("Get Report Alert", &resp.Diagnostics, err)
+		handleError("Get Anomaly Notification", &resp.Diagnostics, err)
 		return
 	}
 
@@ -122,8 +122,8 @@ func (r *reportAlertResource) Read(ctx context.Context, req resource.ReadRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *reportAlertResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_report_alert.ReportAlertModel
+func (r *anomalyNotificationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data resource_anomaly_notification.AnomalyNotificationModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -132,8 +132,8 @@ func (r *reportAlertResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	params := reportalertsv2.NewUpdateReportAlertParams()
-	params.SetReportAlertToken(data.Token.ValueString())
+	params := anomalynotifsv2.NewUpdateAnomalyNotificationParams()
+	params.SetAnomalyNotificationToken(data.Token.ValueString())
 
 	userTokensList, diag := types.ListValueFrom(ctx, types.StringType, data.UserTokens)
 	if diag.HasError() {
@@ -153,16 +153,16 @@ func (r *reportAlertResource) Update(ctx context.Context, req resource.UpdateReq
 	var recipientChannels []string
 	recipientChannelsList.ElementsAs(ctx, recipientChannels, false)
 
-	updateReportAlert := &modelsv2.UpdateReportAlert{
+	updateAnomalyNotification := &modelsv2.UpdateAnomalyNotification{
 		Threshold:         int32(data.Threshold.ValueInt64()),
 		UserTokens:        userTokens,
 		RecipientChannels: recipientChannels,
 	}
 
-	params.WithUpdateReportAlert(updateReportAlert)
-	out, err := r.client.V2.ReportAlerts.UpdateReportAlert(params, r.client.Auth)
+	params.WithUpdateAnomalyNotification(updateAnomalyNotification)
+	out, err := r.client.V2.AnomalyNotifications.UpdateAnomalyNotification(params, r.client.Auth)
 	if err != nil {
-		handleError("Update Report Alert", &resp.Diagnostics, err)
+		handleError("Update Anomaly Notification", &resp.Diagnostics, err)
 		return
 	}
 
@@ -171,24 +171,30 @@ func (r *reportAlertResource) Update(ctx context.Context, req resource.UpdateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *reportAlertResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data resource_report_alert.ReportAlertModel
+func (r *anomalyNotificationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data resource_anomaly_notification.AnomalyNotificationModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	params := reportalertsv2.NewDeleteReportAlertParams()
-	params.SetReportAlertToken(data.Token.ValueString())
-	_, err := r.client.V2.ReportAlerts.DeleteReportAlert(params, r.client.Auth)
+	params := anomalynotifsv2.NewDeleteAnomalyNotificationParams()
+	params.SetAnomalyNotificationToken(data.Token.ValueString())
+
+	_, err := r.client.V2.AnomalyNotifications.DeleteAnomalyNotification(params, r.client.Auth)
 	if err != nil {
-		handleError("Delete Report Alert", &resp.Diagnostics, err)
+		if _, ok := err.(*anomalynotifsv2.GetAnomalyNotificationNotFound); ok {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
+		handleError("Get Anomaly Notification", &resp.Diagnostics, err)
+		return
 	}
-	// Delete API call logic
 }
 
-func readPayloadIntoResourceModel(payload *modelsv2.ReportAlert, data *resource_report_alert.ReportAlertModel) {
+func readPayloadIntoResourceModel(payload *modelsv2.AnomalyNotification, data *resource_anomaly_notification.AnomalyNotificationModel) {
 	data.Token = types.StringValue(payload.Token)
 	data.CostReportToken = types.StringValue(payload.CostReportToken)
 	data.CreatedAt = types.StringValue(payload.CreatedAt)

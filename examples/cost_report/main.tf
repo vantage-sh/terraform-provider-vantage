@@ -53,19 +53,3 @@ resource "vantage_access_grant" "demo_access_grant" {
   resource_token = vantage_dashboard.demo_dashboard.token
 }
 
-# data "vantage_financial_commitment_reports" "all" {
-# }
-
-# output "all_financial_commitment_reports" {
-#   value = data.vantage_financial_commitment_reports.all
-# }
-
-# data "vantage_kubernetes_efficiency_reports" "all" {
-# }
-
-# output "all_kubernetes_efficiency_reports" {
-#   value = data.vantage_kubernetes_efficiency_reports.all
-# }
- 
-
-
