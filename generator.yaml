@@ -2,18 +2,18 @@ provider:
   name: vantage
 
 resources:
-  report_alert:
+  anomaly_notification:
     create:
-      path: /report_alerts
+      path: /anomaly_notifications
       method: POST
     read:
-      path: /report_alerts/{report_alert_token}
+      path: /anomaly_notifications/{anomaly_notification_token}
       method: GET
     update:
-      path: /report_alerts/{report_alert_token}
+      path: /anomaly_notifications/{anomaly_notification_token}
       method: PUT
     delete:
-      path: /report_alerts/{report_alert_token}
+      path: /anomaly_notifications/{anomaly_notification_token}
       method: DELETE
     schema:
       attributes:
@@ -21,7 +21,7 @@ resources:
           token:
             description: The token of the report alert
         aliases:
-          report_alert_token: token
+          anomaly_notification_token: token
 
 data_sources:
   report_notifications:
@@ -51,9 +51,9 @@ data_sources:
         - limit
         - links
         - page
-  report_alerts:
+  anomaly_notifications:
     read:
-      path: /report_alerts
+      path: /anomaly_notifications
       method: GET
     schema:
       ignores:
