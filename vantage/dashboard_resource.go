@@ -21,14 +21,14 @@ func NewDashboardResource() resource.Resource {
 }
 
 type DashboardResourceModel struct {
-	Token          		types.String `tfsdk:"token"`
-	Title          		types.String `tfsdk:"title"`
-	WidgetTokens   		types.List   `tfsdk:"widget_tokens"`
-	DateBin        		types.String `tfsdk:"date_bin"`
-	DateInterval   		types.String `tfsdk:"date_interval"`
-	StartDate      		types.String `tfsdk:"start_date"`
-	EndDate        		types.String `tfsdk:"end_date"`
-	WorkspaceToken 		types.String `tfsdk:"workspace_token"`
+	Token             types.String `tfsdk:"token"`
+	Title             types.String `tfsdk:"title"`
+	WidgetTokens      types.List   `tfsdk:"widget_tokens"`
+	DateBin           types.String `tfsdk:"date_bin"`
+	DateInterval      types.String `tfsdk:"date_interval"`
+	StartDate         types.String `tfsdk:"start_date"`
+	EndDate           types.String `tfsdk:"end_date"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 }
 
@@ -97,7 +97,7 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "Tokens of the saved filters used in the Dashboard.",
-				Optional: 					 true,
+				Optional:            true,
 			},
 		},
 		MarkdownDescription: "Manages a Dashboard.",
@@ -130,17 +130,17 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	params := dashboardsv2.NewCreateDashboardParams()
-	body := &modelsv2.PostDashboards{
-		Title:          		data.Title.ValueStringPointer(),
-		WidgetTokens:   		fromStringsValue(widgetTokens),
-		DateBin:        		data.DateBin.ValueString(),
-		DateInterval:   		data.DateInterval.ValueString(),
-		StartDate:      		data.StartDate.ValueString(),
-		EndDate:        		data.EndDate.ValueStringPointer(),
-		WorkspaceToken: 		data.WorkspaceToken.ValueString(),
-		SavedFilterTokens:  fromStringsValue(savedFilterTokens),
+	body := &modelsv2.CreateDashboard{
+		Title:             data.Title.ValueStringPointer(),
+		WidgetTokens:      fromStringsValue(widgetTokens),
+		DateBin:           data.DateBin.ValueString(),
+		DateInterval:      data.DateInterval.ValueString(),
+		StartDate:         data.StartDate.ValueString(),
+		EndDate:           data.EndDate.ValueStringPointer(),
+		WorkspaceToken:    data.WorkspaceToken.ValueString(),
+		SavedFilterTokens: fromStringsValue(savedFilterTokens),
 	}
-	params.WithDashboards(body)
+	params.WithCreateDashboard(body)
 	out, err := r.client.V2.Dashboards.CreateDashboard(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*dashboardsv2.CreateDashboardBadRequest); ok {
@@ -232,11 +232,11 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	params := dashboardsv2.NewUpdateDashboardParams()
-	body := &modelsv2.PutDashboards{
-		Title:        			data.Title.ValueString(),
-		WidgetTokens: 			fromStringsValue(widgetTokens),
-		SavedFilterTokens:  fromStringsValue(savedFilterTokens),
-		DateBin:      			data.DateBin.ValueString(),
+	body := &modelsv2.UpdateDashboard{
+		Title:             data.Title.ValueString(),
+		WidgetTokens:      fromStringsValue(widgetTokens),
+		SavedFilterTokens: fromStringsValue(savedFilterTokens),
+		DateBin:           data.DateBin.ValueString(),
 	}
 	if data.DateInterval.ValueString() == "" || data.DateInterval.ValueString() == "custom" {
 		body.StartDate = data.StartDate.ValueString()
@@ -245,7 +245,7 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 		body.DateInterval = data.DateInterval.ValueString()
 	}
 	params.WithDashboardToken(data.Token.ValueString())
-	params.WithDashboards(body)
+	params.WithUpdateDashboard(body)
 	out, err := r.client.V2.Dashboards.UpdateDashboard(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*dashboardsv2.UpdateDashboardBadRequest); ok {

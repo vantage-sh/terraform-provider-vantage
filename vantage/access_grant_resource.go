@@ -77,12 +77,12 @@ func (r AccessGrantResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	params := accessgrantsv2.NewCreateAccessGrantParams()
-	body := &modelsv2.PostAccessGrants{
+	body := &modelsv2.CreateAccessGrant{
 		ResourceToken: data.ResourceToken.ValueStringPointer(),
 		TeamToken:     data.TeamToken.ValueStringPointer(),
 		Access:        data.Access.ValueString(),
 	}
-	params.WithAccessGrants(body)
+	params.WithCreateAccessGrant(body)
 	out, err := r.client.V2.AccessGrants.CreateAccessGrant(params, r.client.Auth)
 	if err != nil {
 		handleError("Create Access Grant Resource", &resp.Diagnostics, err)
@@ -136,11 +136,11 @@ func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequ
 	params := accessgrantsv2.NewUpdateAccessGrantParams()
 
 	params.WithAccessGrantToken(data.Token.ValueString())
-	model := &modelsv2.PutAccessGrants{
+	model := &modelsv2.UpdateAccessGrant{
 		Access: data.Access.ValueStringPointer(),
 	}
 
-	params.WithAccessGrants(model)
+	params.WithUpdateAccessGrant(model)
 	out, err := r.client.V2.AccessGrants.UpdateAccessGrant(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Saved Filter Resource", &resp.Diagnostics, err)

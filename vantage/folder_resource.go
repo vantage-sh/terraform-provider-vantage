@@ -78,12 +78,12 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	params := foldersv2.NewCreateFolderParams()
-	rf := &modelsv2.PostFolders{
+	rf := &modelsv2.CreateFolder{
 		Title:             data.Title.ValueStringPointer(),
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		WorkspaceToken:    data.WorkspaceToken.ValueString(),
 	}
-	params.WithFolders(rf)
+	params.WithCreateFolder(rf)
 	out, err := r.client.V2.Folders.CreateFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Create Folder Resource", &resp.Diagnostics, err)
@@ -136,12 +136,12 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	params := foldersv2.NewUpdateFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
-	model := &modelsv2.PutFolders{
+	model := &modelsv2.UpdateFolder{
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		Title:             data.Title.ValueString(),
 		// WorkspaceToken:    data.Title.WorkspaceToken(),
 	}
-	params.WithFolders(model)
+	params.WithUpdateFolder(model)
 	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Folder Resource", &resp.Diagnostics, err)

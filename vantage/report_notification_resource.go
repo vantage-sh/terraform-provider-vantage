@@ -97,7 +97,7 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 		}
 	}
 
-	rp := &modelsv2.PostReportNotifications{
+	rp := &modelsv2.CreateReportNotification{
 		Title:           data.Title.ValueStringPointer(),
 		CostReportToken: data.CostReportToken.ValueStringPointer(),
 		WorkspaceToken:  data.WorkspaceToken.ValueString(),
@@ -106,7 +106,7 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 		Change:          data.Change.ValueStringPointer(),
 	}
 
-	params.WithReportNotifications(rp)
+	params.WithCreateReportNotification(rp)
 	out, err := r.client.V2.Notifications.CreateReportNotification(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*notifsv2.CreateReportNotificationBadRequest); ok {
@@ -190,7 +190,7 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 	}
 	var userTokens []string
 	userTokensSet.ElementsAs(ctx, &userTokens, false)
-	rp := &modelsv2.PutReportNotifications{
+	rp := &modelsv2.UpdateReportNotification{
 		CostReportToken: data.CostReportToken.ValueString(),
 		Change:          data.Change.ValueString(),
 		Frequency:       data.Frequency.ValueString(),
@@ -198,7 +198,7 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 		UserTokens:      userTokens,
 	}
 
-	params.WithReportNotifications(rp)
+	params.WithUpdateReportNotification(rp)
 	out, err := r.client.V2.Notifications.UpdateReportNotification(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*notifsv2.UpdateReportNotificationBadRequest); ok {

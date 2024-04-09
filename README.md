@@ -31,6 +31,8 @@ Once overridden, proceed to the `examples/cost_report` directory and do the usua
 
 You'll need `VANTAGE_API_TOKEN` exposed either via flags to the apply or via environment with a tool like `direnv`.
 
+`VANTAGE_HOST` can be set to override the host used for requests to Vantage.
+
 ```
 terraform apply
 ```
@@ -45,6 +47,13 @@ You should see a warning about the override:
 │
 │ The behavior may therefore not match any released version of the provider and applying changes may cause the state to become
 │ incompatible with published releases.
+```
+
+### Tests
+
+Run tests, including acceptance tests, with
+```
+TF_ACC=1 make test
 ```
 
 ### Docs
