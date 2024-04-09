@@ -24,6 +24,15 @@ resources:
           anomaly_notification_token: token
 
 data_sources:
+  business_metrics:
+    read:
+      path: /business_metrics
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
   report_notifications:
     read:
       path: /report_notifications
