@@ -60,3 +60,12 @@ data_sources:
         - limit
         - links
         - page
+  virtual_tag_configs:
+    read:
+      path: /virtual_tag_configs
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
