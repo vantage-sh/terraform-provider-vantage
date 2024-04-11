@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_business_metrics"
 	businessmetricsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/business_metrics"
 )
@@ -30,15 +29,7 @@ func (r *businessMetricsDataSource) Configure(_ context.Context, req datasource.
 }
 
 type businessMetricsDataSourceModel struct {
-	BusinessMetrics []businessMetricDataSourceModel `tfsdk:"business_metrics"`
-}
-
-type businessMetricDataSourceModel struct {
-	CostReportTokensWithMetadata types.List   `tfsdk:"cost_report_tokens_with_metadata"`
-	CreatedByToken               types.String `tfsdk:"created_by_token"`
-	Title                        types.String `tfsdk:"title"`
-	Token                        types.String `tfsdk:"token"`
-	Values                       types.List   `tfsdk:"values"`
+	BusinessMetrics []businessMetricResourceModel `tfsdk:"business_metrics"`
 }
 
 func (d *businessMetricsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -70,27 +61,15 @@ func (d *businessMetricsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	metrics := []businessMetricDataSourceModel{}
+	metrics := []businessMetricResourceModel{}
 	for _, metric := range out.Payload.BusinessMetrics {
-		costReportTokens, diag := types.ListValueFrom(ctx, types.StringType, metric.CostReportTokensWithMetadata)
+		model := businessMetricResourceModel{}
+		diag := model.applyPayload(ctx, metric, true)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-
-		values, diag := types.ListValueFrom(ctx, types.StringType, metric.Values)
-		if diag.HasError() {
-			resp.Diagnostics.Append(diag...)
-			return
-		}
-
-		metrics = append(metrics, businessMetricDataSourceModel{
-			CostReportTokensWithMetadata: costReportTokens,
-			CreatedByToken:               types.StringValue(metric.CreatedByToken),
-			Title:                        types.StringValue(metric.Title),
-			Token:                        types.StringValue(metric.Token),
-			Values:                       values,
-		})
+		metrics = append(metrics, model)
 	}
 
 	data.BusinessMetrics = metrics

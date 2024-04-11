@@ -23,6 +23,26 @@ resources:
         aliases:
           anomaly_notification_token: token
 
+  business_metric:
+    create:
+      path: /business_metrics
+      method: POST
+    read:
+      path: /business_metrics/{business_metric_token}
+      method: GET
+    update:
+      path: /business_metrics/{business_metric_token}
+      method: PUT
+    delete:
+      path: /business_metrics/{business_metric_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the business metric
+        aliases:
+          business_metric_token: token
 data_sources:
   business_metrics:
     read:

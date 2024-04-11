@@ -53,3 +53,37 @@ resource "vantage_access_grant" "demo_access_grant" {
   resource_token = vantage_dashboard.demo_dashboard.token
 }
 
+locals {
+  metrics_csv = csvdecode(file("${path.module}/metrics.csv"))
+  sorted_dates = distinct(reverse(sort(local.metrics_csv[*].date)))
+  sorted_metrics = flatten(
+        [for value in local.sorted_dates:
+            [ for elem in local.metrics_csv: 
+                 elem if value == elem.date
+            ]     
+        ]) 
+}
+
+resource "vantage_business_metric" "demo_metric2" {
+  title           = "Demo Metric"
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.demo_report.token
+      unit_scale = "per_hundred"
+    }
+  ]
+
+  values = [for row in local.sorted_metrics : {
+    date = row.date
+    amount = row.amount
+  }]
+}
+
+data "vantage_business_metrics" "demo2" {}
+
+output "business_metrics" {
+  value = data.vantage_business_metrics.demo2
+}
+ 
+
+
