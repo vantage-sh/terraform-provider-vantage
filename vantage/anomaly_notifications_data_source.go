@@ -30,7 +30,7 @@ func (d *anomalyNotificationsDataSource) Configure(_ context.Context, req dataso
 }
 
 type anomalyNotificationsDataSourceModel struct {
-	AnomalyNotifications []anomalyNotificationDataSourceModel `tfsdk:"report_alerts"`
+	AnomalyNotifications []anomalyNotificationDataSourceModel `tfsdk:"anomaly_notifications"`
 }
 
 type anomalyNotificationDataSourceModel struct {
@@ -44,7 +44,7 @@ type anomalyNotificationDataSourceModel struct {
 }
 
 func (d *anomalyNotificationsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_report_alerts"
+	resp.TypeName = req.ProviderTypeName + "_anomaly_notifications"
 }
 
 func (d *anomalyNotificationsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
