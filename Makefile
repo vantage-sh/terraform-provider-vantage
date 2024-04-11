@@ -11,7 +11,15 @@ generate:
 	tfplugingen-framework generate data-sources --input spec.json --output vantage
 	rm spec.json tmp-swagger.json tmp.json
 
-docs:	
+scaffold-resource:
+ifndef RESOURCE
+	$(error RESOURCE is not set)
+endif
+	tfplugingen-framework scaffold resource --output-dir vantage --package vantage \
+	  --name ${RESOURCE} \
+	  --force
+
+docs:
 	go generate ./...
 
 test:
