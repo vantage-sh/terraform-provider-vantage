@@ -11,7 +11,7 @@ generate:
 	tfplugingen-framework generate data-sources --input spec.json --output vantage
 	rm spec.json tmp-swagger.json tmp.json
 
-docs:
+docs:	
 	go generate ./...
 
 test:
