@@ -4,10 +4,14 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_anomaly_notification"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	anomalynotifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/anomaly_notifications"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
 
 var _ resource.Resource = (*anomalyNotificationResource)(nil)
@@ -35,7 +39,53 @@ func (r *anomalyNotificationResource) Metadata(ctx context.Context, req resource
 }
 
 func (r *anomalyNotificationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = resource_anomaly_notification.AnomalyNotificationResourceSchema(ctx)
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"cost_report_token": schema.StringAttribute{
+				Required:            true,
+				Description:         "The token of the Cost Report folder that has the notification.",
+				MarkdownDescription: "The token of the Cost Report folder that has the notification.",
+			},
+			"created_at": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.",
+				MarkdownDescription: "The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.",
+			},
+			"recipient_channels": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The Slack/MS Teams channels that receive the notification.",
+				MarkdownDescription: "The Slack/MS Teams channels that receive the notification.",
+			},
+			"threshold": schema.Int64Attribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The threshold amount that must be met for the notification to fire.",
+				MarkdownDescription: "The threshold amount that must be met for the notification to fire.",
+			},
+			"token": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The token of the report alert",
+				MarkdownDescription: "The token of the report alert",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"updated_at": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.",
+				MarkdownDescription: "The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.",
+			},
+			"user_tokens": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The tokens of the users that receive the notification.",
+				MarkdownDescription: "The tokens of the users that receive the notification.",
+			},
+		},
+	}
 }
 
 func (r *anomalyNotificationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
