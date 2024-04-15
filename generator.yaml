@@ -22,7 +22,26 @@ resources:
             description: The token of the report alert
         aliases:
           anomaly_notification_token: token
-
+  budget:
+    create:
+      path: /budgets
+      method: POST
+    read:
+      path: /budgets/{budget_token}
+      method: GET
+    update:
+      path: /budgets/{budget_token}
+      method: PUT
+    delete:
+      path: /budgets/{budget_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the budget
+        aliases:
+          budget_token: token
   business_metric:
     create:
       path: /business_metrics
@@ -44,6 +63,15 @@ resources:
         aliases:
           business_metric_token: token
 data_sources:
+  budgets:
+    read:
+      path: /budgets
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
   business_metrics:
     read:
       path: /business_metrics
