@@ -59,7 +59,7 @@ func (d *budgetsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	budgets := []budgetModel{}
 	for _, budget := range out.Payload.Budgets {
 		model := budgetModel{}
-		diag := applyBudgetPayload(ctx, budget, &model)
+		diag := applyBudgetPayload(ctx, true, budget, &model)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return

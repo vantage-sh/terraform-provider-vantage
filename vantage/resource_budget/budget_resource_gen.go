@@ -72,20 +72,21 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 			"periods": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"amount": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The amount of the Budget Period as a string to ensure precision.",
-							MarkdownDescription: "The amount of the Budget Period as a string to ensure precision.",
+						"amount": schema.Float64Attribute{
+							Required:            true,
+							Description:         "The amount of the period.",
+							MarkdownDescription: "The amount of the period.",
 						},
 						"end_at": schema.StringAttribute{
+							Optional:            true,
 							Computed:            true,
-							Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-							MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
+							Description:         "The end date of the period.",
+							MarkdownDescription: "The end date of the period.",
 						},
 						"start_at": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-							MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
+							Required:            true,
+							Description:         "The start date of the period.",
+							MarkdownDescription: "The start date of the period.",
 						},
 					},
 					CustomType: PeriodsType{
@@ -94,32 +95,10 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 						},
 					},
 				},
+				Optional:            true,
 				Computed:            true,
-				Description:         "The budget periods associated with the Budget.",
-				MarkdownDescription: "The budget periods associated with the Budget.",
-			},
-			"periods_attributes": schema.ListNestedAttribute{
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"amount": schema.Float64Attribute{
-							Required: true,
-						},
-						"end_at": schema.StringAttribute{
-							Optional: true,
-							Computed: true,
-						},
-						"start_at": schema.StringAttribute{
-							Required: true,
-						},
-					},
-					CustomType: PeriodsAttributesType{
-						ObjectType: types.ObjectType{
-							AttrTypes: PeriodsAttributesValue{}.AttributeTypes(ctx),
-						},
-					},
-				},
-				Optional: true,
-				Computed: true,
+				Description:         "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD.",
+				MarkdownDescription: "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -148,7 +127,6 @@ type BudgetModel struct {
 	Name              types.String `tfsdk:"name"`
 	Performance       types.List   `tfsdk:"performance"`
 	Periods           types.List   `tfsdk:"periods"`
-	PeriodsAttributes types.List   `tfsdk:"periods_attributes"`
 	Token             types.String `tfsdk:"token"`
 	UserToken         types.String `tfsdk:"user_token"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
@@ -613,12 +591,12 @@ func (t PeriodsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 		return nil, diags
 	}
 
-	amountVal, ok := amountAttribute.(basetypes.StringValue)
+	amountVal, ok := amountAttribute.(basetypes.Float64Value)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
+			fmt.Sprintf(`amount expected to be basetypes.Float64Value, was: %T`, amountAttribute))
 	}
 
 	endAtAttribute, ok := attributes["end_at"]
@@ -742,12 +720,12 @@ func NewPeriodsValue(attributeTypes map[string]attr.Type, attributes map[string]
 		return NewPeriodsValueUnknown(), diags
 	}
 
-	amountVal, ok := amountAttribute.(basetypes.StringValue)
+	amountVal, ok := amountAttribute.(basetypes.Float64Value)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
+			fmt.Sprintf(`amount expected to be basetypes.Float64Value, was: %T`, amountAttribute))
 	}
 
 	endAtAttribute, ok := attributes["end_at"]
@@ -866,9 +844,9 @@ func (t PeriodsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = PeriodsValue{}
 
 type PeriodsValue struct {
-	Amount  basetypes.StringValue `tfsdk:"amount"`
-	EndAt   basetypes.StringValue `tfsdk:"end_at"`
-	StartAt basetypes.StringValue `tfsdk:"start_at"`
+	Amount  basetypes.Float64Value `tfsdk:"amount"`
+	EndAt   basetypes.StringValue  `tfsdk:"end_at"`
+	StartAt basetypes.StringValue  `tfsdk:"start_at"`
 	state   attr.ValueState
 }
 
@@ -878,7 +856,7 @@ func (v PeriodsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 	var val tftypes.Value
 	var err error
 
-	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["amount"] = basetypes.Float64Type{}.TerraformType(ctx)
 	attrTypes["end_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_at"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -943,7 +921,7 @@ func (v PeriodsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
-			"amount":   basetypes.StringType{},
+			"amount":   basetypes.Float64Type{},
 			"end_at":   basetypes.StringType{},
 			"start_at": basetypes.StringType{},
 		},
@@ -995,430 +973,6 @@ func (v PeriodsValue) Type(ctx context.Context) attr.Type {
 }
 
 func (v PeriodsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
-	return map[string]attr.Type{
-		"amount":   basetypes.StringType{},
-		"end_at":   basetypes.StringType{},
-		"start_at": basetypes.StringType{},
-	}
-}
-
-var _ basetypes.ObjectTypable = PeriodsAttributesType{}
-
-type PeriodsAttributesType struct {
-	basetypes.ObjectType
-}
-
-func (t PeriodsAttributesType) Equal(o attr.Type) bool {
-	other, ok := o.(PeriodsAttributesType)
-
-	if !ok {
-		return false
-	}
-
-	return t.ObjectType.Equal(other.ObjectType)
-}
-
-func (t PeriodsAttributesType) String() string {
-	return "PeriodsAttributesType"
-}
-
-func (t PeriodsAttributesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	attributes := in.Attributes()
-
-	amountAttribute, ok := attributes["amount"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`amount is missing from object`)
-
-		return nil, diags
-	}
-
-	amountVal, ok := amountAttribute.(basetypes.Float64Value)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`amount expected to be basetypes.Float64Value, was: %T`, amountAttribute))
-	}
-
-	endAtAttribute, ok := attributes["end_at"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`end_at is missing from object`)
-
-		return nil, diags
-	}
-
-	endAtVal, ok := endAtAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`end_at expected to be basetypes.StringValue, was: %T`, endAtAttribute))
-	}
-
-	startAtAttribute, ok := attributes["start_at"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`start_at is missing from object`)
-
-		return nil, diags
-	}
-
-	startAtVal, ok := startAtAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`start_at expected to be basetypes.StringValue, was: %T`, startAtAttribute))
-	}
-
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	return PeriodsAttributesValue{
-		Amount:  amountVal,
-		EndAt:   endAtVal,
-		StartAt: startAtVal,
-		state:   attr.ValueStateKnown,
-	}, diags
-}
-
-func NewPeriodsAttributesValueNull() PeriodsAttributesValue {
-	return PeriodsAttributesValue{
-		state: attr.ValueStateNull,
-	}
-}
-
-func NewPeriodsAttributesValueUnknown() PeriodsAttributesValue {
-	return PeriodsAttributesValue{
-		state: attr.ValueStateUnknown,
-	}
-}
-
-func NewPeriodsAttributesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (PeriodsAttributesValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
-	ctx := context.Background()
-
-	for name, attributeType := range attributeTypes {
-		attribute, ok := attributes[name]
-
-		if !ok {
-			diags.AddError(
-				"Missing PeriodsAttributesValue Attribute Value",
-				"While creating a PeriodsAttributesValue value, a missing attribute value was detected. "+
-					"A PeriodsAttributesValue must contain values for all attributes, even if null or unknown. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("PeriodsAttributesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
-			)
-
-			continue
-		}
-
-		if !attributeType.Equal(attribute.Type(ctx)) {
-			diags.AddError(
-				"Invalid PeriodsAttributesValue Attribute Type",
-				"While creating a PeriodsAttributesValue value, an invalid attribute value was detected. "+
-					"A PeriodsAttributesValue must use a matching attribute type for the value. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("PeriodsAttributesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
-					fmt.Sprintf("PeriodsAttributesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
-			)
-		}
-	}
-
-	for name := range attributes {
-		_, ok := attributeTypes[name]
-
-		if !ok {
-			diags.AddError(
-				"Extra PeriodsAttributesValue Attribute Value",
-				"While creating a PeriodsAttributesValue value, an extra attribute value was detected. "+
-					"A PeriodsAttributesValue must not contain values beyond the expected attribute types. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("Extra PeriodsAttributesValue Attribute Name: %s", name),
-			)
-		}
-	}
-
-	if diags.HasError() {
-		return NewPeriodsAttributesValueUnknown(), diags
-	}
-
-	amountAttribute, ok := attributes["amount"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`amount is missing from object`)
-
-		return NewPeriodsAttributesValueUnknown(), diags
-	}
-
-	amountVal, ok := amountAttribute.(basetypes.Float64Value)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`amount expected to be basetypes.Float64Value, was: %T`, amountAttribute))
-	}
-
-	endAtAttribute, ok := attributes["end_at"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`end_at is missing from object`)
-
-		return NewPeriodsAttributesValueUnknown(), diags
-	}
-
-	endAtVal, ok := endAtAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`end_at expected to be basetypes.StringValue, was: %T`, endAtAttribute))
-	}
-
-	startAtAttribute, ok := attributes["start_at"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`start_at is missing from object`)
-
-		return NewPeriodsAttributesValueUnknown(), diags
-	}
-
-	startAtVal, ok := startAtAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`start_at expected to be basetypes.StringValue, was: %T`, startAtAttribute))
-	}
-
-	if diags.HasError() {
-		return NewPeriodsAttributesValueUnknown(), diags
-	}
-
-	return PeriodsAttributesValue{
-		Amount:  amountVal,
-		EndAt:   endAtVal,
-		StartAt: startAtVal,
-		state:   attr.ValueStateKnown,
-	}, diags
-}
-
-func NewPeriodsAttributesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) PeriodsAttributesValue {
-	object, diags := NewPeriodsAttributesValue(attributeTypes, attributes)
-
-	if diags.HasError() {
-		// This could potentially be added to the diag package.
-		diagsStrings := make([]string, 0, len(diags))
-
-		for _, diagnostic := range diags {
-			diagsStrings = append(diagsStrings, fmt.Sprintf(
-				"%s | %s | %s",
-				diagnostic.Severity(),
-				diagnostic.Summary(),
-				diagnostic.Detail()))
-		}
-
-		panic("NewPeriodsAttributesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
-	}
-
-	return object
-}
-
-func (t PeriodsAttributesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
-	if in.Type() == nil {
-		return NewPeriodsAttributesValueNull(), nil
-	}
-
-	if !in.Type().Equal(t.TerraformType(ctx)) {
-		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
-	}
-
-	if !in.IsKnown() {
-		return NewPeriodsAttributesValueUnknown(), nil
-	}
-
-	if in.IsNull() {
-		return NewPeriodsAttributesValueNull(), nil
-	}
-
-	attributes := map[string]attr.Value{}
-
-	val := map[string]tftypes.Value{}
-
-	err := in.As(&val)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range val {
-		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
-
-		if err != nil {
-			return nil, err
-		}
-
-		attributes[k] = a
-	}
-
-	return NewPeriodsAttributesValueMust(PeriodsAttributesValue{}.AttributeTypes(ctx), attributes), nil
-}
-
-func (t PeriodsAttributesType) ValueType(ctx context.Context) attr.Value {
-	return PeriodsAttributesValue{}
-}
-
-var _ basetypes.ObjectValuable = PeriodsAttributesValue{}
-
-type PeriodsAttributesValue struct {
-	Amount  basetypes.Float64Value `tfsdk:"amount"`
-	EndAt   basetypes.StringValue  `tfsdk:"end_at"`
-	StartAt basetypes.StringValue  `tfsdk:"start_at"`
-	state   attr.ValueState
-}
-
-func (v PeriodsAttributesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 3)
-
-	var val tftypes.Value
-	var err error
-
-	attrTypes["amount"] = basetypes.Float64Type{}.TerraformType(ctx)
-	attrTypes["end_at"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["start_at"] = basetypes.StringType{}.TerraformType(ctx)
-
-	objectType := tftypes.Object{AttributeTypes: attrTypes}
-
-	switch v.state {
-	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 3)
-
-		val, err = v.Amount.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["amount"] = val
-
-		val, err = v.EndAt.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["end_at"] = val
-
-		val, err = v.StartAt.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["start_at"] = val
-
-		if err := tftypes.ValidateValue(objectType, vals); err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		return tftypes.NewValue(objectType, vals), nil
-	case attr.ValueStateNull:
-		return tftypes.NewValue(objectType, nil), nil
-	case attr.ValueStateUnknown:
-		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
-	default:
-		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
-	}
-}
-
-func (v PeriodsAttributesValue) IsNull() bool {
-	return v.state == attr.ValueStateNull
-}
-
-func (v PeriodsAttributesValue) IsUnknown() bool {
-	return v.state == attr.ValueStateUnknown
-}
-
-func (v PeriodsAttributesValue) String() string {
-	return "PeriodsAttributesValue"
-}
-
-func (v PeriodsAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"amount":   basetypes.Float64Type{},
-			"end_at":   basetypes.StringType{},
-			"start_at": basetypes.StringType{},
-		},
-		map[string]attr.Value{
-			"amount":   v.Amount,
-			"end_at":   v.EndAt,
-			"start_at": v.StartAt,
-		})
-
-	return objVal, diags
-}
-
-func (v PeriodsAttributesValue) Equal(o attr.Value) bool {
-	other, ok := o.(PeriodsAttributesValue)
-
-	if !ok {
-		return false
-	}
-
-	if v.state != other.state {
-		return false
-	}
-
-	if v.state != attr.ValueStateKnown {
-		return true
-	}
-
-	if !v.Amount.Equal(other.Amount) {
-		return false
-	}
-
-	if !v.EndAt.Equal(other.EndAt) {
-		return false
-	}
-
-	if !v.StartAt.Equal(other.StartAt) {
-		return false
-	}
-
-	return true
-}
-
-func (v PeriodsAttributesValue) Type(ctx context.Context) attr.Type {
-	return PeriodsAttributesType{
-		basetypes.ObjectType{
-			AttrTypes: v.AttributeTypes(ctx),
-		},
-	}
-}
-
-func (v PeriodsAttributesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"amount":   basetypes.Float64Type{},
 		"end_at":   basetypes.StringType{},
