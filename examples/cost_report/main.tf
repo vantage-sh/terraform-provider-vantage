@@ -27,7 +27,7 @@ resource "vantage_cost_report" "demo_report" {
   filter              = "costs.provider = 'kubernetes'"
   saved_filter_tokens = [vantage_saved_filter.demo_filter.token]
   title               = "Demo Report"
- }
+}
 resource "vantage_dashboard" "demo_dashboard" {
   widget_tokens   = [vantage_cost_report.demo_report.token]
   title           = "Demo Dashboard"
@@ -54,27 +54,27 @@ resource "vantage_access_grant" "demo_access_grant" {
 }
 
 locals {
-  metrics_csv = csvdecode(file("${path.module}/metrics.csv"))
+  metrics_csv  = csvdecode(file("${path.module}/metrics.csv"))
   sorted_dates = distinct(reverse(sort(local.metrics_csv[*].date)))
   sorted_metrics = flatten(
-        [for value in local.sorted_dates:
-            [ for elem in local.metrics_csv: 
-                 elem if value == elem.date
-            ]     
-        ]) 
+    [for value in local.sorted_dates :
+      [for elem in local.metrics_csv :
+        elem if value == elem.date
+      ]
+  ])
 }
 
 resource "vantage_business_metric" "demo_metric2" {
-  title           = "Demo Metric"
+  title = "Demo Metric"
   cost_report_tokens_with_metadata = [
     {
       cost_report_token = vantage_cost_report.demo_report.token
-      unit_scale = "per_hundred"
+      unit_scale        = "per_hundred"
     }
   ]
 
   values = [for row in local.sorted_metrics : {
-    date = row.date
+    date   = row.date
     amount = row.amount
   }]
 }
@@ -84,6 +84,23 @@ data "vantage_business_metrics" "demo2" {}
 output "business_metrics" {
   value = data.vantage_business_metrics.demo2
 }
- 
 
 
+
+resource "vantage_budget" "demo_budget" {
+  name              = "Demo Budget"
+  cost_report_token = vantage_cost_report.demo_report.token
+  periods = [
+    {
+      start_at = "2023-12-01"
+      end_at   = "2024-01-01"
+      amount   = 1000
+    }
+  ]
+}
+
+data "vantage_budgets" "demo" {}
+
+output "budgets" {
+  value = data.vantage_budgets.demo
+}
