@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	notifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/notifications"
+	notifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_notifications"
 )
 
 type ReportNotificationResource struct {
@@ -107,7 +107,7 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	params.WithCreateReportNotification(rp)
-	out, err := r.client.V2.Notifications.CreateReportNotification(params, r.client.Auth)
+	out, err := r.client.V2.ReportNotifications.CreateReportNotification(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*notifsv2.CreateReportNotificationBadRequest); ok {
 			handleBadRequest("Create Report Notification", &resp.Diagnostics, e.GetPayload())
@@ -148,7 +148,7 @@ func (r *ReportNotificationResource) Read(ctx context.Context, req resource.Read
 	}
 	params := notifsv2.NewGetReportNotificationParams()
 	params.SetReportNotificationToken(state.Token.ValueString())
-	out, err := r.client.V2.Notifications.GetReportNotification(params, r.client.Auth)
+	out, err := r.client.V2.ReportNotifications.GetReportNotification(params, r.client.Auth)
 	if err != nil {
 		if _, ok := err.(*notifsv2.GetReportNotificationNotFound); ok {
 			resp.State.RemoveResource(ctx)
@@ -199,7 +199,7 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 	}
 
 	params.WithUpdateReportNotification(rp)
-	out, err := r.client.V2.Notifications.UpdateReportNotification(params, r.client.Auth)
+	out, err := r.client.V2.ReportNotifications.UpdateReportNotification(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*notifsv2.UpdateReportNotificationBadRequest); ok {
 			handleBadRequest("Update Report Notification", &resp.Diagnostics, e.GetPayload())
@@ -236,7 +236,7 @@ func (r *ReportNotificationResource) Delete(ctx context.Context, req resource.De
 
 	params := notifsv2.NewDeleteReportNotificationParams()
 	params.SetReportNotificationToken(state.Token.ValueString())
-	_, err := r.client.V2.Notifications.DeleteReportNotification(params, r.client.Auth)
+	_, err := r.client.V2.ReportNotifications.DeleteReportNotification(params, r.client.Auth)
 	if err != nil {
 		handleError("Delete Report Notification", &resp.Diagnostics, err)
 		return

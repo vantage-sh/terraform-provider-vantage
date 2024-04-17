@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_report_notifications"
-	reportnotifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/notifications"
+	reportnotifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_notifications"
 )
 
 var _ datasource.DataSource = (*reportNotificationsDataSource)(nil)
@@ -62,7 +62,7 @@ func (d *reportNotificationsDataSource) Read(ctx context.Context, req datasource
 	}
 
 	params := reportnotifsv2.NewGetReportNotificationsParams()
-	out, err := d.client.V2.Notifications.GetReportNotifications(params, d.client.Auth)
+	out, err := d.client.V2.ReportNotifications.GetReportNotifications(params, d.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Get Vantage Report Notifications", err.Error())
 		return
