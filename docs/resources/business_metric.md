@@ -40,6 +40,10 @@ Optional:
 
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within the CostReport.
 
+Read-Only:
+
+- `label_filter` (List of String) The labels that the BusinessMetric is filtered by within a particular CostReport.
+
 
 <a id="nestedatt--values"></a>
 ### Nested Schema for `values`
@@ -48,5 +52,9 @@ Required:
 
 - `amount` (Number)
 - `date` (String) The date of the Business Metric Value. ISO 8601 formatted.
+
+Optional:
+
+- `label` (String) The label of the Business Metric Value.
 
 

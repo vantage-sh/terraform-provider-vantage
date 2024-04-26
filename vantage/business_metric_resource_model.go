@@ -24,15 +24,18 @@ type businessMetricResourceModel struct {
 type businessMetricResourceModelValue struct {
 	Amount types.Float64 `tfsdk:"amount"`
 	Date   types.String  `tfsdk:"date"`
+	Label  types.String  `tfsdk:"label"`
 }
 
 type businessMetricDataSourceModelValue struct {
 	Amount types.String `tfsdk:"amount"`
 	Date   types.String `tfsdk:"date"`
+	Label  types.String `tfsdk:"label"`
 }
 type businessMetricResourceModelCostReportToken struct {
 	CostReportToken types.String `tfsdk:"cost_report_token"`
 	UnitScale       types.String `tfsdk:"unit_scale"`
+	LabelFilter     types.List   `tfsdk:"label_filter"`
 }
 
 func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload *modelsv2.BusinessMetric, isDataSource bool) diag.Diagnostics {
@@ -50,9 +53,14 @@ func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload 
 	if payload.CostReportTokensWithMetadata != nil {
 		tfCostReportTokens := []businessMetricResourceModelCostReportToken{}
 		for _, costReportToken := range payload.CostReportTokensWithMetadata {
+			labelFilter, diag := types.ListValueFrom(ctx, types.StringType, costReportToken.LabelFilter)
+			if diag.HasError() {
+				return diag
+			}
 			tfCostReportTokens = append(tfCostReportTokens, businessMetricResourceModelCostReportToken{
 				CostReportToken: types.StringValue(costReportToken.CostReportToken),
 				UnitScale:       types.StringValue(costReportToken.UnitScale),
+				LabelFilter:     labelFilter,
 			})
 		}
 
@@ -61,6 +69,7 @@ func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload 
 			types.ObjectType{AttrTypes: map[string]attr.Type{
 				"cost_report_token": types.StringType,
 				"unit_scale":        types.StringType,
+				"label_filter":      types.ListType{ElemType: types.StringType},
 			}},
 			tfCostReportTokens,
 		)
@@ -95,10 +104,12 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 				return nil
 			}
 			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
 
 			value := modelsv2.CreateBusinessMetricValuesItems0{
 				Amount: &amt,
 				Date:   &ts,
+				Label:  label,
 			}
 
 			values = append(values, &value)
@@ -115,9 +126,19 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 
 		costReportTokens := make([]*modelsv2.CreateBusinessMetricCostReportTokensWithMetadataItems0, 0, len(tfCostReportTokens))
 		for _, v := range tfCostReportTokens {
+			tfLabelFilter := []string{}
+			if !v.LabelFilter.IsNull() && !v.LabelFilter.IsUnknown() {
+				tfLabelFilter = make([]string, 0, len(v.LabelFilter.Elements()))
+				diags.Append(v.LabelFilter.ElementsAs(ctx, &tfLabelFilter, false)...)
+				if diags.HasError() {
+					return nil
+				}
+			}
+
 			costReportToken := &modelsv2.CreateBusinessMetricCostReportTokensWithMetadataItems0{
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
+				LabelFilter:     tfLabelFilter,
 			}
 			costReportTokens = append(costReportTokens, costReportToken)
 		}
@@ -156,10 +177,12 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 				return nil
 			}
 			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
 
 			value := modelsv2.UpdateBusinessMetricValuesItems0{
 				Amount: &amt,
 				Date:   &ts,
+				Label:  label,
 			}
 
 			values = append(values, &value)
@@ -176,9 +199,18 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 
 		costReportTokens := make([]*modelsv2.UpdateBusinessMetricCostReportTokensWithMetadataItems0, 0, len(tfCostReportTokens))
 		for _, v := range tfCostReportTokens {
+			tfLabelFilter := []string{}
+			if !v.LabelFilter.IsNull() && !v.LabelFilter.IsUnknown() {
+				tfLabelFilter = make([]string, 0, len(v.LabelFilter.Elements()))
+				diags.Append(v.LabelFilter.ElementsAs(ctx, &tfLabelFilter, false)...)
+				if diags.HasError() {
+					return nil
+				}
+			}
 			costReportToken := &modelsv2.UpdateBusinessMetricCostReportTokensWithMetadataItems0{
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
+				LabelFilter:     tfLabelFilter,
 			}
 			costReportTokens = append(costReportTokens, costReportToken)
 		}
@@ -215,12 +247,14 @@ func (m *businessMetricResourceModel) parseValues(ctx context.Context, isDataSou
 			tfValues = append(tfValues, businessMetricDataSourceModelValue{
 				Amount: types.StringValue(value.Amount),
 				Date:   types.StringValue(date),
+				Label:  types.StringValue(value.Label),
 			})
 		}
 
 		attrTypes := map[string]attr.Type{
 			"amount": types.StringType,
 			"date":   types.StringType,
+			"label":  types.StringType,
 		}
 
 		values, diagnostic := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfValues)
@@ -241,11 +275,13 @@ func (m *businessMetricResourceModel) parseValues(ctx context.Context, isDataSou
 			tfValues = append(tfValues, businessMetricResourceModelValue{
 				Amount: types.Float64Value(amt),
 				Date:   types.StringValue(date),
+				Label:  types.StringValue(value.Label),
 			})
 		}
 		attrTypes := map[string]attr.Type{
 			"amount": types.Float64Type,
 			"date":   types.StringType,
+			"label":  types.StringType,
 		}
 		values, diagnostic := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfValues)
 		if diagnostic.HasError() {
