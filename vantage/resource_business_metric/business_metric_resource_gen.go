@@ -83,6 +83,12 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The date of the Business Metric Value. ISO 8601 formatted.",
 							MarkdownDescription: "The date of the Business Metric Value. ISO 8601 formatted.",
 						},
+						"label": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "The label of the Business Metric Value.",
+							MarkdownDescription: "The label of the Business Metric Value.",
+						},
 					},
 					CustomType: ValuesType{
 						ObjectType: types.ObjectType{
@@ -92,8 +98,8 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 				},
 				Optional:            true,
 				Computed:            true,
-				Description:         "The dates and amounts for the BusinessMetric.",
-				MarkdownDescription: "The dates and amounts for the BusinessMetric.",
+				Description:         "The dates, amounts, and (optional) labels for the BusinessMetric.",
+				MarkdownDescription: "The dates, amounts, and (optional) labels for the BusinessMetric.",
 			},
 		},
 	}
@@ -537,6 +543,24 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
 	}
 
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return nil, diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -544,6 +568,7 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 	return ValuesValue{
 		Amount: amountVal,
 		Date:   dateVal,
+		Label:  labelVal,
 		state:  attr.ValueStateKnown,
 	}, diags
 }
@@ -647,6 +672,24 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
 	}
 
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return NewValuesValueUnknown(), diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
 	if diags.HasError() {
 		return NewValuesValueUnknown(), diags
 	}
@@ -654,6 +697,7 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 	return ValuesValue{
 		Amount: amountVal,
 		Date:   dateVal,
+		Label:  labelVal,
 		state:  attr.ValueStateKnown,
 	}, diags
 }
@@ -728,23 +772,25 @@ var _ basetypes.ObjectValuable = ValuesValue{}
 type ValuesValue struct {
 	Amount basetypes.Float64Value `tfsdk:"amount"`
 	Date   basetypes.StringValue  `tfsdk:"date"`
+	Label  basetypes.StringValue  `tfsdk:"label"`
 	state  attr.ValueState
 }
 
 func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 2)
+	attrTypes := make(map[string]tftypes.Type, 3)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["amount"] = basetypes.Float64Type{}.TerraformType(ctx)
 	attrTypes["date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 2)
+		vals := make(map[string]tftypes.Value, 3)
 
 		val, err = v.Amount.ToTerraformValue(ctx)
 
@@ -761,6 +807,14 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 		}
 
 		vals["date"] = val
+
+		val, err = v.Label.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -795,10 +849,12 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		map[string]attr.Type{
 			"amount": basetypes.Float64Type{},
 			"date":   basetypes.StringType{},
+			"label":  basetypes.StringType{},
 		},
 		map[string]attr.Value{
 			"amount": v.Amount,
 			"date":   v.Date,
+			"label":  v.Label,
 		})
 
 	return objVal, diags
@@ -827,6 +883,10 @@ func (v ValuesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Label.Equal(other.Label) {
+		return false
+	}
+
 	return true
 }
 
@@ -842,5 +902,6 @@ func (v ValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"amount": basetypes.Float64Type{},
 		"date":   basetypes.StringType{},
+		"label":  basetypes.StringType{},
 	}
 }

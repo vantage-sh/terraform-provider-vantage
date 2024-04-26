@@ -110,6 +110,12 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 							Description:         "The date of the Business Metric Value. ISO 8601 formatted.",
 							MarkdownDescription: "The date of the Business Metric Value. ISO 8601 formatted.",
 						},
+						"label": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "The label of the Business Metric Value.",
+							MarkdownDescription: "The label of the Business Metric Value.",
+						},
 					},
 					CustomType: resource_business_metric.ValuesType{
 						ObjectType: types.ObjectType{
