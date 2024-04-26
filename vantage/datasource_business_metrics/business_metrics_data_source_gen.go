@@ -29,7 +29,8 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The token of the CostReport the BusinessMetric is attached to.",
 										MarkdownDescription: "The token of the CostReport the BusinessMetric is attached to.",
 									},
-									"label_filter": schema.StringAttribute{
+									"label_filter": schema.ListAttribute{
+										ElementType:         types.StringType,
 										Computed:            true,
 										Description:         "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 										MarkdownDescription: "The labels that the BusinessMetric is filtered by within a particular CostReport.",
@@ -768,12 +769,12 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 		return nil, diags
 	}
 
-	labelFilterVal, ok := labelFilterAttribute.(basetypes.StringValue)
+	labelFilterVal, ok := labelFilterAttribute.(basetypes.ListValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filter expected to be basetypes.StringValue, was: %T`, labelFilterAttribute))
+			fmt.Sprintf(`label_filter expected to be basetypes.ListValue, was: %T`, labelFilterAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -897,12 +898,12 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 		return NewCostReportTokensWithMetadataValueUnknown(), diags
 	}
 
-	labelFilterVal, ok := labelFilterAttribute.(basetypes.StringValue)
+	labelFilterVal, ok := labelFilterAttribute.(basetypes.ListValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filter expected to be basetypes.StringValue, was: %T`, labelFilterAttribute))
+			fmt.Sprintf(`label_filter expected to be basetypes.ListValue, was: %T`, labelFilterAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -1004,7 +1005,7 @@ var _ basetypes.ObjectValuable = CostReportTokensWithMetadataValue{}
 
 type CostReportTokensWithMetadataValue struct {
 	CostReportToken basetypes.StringValue `tfsdk:"cost_report_token"`
-	LabelFilter     basetypes.StringValue `tfsdk:"label_filter"`
+	LabelFilter     basetypes.ListValue   `tfsdk:"label_filter"`
 	UnitScale       basetypes.StringValue `tfsdk:"unit_scale"`
 	state           attr.ValueState
 }
@@ -1016,7 +1017,9 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 	var err error
 
 	attrTypes["cost_report_token"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["label_filter"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label_filter"] = basetypes.ListType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
@@ -1078,15 +1081,31 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	labelFilterVal, d := types.ListValue(types.StringType, v.LabelFilter.Elements())
+
+	diags.Append(d...)
+
+	if d.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"cost_report_token": basetypes.StringType{},
+			"label_filter": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"unit_scale": basetypes.StringType{},
+		}), diags
+	}
+
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
 			"cost_report_token": basetypes.StringType{},
-			"label_filter":      basetypes.StringType{},
-			"unit_scale":        basetypes.StringType{},
+			"label_filter": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"unit_scale": basetypes.StringType{},
 		},
 		map[string]attr.Value{
 			"cost_report_token": v.CostReportToken,
-			"label_filter":      v.LabelFilter,
+			"label_filter":      labelFilterVal,
 			"unit_scale":        v.UnitScale,
 		})
 
@@ -1134,8 +1153,10 @@ func (v CostReportTokensWithMetadataValue) Type(ctx context.Context) attr.Type {
 func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"cost_report_token": basetypes.StringType{},
-		"label_filter":      basetypes.StringType{},
-		"unit_scale":        basetypes.StringType{},
+		"label_filter": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"unit_scale": basetypes.StringType{},
 	}
 }
 

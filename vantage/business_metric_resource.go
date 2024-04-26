@@ -53,6 +53,12 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 							Description:         "The token of the CostReport the BusinessMetric is attached to.",
 							MarkdownDescription: "The token of the CostReport the BusinessMetric is attached to.",
 						},
+						"label_filter": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Computed:            true,
+							Description:         "The labels that the BusinessMetric is filtered by within a particular CostReport.",
+							MarkdownDescription: "The labels that the BusinessMetric is filtered by within a particular CostReport.",
+						},
 						"unit_scale": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
@@ -109,6 +115,12 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 							Required:            true,
 							Description:         "The date of the Business Metric Value. ISO 8601 formatted.",
 							MarkdownDescription: "The date of the Business Metric Value. ISO 8601 formatted.",
+						},
+						"label": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "The label of the Business Metric Value.",
+							MarkdownDescription: "The label of the Business Metric Value.",
 						},
 					},
 					CustomType: resource_business_metric.ValuesType{
