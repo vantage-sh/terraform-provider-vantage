@@ -24,11 +24,13 @@ type businessMetricResourceModel struct {
 type businessMetricResourceModelValue struct {
 	Amount types.Float64 `tfsdk:"amount"`
 	Date   types.String  `tfsdk:"date"`
+	Label  types.String  `tfsdk:"label"`
 }
 
 type businessMetricDataSourceModelValue struct {
 	Amount types.String `tfsdk:"amount"`
 	Date   types.String `tfsdk:"date"`
+	Label  types.String `tfsdk:"label"`
 }
 type businessMetricResourceModelCostReportToken struct {
 	CostReportToken types.String `tfsdk:"cost_report_token"`
@@ -95,10 +97,12 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 				return nil
 			}
 			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
 
 			value := modelsv2.CreateBusinessMetricValuesItems0{
 				Amount: &amt,
 				Date:   &ts,
+				Label:  label,
 			}
 
 			values = append(values, &value)
@@ -156,10 +160,12 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 				return nil
 			}
 			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
 
 			value := modelsv2.UpdateBusinessMetricValuesItems0{
 				Amount: &amt,
 				Date:   &ts,
+				Label:  label,
 			}
 
 			values = append(values, &value)
@@ -215,12 +221,14 @@ func (m *businessMetricResourceModel) parseValues(ctx context.Context, isDataSou
 			tfValues = append(tfValues, businessMetricDataSourceModelValue{
 				Amount: types.StringValue(value.Amount),
 				Date:   types.StringValue(date),
+				Label:  types.StringValue(value.Label),
 			})
 		}
 
 		attrTypes := map[string]attr.Type{
 			"amount": types.StringType,
 			"date":   types.StringType,
+			"label":  types.StringType,
 		}
 
 		values, diagnostic := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfValues)
@@ -241,11 +249,13 @@ func (m *businessMetricResourceModel) parseValues(ctx context.Context, isDataSou
 			tfValues = append(tfValues, businessMetricResourceModelValue{
 				Amount: types.Float64Value(amt),
 				Date:   types.StringValue(date),
+				Label:  types.StringValue(value.Label),
 			})
 		}
 		attrTypes := map[string]attr.Type{
 			"amount": types.Float64Type,
 			"date":   types.StringType,
+			"label":  types.StringType,
 		}
 		values, diagnostic := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfValues)
 		if diagnostic.HasError() {
