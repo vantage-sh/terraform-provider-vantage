@@ -36,7 +36,7 @@ Read-Only:
 Read-Only:
 
 - `cost_report_token` (String) The token of the CostReport the BusinessMetric is attached to.
-- `label_filter` (String) The labels that the BusinessMetric is filtered by within a particular CostReport.
+- `label_filter` (List of String) The labels that the BusinessMetric is filtered by within a particular CostReport.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within a particular CostReport.
 
 
