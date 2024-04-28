@@ -1,0 +1,10 @@
+name: Integration Test
+on: [workflow_dispatch]
+
+jobs:
+  reuse-workflow:
+    name: Re-use Experiment
+    uses: vantage-sh/core/.github/workflows/integration-test.yml@cp/20240428/spike/reusable-workflow-acc-tests
+    with:
+      test-repo: "vantage-sh/terraform-provider-vantage"
+      test-command: "TF_ACC=1 make test"
