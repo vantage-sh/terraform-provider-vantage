@@ -1,5 +1,5 @@
 name: Integration Test
-on: [workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 
 jobs:
   reuse-workflow:
