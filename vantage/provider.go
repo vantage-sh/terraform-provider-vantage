@@ -90,6 +90,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	host := os.Getenv("VANTAGE_HOST")
 	apiToken := os.Getenv("VANTAGE_API_TOKEN")
+	debug := os.Getenv("VANTAGE_DEBUG") == "true"
 
 	if !config.Host.IsNull() {
 		host = config.Host.ValueString()
@@ -120,7 +121,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	client, err := NewClient(host, apiToken)
+	client, err := NewClient(host, apiToken, debug)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
