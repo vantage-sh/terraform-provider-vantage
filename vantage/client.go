@@ -27,7 +27,7 @@ type Client struct {
 	Auth runtime.ClientAuthInfoWriter
 }
 
-func NewClient(host, token string) (*Client, error) {
+func NewClient(host, token string, debug bool) (*Client, error) {
 	parsedURL, err := url.Parse(host)
 	if err != nil {
 		return nil, err
@@ -38,6 +38,7 @@ func NewClient(host, token string) (*Client, error) {
 	v1Cfg.WithSchemes([]string{parsedURL.Scheme})
 	transportv1 := httptransport.New(v1Cfg.Host, v1Cfg.BasePath, v1Cfg.Schemes)
 	transportv1.Transport = userAgentTripper(transportv1.Transport, userAgent)
+	transportv1.SetDebug(debug)
 	v1 := vantagev1.New(transportv1, strfmt.Default)
 
 	v2Cfg := vantagev2.DefaultTransportConfig()
@@ -45,6 +46,7 @@ func NewClient(host, token string) (*Client, error) {
 	v2Cfg.WithSchemes([]string{parsedURL.Scheme})
 	transportv2 := httptransport.New(v2Cfg.Host, v2Cfg.BasePath, v2Cfg.Schemes)
 	transportv2.Transport = userAgentTripper(transportv2.Transport, userAgent)
+	transportv2.SetDebug(debug)
 	v2 := vantagev2.New(transportv2, strfmt.Default)
 
 	bearerTokenAuth := httptransport.BearerToken(token)
