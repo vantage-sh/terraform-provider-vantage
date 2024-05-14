@@ -25,6 +25,7 @@ type segmentDataSourceModel struct {
 	ParentSegmentToken types.String `tfsdk:"parent_segment_token"`
 	TrackUnallocated   types.Bool   `tfsdk:"track_unallocated"`
 	Priority           types.Int64  `tfsdk:"priority"`
+	ReportToken        types.String `tfsdk:"report_token"`
 	WorkspaceToken     types.String `tfsdk:"workspace_token"`
 	Filter             types.String `tfsdk:"filter"`
 }
