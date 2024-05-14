@@ -112,6 +112,9 @@ func (d *segmentsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 						"workspace_token": schema.StringAttribute{
 							Computed: true,
 						},
+						"report_token": schema.StringAttribute{
+							Computed: true,
+						},
 						"filter": schema.StringAttribute{
 							Computed: true,
 						},
