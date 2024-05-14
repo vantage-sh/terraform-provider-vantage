@@ -14,8 +14,8 @@ func AnomalyNotificationResourceSchema(ctx context.Context) schema.Schema {
 		Attributes: map[string]schema.Attribute{
 			"cost_report_token": schema.StringAttribute{
 				Required:            true,
-				Description:         "The token of the Cost Report folder that has the notification.",
-				MarkdownDescription: "The token of the Cost Report folder that has the notification.",
+				Description:         "The token of the Cost Report that has the notification.",
+				MarkdownDescription: "The token of the Cost Report that has the notification.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
@@ -49,8 +49,8 @@ func AnomalyNotificationResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "The tokens of the users that receive the notification.",
-				MarkdownDescription: "The tokens of the users that receive the notification.",
+				Description:         "The tokens of the Users that receive the notification.",
+				MarkdownDescription: "The tokens of the Users that receive the notification.",
 			},
 		},
 	}
