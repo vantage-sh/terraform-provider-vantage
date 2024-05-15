@@ -76,6 +76,7 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 			Priority:           types.Int64Value(int64(segment.Priority)),
 			Filter:             types.StringValue(segment.Filter),
 			WorkspaceToken:     types.StringValue(segment.WorkspaceToken),
+			ReportToken:        types.StringValue(segment.ReportToken),
 		})
 	}
 

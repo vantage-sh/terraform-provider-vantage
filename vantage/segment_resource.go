@@ -31,6 +31,7 @@ type SegmentResourceModel struct {
 	Description        types.String `tfsdk:"description"`
 	Priority           types.Int64  `tfsdk:"priority"`
 	WorkspaceToken     types.String `tfsdk:"workspace_token"`
+	ReportToken        types.String `tfsdk:"report_token"`
 	Filter             types.String `tfsdk:"filter"`
 	ParentSegmentToken types.String `tfsdk:"parent_segment_token"`
 	Token              types.String `tfsdk:"token"`
@@ -73,7 +74,10 @@ func (r SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-
+			"report_token": schema.StringAttribute{
+				MarkdownDescription: "Token of the report for this segment.",
+				Computed:            true,
+			},
 			"filter": schema.StringAttribute{
 				MarkdownDescription: "The filter query language to apply to the Segment. Additional documentation available at https://docs.vantage.sh/vql.",
 				Optional:            true,
@@ -129,7 +133,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Priority = types.Int64Value(int64(out.Payload.Priority))
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
-
+	data.ReportToken = types.StringValue(out.Payload.ReportToken)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -157,6 +161,7 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	state.ReportToken = types.StringValue(out.Payload.ReportToken)
 	state.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Priority = types.Int64Value(int64(out.Payload.Priority))
@@ -194,6 +199,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	data.ReportToken = types.StringValue(out.Payload.ReportToken)
 	data.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
 	data.Description = types.StringValue(out.Payload.Description)
 	data.Filter = types.StringValue(out.Payload.Filter)
