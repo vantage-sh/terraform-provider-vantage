@@ -29,6 +29,11 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The token of the CostReport the BusinessMetric is attached to.",
 										MarkdownDescription: "The token of the CostReport the BusinessMetric is attached to.",
 									},
+									"label_filter": schema.StringAttribute{
+										Computed:            true,
+										Description:         "The labels that the BusinessMetric is filtered by within a particular CostReport.",
+										MarkdownDescription: "The labels that the BusinessMetric is filtered by within a particular CostReport.",
+									},
 									"unit_scale": schema.StringAttribute{
 										Computed:            true,
 										Description:         "Determines the scale of the BusinessMetric's values within a particular CostReport.",
@@ -42,8 +47,8 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 								},
 							},
 							Computed:            true,
-							Description:         "The tokens for any CostReports that use the BusinessMetric, and the unit scale.",
-							MarkdownDescription: "The tokens for any CostReports that use the BusinessMetric, and the unit scale.",
+							Description:         "The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter.",
+							MarkdownDescription: "The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter.",
 						},
 						"created_by_token": schema.StringAttribute{
 							Computed:            true,
@@ -753,6 +758,24 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 			fmt.Sprintf(`cost_report_token expected to be basetypes.StringValue, was: %T`, costReportTokenAttribute))
 	}
 
+	labelFilterAttribute, ok := attributes["label_filter"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filter is missing from object`)
+
+		return nil, diags
+	}
+
+	labelFilterVal, ok := labelFilterAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filter expected to be basetypes.StringValue, was: %T`, labelFilterAttribute))
+	}
+
 	unitScaleAttribute, ok := attributes["unit_scale"]
 
 	if !ok {
@@ -777,6 +800,7 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 
 	return CostReportTokensWithMetadataValue{
 		CostReportToken: costReportTokenVal,
+		LabelFilter:     labelFilterVal,
 		UnitScale:       unitScaleVal,
 		state:           attr.ValueStateKnown,
 	}, diags
@@ -863,6 +887,24 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 			fmt.Sprintf(`cost_report_token expected to be basetypes.StringValue, was: %T`, costReportTokenAttribute))
 	}
 
+	labelFilterAttribute, ok := attributes["label_filter"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filter is missing from object`)
+
+		return NewCostReportTokensWithMetadataValueUnknown(), diags
+	}
+
+	labelFilterVal, ok := labelFilterAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filter expected to be basetypes.StringValue, was: %T`, labelFilterAttribute))
+	}
+
 	unitScaleAttribute, ok := attributes["unit_scale"]
 
 	if !ok {
@@ -887,6 +929,7 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 
 	return CostReportTokensWithMetadataValue{
 		CostReportToken: costReportTokenVal,
+		LabelFilter:     labelFilterVal,
 		UnitScale:       unitScaleVal,
 		state:           attr.ValueStateKnown,
 	}, diags
@@ -961,24 +1004,26 @@ var _ basetypes.ObjectValuable = CostReportTokensWithMetadataValue{}
 
 type CostReportTokensWithMetadataValue struct {
 	CostReportToken basetypes.StringValue `tfsdk:"cost_report_token"`
+	LabelFilter     basetypes.StringValue `tfsdk:"label_filter"`
 	UnitScale       basetypes.StringValue `tfsdk:"unit_scale"`
 	state           attr.ValueState
 }
 
 func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 2)
+	attrTypes := make(map[string]tftypes.Type, 3)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["cost_report_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label_filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 2)
+		vals := make(map[string]tftypes.Value, 3)
 
 		val, err = v.CostReportToken.ToTerraformValue(ctx)
 
@@ -987,6 +1032,14 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 		}
 
 		vals["cost_report_token"] = val
+
+		val, err = v.LabelFilter.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label_filter"] = val
 
 		val, err = v.UnitScale.ToTerraformValue(ctx)
 
@@ -1028,10 +1081,12 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
 			"cost_report_token": basetypes.StringType{},
+			"label_filter":      basetypes.StringType{},
 			"unit_scale":        basetypes.StringType{},
 		},
 		map[string]attr.Value{
 			"cost_report_token": v.CostReportToken,
+			"label_filter":      v.LabelFilter,
 			"unit_scale":        v.UnitScale,
 		})
 
@@ -1057,6 +1112,10 @@ func (v CostReportTokensWithMetadataValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.LabelFilter.Equal(other.LabelFilter) {
+		return false
+	}
+
 	if !v.UnitScale.Equal(other.UnitScale) {
 		return false
 	}
@@ -1075,6 +1134,7 @@ func (v CostReportTokensWithMetadataValue) Type(ctx context.Context) attr.Type {
 func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"cost_report_token": basetypes.StringType{},
+		"label_filter":      basetypes.StringType{},
 		"unit_scale":        basetypes.StringType{},
 	}
 }
