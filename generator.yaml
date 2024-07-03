@@ -101,6 +101,15 @@ data_sources:
         - limit
         - links
         - page
+  managed_accounts:
+    read:
+      path: /managed_accounts
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
   report_notifications:
     read:
       path: /report_notifications
