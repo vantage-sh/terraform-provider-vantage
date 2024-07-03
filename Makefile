@@ -19,6 +19,15 @@ endif
 	  --name ${RESOURCE} \
 	  --force
 
+# DATASOURCE should be plural (ie "folders")
+scaffold-datasource:
+ifndef DATASOURCE
+	$(error DATASOURCE is not set)
+endif
+	tfplugingen-framework scaffold data-source --output-dir vantage --package vantage \
+	  --name ${DATASOURCE} \
+	  --force
+
 docs:
 	go generate ./...
 

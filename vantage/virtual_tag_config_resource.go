@@ -110,7 +110,7 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	params := tagsv2.NewGetVirtualTagConfigParams().WithVirtualTagConfigToken(state.Token.ValueString())
+	params := tagsv2.NewGetVirtualTagConfigParams().WithToken(state.Token.ValueString())
 	out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		if _, ok := err.(*tagsv2.GetVirtualTagConfigNotFound); ok {
@@ -145,7 +145,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 
 	params := tagsv2.
 		NewUpdateVirtualTagConfigParams().
-		WithVirtualTagConfigToken(data.Token.ValueString()).
+		WithToken(data.Token.ValueString()).
 		WithUpdateVirtualTagConfig(model)
 
 	out, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
@@ -171,7 +171,7 @@ func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	params := tagsv2.NewDeleteVirtualTagConfigParams()
-	params.SetVirtualTagConfigToken(state.Token.ValueString())
+	params.SetToken(state.Token.ValueString())
 	_, err := r.client.V2.VirtualTags.DeleteVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		handleError("Delete Virtual Tag Config Resource", &resp.Diagnostics, err)
