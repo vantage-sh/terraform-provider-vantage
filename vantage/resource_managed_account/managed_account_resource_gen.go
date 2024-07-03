@@ -19,6 +19,13 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Access Credential (aka Integrations) tokens to assign to the Managed Account.",
 				MarkdownDescription: "Access Credential (aka Integrations) tokens to assign to the Managed Account.",
 			},
+			"billing_rule_tokens": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Billing Rule tokens to assign to the Managed Account.",
+				MarkdownDescription: "Billing Rule tokens to assign to the Managed Account.",
+			},
 			"contact_email": schema.StringAttribute{
 				Required:            true,
 				Description:         "The contact email address for the Managed Account.",
@@ -45,6 +52,7 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 
 type ManagedAccountModel struct {
 	AccessCredentialTokens types.List   `tfsdk:"access_credential_tokens"`
+	BillingRuleTokens      types.List   `tfsdk:"billing_rule_tokens"`
 	ContactEmail           types.String `tfsdk:"contact_email"`
 	Name                   types.String `tfsdk:"name"`
 	ParentAccountToken     types.String `tfsdk:"parent_account_token"`
