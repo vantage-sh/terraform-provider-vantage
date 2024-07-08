@@ -22,6 +22,26 @@ resources:
             description: The token of the report alert
         aliases:
           anomaly_notification_token: token
+  billing_rule:
+    create:
+      path: /billing_rules
+      method: POST
+    read:
+      path: /billing_rules/{billing_rule_token}
+      method: GET
+    update:
+      path: /billing_rules/{billing_rule_token}
+      method: PUT
+    delete:
+      path: /billing_rules/{billing_rule_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the billing rule
+        aliases:
+          billing_rule_token: token
   budget:
     create:
       path: /budgets

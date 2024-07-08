@@ -178,5 +178,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewBusinessMetricResource,
 		NewBudgetResource,
 		NewManagedAccountResource,
+		NewBillingRuleResource,
 	}
 }
