@@ -103,6 +103,15 @@ resources:
         aliases:
           managed_account_token: token
 data_sources:
+  billing_rules:
+    read:
+      path: /billing_rules
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
   budgets:
     read:
       path: /budgets

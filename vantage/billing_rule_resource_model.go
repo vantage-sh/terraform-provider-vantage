@@ -10,7 +10,42 @@ import (
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
+type datasourceBillingRuleModel struct {
+	AdjustedRate   types.String `tfsdk:"adjusted_rate"`
+	Amount         types.String `tfsdk:"amount"`
+	Category       types.String `tfsdk:"category"`
+	ChargeType     types.String `tfsdk:"charge_type"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	CreatedByToken types.String `tfsdk:"created_by_token"`
+	Service        types.String `tfsdk:"service"`
+	StartPeriod    types.String `tfsdk:"start_period"`
+	SubCategory    types.String `tfsdk:"sub_category"`
+	Title          types.String `tfsdk:"title"`
+	Token          types.String `tfsdk:"token"`
+	Type           types.String `tfsdk:"type"`
+}
+
 type billingRuleModel resource_billing_rule.BillingRuleModel
+
+func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
+	adjustedRate := strconv.FormatFloat(m.AdjustedRate.ValueFloat64(), 'g', -1, 64)
+	amount := strconv.FormatFloat(m.Amount.ValueFloat64(), 'g', -1, 64)
+
+	return datasourceBillingRuleModel{
+		AdjustedRate:   types.StringValue(adjustedRate),
+		Amount:         types.StringValue(amount),
+		Category:       m.Category,
+		ChargeType:     m.ChargeType,
+		CreatedAt:      m.CreatedAt,
+		CreatedByToken: m.CreatedByToken,
+		Service:        m.Service,
+		StartPeriod:    m.StartPeriod,
+		SubCategory:    m.SubCategory,
+		Title:          m.Title,
+		Token:          m.Token,
+		Type:           m.Type,
+	}
+}
 
 func (m *billingRuleModel) applyPayload(_ context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
 	m.Token = types.StringValue(payload.Token)

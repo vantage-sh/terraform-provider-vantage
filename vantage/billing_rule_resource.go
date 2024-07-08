@@ -15,10 +15,7 @@ import (
 
 var _ resource.Resource = (*billingRuleResource)(nil)
 var _ resource.ResourceWithConfigure = (*billingRuleResource)(nil)
-
 var _ resource.ResourceWithValidateConfig = (*billingRuleResource)(nil)
-
-// var _ resource.ResourceWithConfigValidators = (*billingRuleResource)(nil)
 
 func NewBillingRuleResource() resource.Resource {
 	return &billingRuleResource{}
