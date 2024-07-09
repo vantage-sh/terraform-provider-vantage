@@ -14,15 +14,10 @@ import (
 func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"adjusted_rate": schema.Float64Attribute{
-				Required:            true,
-				Description:         "The adjusted rate of the Billing Rule. Example value: 0.85",
-				MarkdownDescription: "The adjusted rate of the Billing Rule. Example value: 0.85",
-			},
 			"amount": schema.Float64Attribute{
 				Required:            true,
-				Description:         "The credit amount for the Billing Rule. Example value: 300",
-				MarkdownDescription: "The credit amount for the Billing Rule. Example value: 300",
+				Description:         "The amount for the Billing Rule. Example value: 300",
+				MarkdownDescription: "The amount for the Billing Rule. Example value: 300",
 			},
 			"category": schema.StringAttribute{
 				Required:            true,
@@ -43,6 +38,11 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "The token of the User who created the Billing Rule.",
 				MarkdownDescription: "The token of the User who created the Billing Rule.",
+			},
+			"percentage": schema.Float64Attribute{
+				Required:            true,
+				Description:         "The percentage of the cost shown. Example value: 75.0",
+				MarkdownDescription: "The percentage of the cost shown. Example value: 75.0",
 			},
 			"service": schema.StringAttribute{
 				Required:            true,
@@ -87,12 +87,12 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type BillingRuleModel struct {
-	AdjustedRate   types.Float64 `tfsdk:"adjusted_rate"`
 	Amount         types.Float64 `tfsdk:"amount"`
 	Category       types.String  `tfsdk:"category"`
 	ChargeType     types.String  `tfsdk:"charge_type"`
 	CreatedAt      types.String  `tfsdk:"created_at"`
 	CreatedByToken types.String  `tfsdk:"created_by_token"`
+	Percentage     types.Float64 `tfsdk:"percentage"`
 	Service        types.String  `tfsdk:"service"`
 	StartPeriod    types.String  `tfsdk:"start_period"`
 	SubCategory    types.String  `tfsdk:"sub_category"`

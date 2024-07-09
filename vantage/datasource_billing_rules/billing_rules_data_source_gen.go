@@ -21,11 +21,6 @@ func BillingRulesDataSourceSchema(ctx context.Context) schema.Schema {
 			"billing_rules": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"adjusted_rate": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The adjusted rate for the Billing Rule (Adjustment).",
-							MarkdownDescription: "The adjusted rate for the Billing Rule (Adjustment).",
-						},
 						"amount": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The amount for the Billing Rule (Charge).",
@@ -50,6 +45,11 @@ func BillingRulesDataSourceSchema(ctx context.Context) schema.Schema {
 							Computed:            true,
 							Description:         "The token of the User who created the Billing Rule.",
 							MarkdownDescription: "The token of the User who created the Billing Rule.",
+						},
+						"percentage": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The percentage of the cost shown for the Billing Rule (Adjustment).",
+							MarkdownDescription: "The percentage of the cost shown for the Billing Rule (Adjustment).",
 						},
 						"service": schema.StringAttribute{
 							Computed:            true,
@@ -120,24 +120,6 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 	var diags diag.Diagnostics
 
 	attributes := in.Attributes()
-
-	adjustedRateAttribute, ok := attributes["adjusted_rate"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`adjusted_rate is missing from object`)
-
-		return nil, diags
-	}
-
-	adjustedRateVal, ok := adjustedRateAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`adjusted_rate expected to be basetypes.StringValue, was: %T`, adjustedRateAttribute))
-	}
 
 	amountAttribute, ok := attributes["amount"]
 
@@ -227,6 +209,24 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
+	}
+
+	percentageAttribute, ok := attributes["percentage"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`percentage is missing from object`)
+
+		return nil, diags
+	}
+
+	percentageVal, ok := percentageAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`percentage expected to be basetypes.StringValue, was: %T`, percentageAttribute))
 	}
 
 	serviceAttribute, ok := attributes["service"]
@@ -342,12 +342,12 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 	}
 
 	return BillingRulesValue{
-		AdjustedRate:     adjustedRateVal,
 		Amount:           amountVal,
 		Category:         categoryVal,
 		ChargeType:       chargeTypeVal,
 		CreatedAt:        createdAtVal,
 		CreatedByToken:   createdByTokenVal,
+		Percentage:       percentageVal,
 		Service:          serviceVal,
 		StartPeriod:      startPeriodVal,
 		SubCategory:      subCategoryVal,
@@ -421,24 +421,6 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 		return NewBillingRulesValueUnknown(), diags
 	}
 
-	adjustedRateAttribute, ok := attributes["adjusted_rate"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`adjusted_rate is missing from object`)
-
-		return NewBillingRulesValueUnknown(), diags
-	}
-
-	adjustedRateVal, ok := adjustedRateAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`adjusted_rate expected to be basetypes.StringValue, was: %T`, adjustedRateAttribute))
-	}
-
 	amountAttribute, ok := attributes["amount"]
 
 	if !ok {
@@ -527,6 +509,24 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
+	}
+
+	percentageAttribute, ok := attributes["percentage"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`percentage is missing from object`)
+
+		return NewBillingRulesValueUnknown(), diags
+	}
+
+	percentageVal, ok := percentageAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`percentage expected to be basetypes.StringValue, was: %T`, percentageAttribute))
 	}
 
 	serviceAttribute, ok := attributes["service"]
@@ -642,12 +642,12 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 	}
 
 	return BillingRulesValue{
-		AdjustedRate:     adjustedRateVal,
 		Amount:           amountVal,
 		Category:         categoryVal,
 		ChargeType:       chargeTypeVal,
 		CreatedAt:        createdAtVal,
 		CreatedByToken:   createdByTokenVal,
+		Percentage:       percentageVal,
 		Service:          serviceVal,
 		StartPeriod:      startPeriodVal,
 		SubCategory:      subCategoryVal,
@@ -726,12 +726,12 @@ func (t BillingRulesType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = BillingRulesValue{}
 
 type BillingRulesValue struct {
-	AdjustedRate     basetypes.StringValue `tfsdk:"adjusted_rate"`
 	Amount           basetypes.StringValue `tfsdk:"amount"`
 	Category         basetypes.StringValue `tfsdk:"category"`
 	ChargeType       basetypes.StringValue `tfsdk:"charge_type"`
 	CreatedAt        basetypes.StringValue `tfsdk:"created_at"`
 	CreatedByToken   basetypes.StringValue `tfsdk:"created_by_token"`
+	Percentage       basetypes.StringValue `tfsdk:"percentage"`
 	Service          basetypes.StringValue `tfsdk:"service"`
 	StartPeriod      basetypes.StringValue `tfsdk:"start_period"`
 	SubCategory      basetypes.StringValue `tfsdk:"sub_category"`
@@ -747,12 +747,12 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 	var val tftypes.Value
 	var err error
 
-	attrTypes["adjusted_rate"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["category"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["charge_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["percentage"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["service"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_period"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["sub_category"] = basetypes.StringType{}.TerraformType(ctx)
@@ -765,14 +765,6 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 	switch v.state {
 	case attr.ValueStateKnown:
 		vals := make(map[string]tftypes.Value, 12)
-
-		val, err = v.AdjustedRate.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["adjusted_rate"] = val
 
 		val, err = v.Amount.ToTerraformValue(ctx)
 
@@ -813,6 +805,14 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 		}
 
 		vals["created_by_token"] = val
+
+		val, err = v.Percentage.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["percentage"] = val
 
 		val, err = v.Service.ToTerraformValue(ctx)
 
@@ -893,12 +893,12 @@ func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectV
 
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
-			"adjusted_rate":    basetypes.StringType{},
 			"amount":           basetypes.StringType{},
 			"category":         basetypes.StringType{},
 			"charge_type":      basetypes.StringType{},
 			"created_at":       basetypes.StringType{},
 			"created_by_token": basetypes.StringType{},
+			"percentage":       basetypes.StringType{},
 			"service":          basetypes.StringType{},
 			"start_period":     basetypes.StringType{},
 			"sub_category":     basetypes.StringType{},
@@ -907,12 +907,12 @@ func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectV
 			"type":             basetypes.StringType{},
 		},
 		map[string]attr.Value{
-			"adjusted_rate":    v.AdjustedRate,
 			"amount":           v.Amount,
 			"category":         v.Category,
 			"charge_type":      v.ChargeType,
 			"created_at":       v.CreatedAt,
 			"created_by_token": v.CreatedByToken,
+			"percentage":       v.Percentage,
 			"service":          v.Service,
 			"start_period":     v.StartPeriod,
 			"sub_category":     v.SubCategory,
@@ -939,10 +939,6 @@ func (v BillingRulesValue) Equal(o attr.Value) bool {
 		return true
 	}
 
-	if !v.AdjustedRate.Equal(other.AdjustedRate) {
-		return false
-	}
-
 	if !v.Amount.Equal(other.Amount) {
 		return false
 	}
@@ -960,6 +956,10 @@ func (v BillingRulesValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.CreatedByToken.Equal(other.CreatedByToken) {
+		return false
+	}
+
+	if !v.Percentage.Equal(other.Percentage) {
 		return false
 	}
 
@@ -1000,12 +1000,12 @@ func (v BillingRulesValue) Type(ctx context.Context) attr.Type {
 
 func (v BillingRulesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
-		"adjusted_rate":    basetypes.StringType{},
 		"amount":           basetypes.StringType{},
 		"category":         basetypes.StringType{},
 		"charge_type":      basetypes.StringType{},
 		"created_at":       basetypes.StringType{},
 		"created_by_token": basetypes.StringType{},
+		"percentage":       basetypes.StringType{},
 		"service":          basetypes.StringType{},
 		"start_period":     basetypes.StringType{},
 		"sub_category":     basetypes.StringType{},

@@ -30,23 +30,23 @@ func TestAccBillingRule_basic(t *testing.T) {
 				),
 			},
 			{ // create adjustment
-				Config: testAccBillingRule_adjustment("test3", "service", "category", 0.5),
+				Config: testAccBillingRule_adjustment("test3", "service", "category", 50),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "title", "test3"),
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "type", "adjustment"),
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "service", "service"),
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "category", "category"),
-					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "adjusted_rate", "0.5"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "percentage", "50"),
 					resource.TestCheckResourceAttrSet("vantage_billing_rule.test_adjustment", "token"),
 				),
 			},
 			{ // update existing adjustment rule
-				Config: testAccBillingRule_adjustment("test4", "service2", "category2", 0.6),
+				Config: testAccBillingRule_adjustment("test4", "service2", "category2", 60),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "title", "test4"),
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "service", "service2"),
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "category", "category2"),
-					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "adjusted_rate", "0.6"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "percentage", "60"),
 				),
 			},
 			{
@@ -86,16 +86,16 @@ resource "vantage_billing_rule" "test_exclusion" {
 `, title, chargeType)
 }
 
-func testAccBillingRule_adjustment(title, service, category string, adjustedRate float32) string {
+func testAccBillingRule_adjustment(title, service, category string, percentage float32) string {
 	return fmt.Sprintf(`
 resource "vantage_billing_rule" "test_adjustment" {
 	title = %[1]q
 	type = "adjustment"
 	service = %[2]q
 	category = %[3]q
-	adjusted_rate = %[4]f
+	percentage = %[4]f
 }
-	`, title, service, category, adjustedRate)
+	`, title, service, category, percentage)
 }
 
 func testAccBillingRule_charge(title, service, category, subCategory, startPeriod string, amount float32) string {

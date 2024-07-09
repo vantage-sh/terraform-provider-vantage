@@ -11,7 +11,7 @@ import (
 )
 
 type datasourceBillingRuleModel struct {
-	AdjustedRate   types.String `tfsdk:"adjusted_rate"`
+	Percentage     types.String `tfsdk:"percentage"`
 	Amount         types.String `tfsdk:"amount"`
 	Category       types.String `tfsdk:"category"`
 	ChargeType     types.String `tfsdk:"charge_type"`
@@ -28,11 +28,11 @@ type datasourceBillingRuleModel struct {
 type billingRuleModel resource_billing_rule.BillingRuleModel
 
 func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
-	adjustedRate := strconv.FormatFloat(m.AdjustedRate.ValueFloat64(), 'g', -1, 64)
+	percentage := strconv.FormatFloat(m.Percentage.ValueFloat64(), 'g', -1, 64)
 	amount := strconv.FormatFloat(m.Amount.ValueFloat64(), 'g', -1, 64)
 
 	return datasourceBillingRuleModel{
-		AdjustedRate:   types.StringValue(adjustedRate),
+		Percentage:     types.StringValue(percentage),
 		Amount:         types.StringValue(amount),
 		Category:       m.Category,
 		ChargeType:     m.ChargeType,
@@ -50,15 +50,15 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 func (m *billingRuleModel) applyPayload(_ context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
 	m.Token = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
-	if payload.AdjustedRate != "" {
-		rate, err := strconv.ParseFloat(payload.AdjustedRate, 64)
+	if payload.Percentage != "" {
+		rate, err := strconv.ParseFloat(payload.Percentage, 64)
 		if err != nil {
 			d := diag.Diagnostics{}
 			d.AddError("error converting rate to int", err.Error())
 			return d
 		}
 
-		m.AdjustedRate = types.Float64Value(rate)
+		m.Percentage = types.Float64Value(rate)
 	}
 
 	if payload.Amount != "" {
@@ -101,28 +101,28 @@ func (m *billingRuleModel) applyPayload(_ context.Context, payload *modelsv2.Bil
 
 func (m *billingRuleModel) toCreateModel(_ context.Context, _ *diag.Diagnostics) *modelsv2.CreateBillingRule {
 	return &modelsv2.CreateBillingRule{
-		AdjustedRate: m.AdjustedRate.ValueFloat64Pointer(),
-		Amount:       m.Amount.ValueFloat64Pointer(),
-		Category:     m.Category.ValueStringPointer(),
-		ChargeType:   m.ChargeType.ValueStringPointer(),
-		Service:      m.Service.ValueStringPointer(),
-		StartPeriod:  m.StartPeriod.ValueStringPointer(),
-		SubCategory:  m.SubCategory.ValueStringPointer(),
-		Title:        m.Title.ValueStringPointer(),
-		Type:         m.Type.ValueStringPointer(),
+		Percentage:  m.Percentage.ValueFloat64Pointer(),
+		Amount:      m.Amount.ValueFloat64Pointer(),
+		Category:    m.Category.ValueStringPointer(),
+		ChargeType:  m.ChargeType.ValueStringPointer(),
+		Service:     m.Service.ValueStringPointer(),
+		StartPeriod: m.StartPeriod.ValueStringPointer(),
+		SubCategory: m.SubCategory.ValueStringPointer(),
+		Title:       m.Title.ValueStringPointer(),
+		Type:        m.Type.ValueStringPointer(),
 	}
 }
 
 func (m *billingRuleModel) toUpdateModel(_ context.Context, _ *diag.Diagnostics) *modelsv2.UpdateBillingRule {
 
 	return &modelsv2.UpdateBillingRule{
-		AdjustedRate: m.AdjustedRate.ValueFloat64(),
-		Amount:       m.Amount.ValueFloat64(),
-		Category:     m.Category.ValueString(),
-		ChargeType:   m.ChargeType.ValueString(),
-		Service:      m.Service.ValueString(),
-		StartPeriod:  m.StartPeriod.ValueString(),
-		SubCategory:  m.SubCategory.ValueString(),
-		Title:        m.Title.ValueString(),
+		Percentage:  m.Percentage.ValueFloat64(),
+		Amount:      m.Amount.ValueFloat64(),
+		Category:    m.Category.ValueString(),
+		ChargeType:  m.ChargeType.ValueString(),
+		Service:     m.Service.ValueString(),
+		StartPeriod: m.StartPeriod.ValueString(),
+		SubCategory: m.SubCategory.ValueString(),
+		Title:       m.Title.ValueString(),
 	}
 }
