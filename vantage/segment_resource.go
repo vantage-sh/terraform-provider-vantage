@@ -110,13 +110,18 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	params := segmentsv2.NewCreateSegmentParams()
+
 	body := &modelsv2.CreateSegment{
 		Title:              data.Title.ValueStringPointer(),
-		Filter:             data.Filter.ValueString(),
 		ParentSegmentToken: data.ParentSegmentToken.ValueString(),
-		Priority:           int32(data.Priority.ValueInt64()),
 		WorkspaceToken:     data.WorkspaceToken.ValueString(),
-		TrackUnallocated:   data.TrackUnallocated.ValueBoolPointer(),
+		Filter:             data.Filter.ValueString(),
+		Description:        data.Description.ValueString(),
+		Priority:           int32(data.Priority.ValueInt64()),
+	}
+
+	if !data.TrackUnallocated.IsNull() {
+		body.TrackUnallocated = data.TrackUnallocated.ValueBoolPointer()
 	}
 
 	params.WithCreateSegment(body)
@@ -157,7 +162,9 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 		handleError("Get Segment Resource", &resp.Diagnostics, err)
 		return
 	}
-
+	if out.Payload.Description != "" {
+		state.Description = types.StringValue(out.Payload.Description)
+	}
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
@@ -201,7 +208,11 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	data.ReportToken = types.StringValue(out.Payload.ReportToken)
 	data.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
-	data.Description = types.StringValue(out.Payload.Description)
+
+	if out.Payload.Description != "" {
+		data.Description = types.StringValue(out.Payload.Description)
+	}
+
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Title = types.StringValue(out.Payload.Title)
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
