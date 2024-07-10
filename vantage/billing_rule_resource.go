@@ -53,11 +53,11 @@ func (r *billingRuleResource) ValidateConfig(ctx context.Context, req resource.V
 	}
 
 	if data.Type.ValueString() == "adjustment" {
-		if data.AdjustedRate.IsNull() {
+		if data.Percentage.IsNull() {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("adjusted_rate"),
+				path.Root("percentage"),
 				"Missing Attribute Configuration",
-				"Expected adjusted_rate to be configured with adjustment type",
+				"Expected percentage to be configured with adjustment type",
 			)
 		}
 
@@ -125,11 +125,6 @@ func (r *billingRuleResource) ValidateConfig(ctx context.Context, req resource.V
 func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"adjusted_rate": schema.Float64Attribute{
-				Optional:            true,
-				Description:         "The adjusted rate of the Billing Rule. Example value: 0.85",
-				MarkdownDescription: "The adjusted rate of the Billing Rule. Example value: 0.85",
-			},
 			"amount": schema.Float64Attribute{
 				Optional:            true,
 				Description:         "The credit amount for the Billing Rule. Example value: 300",
@@ -154,6 +149,11 @@ func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaReq
 				Computed:            true,
 				Description:         "The token of the User who created the Billing Rule.",
 				MarkdownDescription: "The token of the User who created the Billing Rule.",
+			},
+			"percentage": schema.Float64Attribute{
+				Optional:            true,
+				Description:         "The percentage of the cost shown. Example value: 75.0",
+				MarkdownDescription: "The percentage of the cost shown. Example value: 75.0",
 			},
 			"service": schema.StringAttribute{
 				Optional:            true,
