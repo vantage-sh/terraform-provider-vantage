@@ -36,7 +36,24 @@ Read-Only:
 
 Read-Only:
 
+- `business_metric_token` (String) The token of the associated BusinessMetric.
+- `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--virtual_tag_configs--values--cost_metric))
 - `filter` (String) The filter VQL for the Value.
 - `name` (String) The name of the Value.
+
+<a id="nestedatt--virtual_tag_configs--values--cost_metric"></a>
+### Nested Schema for `virtual_tag_configs.values.cost_metric`
+
+Read-Only:
+
+- `aggregation` (Attributes) (see [below for nested schema](#nestedatt--virtual_tag_configs--values--cost_metric--aggregation))
+- `filter` (String) The filter VQL for the cost metric.
+
+<a id="nestedatt--virtual_tag_configs--values--cost_metric--aggregation"></a>
+### Nested Schema for `virtual_tag_configs.values.cost_metric.filter`
+
+Read-Only:
+
+- `tag` (String) The tag to aggregate on.
 
 
