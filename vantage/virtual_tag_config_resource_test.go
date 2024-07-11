@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -17,22 +16,6 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 	keyPre := keyV0 + "-pre"
 	keyV1 := keyV0 + "-updated"
 	resourceName := "vantage_virtual_tag_config.test"
-
-	tfValues := func(values []map[string]string) string {
-		if values == nil {
-			return ""
-		}
-		var valuesList []string
-		for _, value := range values {
-			var fields []string
-			for k, v := range value {
-				fields = append(fields, fmt.Sprintf(`%[1]q = %[2]q`, k, v))
-			}
-			valuesList = append(valuesList, fmt.Sprintf(`{ %s }`, strings.Join(fields, ",")))
-		}
-
-		return fmt.Sprintf(`values = [%[1]s]`, strings.Join(valuesList, ","))
-	}
 
 	fromState := func(key, field string) string {
 		return fmt.Sprintf(
@@ -58,14 +41,34 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 			},
 			// Create: with values
 			{
-				Config: testAccVantageVirtualTagConfigTf_basic("test", keyV0, overridable, backfillUntil, tfValues([]map[string]string{{"name": "value-0"}})),
+				Config: testAccVantageVirtualTagConfigTf_basic("test", keyV0, overridable, backfillUntil, `
+				values = [
+					{
+						name = "value-0"
+						filter = "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"
+					},
+					{
+						filter = "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"
+						cost_metric = {
+							aggregation = {
+								tag = "environment"
+							}
+							filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
+						}
+					}
+				]
+				`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "key", keyV0),
 					resource.TestCheckResourceAttr(resourceName, "overridable", "true"),
 					resource.TestCheckResourceAttr(resourceName, "backfill_until", "2024-03-01"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
-					resource.TestCheckResourceAttr(resourceName, "values.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.name", "value-0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"),
+					resource.TestCheckResourceAttr(resourceName, "values.1.filter", "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"),
+					resource.TestCheckResourceAttr(resourceName, "values.1.cost_metric.aggregation.tag", "environment"),
+					resource.TestCheckResourceAttr(resourceName, "values.1.cost_metric.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"),
 				),
 			},
 			// Update: not specifying values
@@ -85,24 +88,18 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 			},
 			// Update: set multiple values with filters
 			{
-				Config: testAccVantageVirtualTagConfigTf_basic(
-					"test",
-					keyV1,
-					!overridable,
-					backfillUntil,
-					tfValues(
-						[]map[string]string{
-							{
-								"name":   "value-0",
-								"filter": "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')",
-							},
-							{
-								"name":   "value-1",
-								"filter": "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')",
-							},
-						},
-					),
-				),
+				Config: testAccVantageVirtualTagConfigTf_basic("test", keyV1, !overridable, backfillUntil, `
+				values = [
+					{
+						name = "value-0"
+						filter = "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"
+					},
+					{
+						name = "value-1"
+						filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+					}
+				]
+				`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "key", keyV1),
 					resource.TestCheckResourceAttr(resourceName, "overridable", "false"),

@@ -50,10 +50,27 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
 
 Required:
 
-- `name` (String) The name of the Value.
+- `filter` (String) The filter VQL for the Value.
 
 Optional:
 
-- `filter` (String) The filter VQL for the Value.
+- `business_metric_token` (String) The token of the associated BusinessMetric.
+- `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric))
+- `name` (String) The name of the Value.
+
+<a id="nestedatt--values--cost_metric"></a>
+### Nested Schema for `values.cost_metric`
+
+Optional:
+
+- `aggregation` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric--aggregation))
+- `filter` (String) The filter VQL for the cost metric.
+
+<a id="nestedatt--values--cost_metric--aggregation"></a>
+### Nested Schema for `values.cost_metric.aggregation`
+
+Optional:
+
+- `tag` (String) The tag to aggregate on.
 
 

@@ -7,8 +7,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
 	tagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
+
+var _ resource.Resource = (*VirtualTagConfigResource)(nil)
+var _ resource.ResourceWithConfigure = (*VirtualTagConfigResource)(nil)
 
 type VirtualTagConfigResource struct {
 	client *Client
@@ -53,14 +58,73 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"filter": schema.StringAttribute{
+						"business_metric_token": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
+							Description:         "The token of the associated BusinessMetric.",
+							MarkdownDescription: "The token of the associated BusinessMetric.",
+							// TODO
+							// Validators: []validator.String{
+							// 	// Validate only this attribute, cost_metric, or name is configured.
+							// 	stringvalidator.ExactlyOneOf(path.Expressions{
+							// 		path.MatchRelative().AtParent().AtName("cost_metric"),
+							// 		path.MatchRelative().AtParent().AtName("name"),
+							// 	}...),
+							// },
+						},
+						"cost_metric": schema.SingleNestedAttribute{
+							Attributes: map[string]schema.Attribute{
+								"aggregation": schema.SingleNestedAttribute{
+									Attributes: map[string]schema.Attribute{
+										"tag": schema.StringAttribute{
+											Optional:            true,
+											Description:         "The tag to aggregate on.",
+											MarkdownDescription: "The tag to aggregate on.",
+										},
+									},
+									CustomType: resource_virtual_tag_config.AggregationType{
+										ObjectType: types.ObjectType{
+											AttrTypes: resource_virtual_tag_config.AggregationValue{}.AttributeTypes(ctx),
+										},
+									},
+									Optional: true,
+								},
+								"filter": schema.StringAttribute{
+									Optional:            true,
+									Description:         "The filter VQL for the cost metric.",
+									MarkdownDescription: "The filter VQL for the cost metric.",
+								},
+							},
+							CustomType: resource_virtual_tag_config.CostMetricType{
+								ObjectType: types.ObjectType{
+									AttrTypes: resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx),
+								},
+							},
+							Optional: true,
+							Computed: true,
+							// Validators: []validator.Object{
+							// 	// Validate only this attribute, business_metric_token, or name is configured.
+							// 	objectvalidator.ExactlyOneOf(path.Expressions{
+							// 		path.MatchRelative().AtParent().AtName("business_metric_token"),
+							// 		path.MatchRelative().AtParent().AtName("name"),
+							// 	}...),
+							// },
+						},
+						"filter": schema.StringAttribute{
+							Required:            true,
 							MarkdownDescription: "The filter VQL for the Value.",
 						},
 						"name": schema.StringAttribute{
-							Required:            true,
+							Optional:            true,
+							Computed:            true,
 							MarkdownDescription: "The name of the Value.",
+							// Validators: []validator.String{
+							// 	// Validate only this attribute, business_metric_token, or cost_metric is configured.
+							// 	stringvalidator.ExactlyOneOf(path.Expressions{
+							// 		path.MatchRelative().AtParent().AtName("business_metric_token"),
+							// 		path.MatchRelative().AtParent().AtName("cost_metric"),
+							// 	}...),
+							// },
 						},
 					},
 				},
@@ -71,7 +135,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 }
 
 func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *VirtualTagConfigResourceModel
+	var data *virtualTagConfigModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -103,7 +167,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 }
 
 func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *VirtualTagConfigResourceModel
+	var state *virtualTagConfigModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -132,7 +196,7 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *VirtualTagConfigResourceModel
+	var data *virtualTagConfigModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -164,7 +228,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 }
 
 func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *VirtualTagConfigResourceModel
+	var state *virtualTagConfigModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
