@@ -102,6 +102,19 @@ resources:
             description: The token of the managed account
         aliases:
           managed_account_token: token
+  virtual_tag_config:
+    create:
+      path: /virtual_tag_configs
+      method: POST
+    read:
+      path: /virtual_tag_configs/{token}
+      method: GET
+    update:
+      path: /virtual_tag_configs/{token}
+      method: PUT
+    delete:
+      path: /virtual_tag_configs/{token}
+      method: DELETE
 data_sources:
   billing_rules:
     read:

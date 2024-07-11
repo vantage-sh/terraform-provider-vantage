@@ -58,7 +58,12 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 			},
 			// Create: with values
 			{
-				Config: testAccVantageVirtualTagConfigTf_basic("test", keyV0, overridable, backfillUntil, tfValues([]map[string]string{{"name": "value-0"}})),
+				Config: testAccVantageVirtualTagConfigTf_basic("test", keyV0, overridable, backfillUntil, tfValues([]map[string]string{
+					{
+						"name":   "value-0",
+						"filter": "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')",
+					},
+				})),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "key", keyV0),
 					resource.TestCheckResourceAttr(resourceName, "overridable", "true"),

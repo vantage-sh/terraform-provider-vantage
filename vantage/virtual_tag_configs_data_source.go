@@ -22,7 +22,7 @@ type virtualTagConfigsDataSource struct {
 }
 
 type virtualTagConfigsDataSourceModel struct {
-	VirtualTagConfigs []VirtualTagConfigResourceModel `tfsdk:"virtual_tag_configs"`
+	VirtualTagConfigs []virtualTagConfigModel `tfsdk:"virtual_tag_configs"`
 }
 
 func (d *virtualTagConfigsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -62,9 +62,9 @@ func (d *virtualTagConfigsDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	vtags := make([]VirtualTagConfigResourceModel, 0, len(apiRes.Payload.VirtualTagConfigs))
+	vtags := make([]virtualTagConfigModel, 0, len(apiRes.Payload.VirtualTagConfigs))
 	for _, element := range apiRes.Payload.VirtualTagConfigs {
-		model := VirtualTagConfigResourceModel{}
+		model := virtualTagConfigModel{}
 		diag := model.applyPayload(ctx, element)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
