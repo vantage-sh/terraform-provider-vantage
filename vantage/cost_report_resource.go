@@ -25,13 +25,20 @@ func NewCostReportResource() resource.Resource {
 }
 
 type CostReportResourceModel struct {
-	Token             types.String `tfsdk:"token"`
-	Title             types.String `tfsdk:"title"`
-	FolderToken       types.String `tfsdk:"folder_token"`
-	Filter            types.String `tfsdk:"filter"`
-	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-	Groupings         types.String `tfsdk:"groupings"`
+	Token                   types.String `tfsdk:"token"`
+	Title                   types.String `tfsdk:"title"`
+	FolderToken             types.String `tfsdk:"folder_token"`
+	Filter                  types.String `tfsdk:"filter"`
+	SavedFilterTokens       types.List   `tfsdk:"saved_filter_tokens"`
+	WorkspaceToken          types.String `tfsdk:"workspace_token"`
+	Groupings               types.String `tfsdk:"groupings"`
+	StartDate               types.String `tfsdk:"start_date"`
+	EndDate                 types.String `tfsdk:"end_date"`
+	PreviousPeriodStartDate types.String `tfsdk:"previous_period_start_date"`
+	PreviousPeriodEndDate   types.String `tfsdk:"previous_period_end_date"`
+	DateInterval            types.String `tfsdk:"date_interval"`
+	ChartType               types.String `tfsdk:"chart_type"`
+	DateBin                 types.String `tfsdk:"date_bin"`
 }
 
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -46,7 +53,7 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				Required:            true,
 			},
 			"folder_token": schema.StringAttribute{
-				MarkdownDescription: "Token of the folder this report resides in.",
+				MarkdownDescription: "Token of the folder this Cost Report resides in.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -60,14 +67,61 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:            true,
 				Computed:            true,
 			},
+			"start_date": schema.StringAttribute{
+				MarkdownDescription: "Start date to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"end_date": schema.StringAttribute{
+				MarkdownDescription: "End date to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"previous_period_start_date": schema.StringAttribute{
+				MarkdownDescription: "Start date to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"previous_period_end_date": schema.StringAttribute{
+				MarkdownDescription: "End date to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"date_interval": schema.StringAttribute{
+				MarkdownDescription: "Date interval to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+			},
+			"chart_type": schema.StringAttribute{
+				MarkdownDescription: "Chart type to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+			},
+			"date_bin": schema.StringAttribute{
+				MarkdownDescription: "Date bin to apply to the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Saved filter tokens to be applied to the report.",
+				MarkdownDescription: "Saved filter tokens to be applied to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"workspace_token": schema.StringAttribute{
-				MarkdownDescription: "Workspace token to add the cost report to.",
+				MarkdownDescription: "Workspace token to add the Cost Report to.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -107,12 +161,19 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 
 	params := costsv2.NewCreateCostReportParams()
 	body := &modelsv2.CreateCostReport{
-		Title:             data.Title.ValueStringPointer(),
-		FolderToken:       data.FolderToken.ValueString(),
-		Filter:            data.Filter.ValueString(),
-		Groupings:         data.Groupings.ValueString(),
-		SavedFilterTokens: fromStringsValue(sft),
-		WorkspaceToken:    data.WorkspaceToken.ValueString(),
+		Title:                   data.Title.ValueStringPointer(),
+		FolderToken:             data.FolderToken.ValueString(),
+		Filter:                  data.Filter.ValueString(),
+		Groupings:               data.Groupings.ValueString(),
+		SavedFilterTokens:       fromStringsValue(sft),
+		WorkspaceToken:          data.WorkspaceToken.ValueString(),
+		StartDate:               data.StartDate.ValueString(),
+		EndDate:                 data.EndDate.ValueStringPointer(),
+		DateInterval:            data.DateInterval.ValueString(),
+		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
+		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueStringPointer(),
+		ChartType:               data.ChartType.ValueStringPointer(),
+		DateBin:                 data.DateBin.ValueStringPointer(),
 	}
 	params.WithCreateCostReport(body)
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
@@ -125,6 +186,13 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Groupings = types.StringValue(out.Payload.Groupings)
+	data.StartDate = types.StringValue(out.Payload.StartDate)
+	data.EndDate = types.StringValue(out.Payload.EndDate)
+	data.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
+	data.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	data.DateInterval = types.StringValue(out.Payload.DateInterval)
+	data.ChartType = types.StringValue(out.Payload.ChartType)
+	data.DateBin = types.StringValue(out.Payload.DateBin)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
@@ -163,6 +231,13 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.Title = types.StringValue(out.Payload.Title)
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Groupings = types.StringValue(out.Payload.Groupings)
+	state.StartDate = types.StringValue(out.Payload.StartDate)
+	state.EndDate = types.StringValue(out.Payload.EndDate)
+	state.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
+	state.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	state.DateInterval = types.StringValue(out.Payload.DateInterval)
+	state.ChartType = types.StringValue(out.Payload.ChartType)
+	state.DateBin = types.StringValue(out.Payload.DateBin)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -193,11 +268,18 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	params := costsv2.NewUpdateCostReportParams()
 	params.WithCostReportToken(data.Token.ValueString())
 	model := &modelsv2.UpdateCostReport{
-		FolderToken:       data.FolderToken.ValueString(),
-		Title:             data.Title.ValueString(),
-		Filter:            data.Filter.ValueString(),
-		SavedFilterTokens: fromStringsValue(sft),
-		Groupings:         data.Groupings.ValueString(),
+		FolderToken:             data.FolderToken.ValueString(),
+		Title:                   data.Title.ValueString(),
+		Filter:                  data.Filter.ValueString(),
+		SavedFilterTokens:       fromStringsValue(sft),
+		Groupings:               data.Groupings.ValueString(),
+		StartDate:               data.StartDate.ValueString(),
+		EndDate:                 data.EndDate.ValueString(),
+		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
+		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueString(),
+		DateInterval:            data.DateInterval.ValueString(),
+		ChartType:               data.ChartType.ValueStringPointer(),
+		DateBin:                 data.DateBin.ValueStringPointer(),
 	}
 	params.WithUpdateCostReport(model)
 	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
@@ -211,6 +293,13 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Groupings = types.StringValue(out.Payload.Groupings)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	data.StartDate = types.StringValue(out.Payload.StartDate)
+	data.EndDate = types.StringValue(out.Payload.EndDate)
+	data.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
+	data.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	data.DateInterval = types.StringValue(out.Payload.DateInterval)
+	data.ChartType = types.StringValue(out.Payload.ChartType)
+	data.DateBin = types.StringValue(out.Payload.DateBin)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)

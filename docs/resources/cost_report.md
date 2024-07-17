@@ -34,11 +34,18 @@ resource "vantage_cost_report" "demo_report" {
 
 ### Optional
 
+- `chart_type` (String) Chart type to apply to the Cost Report.
+- `date_bin` (String) Date bin to apply to the Cost Report.
+- `date_interval` (String) Date interval to apply to the Cost Report.
+- `end_date` (String) End date to apply to the Cost Report.
 - `filter` (String) Filter query to apply to the Cost Report
-- `folder_token` (String) Token of the folder this report resides in.
+- `folder_token` (String) Token of the folder this Cost Report resides in.
 - `groupings` (String) Grouping aggregations applied to the filtered data.
-- `saved_filter_tokens` (List of String) Saved filter tokens to be applied to the report.
-- `workspace_token` (String) Workspace token to add the cost report to.
+- `previous_period_end_date` (String) End date to apply to the Cost Report.
+- `previous_period_start_date` (String) Start date to apply to the Cost Report.
+- `saved_filter_tokens` (List of String) Saved filter tokens to be applied to the Cost Report.
+- `start_date` (String) Start date to apply to the Cost Report.
+- `workspace_token` (String) Workspace token to add the Cost Report to.
 
 ### Read-Only
 

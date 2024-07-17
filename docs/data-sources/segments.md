@@ -28,6 +28,7 @@ Read-Only:
 - `filter` (String)
 - `parent_segment_token` (String)
 - `priority` (Number)
+- `report_token` (String)
 - `title` (String)
 - `token` (String)
 - `track_unallocated` (Boolean)

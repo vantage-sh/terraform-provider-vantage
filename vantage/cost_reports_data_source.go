@@ -23,13 +23,20 @@ type costReportsDataSource struct {
 }
 
 type costReportDataSourceModel struct {
-	Token             types.String `tfsdk:"token"`
-	Title             types.String `tfsdk:"title"`
-	Filter            types.String `tfsdk:"filter"`
-	FolderToken       types.String `tfsdk:"folder_token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-	Groupings         types.String `tfsdk:"groupings"`
+	Token                   types.String `tfsdk:"token"`
+	Title                   types.String `tfsdk:"title"`
+	Filter                  types.String `tfsdk:"filter"`
+	FolderToken             types.String `tfsdk:"folder_token"`
+	WorkspaceToken          types.String `tfsdk:"workspace_token"`
+	SavedFilterTokens       types.List   `tfsdk:"saved_filter_tokens"`
+	Groupings               types.String `tfsdk:"groupings"`
+	StartDate               types.String `tfsdk:"start_date"`
+	EndDate                 types.String `tfsdk:"end_date"`
+	PreviousPeriodStartDate types.String `tfsdk:"previous_period_start_date"`
+	PreviousPeriodEndDate   types.String `tfsdk:"previous_period_end_date"`
+	DateInterval            types.String `tfsdk:"date_interval"`
+	ChartType               types.String `tfsdk:"chart_type"`
+	DateBin                 types.String `tfsdk:"date_bin"`
 }
 
 type costReportsDataSourceModel struct {
@@ -68,6 +75,27 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						"groupings": schema.StringAttribute{
 							Computed: true,
 						},
+						"start_date": schema.StringAttribute{
+							Computed: true,
+						},
+						"end_date": schema.StringAttribute{
+							Computed: true,
+						},
+						"previous_period_start_date": schema.StringAttribute{
+							Computed: true,
+						},
+						"previous_period_end_date": schema.StringAttribute{
+							Computed: true,
+						},
+						"date_interval": schema.StringAttribute{
+							Computed: true,
+						},
+						"chart_type": schema.StringAttribute{
+							Computed: true,
+						},
+						"date_bin": schema.StringAttribute{
+							Computed: true,
+						},
 					},
 				},
 				Computed: true,
@@ -100,13 +128,20 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			return
 		}
 		costReports = append(costReports, costReportDataSourceModel{
-			Title:             types.StringValue(r.Title),
-			Token:             types.StringValue(r.Token),
-			Filter:            types.StringValue(r.Filter),
-			FolderToken:       types.StringValue(r.FolderToken),
-			WorkspaceToken:    types.StringValue(r.WorkspaceToken),
-			SavedFilterTokens: savedFilterTokens,
-			Groupings:         types.StringValue(r.Groupings),
+			Title:                   types.StringValue(r.Title),
+			Token:                   types.StringValue(r.Token),
+			Filter:                  types.StringValue(r.Filter),
+			FolderToken:             types.StringValue(r.FolderToken),
+			WorkspaceToken:          types.StringValue(r.WorkspaceToken),
+			SavedFilterTokens:       savedFilterTokens,
+			Groupings:               types.StringValue(r.Groupings),
+			StartDate:               types.StringValue(r.StartDate),
+			EndDate:                 types.StringValue(r.EndDate),
+			PreviousPeriodStartDate: types.StringValue(r.PreviousPeriodStartDate),
+			PreviousPeriodEndDate:   types.StringValue(r.PreviousPeriodEndDate),
+			DateInterval:            types.StringValue(r.DateInterval),
+			ChartType:               types.StringValue(r.ChartType),
+			DateBin:                 types.StringValue(r.DateBin),
 		})
 	}
 	state.CostReports = costReports
