@@ -77,8 +77,8 @@ func (m *VirtualTagConfigResourceModel) toCreate(ctx context.Context, diags *dia
 		values := make([]*modelsv2.CreateVirtualTagConfigValuesItems0, 0, len(tfValues))
 		for _, v := range tfValues {
 			value := &modelsv2.CreateVirtualTagConfigValuesItems0{
-				Name:   v.Name.ValueStringPointer(),
-				Filter: v.Filter.ValueString(),
+				Name:   v.Name.ValueString(),
+				Filter: v.Filter.ValueStringPointer(),
 			}
 			values = append(values, value)
 		}
@@ -120,8 +120,8 @@ func (m *VirtualTagConfigResourceModel) toUpdate(ctx context.Context, diags *dia
 		values := make([]*modelsv2.UpdateVirtualTagConfigValuesItems0, 0, len(tfValues))
 		for _, v := range tfValues {
 			value := &modelsv2.UpdateVirtualTagConfigValuesItems0{
-				Name:   v.Name.ValueStringPointer(),
-				Filter: v.Filter.ValueString(),
+				Name:   v.Name.ValueString(),
+				Filter: v.Filter.ValueStringPointer(),
 			}
 			values = append(values, value)
 		}

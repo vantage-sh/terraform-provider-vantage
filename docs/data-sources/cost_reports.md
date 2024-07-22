@@ -24,10 +24,17 @@ description: |-
 
 Read-Only:
 
+- `chart_type` (String)
+- `date_bin` (String)
+- `date_interval` (String)
+- `end_date` (String)
 - `filter` (String)
 - `folder_token` (String)
 - `groupings` (String)
+- `previous_period_end_date` (String)
+- `previous_period_start_date` (String)
 - `saved_filter_tokens` (List of String)
+- `start_date` (String)
 - `title` (String)
 - `token` (String)
 - `workspace_token` (String)
