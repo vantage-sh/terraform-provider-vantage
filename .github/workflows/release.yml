@@ -6,7 +6,7 @@
 # secret. If you would rather own your own GPG handling, please fork this action
 # or use an alternative one for key handling.
 #
-# You will need to pass the `--batch` flag to `gpg` in your signing step 
+# You will need to pass the `--batch` flag to `gpg` in your signing step
 # in `goreleaser` to indicate this is being used in a non-interactive mode.
 #
 name: release
@@ -43,8 +43,8 @@ jobs:
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f82d6c1c344bcacabba2c841718984797f664a6b # v4.2.0
         with:
-          version: latest
-          args: release --rm-dist
+          version: v2.1.0
+          args: release --clean
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           # GitHub sets this automatically
