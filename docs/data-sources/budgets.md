@@ -27,6 +27,7 @@ Read-Only:
 - `budget_alert_tokens` (List of String) The tokens of the BudgetAlerts associated with the Budget.
 - `cost_report_token` (String) The token of the Report associated with the Budget.
 - `created_at` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
+- `created_by_token` (String) The token of the Creator of the Budget.
 - `name` (String) The name of the Budget.
 - `performance` (Attributes List) The historical performance of the Budget. (see [below for nested schema](#nestedatt--budgets--performance))
 - `periods` (Attributes List) The budget periods associated with the Budget. (see [below for nested schema](#nestedatt--budgets--periods))

@@ -25,7 +25,7 @@ description: |-
 Read-Only:
 
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--business_metrics--cost_report_tokens_with_metadata))
-- `created_by_token` (String) The token of the User who created the BusinessMetric.
+- `created_by_token` (String) The token of the Creator of the BusinessMetric.
 - `title` (String) The title of the BusinessMetric.
 - `token` (String) The token of the BusinessMetric.
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--business_metrics--values))

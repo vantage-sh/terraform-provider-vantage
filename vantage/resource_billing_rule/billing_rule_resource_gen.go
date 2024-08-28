@@ -36,8 +36,8 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"created_by_token": schema.StringAttribute{
 				Computed:            true,
-				Description:         "The token of the User who created the Billing Rule.",
-				MarkdownDescription: "The token of the User who created the Billing Rule.",
+				Description:         "The token of the Creator of the Billing Rule.",
+				MarkdownDescription: "The token of the Creator of the Billing Rule.",
 			},
 			"percentage": schema.Float64Attribute{
 				Required:            true,

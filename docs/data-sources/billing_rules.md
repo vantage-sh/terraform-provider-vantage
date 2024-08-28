@@ -28,7 +28,7 @@ Read-Only:
 - `category` (String) The category for the Billing Rule (Charge).
 - `charge_type` (String) The charge type for the Billing Rule.
 - `created_at` (String) The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.
-- `created_by_token` (String) The token of the User who created the Billing Rule.
+- `created_by_token` (String) The token of the Creator of the Billing Rule.
 - `percentage` (String) The percentage of the cost shown for the Billing Rule (Adjustment).
 - `service` (String) The service for the Billing Rule (Charge).
 - `start_period` (String) The start period for the Billing Rule (Charge).

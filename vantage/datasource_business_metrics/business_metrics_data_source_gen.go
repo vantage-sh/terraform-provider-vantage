@@ -53,8 +53,8 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"created_by_token": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The token of the User who created the BusinessMetric.",
-							MarkdownDescription: "The token of the User who created the BusinessMetric.",
+							Description:         "The token of the Creator of the BusinessMetric.",
+							MarkdownDescription: "The token of the Creator of the BusinessMetric.",
 						},
 						"title": schema.StringAttribute{
 							Computed:            true,

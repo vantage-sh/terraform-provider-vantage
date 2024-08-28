@@ -28,8 +28,8 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"created_by_token": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The token of the User who created the VirtualTagConfig.",
-							MarkdownDescription: "The token of the User who created the VirtualTagConfig.",
+							Description:         "The token of the Creator of the VirtualTagConfig.",
+							MarkdownDescription: "The token of the Creator of the VirtualTagConfig.",
 						},
 						"key": schema.StringAttribute{
 							Computed:            true,
