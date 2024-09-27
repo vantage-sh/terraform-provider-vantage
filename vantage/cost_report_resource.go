@@ -273,14 +273,20 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		Filter:                  data.Filter.ValueString(),
 		SavedFilterTokens:       fromStringsValue(sft),
 		Groupings:               data.Groupings.ValueString(),
-		StartDate:               data.StartDate.ValueString(),
-		EndDate:                 data.EndDate.ValueString(),
 		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
 		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueString(),
-		DateInterval:            data.DateInterval.ValueString(),
 		ChartType:               data.ChartType.ValueStringPointer(),
 		DateBin:                 data.DateBin.ValueStringPointer(),
 	}
+
+	if data.DateInterval.ValueString() == "custom" {
+		model.StartDate = data.StartDate.ValueString()
+		model.EndDate = data.EndDate.ValueString()
+		model.DateInterval = "custom"
+	} else {
+		model.DateInterval = data.DateInterval.ValueString()
+	}
+
 	params.WithUpdateCostReport(model)
 	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
 	if err != nil {
