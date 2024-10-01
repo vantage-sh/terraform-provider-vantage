@@ -16,8 +16,6 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 	// 3 months ago, beginning of month
 	now := time.Now()
 	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
-	fmt.Print("\n\n\n\n\n")
-	fmt.Println(backfillUntil)
 	keyPre := keyV0 + "-pre"
 	keyV1 := keyV0 + "-updated"
 	resourceName := "vantage_virtual_tag_config.test"
