@@ -3,6 +3,7 @@ package vantage
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -12,7 +13,11 @@ import (
 func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 	keyV0 := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	overridable := true
-	backfillUntil := "2024-03-01"
+	// 3 months ago, beginning of month
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	fmt.Print("\n\n\n\n\n")
+	fmt.Println(backfillUntil)
 	keyPre := keyV0 + "-pre"
 	keyV1 := keyV0 + "-updated"
 	resourceName := "vantage_virtual_tag_config.test"
@@ -34,7 +39,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "key", keyPre),
 					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "overridable", "true"),
-					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "backfill_until", "2024-03-01"),
+					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "backfill_until", backfillUntil),
 					resource.TestCheckResourceAttrSet("vantage_virtual_tag_config.test-no-values", "token"),
 					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "values.#", "0"),
 				),
@@ -61,7 +66,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "key", keyV0),
 					resource.TestCheckResourceAttr(resourceName, "overridable", "true"),
-					resource.TestCheckResourceAttr(resourceName, "backfill_until", "2024-03-01"),
+					resource.TestCheckResourceAttr(resourceName, "backfill_until", backfillUntil),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttr(resourceName, "values.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.name", "value-0"),
