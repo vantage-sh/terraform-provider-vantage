@@ -14,7 +14,11 @@ import (
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
-var _ resource.ResourceWithConfigValidators = &CostReportResource{}
+var (
+	_ resource.Resource                = (*CostReportResource)(nil)
+	_ resource.ResourceWithConfigure   = (*CostReportResource)(nil)
+	_ resource.ResourceWithImportState = (*CostReportResource)(nil)
+)
 
 type CostReportResource struct {
 	client *Client
@@ -239,6 +243,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.ChartType = types.StringValue(out.Payload.ChartType)
 	state.DateBin = types.StringValue(out.Payload.DateBin)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
+	state.FolderToken = types.StringValue(out.Payload.FolderToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
@@ -247,6 +252,10 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.SavedFilterTokens = savedFilterTokensValue
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r CostReportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r CostReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

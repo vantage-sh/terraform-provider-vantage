@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -13,8 +14,11 @@ import (
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
 )
 
-var _ resource.Resource = (*budgetResource)(nil)
-var _ resource.ResourceWithConfigure = (*budgetResource)(nil)
+var (
+	_ resource.Resource                = (*budgetResource)(nil)
+	_ resource.ResourceWithConfigure   = (*budgetResource)(nil)
+	_ resource.ResourceWithImportState = (*budgetResource)(nil)
+)
 
 func NewBudgetResource() resource.Resource {
 	return &budgetResource{}
@@ -205,6 +209,10 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *budgetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

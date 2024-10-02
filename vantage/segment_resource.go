@@ -16,7 +16,11 @@ import (
 	segmentsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/segments"
 )
 
-var _ resource.ResourceWithConfigValidators = &SegmentResource{}
+var (
+	_ resource.Resource                = (*SegmentResource)(nil)
+	_ resource.ResourceWithConfigure   = (*SegmentResource)(nil)
+	_ resource.ResourceWithImportState = (*SegmentResource)(nil)
+)
 
 type SegmentResource struct {
 	client *Client
@@ -175,6 +179,10 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 	state.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r SegmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -11,6 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	notifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_notifications"
+)
+
+var (
+	_ resource.Resource                = (*ReportNotificationResource)(nil)
+	_ resource.ResourceWithConfigure   = (*ReportNotificationResource)(nil)
+	_ resource.ResourceWithImportState = (*ReportNotificationResource)(nil)
 )
 
 type ReportNotificationResource struct {
@@ -172,6 +179,10 @@ func (r *ReportNotificationResource) Read(ctx context.Context, req resource.Read
 	state.Frequency = types.StringValue(out.Payload.Frequency)
 	state.Change = types.StringValue(out.Payload.Change)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *ReportNotificationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *ReportNotificationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
