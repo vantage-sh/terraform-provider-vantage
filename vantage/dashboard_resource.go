@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -10,6 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
+)
+
+var (
+	_ resource.Resource                = (*DashboardResource)(nil)
+	_ resource.ResourceWithConfigure   = (*DashboardResource)(nil)
+	_ resource.ResourceWithImportState = (*DashboardResource)(nil)
 )
 
 type DashboardResource struct {
@@ -204,6 +211,10 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 	state.SavedFilterTokens = saved_filters
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r DashboardResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r DashboardResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

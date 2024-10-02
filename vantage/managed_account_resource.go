@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -13,8 +14,11 @@ import (
 	managedaccountsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/managed_accounts"
 )
 
-var _ resource.Resource = (*managedAccountResource)(nil)
-var _ resource.ResourceWithConfigure = (*managedAccountResource)(nil)
+var (
+	_ resource.Resource                = (*managedAccountResource)(nil)
+	_ resource.ResourceWithConfigure   = (*managedAccountResource)(nil)
+	_ resource.ResourceWithImportState = (*managedAccountResource)(nil)
+)
 
 func NewManagedAccountResource() resource.Resource {
 	return &managedAccountResource{}
@@ -144,6 +148,10 @@ func (r *managedAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *managedAccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *managedAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

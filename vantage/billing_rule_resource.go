@@ -13,9 +13,12 @@ import (
 	billingrulesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/billing_rules"
 )
 
-var _ resource.Resource = (*billingRuleResource)(nil)
-var _ resource.ResourceWithConfigure = (*billingRuleResource)(nil)
-var _ resource.ResourceWithValidateConfig = (*billingRuleResource)(nil)
+var (
+	_ resource.Resource                   = (*billingRuleResource)(nil)
+	_ resource.ResourceWithConfigure      = (*billingRuleResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*billingRuleResource)(nil)
+	_ resource.ResourceWithImportState    = (*billingRuleResource)(nil)
+)
 
 func NewBillingRuleResource() resource.Resource {
 	return &billingRuleResource{}
@@ -265,6 +268,10 @@ func (r *billingRuleResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *billingRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *billingRuleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

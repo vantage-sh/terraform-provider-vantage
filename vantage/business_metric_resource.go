@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = (*businessMetricResource)(nil)
-	_ resource.ResourceWithConfigure = (*businessMetricResource)(nil)
+	_ resource.Resource                = (*businessMetricResource)(nil)
+	_ resource.ResourceWithConfigure   = (*businessMetricResource)(nil)
+	_ resource.ResourceWithImportState = (*businessMetricResource)(nil)
 )
 
 func NewBusinessMetricResource() resource.Resource {
@@ -203,6 +205,10 @@ func (r *businessMetricResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *businessMetricResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *businessMetricResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

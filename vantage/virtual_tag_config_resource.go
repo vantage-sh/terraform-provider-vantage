@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -12,8 +13,11 @@ import (
 	tagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
 
-var _ resource.Resource = (*VirtualTagConfigResource)(nil)
-var _ resource.ResourceWithConfigure = (*VirtualTagConfigResource)(nil)
+var (
+	_ resource.Resource                = (*VirtualTagConfigResource)(nil)
+	_ resource.ResourceWithConfigure   = (*VirtualTagConfigResource)(nil)
+	_ resource.ResourceWithImportState = (*VirtualTagConfigResource)(nil)
+)
 
 type VirtualTagConfigResource struct {
 	client *Client
@@ -193,6 +197,10 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r VirtualTagConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

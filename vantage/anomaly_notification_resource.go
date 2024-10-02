@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -14,8 +15,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
 
-var _ resource.Resource = (*anomalyNotificationResource)(nil)
-var _ resource.ResourceWithConfigure = (*anomalyNotificationResource)(nil)
+var (
+	_ resource.Resource                = (*anomalyNotificationResource)(nil)
+	_ resource.ResourceWithConfigure   = (*anomalyNotificationResource)(nil)
+	_ resource.ResourceWithImportState = (*anomalyNotificationResource)(nil)
+)
 
 func NewAnomalyNotificationResource() resource.Resource {
 	return &anomalyNotificationResource{}
@@ -170,6 +174,10 @@ func (r *anomalyNotificationResource) Read(ctx context.Context, req resource.Rea
 	readPayloadIntoResourceModel(out.Payload, &data)
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *anomalyNotificationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *anomalyNotificationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

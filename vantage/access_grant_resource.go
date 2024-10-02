@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -12,6 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	accessgrantsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/access_grants"
+)
+
+var (
+	_ resource.Resource                = (*AccessGrantResource)(nil)
+	_ resource.ResourceWithConfigure   = (*AccessGrantResource)(nil)
+	_ resource.ResourceWithImportState = (*AccessGrantResource)(nil)
 )
 
 type AccessGrantResource struct {
@@ -124,6 +131,10 @@ func (r AccessGrantResource) Read(ctx context.Context, req resource.ReadRequest,
 	state.Access = types.StringValue(out.Payload.Access)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r AccessGrantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

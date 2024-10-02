@@ -14,7 +14,11 @@ import (
 	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
 )
 
-var _ resource.ResourceWithConfigValidators = &FolderResource{}
+var (
+	_ resource.Resource                = (*FolderResource)(nil)
+	_ resource.ResourceWithConfigure   = (*FolderResource)(nil)
+	_ resource.ResourceWithImportState = (*FolderResource)(nil)
+)
 
 type FolderResource struct {
 	client *Client
@@ -125,6 +129,10 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.Title = types.StringValue(out.Payload.Title)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r FolderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

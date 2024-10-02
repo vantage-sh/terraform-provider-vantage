@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -10,6 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	filtersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/saved_filters"
+)
+
+var (
+	_ resource.Resource                = (*SavedFilterResource)(nil)
+	_ resource.ResourceWithConfigure   = (*SavedFilterResource)(nil)
+	_ resource.ResourceWithImportState = (*SavedFilterResource)(nil)
 )
 
 type SavedFilterResource struct {
@@ -118,6 +125,10 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r SavedFilterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
