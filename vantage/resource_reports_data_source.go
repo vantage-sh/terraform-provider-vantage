@@ -23,9 +23,7 @@ type resourceReportDataSourceModel struct {
 	Title          types.String `tfsdk:"title"`
 	UserToken      types.String `tfsdk:"user_token"`
 	WorkspaceToken types.String `tfsdk:"workspace_token"`
-	Default        types.Bool   `tfsdk:"default"`
 	CreatedAt      types.String `tfsdk:"created_at"`
-	SegmentToken   types.String `tfsdk:"segment_token"`
 }
 
 type resourceReportsDataSourceModel struct {
@@ -69,9 +67,7 @@ func (r *resourceReportsDataSource) Read(ctx context.Context, req datasource.Rea
 			Title:          types.StringValue(report.Title),
 			UserToken:      types.StringValue(report.UserToken),
 			WorkspaceToken: types.StringValue(report.WorkspaceToken),
-			Default:        types.BoolValue(report.Default),
 			CreatedAt:      types.StringValue(report.CreatedAt),
-			SegmentToken:   types.StringValue(report.SegmentToken),
 		})
 	}
 
@@ -101,13 +97,7 @@ func (r *resourceReportsDataSource) Schema(_ context.Context, _ datasource.Schem
 						"workspace_token": schema.StringAttribute{
 							Computed: true,
 						},
-						"segment_token": schema.StringAttribute{
-							Computed: true,
-						},
 						"created_at": schema.StringAttribute{
-							Computed: true,
-						},
-						"default": schema.BoolAttribute{
 							Computed: true,
 						},
 					},
