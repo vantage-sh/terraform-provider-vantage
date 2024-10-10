@@ -25,8 +25,6 @@ description: |-
 Read-Only:
 
 - `created_at` (String)
-- `default` (Boolean)
-- `segment_token` (String)
 - `title` (String)
 - `token` (String)
 - `user_token` (String)
