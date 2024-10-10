@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -11,8 +12,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = (*resourceReportResource)(nil)
-	_ resource.ResourceWithConfigure = (*resourceReportResource)(nil)
+	_ resource.Resource                = (*resourceReportResource)(nil)
+	_ resource.ResourceWithConfigure   = (*resourceReportResource)(nil)
+	_ resource.ResourceWithImportState = (*resourceReportResource)(nil)
 )
 
 func NewResourceReportResource() resource.Resource {
@@ -21,6 +23,11 @@ func NewResourceReportResource() resource.Resource {
 
 type resourceReportResource struct {
 	client *Client
+}
+
+func (r *resourceReportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
+
 }
 
 func (r *resourceReportResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
