@@ -102,6 +102,26 @@ resources:
             description: The token of the managed account
         aliases:
           managed_account_token: token
+  resource_report:
+    create:
+      path: /resource_reports
+      method: POST
+    read:
+      path: /resource_reports/{resource_report_token}
+      method: GET
+    update:
+      path: /resource_reports/{resource_report_token}
+      method: PUT
+    delete:
+      path: /resource_reports/{resource_report_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the report
+        aliases:
+          resource_report_token: token
   virtual_tag_config:
     create:
       path: /virtual_tag_configs
