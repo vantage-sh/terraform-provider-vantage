@@ -133,6 +133,7 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Budget, dst *budgetModel) diag.Diagnostics {
 	dst.Token = types.StringValue(src.Token)
 	dst.CreatedAt = types.StringValue(src.CreatedAt)
+	dst.CreatedByToken = types.StringValue(src.CreatedByToken)
 	dst.Name = types.StringValue(src.Name)
 	dst.UserToken = types.StringValue(src.UserToken)
 	dst.WorkspaceToken = types.StringValue(src.WorkspaceToken)

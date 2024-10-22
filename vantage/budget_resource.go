@@ -58,6 +58,11 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
 				MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
 			},
+			"created_by_token": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The token of the Creator of the Budget.",
+				MarkdownDescription: "The token of the Creator of the Budget.",
+			},
 			"name": schema.StringAttribute{
 				Required:            true,
 				Description:         "The name of the Budget.",
@@ -136,6 +141,7 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Description:         "The token for the User who created this Budget.",
 				MarkdownDescription: "The token for the User who created this Budget.",
 			},
+
 			"workspace_token": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
