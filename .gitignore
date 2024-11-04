@@ -8,4 +8,5 @@ tmp.json
 tmp-swagger.json
 **/dist
 **/bin
+.vscode/
 
