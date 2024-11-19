@@ -25,8 +25,8 @@ func ResourceReportResourceSchema(ctx context.Context) schema.Schema {
 			"filter": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The VQL filter for the ResourceReport.",
-				MarkdownDescription: "The VQL filter for the ResourceReport.",
+				Description:         "The filter query language to apply to the ResourceReport. Additional documentation available at https://docs.vantage.sh/vql.",
+				MarkdownDescription: "The filter query language to apply to the ResourceReport. Additional documentation available at https://docs.vantage.sh/vql.",
 			},
 			"title": schema.StringAttribute{
 				Optional:            true,

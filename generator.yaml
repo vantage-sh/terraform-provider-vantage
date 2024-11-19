@@ -82,6 +82,26 @@ resources:
             description: The token of the business metric
         aliases:
           business_metric_token: token
+  kubernetes_efficiency_report:
+    create:
+      path: /kubernetes_efficiency_reports
+      method: POST
+    read:
+      path: /kubernetes_efficiency_reports/{kubernetes_efficiency_report_token}
+      method: GET
+    update:
+      path: /kubernetes_efficiency_reports/{kubernetes_efficiency_report_token}
+      method: PUT
+    delete:
+      path: /kubernetes_efficiency_reports/{kubernetes_efficiency_report_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the report
+        aliases:
+          kubernetes_efficiency_report_token: token
   managed_account:
     create:
       path: /managed_accounts

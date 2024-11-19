@@ -173,7 +173,6 @@ func (r *resourceReportResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// tflog.Debug(ctx, fmt.Sprintf("update payload: %v", out.Payload))
 	diag := data.applyPayload(ctx, out.Payload, false)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)

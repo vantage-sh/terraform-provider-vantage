@@ -23,8 +23,8 @@ func KubernetesEfficiencyReportsDataSourceSchema(ctx context.Context) schema.Sch
 					Attributes: map[string]schema.Attribute{
 						"aggregated_by": schema.StringAttribute{
 							Computed:            true,
-							Description:         "How costs are aggregated by. Possible values: idle_costs, amount.",
-							MarkdownDescription: "How costs are aggregated by. Possible values: idle_costs, amount.",
+							Description:         "How costs are aggregated by. Possible values: idle_cost, amount, cost_efficiency.",
+							MarkdownDescription: "How costs are aggregated by. Possible values: idle_cost, amount, cost_efficiency.",
 						},
 						"created_at": schema.StringAttribute{
 							Computed:            true,
@@ -51,10 +51,15 @@ func KubernetesEfficiencyReportsDataSourceSchema(ctx context.Context) schema.Sch
 							Description:         "The end date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.",
 							MarkdownDescription: "The end date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.",
 						},
+						"filter": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The filter applied to the KubernetesEfficiencyReport. Additional documentation available at https://docs.vantage.sh/vql.",
+							MarkdownDescription: "The filter applied to the KubernetesEfficiencyReport. Additional documentation available at https://docs.vantage.sh/vql.",
+						},
 						"groupings": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The grouping aggregations applied to the filtered data.",
-							MarkdownDescription: "The grouping aggregations applied to the filtered data.",
+							Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.",
+							MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.",
 						},
 						"start_date": schema.StringAttribute{
 							Computed:            true,
@@ -229,6 +234,24 @@ func (t KubernetesEfficiencyReportsType) ValueFromObject(ctx context.Context, in
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	filterAttribute, ok := attributes["filter"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`filter is missing from object`)
+
+		return nil, diags
+	}
+
+	filterVal, ok := filterAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`filter expected to be basetypes.StringValue, was: %T`, filterAttribute))
+	}
+
 	groupingsAttribute, ok := attributes["groupings"]
 
 	if !ok {
@@ -348,6 +371,7 @@ func (t KubernetesEfficiencyReportsType) ValueFromObject(ctx context.Context, in
 		DateInterval:   dateIntervalVal,
 		Default:        defaultVal,
 		EndDate:        endDateVal,
+		Filter:         filterVal,
 		Groupings:      groupingsVal,
 		StartDate:      startDateVal,
 		Title:          titleVal,
@@ -529,6 +553,24 @@ func NewKubernetesEfficiencyReportsValue(attributeTypes map[string]attr.Type, at
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	filterAttribute, ok := attributes["filter"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`filter is missing from object`)
+
+		return NewKubernetesEfficiencyReportsValueUnknown(), diags
+	}
+
+	filterVal, ok := filterAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`filter expected to be basetypes.StringValue, was: %T`, filterAttribute))
+	}
+
 	groupingsAttribute, ok := attributes["groupings"]
 
 	if !ok {
@@ -648,6 +690,7 @@ func NewKubernetesEfficiencyReportsValue(attributeTypes map[string]attr.Type, at
 		DateInterval:   dateIntervalVal,
 		Default:        defaultVal,
 		EndDate:        endDateVal,
+		Filter:         filterVal,
 		Groupings:      groupingsVal,
 		StartDate:      startDateVal,
 		Title:          titleVal,
@@ -732,6 +775,7 @@ type KubernetesEfficiencyReportsValue struct {
 	DateInterval   basetypes.StringValue `tfsdk:"date_interval"`
 	Default        basetypes.BoolValue   `tfsdk:"default"`
 	EndDate        basetypes.StringValue `tfsdk:"end_date"`
+	Filter         basetypes.StringValue `tfsdk:"filter"`
 	Groupings      basetypes.StringValue `tfsdk:"groupings"`
 	StartDate      basetypes.StringValue `tfsdk:"start_date"`
 	Title          basetypes.StringValue `tfsdk:"title"`
@@ -742,7 +786,7 @@ type KubernetesEfficiencyReportsValue struct {
 }
 
 func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 12)
+	attrTypes := make(map[string]tftypes.Type, 13)
 
 	var val tftypes.Value
 	var err error
@@ -753,6 +797,7 @@ func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) 
 	attrTypes["date_interval"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["default"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["groupings"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
@@ -764,7 +809,7 @@ func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) 
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 12)
+		vals := make(map[string]tftypes.Value, 13)
 
 		val, err = v.AggregatedBy.ToTerraformValue(ctx)
 
@@ -813,6 +858,14 @@ func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) 
 		}
 
 		vals["end_date"] = val
+
+		val, err = v.Filter.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["filter"] = val
 
 		val, err = v.Groupings.ToTerraformValue(ctx)
 
@@ -899,6 +952,7 @@ func (v KubernetesEfficiencyReportsValue) ToObjectValue(ctx context.Context) (ba
 			"date_interval":   basetypes.StringType{},
 			"default":         basetypes.BoolType{},
 			"end_date":        basetypes.StringType{},
+			"filter":          basetypes.StringType{},
 			"groupings":       basetypes.StringType{},
 			"start_date":      basetypes.StringType{},
 			"title":           basetypes.StringType{},
@@ -913,6 +967,7 @@ func (v KubernetesEfficiencyReportsValue) ToObjectValue(ctx context.Context) (ba
 			"date_interval":   v.DateInterval,
 			"default":         v.Default,
 			"end_date":        v.EndDate,
+			"filter":          v.Filter,
 			"groupings":       v.Groupings,
 			"start_date":      v.StartDate,
 			"title":           v.Title,
@@ -963,6 +1018,10 @@ func (v KubernetesEfficiencyReportsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Filter.Equal(other.Filter) {
+		return false
+	}
+
 	if !v.Groupings.Equal(other.Groupings) {
 		return false
 	}
@@ -1006,6 +1065,7 @@ func (v KubernetesEfficiencyReportsValue) AttributeTypes(ctx context.Context) ma
 		"date_interval":   basetypes.StringType{},
 		"default":         basetypes.BoolType{},
 		"end_date":        basetypes.StringType{},
+		"filter":          basetypes.StringType{},
 		"groupings":       basetypes.StringType{},
 		"start_date":      basetypes.StringType{},
 		"title":           basetypes.StringType{},
