@@ -114,7 +114,8 @@ func (r *kubernetesEfficiencyReportResource) Schema(ctx context.Context, req res
 				MarkdownDescription: "Indicates whether the KubernetesEfficiencyReport is the default report.",
 			},
 			"end_date": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				Description:         "The end date of the KubernetesEfficiencyReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The end date of the KubernetesEfficiencyReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},
@@ -132,7 +133,8 @@ func (r *kubernetesEfficiencyReportResource) Schema(ctx context.Context, req res
 				MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.",
 			},
 			"start_date": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				Description:         "The start date of the KubernetesEfficiencyReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The start date of the KubernetesEfficiencyReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},
