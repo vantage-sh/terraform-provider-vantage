@@ -40,13 +40,12 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 				MarkdownDescription: "The date bin of the KubernetesEfficiencyReport.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
-						"cumulative",
 						"day",
 						"week",
 						"month",
 					),
 				},
-				Default: stringdefault.StaticString("cumulative"),
+				Default: stringdefault.StaticString("day"),
 			},
 			"date_bucket": schema.StringAttribute{
 				Computed:            true,

@@ -76,12 +76,13 @@ func (r *kubernetesEfficiencyReportResource) Schema(ctx context.Context, req res
 						"month",
 					),
 				},
-				Default: stringdefault.StaticString("cumulative"),
+				Default: stringdefault.StaticString("day"),
 			},
 			"date_bucket": schema.StringAttribute{
 				Computed:            true,
 				Description:         "How costs are grouped and displayed in the KubernetesEfficiencyReport. Possible values: day, week, month.",
 				MarkdownDescription: "How costs are grouped and displayed in the KubernetesEfficiencyReport. Possible values: day, week, month.",
+				Default:             stringdefault.StaticString("day"),
 			},
 			"date_interval": schema.StringAttribute{
 				Optional:            true,
@@ -168,6 +169,13 @@ func (r *kubernetesEfficiencyReportResource) Schema(ctx context.Context, req res
 func (r *kubernetesEfficiencyReportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data kubernetesEfficiencyReportModel
 
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	model := data.toCreateModel(ctx)
 
 	params := k8seffreportsv2.NewCreateKubernetesEfficiencyReportParams().WithCreateKubernetesEfficiencyReport(model)
@@ -234,7 +242,7 @@ func (r *kubernetesEfficiencyReportResource) Update(ctx context.Context, req res
 
 	model := data.toUpdateModel(ctx)
 
-	params := k8seffreportsv2.NewUpdateKubernetesEfficiencyReportParams().WithUpdateKubernetesEfficiencyReport(model)
+	params := k8seffreportsv2.NewUpdateKubernetesEfficiencyReportParams().WithUpdateKubernetesEfficiencyReport(model).WithKubernetesEfficiencyReportToken(data.Token.ValueString())
 
 	out, err := r.client.V2.KubernetesEfficiencyReports.UpdateKubernetesEfficiencyReport(params, r.client.Auth)
 	if err != nil {

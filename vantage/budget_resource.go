@@ -196,7 +196,9 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	params := budgetsv2.NewGetBudgetParams().WithBudgetToken(data.Token.ValueString())
+	fBool := false
+
+	params := budgetsv2.NewGetBudgetParams().WithBudgetToken(data.Token.ValueString()).WithIncludePerformance(&fBool)
 	out, err := r.client.V2.Budgets.GetBudget(params, r.client.Auth)
 	if err != nil {
 		if _, ok := err.(*budgetsv2.GetBudgetNotFound); ok {

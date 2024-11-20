@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -24,7 +25,28 @@ func (r *kubernetesEfficiencyReportModel) applyPayload(ctx context.Context, payl
 	r.DateBucket = types.StringValue(payload.DateBucket)
 	r.DateInterval = types.StringValue(payload.DateInterval)
 	r.Default = types.BoolValue(payload.Default)
-	r.EndDate = types.StringValue(payload.EndDate)
+
+	startDate, err := time.Parse(strfmt.RFC3339Millis, payload.StartDate)
+
+	if err != nil {
+		d := diag.Diagnostics{}
+		d.AddError("error parsing start date", err.Error())
+		return d
+	}
+
+	tfDate := strfmt.Date(startDate)
+	r.StartDate = types.StringValue(tfDate.String())
+
+	endDate, err := time.Parse(strfmt.RFC3339Millis, payload.EndDate)
+
+	if err != nil {
+		d := diag.Diagnostics{}
+		d.AddError("error parsing end date", err.Error())
+		return d
+	}
+
+	tfDate = strfmt.Date(endDate)
+	r.EndDate = types.StringValue(tfDate.String())
 
 	groupings := strings.Split(payload.Groupings, ",")
 
