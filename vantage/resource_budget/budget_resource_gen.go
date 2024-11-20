@@ -40,6 +40,12 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the Creator of the Budget.",
 				MarkdownDescription: "The token of the Creator of the Budget.",
 			},
+			"include_performance": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Include performance data.",
+				MarkdownDescription: "Include performance data.",
+			},
 			"name": schema.StringAttribute{
 				Required:            true,
 				Description:         "The name of the Budget.",
@@ -126,16 +132,17 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type BudgetModel struct {
-	BudgetAlertTokens types.List   `tfsdk:"budget_alert_tokens"`
-	CostReportToken   types.String `tfsdk:"cost_report_token"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	CreatedByToken    types.String `tfsdk:"created_by_token"`
-	Name              types.String `tfsdk:"name"`
-	Performance       types.List   `tfsdk:"performance"`
-	Periods           types.List   `tfsdk:"periods"`
-	Token             types.String `tfsdk:"token"`
-	UserToken         types.String `tfsdk:"user_token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	BudgetAlertTokens  types.List   `tfsdk:"budget_alert_tokens"`
+	CostReportToken    types.String `tfsdk:"cost_report_token"`
+	CreatedAt          types.String `tfsdk:"created_at"`
+	CreatedByToken     types.String `tfsdk:"created_by_token"`
+	IncludePerformance types.Bool   `tfsdk:"include_performance"`
+	Name               types.String `tfsdk:"name"`
+	Performance        types.List   `tfsdk:"performance"`
+	Periods            types.List   `tfsdk:"periods"`
+	Token              types.String `tfsdk:"token"`
+	UserToken          types.String `tfsdk:"user_token"`
+	WorkspaceToken     types.String `tfsdk:"workspace_token"`
 }
 
 var _ basetypes.ObjectTypable = PerformanceType{}
