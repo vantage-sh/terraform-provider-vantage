@@ -24,13 +24,14 @@ description: |-
 
 Read-Only:
 
-- `aggregated_by` (String) How costs are aggregated by. Possible values: idle_costs, amount.
+- `aggregated_by` (String) How costs are aggregated by. Possible values: idle_cost, amount, cost_efficiency.
 - `created_at` (String) The date and time, in UTC, the report was created. ISO 8601 Formatted.
 - `date_bucket` (String) How costs are grouped and displayed in the KubernetesEfficiencyReport. Possible values: day, week, month.
 - `date_interval` (String) The date range for the KubernetesEfficiencyReport. Only present if a custom date range is not specified.
 - `default` (Boolean) Indicates whether the KubernetesEfficiencyReport is the default report.
 - `end_date` (String) The end date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.
-- `groupings` (String) The grouping aggregations applied to the filtered data.
+- `filter` (String) The filter applied to the KubernetesEfficiencyReport. Additional documentation available at https://docs.vantage.sh/vql.
+- `groupings` (String) Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.
 - `start_date` (String) The start date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.
 - `title` (String) The title of the KubernetesEfficiencyReport.
 - `token` (String)
