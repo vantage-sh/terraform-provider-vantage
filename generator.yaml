@@ -84,6 +84,26 @@ resources:
             description: The token of the business metric
         aliases:
           business_metric_token: token
+  dashboard:
+    create:
+      path: /dashboards
+      method: POST
+    read:
+      path: /dashboards/{dashboard_token}
+      method: GET
+    update:
+      path: /dashboards/{dashboard_token}
+      method: PUT
+    delete:
+      path: /dashboards/{dashboard_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the dashboard
+        aliases:
+          dashboard_token: token
   kubernetes_efficiency_report:
     create:
       path: /kubernetes_efficiency_reports
@@ -179,6 +199,15 @@ data_sources:
   business_metrics:
     read:
       path: /business_metrics
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  dashboards:
+    read:
+      path: /dashboards
       method: GET
     schema:
       ignores:
