@@ -13,7 +13,7 @@ import (
 
 type virtualTagConfigModel resource_virtual_tag_config.VirtualTagConfigModel
 
-type virtualTagConfigResourceModelValue struct {
+type virtualTagConfigValueModel struct {
 	BusinessMetricToken types.String                                `tfsdk:"business_metric_token"`
 	CostMetric          resource_virtual_tag_config.CostMetricValue `tfsdk:"cost_metric"`
 	Filter              types.String                                `tfsdk:"filter"`
@@ -200,8 +200,8 @@ func (m *virtualTagConfigModel) backfillUntilFromTf(diags *diag.Diagnostics) *st
 	return &date
 }
 
-func (m *virtualTagConfigModel) valuesFromTf(ctx context.Context, diags *diag.Diagnostics) []*virtualTagConfigResourceModelValue {
-	values := make([]*virtualTagConfigResourceModelValue, 0, len(m.Values.Elements()))
+func (m *virtualTagConfigModel) valuesFromTf(ctx context.Context, diags *diag.Diagnostics) []*virtualTagConfigValueModel {
+	values := make([]*virtualTagConfigValueModel, 0, len(m.Values.Elements()))
 	if diag := m.Values.ElementsAs(ctx, &values, false); diag.HasError() {
 		diags.Append(diag...)
 		return nil

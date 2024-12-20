@@ -4,8 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_dashboards"
 	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
 )
 
@@ -14,28 +13,20 @@ var (
 	_ datasource.DataSourceWithConfigure = &dashboardsDataSource{}
 )
 
-func NewDashboardsDataSource() datasource.DataSource {
-	return &dashboardsDataSource{}
-}
-
-type dashboardDataSourceModel struct {
-	Token          		types.String `tfsdk:"token"`
-	Title          		types.String `tfsdk:"title"`
-	WidgetTokens   		types.List   `tfsdk:"widget_tokens"`
-	DateBin        		types.String `tfsdk:"date_bin"`
-	DateInterval   		types.String `tfsdk:"date_interval"`
-	StartDate      		types.String `tfsdk:"start_date"`
-	EndDate        		types.String `tfsdk:"end_date"`
-	WorkspaceToken 		types.String `tfsdk:"workspace_token"`
-	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
-}
-
 type dashboardsDataSourceModel struct {
-	Dashboards []dashboardDataSourceModel `tfsdk:"dashboards"`
+	Dashboards []dashboardModel `tfsdk:"dashboards"`
 }
 
 type dashboardsDataSource struct {
 	client *Client
+}
+
+func NewDashboardsDataSource() datasource.DataSource {
+	return &dashboardsDataSource{}
+}
+
+func (d *dashboardsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = datasource_dashboards.DashboardsDataSourceSchema(ctx)
 }
 
 func (d *dashboardsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -64,80 +55,13 @@ func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	for _, dashboard := range out.Payload.Dashboards {
-
-		var dashboardModel dashboardDataSourceModel
-		dashboardModel.Token = types.StringValue(dashboard.Token)
-		dashboardModel.Title = types.StringValue(dashboard.Title)
-		dashboardModel.DateBin = types.StringValue(dashboard.DateBin)
-		dashboardModel.DateInterval = types.StringValue(dashboard.DateInterval)
-		dashboardModel.StartDate = types.StringValue(dashboard.StartDate)
-		dashboardModel.EndDate = types.StringValue(dashboard.EndDate)
-		dashboardModel.WorkspaceToken = types.StringValue(dashboard.WorkspaceToken)
-
-		widgetTokens, diag := types.ListValueFrom(ctx, types.StringType, dashboard.WidgetTokens)
-		if diag.HasError() {
+		d := dashboardModel{}
+		if diag := d.applyPayload(ctx, dashboard); diag.HasError() {
 			resp.Diagnostics.Append(diag...)
-			return
 		}
-		dashboardModel.WidgetTokens = widgetTokens
-
-		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, dashboard.SavedFilterTokens)
-		if diag.HasError() {
-			resp.Diagnostics.Append(diag...)
-			return
-		}
-		dashboardModel.SavedFilterTokens = savedFilterTokens
-
-		state.Dashboards = append(state.Dashboards, dashboardModel)
+		state.Dashboards = append(state.Dashboards, d)
 	}
 
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
-func (d *dashboardsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"dashboards": schema.ListNestedAttribute{
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"token": schema.StringAttribute{
-							Computed: true,
-						},
-						"title": schema.StringAttribute{
-							Computed: true,
-						},
-						"widget_tokens": schema.ListAttribute{
-							ElementType: types.StringType,
-							Computed:    true,
-						},
-						"date_bin": schema.StringAttribute{
-							Computed: true,
-						},
-						"date_interval": schema.StringAttribute{
-							Computed: true,
-						},
-						"start_date": schema.StringAttribute{
-							Computed: true,
-						},
-						"end_date": schema.StringAttribute{
-							Computed: true,
-						},
-						"workspace_token": schema.StringAttribute{
-							Computed: true,
-						},
-						"saved_filter_tokens": schema.ListAttribute{
-							ElementType: types.StringType,
-							Computed:    true,
-						},
-					},
-				},
-				Computed: true,
-			},
-		},
-	}
-
 }
