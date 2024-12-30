@@ -152,7 +152,7 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 }
 
 func (r DashboardResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *resource_dashboard.DashboardModel
+	var state *dashboardModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
