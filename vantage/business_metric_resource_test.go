@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
 func TestAccBusinessMetric_basic(t *testing.T) {
+	now := time.Now()
+	date1 := fmt.Sprintf("%d-01-10", now.Year())
+	date2 := fmt.Sprintf("%d-01-01", now.Year())
 	tfValues := func(values []map[string]string) string {
 		if values == nil {
 			return ""
@@ -40,16 +44,16 @@ func TestAccBusinessMetric_basic(t *testing.T) {
 			},
 			{ // create with values
 				Config: testAccVantageBusinessMetricTf_basic("test", "test", tfValues([]map[string]string{
-					{"date": "2024-01-10", "amount": "345.12"},
-					{"date": "2024-01-01", "amount": "123.45", "label": "a-label"},
+					{"date": date1, "amount": "345.12"},
+					{"date": date2, "amount": "123.45", "label": "a-label"},
 				})),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vantage_business_metric.test", "token"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "title", "test"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.date", "2024-01-10"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.date", date1),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.amount", "345.12"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.label", ""),
-					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.date", "2024-01-01"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.date", date2),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.amount", "123.45"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.label", "a-label"),
 				),
