@@ -12,8 +12,9 @@ import (
 func TestAccDashboard_basic(t *testing.T) {
 	now := time.Now()
 	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	startDatePrevMonth := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
-	endDatePrevMonth := beginningOfCurrentMonth.AddDate(0, 0, -1).Format("2006-01-02")
+	fmt.Println("beginningOfCurrentMonth", beginningOfCurrentMonth)
+	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
+	endDate := beginningOfCurrentMonth.AddDate(0, 0, -1).Format("2006-01-02")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -21,12 +22,12 @@ func TestAccDashboard_basic(t *testing.T) {
 			// Create: without widgets
 			{
 				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
-					testAccDashboard_basicTf("test-no-widgets", ""),
+					testAccDashboard_basicTf("test-no-widgets", startDate, endDate, ""),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "date_interval", "last_month"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "end_date", endDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "date_interval", "custom"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "end_date", endDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "start_date", startDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "start_date", startDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "title", "test-no-widgets"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-no-widgets", "widgets.#", "0"),
 					resource.TestCheckResourceAttrSet("vantage_dashboard.test-no-widgets", "workspace_token"),
@@ -39,6 +40,8 @@ func TestAccDashboard_basic(t *testing.T) {
 					testAccDashboard_basicTfReports("test-report") +
 					testAccDashboard_basicTf(
 						"test-with-widgets",
+						startDate,
+						endDate,
 						`widgets = [
 							{
 								settings = { display_type = "table" }
@@ -49,10 +52,10 @@ func TestAccDashboard_basic(t *testing.T) {
 					),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_resource_report.test-report", "title", "test-report"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "last_month"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "1"),
 
@@ -66,12 +69,12 @@ func TestAccDashboard_basic(t *testing.T) {
 
 			// Update: remove widget
 			{
-				Config: testAccDashboard_basicTf("test-with-widgets", `widgets = []`),
+				Config: testAccDashboard_basicTf("test-with-widgets", startDate, endDate, `widgets = []`),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "last_month"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "0"),
 					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
@@ -85,6 +88,8 @@ func TestAccDashboard_basic(t *testing.T) {
 					testAccDashboard_basicTfReports("test-report-3") +
 					testAccDashboard_basicTf(
 						"test-with-widgets",
+						startDate,
+						endDate,
 						`widgets = [
 							{
 								settings = { display_type = "table" }
@@ -100,10 +105,10 @@ func TestAccDashboard_basic(t *testing.T) {
 					),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_resource_report.test-report-2", "title", "test-report-2"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "last_month"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDatePrevMonth),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "2"),
 
@@ -137,12 +142,13 @@ func testAccDashboard_basicTfReports(id string) string {
 		}`, id)
 }
 
-func testAccDashboard_basicTf(id string, widgetsStr string) string {
+func testAccDashboard_basicTf(id, startDate, endDate, widgetsStr string) string {
 	return fmt.Sprintf(`
 		resource "vantage_dashboard" %[1]q {
 		 	title = %[1]q
-			date_interval = "last_month"
-			%[2]s
+			start_date = "%[2]s"
+			end_date = "%[3]s"
+			%[4]s
 
-		}`, id, widgetsStr)
+		}`, id, startDate, endDate, widgetsStr)
 }
