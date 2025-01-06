@@ -12,7 +12,6 @@ import (
 func TestAccDashboard_basic(t *testing.T) {
 	now := time.Now()
 	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	fmt.Println("beginningOfCurrentMonth", beginningOfCurrentMonth)
 	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
 	endDate := beginningOfCurrentMonth.AddDate(0, 0, -1).Format("2006-01-02")
 	resource.Test(t, resource.TestCase{
@@ -69,7 +68,8 @@ func TestAccDashboard_basic(t *testing.T) {
 
 			// Update: remove widget
 			{
-				Config: testAccDashboard_basicTf("test-with-widgets", startDate, endDate, `widgets = []`),
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTf("test-with-widgets", startDate, endDate, `widgets = []`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
@@ -128,9 +128,7 @@ func TestAccDashboard_basic(t *testing.T) {
 }
 
 func testAccDashboard_basicTfDatasourceWorkspaces() string {
-	return `
-		data "vantage_workspaces" "test" {}
-		`
+	return `data "vantage_workspaces" "test" {}`
 }
 
 func testAccDashboard_basicTfReports(id string) string {
@@ -145,6 +143,7 @@ func testAccDashboard_basicTfReports(id string) string {
 func testAccDashboard_basicTf(id, startDate, endDate, widgetsStr string) string {
 	return fmt.Sprintf(`
 		resource "vantage_dashboard" %[1]q {
+			workspace_token = data.vantage_workspaces.test.workspaces[0].token
 		 	title = %[1]q
 			start_date = "%[2]s"
 			end_date = "%[3]s"
