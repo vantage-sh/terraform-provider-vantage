@@ -5,7 +5,6 @@ package resource_kubernetes_efficiency_report
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -33,11 +32,11 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 				Description:         "The date and time, in UTC, the report was created. ISO 8601 Formatted.",
 				MarkdownDescription: "The date and time, in UTC, the report was created. ISO 8601 Formatted.",
 			},
-			"date_bin": schema.StringAttribute{
+			"date_bucket": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The date bin of the KubernetesEfficiencyReport.",
-				MarkdownDescription: "The date bin of the KubernetesEfficiencyReport.",
+				Description:         "The date bucket of the KubernetesEfficiencyReport.",
+				MarkdownDescription: "The date bucket of the KubernetesEfficiencyReport.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"day",
@@ -45,12 +44,6 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 						"month",
 					),
 				},
-				Default: stringdefault.StaticString("day"),
-			},
-			"date_bucket": schema.StringAttribute{
-				Computed:            true,
-				Description:         "How costs are grouped and displayed in the KubernetesEfficiencyReport. Possible values: day, week, month.",
-				MarkdownDescription: "How costs are grouped and displayed in the KubernetesEfficiencyReport. Possible values: day, week, month.",
 			},
 			"date_interval": schema.StringAttribute{
 				Optional:            true,
@@ -74,6 +67,7 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 						"next_6_months",
 						"next_12_months",
 						"year_to_date",
+						"last_3_days",
 					),
 				},
 			},
@@ -134,7 +128,6 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 type KubernetesEfficiencyReportModel struct {
 	AggregatedBy   types.String `tfsdk:"aggregated_by"`
 	CreatedAt      types.String `tfsdk:"created_at"`
-	DateBin        types.String `tfsdk:"date_bin"`
 	DateBucket     types.String `tfsdk:"date_bucket"`
 	DateInterval   types.String `tfsdk:"date_interval"`
 	Default        types.Bool   `tfsdk:"default"`

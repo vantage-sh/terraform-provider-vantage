@@ -27,6 +27,12 @@ func BudgetsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The tokens of the BudgetAlerts associated with the Budget.",
 							MarkdownDescription: "The tokens of the BudgetAlerts associated with the Budget.",
 						},
+						"child_budget_tokens": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Computed:            true,
+							Description:         "The tokens of the child Budgets associated with the hierarchical Budget.",
+							MarkdownDescription: "The tokens of the child Budgets associated with the hierarchical Budget.",
+						},
 						"cost_report_token": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The token of the Report associated with the Budget.",
@@ -178,6 +184,24 @@ func (t BudgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 			fmt.Sprintf(`budget_alert_tokens expected to be basetypes.ListValue, was: %T`, budgetAlertTokensAttribute))
 	}
 
+	childBudgetTokensAttribute, ok := attributes["child_budget_tokens"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`child_budget_tokens is missing from object`)
+
+		return nil, diags
+	}
+
+	childBudgetTokensVal, ok := childBudgetTokensAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`child_budget_tokens expected to be basetypes.ListValue, was: %T`, childBudgetTokensAttribute))
+	}
+
 	costReportTokenAttribute, ok := attributes["cost_report_token"]
 
 	if !ok {
@@ -346,6 +370,7 @@ func (t BudgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 
 	return BudgetsValue{
 		BudgetAlertTokens: budgetAlertTokensVal,
+		ChildBudgetTokens: childBudgetTokensVal,
 		CostReportToken:   costReportTokenVal,
 		CreatedAt:         createdAtVal,
 		CreatedByToken:    createdByTokenVal,
@@ -440,6 +465,24 @@ func NewBudgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 			fmt.Sprintf(`budget_alert_tokens expected to be basetypes.ListValue, was: %T`, budgetAlertTokensAttribute))
 	}
 
+	childBudgetTokensAttribute, ok := attributes["child_budget_tokens"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`child_budget_tokens is missing from object`)
+
+		return NewBudgetsValueUnknown(), diags
+	}
+
+	childBudgetTokensVal, ok := childBudgetTokensAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`child_budget_tokens expected to be basetypes.ListValue, was: %T`, childBudgetTokensAttribute))
+	}
+
 	costReportTokenAttribute, ok := attributes["cost_report_token"]
 
 	if !ok {
@@ -608,6 +651,7 @@ func NewBudgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 
 	return BudgetsValue{
 		BudgetAlertTokens: budgetAlertTokensVal,
+		ChildBudgetTokens: childBudgetTokensVal,
 		CostReportToken:   costReportTokenVal,
 		CreatedAt:         createdAtVal,
 		CreatedByToken:    createdByTokenVal,
@@ -690,6 +734,7 @@ var _ basetypes.ObjectValuable = BudgetsValue{}
 
 type BudgetsValue struct {
 	BudgetAlertTokens basetypes.ListValue   `tfsdk:"budget_alert_tokens"`
+	ChildBudgetTokens basetypes.ListValue   `tfsdk:"child_budget_tokens"`
 	CostReportToken   basetypes.StringValue `tfsdk:"cost_report_token"`
 	CreatedAt         basetypes.StringValue `tfsdk:"created_at"`
 	CreatedByToken    basetypes.StringValue `tfsdk:"created_by_token"`
@@ -703,12 +748,15 @@ type BudgetsValue struct {
 }
 
 func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 10)
+	attrTypes := make(map[string]tftypes.Type, 11)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["budget_alert_tokens"] = basetypes.ListType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
+	attrTypes["child_budget_tokens"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
 	attrTypes["cost_report_token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -729,7 +777,7 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 10)
+		vals := make(map[string]tftypes.Value, 11)
 
 		val, err = v.BudgetAlertTokens.ToTerraformValue(ctx)
 
@@ -738,6 +786,14 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		}
 
 		vals["budget_alert_tokens"] = val
+
+		val, err = v.ChildBudgetTokens.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["child_budget_tokens"] = val
 
 		val, err = v.CostReportToken.ToTerraformValue(ctx)
 
@@ -907,6 +963,37 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"budget_alert_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"child_budget_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"cost_report_token": basetypes.StringType{},
+			"created_at":        basetypes.StringType{},
+			"created_by_token":  basetypes.StringType{},
+			"name":              basetypes.StringType{},
+			"performance": basetypes.ListType{
+				ElemType: PerformanceValue{}.Type(ctx),
+			},
+			"periods": basetypes.ListType{
+				ElemType: PeriodsValue{}.Type(ctx),
+			},
+			"token":           basetypes.StringType{},
+			"user_token":      basetypes.StringType{},
+			"workspace_token": basetypes.StringType{},
+		}), diags
+	}
+
+	childBudgetTokensVal, d := types.ListValue(types.StringType, v.ChildBudgetTokens.Elements())
+
+	diags.Append(d...)
+
+	if d.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"budget_alert_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"child_budget_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"cost_report_token": basetypes.StringType{},
 			"created_at":        basetypes.StringType{},
 			"created_by_token":  basetypes.StringType{},
@@ -928,6 +1015,9 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"budget_alert_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"child_budget_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"cost_report_token": basetypes.StringType{},
 			"created_at":        basetypes.StringType{},
 			"created_by_token":  basetypes.StringType{},
@@ -944,6 +1034,7 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 		},
 		map[string]attr.Value{
 			"budget_alert_tokens": budgetAlertTokensVal,
+			"child_budget_tokens": childBudgetTokensVal,
 			"cost_report_token":   v.CostReportToken,
 			"created_at":          v.CreatedAt,
 			"created_by_token":    v.CreatedByToken,
@@ -974,6 +1065,10 @@ func (v BudgetsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.BudgetAlertTokens.Equal(other.BudgetAlertTokens) {
+		return false
+	}
+
+	if !v.ChildBudgetTokens.Equal(other.ChildBudgetTokens) {
 		return false
 	}
 
@@ -1027,6 +1122,9 @@ func (v BudgetsValue) Type(ctx context.Context) attr.Type {
 func (v BudgetsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"budget_alert_tokens": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"child_budget_tokens": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"cost_report_token": basetypes.StringType{},

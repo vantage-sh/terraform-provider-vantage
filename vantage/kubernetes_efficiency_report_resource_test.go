@@ -21,6 +21,7 @@ func TestKubernetesReport(t *testing.T) {
 				Config: testAccKubernetesReport(rTitle, "kubernetes.cluster_id = 'foo'"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_kubernetes_efficiency_report.kubernetes_efficiency_report", "title", rTitle),
+					resource.TestCheckResourceAttr("vantage_kubernetes_efficiency_report.kubernetes_efficiency_report", "date_bucket", "week"),
 				),
 			},
 			{
@@ -45,7 +46,7 @@ resource "vantage_kubernetes_efficiency_report" "kubernetes_efficiency_report" {
   title = %[1]q
 	filter = %[2]q
 	aggregated_by = "amount"
-	date_bin = "week"
+	date_bucket = "week"
 	date_interval = "custom"
 	start_date = "2024-01-01"
 	end_date = "2024-01-31"
