@@ -128,7 +128,9 @@ func TestAccDashboard_basic(t *testing.T) {
 }
 
 func testAccDashboard_basicTfDatasourceWorkspaces() string {
-	return `data "vantage_workspaces" "test" {}`
+	return `
+		data "vantage_workspaces" "test" {}
+	`
 }
 
 func testAccDashboard_basicTfReports(id string) string {

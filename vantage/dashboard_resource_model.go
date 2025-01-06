@@ -178,10 +178,11 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 	}
 
 	payload := &modelsv2.UpdateDashboard{
+		DateBin:           m.DateBin.ValueString(),
+		SavedFilterTokens: fromStringsValue(savedFilterTokens),
 		Title:             m.Title.ValueString(),
 		Widgets:           widgets,
-		SavedFilterTokens: fromStringsValue(savedFilterTokens),
-		DateBin:           m.DateBin.ValueString(),
+		WorkspaceToken:    m.WorkspaceToken.ValueString(),
 	}
 
 	if m.DateInterval.ValueString() == "" || m.DateInterval.ValueString() == "custom" {
