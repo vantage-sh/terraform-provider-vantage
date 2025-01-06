@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -77,7 +78,8 @@ func (d *kubernetesEfficiencyReportsDataSource) Read(ctx context.Context, req da
 
 	reports := []kubernetesEfficiencyReportModel{}
 	for _, ker := range out.Payload.KubernetesEfficiencyReports {
-		groupings, diag := types.ListValueFrom(ctx, types.StringType, ker.Groupings)
+		splitGroupings := strings.Split(ker.Groupings, ",")
+		groupings, diag := types.ListValueFrom(ctx, types.StringType, splitGroupings)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
