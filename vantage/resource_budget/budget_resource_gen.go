@@ -24,11 +24,18 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The tokens of the BudgetAlerts associated with the Budget.",
 				MarkdownDescription: "The tokens of the BudgetAlerts associated with the Budget.",
 			},
+			"child_budget_tokens": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The tokens of any child Budgets when creating a hierarchical Budget.",
+				MarkdownDescription: "The tokens of any child Budgets when creating a hierarchical Budget.",
+			},
 			"cost_report_token": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The CostReport token.",
-				MarkdownDescription: "The CostReport token.",
+				Description:         "The CostReport token. Ignored for hierarchical Budgets.",
+				MarkdownDescription: "The CostReport token. Ignored for hierarchical Budgets.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
@@ -102,8 +109,8 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				},
 				Optional:            true,
 				Computed:            true,
-				Description:         "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD.",
-				MarkdownDescription: "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD.",
+				Description:         "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. Ignored for hierarchical Budgets.",
+				MarkdownDescription: "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. Ignored for hierarchical Budgets.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -127,6 +134,7 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 
 type BudgetModel struct {
 	BudgetAlertTokens types.List   `tfsdk:"budget_alert_tokens"`
+	ChildBudgetTokens types.List   `tfsdk:"child_budget_tokens"`
 	CostReportToken   types.String `tfsdk:"cost_report_token"`
 	CreatedAt         types.String `tfsdk:"created_at"`
 	CreatedByToken    types.String `tfsdk:"created_by_token"`

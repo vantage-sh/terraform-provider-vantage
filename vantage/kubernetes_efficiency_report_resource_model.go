@@ -74,7 +74,7 @@ func (r *kubernetesEfficiencyReportModel) toCreateModel(ctx context.Context) *mo
 		Filter:         r.Filter.ValueString(),
 		WorkspaceToken: r.WorkspaceToken.ValueStringPointer(),
 		AggregatedBy:   r.AggregatedBy.ValueString(),
-		DateBin:        r.DateBucket.ValueStringPointer(),
+		DateBucket:     r.DateBucket.ValueString(),
 		DateInterval:   r.DateInterval.ValueString(),
 		Groupings:      groupings,
 	}
@@ -105,7 +105,7 @@ func (r *kubernetesEfficiencyReportModel) toUpdateModel(ctx context.Context) *mo
 		Title:        r.Title.ValueString(),
 		Filter:       r.Filter.ValueString(),
 		AggregatedBy: r.AggregatedBy.ValueString(),
-		DateBin:      r.DateBucket.ValueStringPointer(),
+		DateBucket:   r.DateBucket.ValueString(),
 		DateInterval: r.DateInterval.ValueString(),
 		Groupings:    groupings,
 	}
