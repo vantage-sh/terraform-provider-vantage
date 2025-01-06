@@ -28,6 +28,7 @@ endif
 	  --name ${DATASOURCE} \
 	  --force
 
+.PHONY: docs
 docs:
 	go generate ./...
 
