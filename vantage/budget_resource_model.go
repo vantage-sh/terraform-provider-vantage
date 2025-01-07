@@ -41,6 +41,12 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		WorkspaceToken:  src.WorkspaceToken.ValueString(),
 	}
 
+    if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
+        childBudgetTokens := []string{}
+        src.ChildBudgetTokens.ElementsAs(ctx, &childBudgetTokens, false)
+        dst.ChildBudgetTokens = childBudgetTokens
+    }
+
 	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
 		periods := make([]*budgetPeriodResourceModel, 0, len(src.Periods.Elements()))
 		if diag := src.Periods.ElementsAs(ctx, &periods, false); diag.HasError() {
@@ -86,6 +92,12 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 	dst := &modelsv2.UpdateBudget{
 		Name:            src.Name.ValueString(),
 		CostReportToken: src.CostReportToken.ValueString(),
+	}
+
+	if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
+		childBudgetTokens := []string{}
+		src.ChildBudgetTokens.ElementsAs(ctx, &childBudgetTokens, false)
+		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
 	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
@@ -146,6 +158,14 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 		}
 		dst.BudgetAlertTokens = budgetAlertTokens
 	}
+
+    if src.ChildBudgetTokens != nil {
+        childBudgetTokens, diag := types.ListValueFrom(ctx, types.StringType, src.ChildBudgetTokens)
+        if diag.HasError() {
+            return diag
+        }
+        dst.ChildBudgetTokens = childBudgetTokens
+    }
 
 	if src.Performance != nil {
 		perfs := make([]budgetPerformanceModel, 0, len(src.Performance))

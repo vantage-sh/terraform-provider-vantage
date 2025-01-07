@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
@@ -39,118 +38,17 @@ func (r *budgetResource) Metadata(ctx context.Context, req resource.MetadataRequ
 }
 
 func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"budget_alert_tokens": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Computed:            true,
-				Description:         "The tokens of the BudgetAlerts associated with the Budget.",
-				MarkdownDescription: "The tokens of the BudgetAlerts associated with the Budget.",
-			},
-			"cost_report_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The CostReport token.",
-				MarkdownDescription: "The CostReport token.",
-			},
-			"created_at": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-				MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-			},
-			"created_by_token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token of the Creator of the Budget.",
-				MarkdownDescription: "The token of the Creator of the Budget.",
-			},
-			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "The name of the Budget.",
-				MarkdownDescription: "The name of the Budget.",
-			},
-			"performance": schema.ListNestedAttribute{
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"actual": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-							MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-						},
-						"amount": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The amount of the Budget Period as a string to ensure precision.",
-							MarkdownDescription: "The amount of the Budget Period as a string to ensure precision.",
-						},
-						"date": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-							MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-						},
-					},
-					CustomType: resource_budget.PerformanceType{
-						ObjectType: types.ObjectType{
-							AttrTypes: resource_budget.PerformanceValue{}.AttributeTypes(ctx),
-						},
-					},
-				},
-				Computed:            true,
-				Description:         "The historical performance of the Budget.",
-				MarkdownDescription: "The historical performance of the Budget.",
-			},
-			"periods": schema.ListNestedAttribute{
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"amount": schema.Float64Attribute{
-							Required:            true,
-							Description:         "The amount of the period.",
-							MarkdownDescription: "The amount of the period.",
-						},
-						"end_at": schema.StringAttribute{
-							Optional:            true,
-							Computed:            true,
-							Description:         "The end date of the period.",
-							MarkdownDescription: "The end date of the period.",
-						},
-						"start_at": schema.StringAttribute{
-							Required:            true,
-							Description:         "The start date of the period.",
-							MarkdownDescription: "The start date of the period.",
-						},
-					},
-					CustomType: resource_budget.PeriodsType{
-						ObjectType: types.ObjectType{
-							AttrTypes: resource_budget.PeriodsValue{}.AttributeTypes(ctx),
-						},
-					},
-				},
-				Optional:            true,
-				Computed:            true,
-				Description:         "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD.",
-				MarkdownDescription: "The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD.",
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token of the budget",
-				MarkdownDescription: "The token of the budget",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"user_token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token for the User who created this Budget.",
-				MarkdownDescription: "The token for the User who created this Budget.",
-			},
-
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The token of the Workspace to add the Budget to.",
-				MarkdownDescription: "The token of the Workspace to add the Budget to.",
-			},
+	s := resource_budget.BudgetResourceSchema(ctx)
+	attrs := s.GetAttributes()
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		Description: attrs["token"].GetDescription(),
+		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
-
+	resp.Schema = s
 }
 
 func (r *budgetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
