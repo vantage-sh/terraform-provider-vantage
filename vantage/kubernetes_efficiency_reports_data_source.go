@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,23 +30,24 @@ func (d *kubernetesEfficiencyReportsDataSource) Configure(ctx context.Context, r
 }
 
 type kubernetesEfficiencyReportsDataSourceModel struct {
-	KubernetesEfficiencyReports []kubernetesEfficiencyReportModel `tfsdk:"kubernetes_efficiency_reports"`
+	KubernetesEfficiencyReports []kubernetesEfficiencyReportDataModel `tfsdk:"kubernetes_efficiency_reports"`
 }
 
-// type kubernetesEfficiencyReportModel struct {
-// 	AggregatedBy   types.String `tfsdk:"aggregated_by"`
-// 	CreatedAt      types.String `tfsdk:"created_at"`
-// 	DateBucket     types.String `tfsdk:"date_bucket"`
-// 	DateInterval   types.String `tfsdk:"date_interval"`
-// 	Default        types.Bool   `tfsdk:"default"`
-// 	EndDate        types.String `tfsdk:"end_date"`
-// 	Groupings      types.String `tfsdk:"groupings"`
-// 	StartDate      types.String `tfsdk:"start_date"`
-// 	Title          types.String `tfsdk:"title"`
-// 	Token          types.String `tfsdk:"token"`
-// 	UserToken      types.String `tfsdk:"user_token"`
-// 	WorkspaceToken types.String `tfsdk:"workspace_token"`
-// }
+type kubernetesEfficiencyReportDataModel struct {
+	AggregatedBy   types.String `tfsdk:"aggregated_by"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	DateBucket     types.String `tfsdk:"date_bucket"`
+	DateInterval   types.String `tfsdk:"date_interval"`
+	Default        types.Bool   `tfsdk:"default"`
+	EndDate        types.String `tfsdk:"end_date"`
+	Filter         types.String `tfsdk:"filter"`
+	Groupings      types.String `tfsdk:"groupings"`
+	StartDate      types.String `tfsdk:"start_date"`
+	Title          types.String `tfsdk:"title"`
+	Token          types.String `tfsdk:"token"`
+	UserToken      types.String `tfsdk:"user_token"`
+	WorkspaceToken types.String `tfsdk:"workspace_token"`
+}
 
 func (d *kubernetesEfficiencyReportsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_kubernetes_efficiency_reports"
@@ -76,22 +76,16 @@ func (d *kubernetesEfficiencyReportsDataSource) Read(ctx context.Context, req da
 		return
 	}
 
-	reports := []kubernetesEfficiencyReportModel{}
+	reports := []kubernetesEfficiencyReportDataModel{}
 	for _, ker := range out.Payload.KubernetesEfficiencyReports {
-		splitGroupings := strings.Split(ker.Groupings, ",")
-		groupings, diag := types.ListValueFrom(ctx, types.StringType, splitGroupings)
-		if diag.HasError() {
-			resp.Diagnostics.Append(diag...)
-			return
-		}
-		report := kubernetesEfficiencyReportModel{
+		report := kubernetesEfficiencyReportDataModel{
 			AggregatedBy:   types.StringValue(ker.AggregatedBy),
 			CreatedAt:      types.StringValue(ker.CreatedAt),
 			DateBucket:     types.StringValue(ker.DateBucket),
 			DateInterval:   types.StringValue(ker.DateInterval),
 			Default:        types.BoolValue(ker.Default),
 			EndDate:        types.StringValue(ker.EndDate),
-			Groupings:      groupings,
+			Groupings:      types.StringValue(ker.Groupings),
 			StartDate:      types.StringValue(ker.StartDate),
 			Title:          types.StringValue(ker.Title),
 			Token:          types.StringValue(ker.Token),
