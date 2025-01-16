@@ -50,7 +50,7 @@ resource "vantage_kubernetes_efficiency_report" "kubernetes_efficiency_report" {
 	date_interval = "custom"
 	start_date = "2024-01-01"
 	end_date = "2024-01-31"
-	groupings = ["cluster_id"]
+	groupings = ["namespace","label:app"]
 }
 `, title, filter)
 }

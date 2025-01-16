@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	resource_budget "github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -41,11 +40,11 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		WorkspaceToken:  src.WorkspaceToken.ValueString(),
 	}
 
-    if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
-        childBudgetTokens := []string{}
-        src.ChildBudgetTokens.ElementsAs(ctx, &childBudgetTokens, false)
-        dst.ChildBudgetTokens = childBudgetTokens
-    }
+	if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
+		childBudgetTokens := []string{}
+		src.ChildBudgetTokens.ElementsAs(ctx, &childBudgetTokens, false)
+		dst.ChildBudgetTokens = childBudgetTokens
+	}
 
 	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
 		periods := make([]*budgetPeriodResourceModel, 0, len(src.Periods.Elements()))
@@ -159,13 +158,13 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 		dst.BudgetAlertTokens = budgetAlertTokens
 	}
 
-    if src.ChildBudgetTokens != nil {
-        childBudgetTokens, diag := types.ListValueFrom(ctx, types.StringType, src.ChildBudgetTokens)
-        if diag.HasError() {
-            return diag
-        }
-        dst.ChildBudgetTokens = childBudgetTokens
-    }
+	if src.ChildBudgetTokens != nil {
+		childBudgetTokens, diag := types.ListValueFrom(ctx, types.StringType, src.ChildBudgetTokens)
+		if diag.HasError() {
+			return diag
+		}
+		dst.ChildBudgetTokens = childBudgetTokens
+	}
 
 	if src.Performance != nil {
 		perfs := make([]budgetPerformanceModel, 0, len(src.Performance))
@@ -238,7 +237,6 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 				"end_at":   types.StringType,
 				"start_at": types.StringType,
 			}
-			tflog.Debug(ctx, fmt.Sprintf("andy 2 isDataSource: %v, periods %v, attrTypes %v", isDataSource, periods, attrTypes))
 			l, d := types.ListValueFrom(
 				ctx,
 				types.ObjectType{AttrTypes: attrTypes},
