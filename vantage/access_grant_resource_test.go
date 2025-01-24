@@ -15,12 +15,13 @@ func TestAccVantageAccessGrant_basic(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{ // create access grant for report
-				Config: testAccVantageAccessGrantConfig_basic(),
+				Config: testAccVantageAccessGrantConfig_basic("allowed"),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_access_grant.test", "access", "allowed"),
 					func(s *terraform.State) error {
-						resourceAccessGrant := s.RootModule().Resources["vantage_access_grant.access_grant"]
-						resource := s.RootModule().Resources["vantage_resource_report.resource_report"]
-						team := s.RootModule().Resources["vantage_team.team"]
+						resourceAccessGrant := s.RootModule().Resources["vantage_access_grant.test"]
+						resource := s.RootModule().Resources["vantage_resource_report.test"]
+						team := s.RootModule().Resources["vantage_team.test"]
 
 						if resourceAccessGrant.Primary.Attributes["resource_token"] != resource.Primary.Attributes["token"] {
 							return fmt.Errorf(
@@ -41,26 +42,34 @@ func TestAccVantageAccessGrant_basic(t *testing.T) {
 					},
 				),
 			},
+			{ // update access grant for report
+				Config: testAccVantageAccessGrantConfig_basic("denied"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_access_grant.test", "access", "denied"),
+				),
+			},
 		},
 	})
 }
 
-func testAccVantageAccessGrantConfig_basic() string {
-	return `
+func testAccVantageAccessGrantConfig_basic(access string) string {
+	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
 
-resource "vantage_team" "team" {
+resource "vantage_team" "test" {
 	name = "test"
 }
-resource "vantage_resource_report" "resource_report" {
-	workspace_token = data.vantage_workspaces.test.workspaces[0].token
-	title = "test"
+
+resource "vantage_resource_report" "test" {
 	filter = "resources.provider = 'aws'"
+	title = "test"
+	workspace_token = data.vantage_workspaces.test.workspaces[0].token
 }
 
-resource "vantage_access_grant" "access_grant" {
-	team_token = vantage_team.team.token
-	resource_token = vantage_resource_report.resource_report.token
+resource "vantage_access_grant" "test" {
+	resource_token = vantage_resource_report.test.token
+	team_token = vantage_team.test.token
+	access = %[1]q
 }
-`
+`, access)
 }
