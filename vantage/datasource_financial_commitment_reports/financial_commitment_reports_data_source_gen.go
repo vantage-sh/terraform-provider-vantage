@@ -46,6 +46,11 @@ func FinancialCommitmentReportsDataSourceSchema(ctx context.Context) schema.Sche
 							Description:         "The end date for the FinancialCommitmentReport. Only set for custom date ranges. ISO 8601 Formatted.",
 							MarkdownDescription: "The end date for the FinancialCommitmentReport. Only set for custom date ranges. ISO 8601 Formatted.",
 						},
+						"filter": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The filter applied to the FinancialCommitmentReport. Additional documentation available at https://docs.vantage.sh/vql.",
+							MarkdownDescription: "The filter applied to the FinancialCommitmentReport. Additional documentation available at https://docs.vantage.sh/vql.",
+						},
 						"groupings": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The grouping aggregations applied to the filtered data.",
@@ -211,6 +216,24 @@ func (t FinancialCommitmentReportsType) ValueFromObject(ctx context.Context, in 
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	filterAttribute, ok := attributes["filter"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`filter is missing from object`)
+
+		return nil, diags
+	}
+
+	filterVal, ok := filterAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`filter expected to be basetypes.StringValue, was: %T`, filterAttribute))
+	}
+
 	groupingsAttribute, ok := attributes["groupings"]
 
 	if !ok {
@@ -347,6 +370,7 @@ func (t FinancialCommitmentReportsType) ValueFromObject(ctx context.Context, in 
 		DateInterval:       dateIntervalVal,
 		Default:            defaultVal,
 		EndDate:            endDateVal,
+		Filter:             filterVal,
 		Groupings:          groupingsVal,
 		OnDemandCostsScope: onDemandCostsScopeVal,
 		StartDate:          startDateVal,
@@ -511,6 +535,24 @@ func NewFinancialCommitmentReportsValue(attributeTypes map[string]attr.Type, att
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	filterAttribute, ok := attributes["filter"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`filter is missing from object`)
+
+		return NewFinancialCommitmentReportsValueUnknown(), diags
+	}
+
+	filterVal, ok := filterAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`filter expected to be basetypes.StringValue, was: %T`, filterAttribute))
+	}
+
 	groupingsAttribute, ok := attributes["groupings"]
 
 	if !ok {
@@ -647,6 +689,7 @@ func NewFinancialCommitmentReportsValue(attributeTypes map[string]attr.Type, att
 		DateInterval:       dateIntervalVal,
 		Default:            defaultVal,
 		EndDate:            endDateVal,
+		Filter:             filterVal,
 		Groupings:          groupingsVal,
 		OnDemandCostsScope: onDemandCostsScopeVal,
 		StartDate:          startDateVal,
@@ -731,6 +774,7 @@ type FinancialCommitmentReportsValue struct {
 	DateInterval       basetypes.StringValue `tfsdk:"date_interval"`
 	Default            basetypes.BoolValue   `tfsdk:"default"`
 	EndDate            basetypes.StringValue `tfsdk:"end_date"`
+	Filter             basetypes.StringValue `tfsdk:"filter"`
 	Groupings          basetypes.StringValue `tfsdk:"groupings"`
 	OnDemandCostsScope basetypes.StringValue `tfsdk:"on_demand_costs_scope"`
 	StartDate          basetypes.StringValue `tfsdk:"start_date"`
@@ -742,7 +786,7 @@ type FinancialCommitmentReportsValue struct {
 }
 
 func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 12)
+	attrTypes := make(map[string]tftypes.Type, 13)
 
 	var val tftypes.Value
 	var err error
@@ -752,6 +796,7 @@ func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (
 	attrTypes["date_interval"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["default"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["groupings"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["on_demand_costs_scope"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
@@ -764,7 +809,7 @@ func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 12)
+		vals := make(map[string]tftypes.Value, 13)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -805,6 +850,14 @@ func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (
 		}
 
 		vals["end_date"] = val
+
+		val, err = v.Filter.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["filter"] = val
 
 		val, err = v.Groupings.ToTerraformValue(ctx)
 
@@ -898,6 +951,7 @@ func (v FinancialCommitmentReportsValue) ToObjectValue(ctx context.Context) (bas
 			"date_interval":         basetypes.StringType{},
 			"default":               basetypes.BoolType{},
 			"end_date":              basetypes.StringType{},
+			"filter":                basetypes.StringType{},
 			"groupings":             basetypes.StringType{},
 			"on_demand_costs_scope": basetypes.StringType{},
 			"start_date":            basetypes.StringType{},
@@ -912,6 +966,7 @@ func (v FinancialCommitmentReportsValue) ToObjectValue(ctx context.Context) (bas
 			"date_interval":         v.DateInterval,
 			"default":               v.Default,
 			"end_date":              v.EndDate,
+			"filter":                v.Filter,
 			"groupings":             v.Groupings,
 			"on_demand_costs_scope": v.OnDemandCostsScope,
 			"start_date":            v.StartDate,
@@ -956,6 +1011,10 @@ func (v FinancialCommitmentReportsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.EndDate.Equal(other.EndDate) {
+		return false
+	}
+
+	if !v.Filter.Equal(other.Filter) {
 		return false
 	}
 
@@ -1005,6 +1064,7 @@ func (v FinancialCommitmentReportsValue) AttributeTypes(ctx context.Context) map
 		"date_interval":         basetypes.StringType{},
 		"default":               basetypes.BoolType{},
 		"end_date":              basetypes.StringType{},
+		"filter":                basetypes.StringType{},
 		"groupings":             basetypes.StringType{},
 		"on_demand_costs_scope": basetypes.StringType{},
 		"start_date":            basetypes.StringType{},

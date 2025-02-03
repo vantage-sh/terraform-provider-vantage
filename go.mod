@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.5.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
-	github.com/vantage-sh/vantage-go v0.0.47
+	github.com/vantage-sh/vantage-go v0.0.50
 )
 
 // replace github.com/vantage-sh/vantage-go v0.0.46 => ../vantage-go
