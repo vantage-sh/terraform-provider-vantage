@@ -104,6 +104,26 @@ resources:
             description: The token of the dashboard
         aliases:
           dashboard_token: token
+  financial_commitment_report:
+    create:
+      path: /financial_commitment_reports
+      method: POST
+    read:
+      path: /financial_commitment_reports/{financial_commitment_report_token}
+      method: GET
+    update:
+      path: /financial_commitment_reports/{financial_commitment_report_token}
+      method: PUT
+    delete:
+      path: /financial_commitment_reports/{financial_commitment_report_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the report
+        aliases:
+          financial_commitment_report_token: token
   kubernetes_efficiency_report:
     create:
       path: /kubernetes_efficiency_reports
