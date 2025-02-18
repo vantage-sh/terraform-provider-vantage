@@ -184,5 +184,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewResourceReportResource,
 		NewKubernetesEfficiencyReportResource,
 		NewFinancialCommitmentReportResource,
+		NewNetworkFlowReportResource,
 	}
 }

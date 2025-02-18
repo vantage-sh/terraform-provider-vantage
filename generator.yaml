@@ -164,6 +164,26 @@ resources:
             description: The token of the managed account
         aliases:
           managed_account_token: token
+  network_flow_report:
+    create:
+      path: /network_flow_reports
+      method: POST
+    read:
+      path: /network_flow_reports/{network_flow_report_token}
+      method: GET
+    update:
+      path: /network_flow_reports/{network_flow_report_token}
+      method: PUT
+    delete:
+      path: /network_flow_reports/{network_flow_report_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the report
+        aliases:
+          network_flow_report_token: token
   resource_report:
     create:
       path: /resource_reports
@@ -264,6 +284,15 @@ data_sources:
   kubernetes_efficiency_reports:
     read:
       path: /kubernetes_efficiency_reports
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  network_flow_reports:
+    read:
+      path: /network_flow_reports
       method: GET
     schema:
       ignores:

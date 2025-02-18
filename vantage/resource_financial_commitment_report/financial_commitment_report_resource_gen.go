@@ -35,8 +35,8 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 			"date_interval": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The date interval of the FinancialCommitmentReport. Incompatible with 'start_date' and 'end_date' parameters. Defaults to 'this_month' if start_date and end_date are not provided.",
-				MarkdownDescription: "The date interval of the FinancialCommitmentReport. Incompatible with 'start_date' and 'end_date' parameters. Defaults to 'this_month' if start_date and end_date are not provided.",
+				Description:         "The date interval of the FinancialCommitmentReport. Unless 'custom' is used, this is incompatible with 'start_date' and 'end_date' parameters. Defaults to 'last_3_months'.",
+				MarkdownDescription: "The date interval of the FinancialCommitmentReport. Unless 'custom' is used, this is incompatible with 'start_date' and 'end_date' parameters. Defaults to 'last_3_months'.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"this_month",
@@ -75,8 +75,8 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, label:<label_name>.",
-				MarkdownDescription: "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, label:<label_name>.",
+				Description:         "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
+				MarkdownDescription: "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
 			},
 			"on_demand_costs_scope": schema.StringAttribute{
 				Optional:            true,
