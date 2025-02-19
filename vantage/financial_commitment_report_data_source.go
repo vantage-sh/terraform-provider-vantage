@@ -45,6 +45,7 @@ type FinancialCommitmentReportModel struct {
 	DateInterval       types.String `tfsdk:"date_interval"`
 	Default            types.Bool   `tfsdk:"default"`
 	EndDate            types.String `tfsdk:"end_date"`
+	Filter             types.String `tfsdk:"filter"`
 	Groupings          types.String `tfsdk:"groupings"`
 	OnDemandCostsScope types.String `tfsdk:"on_demand_costs_scope"`
 	StartDate          types.String `tfsdk:"start_date"`
@@ -84,6 +85,7 @@ func (d *financialCommitmentReportsDataSource) Read(ctx context.Context, req dat
 			DateInterval:       types.StringValue(fcr.DateInterval),
 			Default:            types.BoolValue(fcr.Default),
 			EndDate:            types.StringValue(fcr.EndDate),
+			Filter:             types.StringValue(fcr.Filter),
 			Groupings:          types.StringValue(fcr.Groupings),
 			OnDemandCostsScope: types.StringValue(fcr.OnDemandCostsScope),
 			StartDate:          types.StringValue(fcr.StartDate),
