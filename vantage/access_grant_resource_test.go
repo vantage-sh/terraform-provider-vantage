@@ -10,7 +10,7 @@ import (
 )
 
 func TestAccVantageAccessGrant_basic(t *testing.T) {
-	t.Skip("Skipping test until we fix the other thing")
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
