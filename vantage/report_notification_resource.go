@@ -29,14 +29,13 @@ func NewReportNotificationResource() resource.Resource {
 }
 
 type ReportNotificationResourceModel struct {
-	Title             types.String `tfsdk:"title"`
-	Token             types.String `tfsdk:"token"`
-	CostReportToken   types.String `tfsdk:"cost_report_token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-	UserTokens        types.Set    `tfsdk:"user_tokens"`
-	Frequency         types.String `tfsdk:"frequency"`
-	Change            types.String `tfsdk:"change"`
-	RecipientChannels types.List   `tfsdk:"recipient_channels"`
+	Title           types.String `tfsdk:"title"`
+	Token           types.String `tfsdk:"token"`
+	CostReportToken types.String `tfsdk:"cost_report_token"`
+	WorkspaceToken  types.String `tfsdk:"workspace_token"`
+	UserTokens      types.Set    `tfsdk:"user_tokens"`
+	Frequency       types.String `tfsdk:"frequency"`
+	Change          types.String `tfsdk:"change"`
 }
 
 func (r *ReportNotificationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -73,11 +72,6 @@ func (r ReportNotificationResource) Schema(ctx context.Context, req resource.Sch
 					setplanmodifier.RequiresReplace(),
 				},
 			},
-			"recipient_channels": schema.ListAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "Recipient channels for the report notification",
-				Optional:            true,
-			},
 			"frequency": schema.StringAttribute{
 				MarkdownDescription: "The frequency at which the ReportNotification is sent. One of daily/weekly/monthly",
 				Required:            true,
@@ -104,23 +98,19 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 	var userTokens []types.String
 	if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
 		userTokens = make([]types.String, 0, len(data.UserTokens.Elements()))
-		data.UserTokens.ElementsAs(ctx, &userTokens, false)
-	}
-
-	var recipientChannels []types.String
-	if !data.RecipientChannels.IsNull() && !data.RecipientChannels.IsUnknown() {
-		recipientChannels = make([]types.String, 0, len(data.RecipientChannels.Elements()))
-		data.RecipientChannels.ElementsAs(ctx, &recipientChannels, false)
+		resp.Diagnostics.Append(data.UserTokens.ElementsAs(ctx, &userTokens, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	rp := &modelsv2.CreateReportNotification{
-		Title:             data.Title.ValueStringPointer(),
-		CostReportToken:   data.CostReportToken.ValueStringPointer(),
-		WorkspaceToken:    data.WorkspaceToken.ValueString(),
-		UserTokens:        fromStringsValue(userTokens),
-		RecipientChannels: fromStringsValue(recipientChannels),
-		Frequency:         data.Frequency.ValueStringPointer(),
-		Change:            data.Change.ValueStringPointer(),
+		Title:           data.Title.ValueStringPointer(),
+		CostReportToken: data.CostReportToken.ValueStringPointer(),
+		WorkspaceToken:  data.WorkspaceToken.ValueString(),
+		UserTokens:      fromStringsValue(userTokens),
+		Frequency:       data.Frequency.ValueStringPointer(),
+		Change:          data.Change.ValueStringPointer(),
 	}
 
 	params.WithCreateReportNotification(rp)
@@ -151,19 +141,6 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 	}
 	data.Frequency = types.StringValue(out.Payload.Frequency)
 	data.Change = types.StringValue(out.Payload.Change)
-
-	if out.Payload.RecipientChannels != nil {
-		rcValue := make([]types.String, 0, len(out.Payload.RecipientChannels))
-		for _, rc := range out.Payload.RecipientChannels {
-			rcValue = append(rcValue, types.StringValue(rc))
-		}
-		list, diag := types.ListValueFrom(ctx, types.StringType, rcValue)
-		if diag.HasError() {
-			resp.Diagnostics.Append(diag...)
-			return
-		}
-		data.RecipientChannels = list
-	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -198,15 +175,7 @@ func (r *ReportNotificationResource) Read(ctx context.Context, req resource.Read
 	}
 
 	state.UserTokens = userTokens
-	if out.Payload.RecipientChannels != nil {
-		recipientChannels, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.RecipientChannels)
-		if diag.HasError() {
-			resp.Diagnostics.Append(diag...)
-			return
-		}
-		state.RecipientChannels = recipientChannels
-	}
-	state.Title = types.StringValue(out.Payload.Title)
+
 	state.Frequency = types.StringValue(out.Payload.Frequency)
 	state.Change = types.StringValue(out.Payload.Change)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -225,27 +194,19 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 
 	params := notifsv2.NewUpdateReportNotificationParams()
 	params.SetReportNotificationToken(data.Token.ValueString())
-
-	var userTokens []types.String
-	if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
-		userTokens = make([]types.String, 0, len(data.UserTokens.Elements()))
-		data.UserTokens.ElementsAs(ctx, &userTokens, false)
+	userTokensSet, diag := types.SetValueFrom(ctx, types.StringType, data.UserTokens)
+	if diag.HasError() {
+		resp.Diagnostics.Append(diag...)
+		return
 	}
-
-	var recipientChannels []types.String
-	if !data.RecipientChannels.IsNull() && !data.RecipientChannels.IsUnknown() {
-		recipientChannels = make([]types.String, 0, len(data.RecipientChannels.Elements()))
-		data.RecipientChannels.ElementsAs(ctx, &recipientChannels, false)
-	}
-
+	var userTokens []string
+	userTokensSet.ElementsAs(ctx, &userTokens, false)
 	rp := &modelsv2.UpdateReportNotification{
-
-		CostReportToken:   data.CostReportToken.ValueString(),
-		Change:            data.Change.ValueString(),
-		Frequency:         data.Frequency.ValueString(),
-		Title:             data.Title.ValueString(),
-		UserTokens:        fromStringsValue(userTokens),
-		RecipientChannels: fromStringsValue(recipientChannels),
+		CostReportToken: data.CostReportToken.ValueString(),
+		Change:          data.Change.ValueString(),
+		Frequency:       data.Frequency.ValueString(),
+		Title:           data.Title.ValueString(),
+		UserTokens:      userTokens,
 	}
 
 	params.WithUpdateReportNotification(rp)
@@ -272,15 +233,6 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 			return
 		}
 		data.UserTokens = userTokens
-	}
-
-	if out.Payload.RecipientChannels != nil {
-		recipientChannels, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.RecipientChannels)
-		if diag.HasError() {
-			resp.Diagnostics.Append(diag...)
-			return
-		}
-		data.RecipientChannels = recipientChannels
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
