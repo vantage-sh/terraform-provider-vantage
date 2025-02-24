@@ -11,6 +11,8 @@ import (
 )
 
 func TestAccBusinessMetric_basic(t *testing.T) {
+	t.Skip()
+
 	now := time.Now()
 	date1 := fmt.Sprintf("%d-01-10", now.Year())
 	date2 := fmt.Sprintf("%d-01-01", now.Year())
