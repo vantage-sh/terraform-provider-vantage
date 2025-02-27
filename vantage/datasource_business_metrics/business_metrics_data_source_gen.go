@@ -66,35 +66,6 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The token of the BusinessMetric.",
 							MarkdownDescription: "The token of the BusinessMetric.",
 						},
-						"values": schema.ListNestedAttribute{
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"amount": schema.StringAttribute{
-										Computed:            true,
-										Description:         "The amount of the Business Metric Value as a string to ensure precision.",
-										MarkdownDescription: "The amount of the Business Metric Value as a string to ensure precision.",
-									},
-									"date": schema.StringAttribute{
-										Computed:            true,
-										Description:         "The date of the Business Metric Value. ISO 8601 formatted.",
-										MarkdownDescription: "The date of the Business Metric Value. ISO 8601 formatted.",
-									},
-									"label": schema.StringAttribute{
-										Computed:            true,
-										Description:         "The label of the Business Metric Value.",
-										MarkdownDescription: "The label of the Business Metric Value.",
-									},
-								},
-								CustomType: ValuesType{
-									ObjectType: types.ObjectType{
-										AttrTypes: ValuesValue{}.AttributeTypes(ctx),
-									},
-								},
-							},
-							Computed:            true,
-							Description:         "The dates, amounts, and (optional) labels for the BusinessMetric.",
-							MarkdownDescription: "The dates, amounts, and (optional) labels for the BusinessMetric.",
-						},
 					},
 					CustomType: BusinessMetricsType{
 						ObjectType: types.ObjectType{
@@ -209,24 +180,6 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
 	}
 
-	valuesAttribute, ok := attributes["values"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`values is missing from object`)
-
-		return nil, diags
-	}
-
-	valuesVal, ok := valuesAttribute.(basetypes.ListValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`values expected to be basetypes.ListValue, was: %T`, valuesAttribute))
-	}
-
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -236,7 +189,6 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 		CreatedByToken:               createdByTokenVal,
 		Title:                        titleVal,
 		Token:                        tokenVal,
-		Values:                       valuesVal,
 		state:                        attr.ValueStateKnown,
 	}, diags
 }
@@ -376,24 +328,6 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
 	}
 
-	valuesAttribute, ok := attributes["values"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`values is missing from object`)
-
-		return NewBusinessMetricsValueUnknown(), diags
-	}
-
-	valuesVal, ok := valuesAttribute.(basetypes.ListValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`values expected to be basetypes.ListValue, was: %T`, valuesAttribute))
-	}
-
 	if diags.HasError() {
 		return NewBusinessMetricsValueUnknown(), diags
 	}
@@ -403,7 +337,6 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 		CreatedByToken:               createdByTokenVal,
 		Title:                        titleVal,
 		Token:                        tokenVal,
-		Values:                       valuesVal,
 		state:                        attr.ValueStateKnown,
 	}, diags
 }
@@ -480,12 +413,11 @@ type BusinessMetricsValue struct {
 	CreatedByToken               basetypes.StringValue `tfsdk:"created_by_token"`
 	Title                        basetypes.StringValue `tfsdk:"title"`
 	Token                        basetypes.StringValue `tfsdk:"token"`
-	Values                       basetypes.ListValue   `tfsdk:"values"`
 	state                        attr.ValueState
 }
 
 func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 5)
+	attrTypes := make(map[string]tftypes.Type, 4)
 
 	var val tftypes.Value
 	var err error
@@ -496,15 +428,12 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["values"] = basetypes.ListType{
-		ElemType: ValuesValue{}.Type(ctx),
-	}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 5)
+		vals := make(map[string]tftypes.Value, 4)
 
 		val, err = v.CostReportTokensWithMetadata.ToTerraformValue(ctx)
 
@@ -537,14 +466,6 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["token"] = val
-
-		val, err = v.Values.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["values"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -604,35 +525,6 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
-	values := types.ListValueMust(
-		ValuesType{
-			basetypes.ObjectType{
-				AttrTypes: ValuesValue{}.AttributeTypes(ctx),
-			},
-		},
-		v.Values.Elements(),
-	)
-
-	if v.Values.IsNull() {
-		values = types.ListNull(
-			ValuesType{
-				basetypes.ObjectType{
-					AttrTypes: ValuesValue{}.AttributeTypes(ctx),
-				},
-			},
-		)
-	}
-
-	if v.Values.IsUnknown() {
-		values = types.ListUnknown(
-			ValuesType{
-				basetypes.ObjectType{
-					AttrTypes: ValuesValue{}.AttributeTypes(ctx),
-				},
-			},
-		)
-	}
-
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
 			"cost_report_tokens_with_metadata": basetypes.ListType{
@@ -641,16 +533,12 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"created_by_token": basetypes.StringType{},
 			"title":            basetypes.StringType{},
 			"token":            basetypes.StringType{},
-			"values": basetypes.ListType{
-				ElemType: ValuesValue{}.Type(ctx),
-			},
 		},
 		map[string]attr.Value{
 			"cost_report_tokens_with_metadata": costReportTokensWithMetadata,
 			"created_by_token":                 v.CreatedByToken,
 			"title":                            v.Title,
 			"token":                            v.Token,
-			"values":                           values,
 		})
 
 	return objVal, diags
@@ -687,10 +575,6 @@ func (v BusinessMetricsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
-	if !v.Values.Equal(other.Values) {
-		return false
-	}
-
 	return true
 }
 
@@ -710,9 +594,6 @@ func (v BusinessMetricsValue) AttributeTypes(ctx context.Context) map[string]att
 		"created_by_token": basetypes.StringType{},
 		"title":            basetypes.StringType{},
 		"token":            basetypes.StringType{},
-		"values": basetypes.ListType{
-			ElemType: ValuesValue{}.Type(ctx),
-		},
 	}
 }
 
@@ -1157,429 +1038,5 @@ func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) m
 			ElemType: types.StringType,
 		},
 		"unit_scale": basetypes.StringType{},
-	}
-}
-
-var _ basetypes.ObjectTypable = ValuesType{}
-
-type ValuesType struct {
-	basetypes.ObjectType
-}
-
-func (t ValuesType) Equal(o attr.Type) bool {
-	other, ok := o.(ValuesType)
-
-	if !ok {
-		return false
-	}
-
-	return t.ObjectType.Equal(other.ObjectType)
-}
-
-func (t ValuesType) String() string {
-	return "ValuesType"
-}
-
-func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	attributes := in.Attributes()
-
-	amountAttribute, ok := attributes["amount"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`amount is missing from object`)
-
-		return nil, diags
-	}
-
-	amountVal, ok := amountAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
-	}
-
-	dateAttribute, ok := attributes["date"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`date is missing from object`)
-
-		return nil, diags
-	}
-
-	dateVal, ok := dateAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
-	}
-
-	labelAttribute, ok := attributes["label"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`label is missing from object`)
-
-		return nil, diags
-	}
-
-	labelVal, ok := labelAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
-	}
-
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	return ValuesValue{
-		Amount: amountVal,
-		Date:   dateVal,
-		Label:  labelVal,
-		state:  attr.ValueStateKnown,
-	}, diags
-}
-
-func NewValuesValueNull() ValuesValue {
-	return ValuesValue{
-		state: attr.ValueStateNull,
-	}
-}
-
-func NewValuesValueUnknown() ValuesValue {
-	return ValuesValue{
-		state: attr.ValueStateUnknown,
-	}
-}
-
-func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (ValuesValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
-	ctx := context.Background()
-
-	for name, attributeType := range attributeTypes {
-		attribute, ok := attributes[name]
-
-		if !ok {
-			diags.AddError(
-				"Missing ValuesValue Attribute Value",
-				"While creating a ValuesValue value, a missing attribute value was detected. "+
-					"A ValuesValue must contain values for all attributes, even if null or unknown. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("ValuesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
-			)
-
-			continue
-		}
-
-		if !attributeType.Equal(attribute.Type(ctx)) {
-			diags.AddError(
-				"Invalid ValuesValue Attribute Type",
-				"While creating a ValuesValue value, an invalid attribute value was detected. "+
-					"A ValuesValue must use a matching attribute type for the value. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("ValuesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
-					fmt.Sprintf("ValuesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
-			)
-		}
-	}
-
-	for name := range attributes {
-		_, ok := attributeTypes[name]
-
-		if !ok {
-			diags.AddError(
-				"Extra ValuesValue Attribute Value",
-				"While creating a ValuesValue value, an extra attribute value was detected. "+
-					"A ValuesValue must not contain values beyond the expected attribute types. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("Extra ValuesValue Attribute Name: %s", name),
-			)
-		}
-	}
-
-	if diags.HasError() {
-		return NewValuesValueUnknown(), diags
-	}
-
-	amountAttribute, ok := attributes["amount"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`amount is missing from object`)
-
-		return NewValuesValueUnknown(), diags
-	}
-
-	amountVal, ok := amountAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
-	}
-
-	dateAttribute, ok := attributes["date"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`date is missing from object`)
-
-		return NewValuesValueUnknown(), diags
-	}
-
-	dateVal, ok := dateAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
-	}
-
-	labelAttribute, ok := attributes["label"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`label is missing from object`)
-
-		return NewValuesValueUnknown(), diags
-	}
-
-	labelVal, ok := labelAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
-	}
-
-	if diags.HasError() {
-		return NewValuesValueUnknown(), diags
-	}
-
-	return ValuesValue{
-		Amount: amountVal,
-		Date:   dateVal,
-		Label:  labelVal,
-		state:  attr.ValueStateKnown,
-	}, diags
-}
-
-func NewValuesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) ValuesValue {
-	object, diags := NewValuesValue(attributeTypes, attributes)
-
-	if diags.HasError() {
-		// This could potentially be added to the diag package.
-		diagsStrings := make([]string, 0, len(diags))
-
-		for _, diagnostic := range diags {
-			diagsStrings = append(diagsStrings, fmt.Sprintf(
-				"%s | %s | %s",
-				diagnostic.Severity(),
-				diagnostic.Summary(),
-				diagnostic.Detail()))
-		}
-
-		panic("NewValuesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
-	}
-
-	return object
-}
-
-func (t ValuesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
-	if in.Type() == nil {
-		return NewValuesValueNull(), nil
-	}
-
-	if !in.Type().Equal(t.TerraformType(ctx)) {
-		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
-	}
-
-	if !in.IsKnown() {
-		return NewValuesValueUnknown(), nil
-	}
-
-	if in.IsNull() {
-		return NewValuesValueNull(), nil
-	}
-
-	attributes := map[string]attr.Value{}
-
-	val := map[string]tftypes.Value{}
-
-	err := in.As(&val)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range val {
-		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
-
-		if err != nil {
-			return nil, err
-		}
-
-		attributes[k] = a
-	}
-
-	return NewValuesValueMust(ValuesValue{}.AttributeTypes(ctx), attributes), nil
-}
-
-func (t ValuesType) ValueType(ctx context.Context) attr.Value {
-	return ValuesValue{}
-}
-
-var _ basetypes.ObjectValuable = ValuesValue{}
-
-type ValuesValue struct {
-	Amount basetypes.StringValue `tfsdk:"amount"`
-	Date   basetypes.StringValue `tfsdk:"date"`
-	Label  basetypes.StringValue `tfsdk:"label"`
-	state  attr.ValueState
-}
-
-func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 3)
-
-	var val tftypes.Value
-	var err error
-
-	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["date"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["label"] = basetypes.StringType{}.TerraformType(ctx)
-
-	objectType := tftypes.Object{AttributeTypes: attrTypes}
-
-	switch v.state {
-	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 3)
-
-		val, err = v.Amount.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["amount"] = val
-
-		val, err = v.Date.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["date"] = val
-
-		val, err = v.Label.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["label"] = val
-
-		if err := tftypes.ValidateValue(objectType, vals); err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		return tftypes.NewValue(objectType, vals), nil
-	case attr.ValueStateNull:
-		return tftypes.NewValue(objectType, nil), nil
-	case attr.ValueStateUnknown:
-		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
-	default:
-		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
-	}
-}
-
-func (v ValuesValue) IsNull() bool {
-	return v.state == attr.ValueStateNull
-}
-
-func (v ValuesValue) IsUnknown() bool {
-	return v.state == attr.ValueStateUnknown
-}
-
-func (v ValuesValue) String() string {
-	return "ValuesValue"
-}
-
-func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"amount": basetypes.StringType{},
-			"date":   basetypes.StringType{},
-			"label":  basetypes.StringType{},
-		},
-		map[string]attr.Value{
-			"amount": v.Amount,
-			"date":   v.Date,
-			"label":  v.Label,
-		})
-
-	return objVal, diags
-}
-
-func (v ValuesValue) Equal(o attr.Value) bool {
-	other, ok := o.(ValuesValue)
-
-	if !ok {
-		return false
-	}
-
-	if v.state != other.state {
-		return false
-	}
-
-	if v.state != attr.ValueStateKnown {
-		return true
-	}
-
-	if !v.Amount.Equal(other.Amount) {
-		return false
-	}
-
-	if !v.Date.Equal(other.Date) {
-		return false
-	}
-
-	if !v.Label.Equal(other.Label) {
-		return false
-	}
-
-	return true
-}
-
-func (v ValuesValue) Type(ctx context.Context) attr.Type {
-	return ValuesType{
-		basetypes.ObjectType{
-			AttrTypes: v.AttributeTypes(ctx),
-		},
-	}
-}
-
-func (v ValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
-	return map[string]attr.Type{
-		"amount": basetypes.StringType{},
-		"date":   basetypes.StringType{},
-		"label":  basetypes.StringType{},
 	}
 }

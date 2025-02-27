@@ -3,34 +3,31 @@ package vantage
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_business_metrics"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
-type businessMetricResourceModel struct {
-	CostReportTokensWithMetadata types.List   `tfsdk:"cost_report_tokens_with_metadata"`
-	CreatedByToken               types.String `tfsdk:"created_by_token"`
-	Title                        types.String `tfsdk:"title"`
-	Token                        types.String `tfsdk:"token"`
-	Values                       types.List   `tfsdk:"values"`
+type BusinessMetricPayloadApplier interface {
+	SetTitle(title types.String)
+	SetToken(token types.String)
+	SetCreatedByToken(createdByToken types.String)
+	SetCostReportTokensWithMetadata(costReportTokens types.List)
 }
 
+type businessMetricResourceModel resource_business_metric.BusinessMetricModel
+
+type businessMetricDataSourceValue datasource_business_metrics.BusinessMetricsValue
 type businessMetricResourceModelValue struct {
 	Amount types.Float64 `tfsdk:"amount"`
 	Date   types.String  `tfsdk:"date"`
 	Label  types.String  `tfsdk:"label"`
-}
-
-type businessMetricDataSourceModelValue struct {
-	Amount types.String `tfsdk:"amount"`
-	Date   types.String `tfsdk:"date"`
-	Label  types.String `tfsdk:"label"`
 }
 type businessMetricResourceModelCostReportToken struct {
 	CostReportToken types.String `tfsdk:"cost_report_token"`
@@ -38,17 +35,42 @@ type businessMetricResourceModelCostReportToken struct {
 	LabelFilter     types.List   `tfsdk:"label_filter"`
 }
 
-func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload *modelsv2.BusinessMetric, isDataSource bool) diag.Diagnostics {
+func (m *businessMetricResourceModel) SetTitle(title types.String) {
+	m.Title = title
+}
 
-	m.Title = types.StringValue(payload.Title)
-	m.Token = types.StringValue(payload.Token)
-	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
-	if payload.Values != nil {
-		diag := m.parseValues(ctx, isDataSource, payload.Values)
-		if diag.HasError() {
-			return diag
-		}
-	}
+func (m *businessMetricResourceModel) SetToken(token types.String) {
+	m.Token = token
+}
+
+func (m *businessMetricResourceModel) SetCreatedByToken(createdByToken types.String) {
+	m.CreatedByToken = createdByToken
+}
+
+func (m *businessMetricResourceModel) SetCostReportTokensWithMetadata(costReportTokens types.List) {
+	m.CostReportTokensWithMetadata = costReportTokens
+}
+
+func (m *businessMetricDataSourceValue) SetTitle(title types.String) {
+	m.Title = title
+}
+
+func (m *businessMetricDataSourceValue) SetToken(token types.String) {
+	m.Token = token
+}
+
+func (m *businessMetricDataSourceValue) SetCreatedByToken(createdByToken types.String) {
+	m.CreatedByToken = createdByToken
+}
+
+func (m *businessMetricDataSourceValue) SetCostReportTokensWithMetadata(costReportTokens types.List) {
+	m.CostReportTokensWithMetadata = costReportTokens
+}
+
+func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payload *modelsv2.BusinessMetric) diag.Diagnostics {
+	m.SetTitle(types.StringValue(payload.Title))
+	m.SetToken(types.StringValue(payload.Token))
+	m.SetCreatedByToken(types.StringValue(payload.CreatedByToken))
 
 	if payload.CostReportTokensWithMetadata != nil {
 		tfCostReportTokens := []businessMetricResourceModelCostReportToken{}
@@ -78,10 +100,18 @@ func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload 
 			return diag
 		}
 
-		m.CostReportTokensWithMetadata = costReportTokens
+		m.SetCostReportTokensWithMetadata(costReportTokens)
 	}
 
 	return nil
+}
+
+func (m *businessMetricDataSourceValue) applyPayload(ctx context.Context, payload *modelsv2.BusinessMetric) diag.Diagnostics {
+	return applyPayload(ctx, m, payload)
+}
+
+func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload *modelsv2.BusinessMetric) diag.Diagnostics {
+	return applyPayload(ctx, m, payload)
 }
 
 func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.Diagnostics) *modelsv2.CreateBusinessMetric {
@@ -236,59 +266,4 @@ func (m *businessMetricResourceModel) costReportTokensFromTf(ctx context.Context
 		return nil
 	}
 	return costReportTokens
-}
-
-func (m *businessMetricResourceModel) parseValues(ctx context.Context, isDataSource bool, values []*modelsv2.BusinessMetricValue) diag.Diagnostics {
-	if isDataSource {
-		tfValues := []businessMetricDataSourceModelValue{}
-		for _, value := range values {
-			t, _ := time.Parse(time.RFC3339, value.Date)
-			date := t.Format("2006-01-02")
-			tfValues = append(tfValues, businessMetricDataSourceModelValue{
-				Amount: types.StringValue(value.Amount),
-				Date:   types.StringValue(date),
-				Label:  types.StringValue(value.Label),
-			})
-		}
-
-		attrTypes := map[string]attr.Type{
-			"amount": types.StringType,
-			"date":   types.StringType,
-			"label":  types.StringType,
-		}
-
-		values, diagnostic := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfValues)
-
-		if diagnostic.HasError() {
-			return diagnostic
-		}
-		m.Values = values
-
-	} else {
-		tfValues := []businessMetricResourceModelValue{}
-		for _, value := range values {
-			amt, _ := strconv.ParseFloat(value.Amount, 64)
-
-			t, _ := time.Parse(time.RFC3339, value.Date)
-			date := t.Format("2006-01-02")
-
-			tfValues = append(tfValues, businessMetricResourceModelValue{
-				Amount: types.Float64Value(amt),
-				Date:   types.StringValue(date),
-				Label:  types.StringValue(value.Label),
-			})
-		}
-		attrTypes := map[string]attr.Type{
-			"amount": types.Float64Type,
-			"date":   types.StringType,
-			"label":  types.StringType,
-		}
-		values, diagnostic := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfValues)
-		if diagnostic.HasError() {
-			return diagnostic
-		}
-		m.Values = values
-	}
-
-	return nil
 }

@@ -86,15 +86,11 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 							Required: true,
 						},
 						"date": schema.StringAttribute{
-							Required:            true,
-							Description:         "The date of the Business Metric Value. ISO 8601 formatted.",
-							MarkdownDescription: "The date of the Business Metric Value. ISO 8601 formatted.",
+							Required: true,
 						},
 						"label": schema.StringAttribute{
-							Optional:            true,
-							Computed:            true,
-							Description:         "The label of the Business Metric Value.",
-							MarkdownDescription: "The label of the Business Metric Value.",
+							Optional: true,
+							Computed: true,
 						},
 					},
 					CustomType: ValuesType{
