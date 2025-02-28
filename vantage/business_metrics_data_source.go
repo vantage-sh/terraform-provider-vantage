@@ -32,8 +32,6 @@ type businessMetricsDataSourceModel struct {
 	BusinessMetrics []businessMetricDataSourceValue `tfsdk:"business_metrics"`
 }
 
-// type businessMetricsDataSourceModel datasource_business_metrics.BusinessMetricsModel
-
 func (d *businessMetricsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_business_metrics"
 }
