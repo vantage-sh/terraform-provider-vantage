@@ -13,7 +13,7 @@ require (
 	github.com/vantage-sh/vantage-go v0.0.52
 )
 
-// replace github.com/vantage-sh/vantage-go v0.0.51 => ../vantage-go
+// replace github.com/vantage-sh/vantage-go => ../vantage-go
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect

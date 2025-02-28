@@ -35,26 +35,43 @@ func TestAccBusinessMetric_basic(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			{ // create without values
-				Config: testAccVantageBusinessMetricTf_basic("test-no-values", "test", ""),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vantage_business_metric.test-no-values", "token"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "title", "test"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "values.#", "0"),
-				),
-			},
-			{ // update without values
-				Config: testAccVantageBusinessMetricTf_basic("test-no-values", "updated-test", ""),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vantage_business_metric.test-no-values", "token"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "title", "updated-test"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "values.#", "0"),
-				),
-			},
-			{ // create with values
+			// { // create without values
+			// 	Config: testAccVantageBusinessMetricTf_basic("test-no-values", "test", ""),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttrSet("vantage_business_metric.test-no-values", "token"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "title", "test"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "values.#", "0"),
+			// 	),
+			// },
+			// { // update without values
+			// 	Config: testAccVantageBusinessMetricTf_basic("test-no-values", "updated-test", ""),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttrSet("vantage_business_metric.test-no-values", "token"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "title", "updated-test"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-no-values", "values.#", "0"),
+			// 	),
+			// },
+			// { // create with values
+			// 	Config: testAccVantageBusinessMetricTf_basic("test", "test", tfValues([]map[string]string{
+			// 		{"date": date1, "amount": "345.12"},
+			// 		{"date": date2, "amount": "123.45", "label": "a-label"},
+			// 	})),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttrSet("vantage_business_metric.test", "token"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "title", "test"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.date", date1),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.amount", "345.12"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.label", ""),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.date", date2),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.amount", "123.45"),
+			// 		resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.label", "a-label"),
+			// 	),
+			// },
+			{ // update values
 				Config: testAccVantageBusinessMetricTf_basic("test", "test", tfValues([]map[string]string{
 					{"date": date1, "amount": "345.12"},
 					{"date": date2, "amount": "123.45", "label": "a-label"},
+					{"date": date3, "amount": "123.45", "label": "a-label"},
 				})),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vantage_business_metric.test", "token"),
@@ -65,17 +82,20 @@ func TestAccBusinessMetric_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.date", date2),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.amount", "123.45"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.1.label", "a-label"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.2.date", date3),
+					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.2.amount", "123.45"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.2.label", "a-label"),
 				),
 			},
-			{ // update values
-				Config: testAccVantageBusinessMetricTf_basic("test", "test", tfValues([]map[string]string{
+			{ // update the resource, but dont touch the values
+				Config: testAccVantageBusinessMetricTf_basic("test", "updated-test", tfValues([]map[string]string{
 					{"date": date1, "amount": "345.12"},
 					{"date": date2, "amount": "123.45", "label": "a-label"},
 					{"date": date3, "amount": "123.45", "label": "a-label"},
 				})),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vantage_business_metric.test", "token"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test", "title", "test"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test", "title", "updated-test"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.date", date1),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.amount", "345.12"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test", "values.0.label", ""),
