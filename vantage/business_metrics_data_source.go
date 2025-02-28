@@ -29,7 +29,7 @@ func (r *businessMetricsDataSource) Configure(_ context.Context, req datasource.
 }
 
 type businessMetricsDataSourceModel struct {
-	BusinessMetrics []businessMetricResourceModel `tfsdk:"business_metrics"`
+	BusinessMetrics []businessMetricDataSourceValue `tfsdk:"business_metrics"`
 }
 
 func (d *businessMetricsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -61,10 +61,10 @@ func (d *businessMetricsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	metrics := []businessMetricResourceModel{}
+	metrics := []businessMetricDataSourceValue{}
 	for _, metric := range out.Payload.BusinessMetrics {
-		model := businessMetricResourceModel{}
-		diag := model.applyPayload(ctx, metric, true)
+		model := businessMetricDataSourceValue{}
+		diag := model.applyPayload(ctx, metric)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
