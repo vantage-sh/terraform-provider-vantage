@@ -35,8 +35,9 @@ resource "vantage_budget" "demo_budget" {
 
 ### Optional
 
-- `cost_report_token` (String) The CostReport token.
-- `periods` (Attributes List) The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. (see [below for nested schema](#nestedatt--periods))
+- `child_budget_tokens` (List of String) The tokens of any child Budgets when creating a hierarchical Budget.
+- `cost_report_token` (String) The CostReport token. Ignored for hierarchical Budgets.
+- `periods` (Attributes List) The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. Ignored for hierarchical Budgets. (see [below for nested schema](#nestedatt--periods))
 - `workspace_token` (String) The token of the Workspace to add the Budget to.
 
 ### Read-Only

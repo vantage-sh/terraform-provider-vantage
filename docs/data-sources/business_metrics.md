@@ -28,7 +28,6 @@ Read-Only:
 - `created_by_token` (String) The token of the Creator of the BusinessMetric.
 - `title` (String) The title of the BusinessMetric.
 - `token` (String) The token of the BusinessMetric.
-- `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--business_metrics--values))
 
 <a id="nestedatt--business_metrics--cost_report_tokens_with_metadata"></a>
 ### Nested Schema for `business_metrics.cost_report_tokens_with_metadata`
@@ -38,15 +37,5 @@ Read-Only:
 - `cost_report_token` (String) The token of the CostReport the BusinessMetric is attached to.
 - `label_filter` (List of String) The labels that the BusinessMetric is filtered by within a particular CostReport.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within a particular CostReport.
-
-
-<a id="nestedatt--business_metrics--values"></a>
-### Nested Schema for `business_metrics.values`
-
-Read-Only:
-
-- `amount` (String) The amount of the Business Metric Value as a string to ensure precision.
-- `date` (String) The date of the Business Metric Value. ISO 8601 formatted.
-- `label` (String) The label of the Business Metric Value.
 
 

@@ -21,12 +21,12 @@ description: |-
 
 ### Optional
 
-- `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, and the unit scale. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
-- `values` (Attributes List) The dates and amounts for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
+- `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
+- `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
 
-- `created_by_token` (String) The token of the User who created the BusinessMetric.
+- `created_by_token` (String) The token of the Creator of the BusinessMetric.
 - `token` (String) The token of the business metric
 
 <a id="nestedatt--cost_report_tokens_with_metadata"></a>
@@ -38,11 +38,8 @@ Required:
 
 Optional:
 
+- `label_filter` (List of String) Include only values with these labels in the CostReport.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within the CostReport.
-
-Read-Only:
-
-- `label_filter` (List of String) The labels that the BusinessMetric is filtered by within a particular CostReport.
 
 
 <a id="nestedatt--values"></a>
@@ -51,10 +48,10 @@ Read-Only:
 Required:
 
 - `amount` (Number)
-- `date` (String) The date of the Business Metric Value. ISO 8601 formatted.
+- `date` (String)
 
 Optional:
 
-- `label` (String) The label of the Business Metric Value.
+- `label` (String)
 
 

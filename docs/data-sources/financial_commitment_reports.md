@@ -29,6 +29,7 @@ Read-Only:
 - `date_interval` (String) The date range for the FinancialCommitmentReport. Only present if a custom date range is not specified.
 - `default` (Boolean) Indicates whether the FinancialCommitmentReport is the default report.
 - `end_date` (String) The end date for the FinancialCommitmentReport. Only set for custom date ranges. ISO 8601 Formatted.
+- `filter` (String) The filter applied to the FinancialCommitmentReport. Additional documentation available at https://docs.vantage.sh/vql.
 - `groupings` (String) The grouping aggregations applied to the filtered data.
 - `on_demand_costs_scope` (String) The scope for the costs. Possible values: discountable, all.
 - `start_date` (String) The start date for the FinancialCommitmentReport. Only set for custom date ranges. ISO 8601 Formatted.
