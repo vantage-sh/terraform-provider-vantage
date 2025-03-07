@@ -75,17 +75,11 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Start date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"end_date": schema.StringAttribute{
 				MarkdownDescription: "End date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"previous_period_start_date": schema.StringAttribute{
 				MarkdownDescription: "Start date to apply to the Cost Report.",
@@ -235,11 +229,13 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.Title = types.StringValue(out.Payload.Title)
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Groupings = types.StringValue(out.Payload.Groupings)
-	state.StartDate = types.StringValue(out.Payload.StartDate)
-	state.EndDate = types.StringValue(out.Payload.EndDate)
 	state.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
 	state.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
 	state.DateInterval = types.StringValue(out.Payload.DateInterval)
+	// if out.Payload.DateInterval == "custom" {
+	state.StartDate = types.StringValue(out.Payload.StartDate)
+	state.EndDate = types.StringValue(out.Payload.EndDate)
+	// }
 	state.ChartType = types.StringValue(out.Payload.ChartType)
 	state.DateBin = types.StringValue(out.Payload.DateBin)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
