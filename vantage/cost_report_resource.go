@@ -75,17 +75,11 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Start date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"end_date": schema.StringAttribute{
 				MarkdownDescription: "End date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"previous_period_start_date": schema.StringAttribute{
 				MarkdownDescription: "Start date to apply to the Cost Report.",
