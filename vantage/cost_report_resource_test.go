@@ -1,10 +1,13 @@
 package vantage
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
@@ -29,6 +32,33 @@ func TestAccCostReport(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccCostReport_grouping(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create cost report
+				Config: costReportWithGrouping(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-grouping", "groupings", "service"),
+				),
+			},
+			{
+				Config: costReportWithoutGrouping(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-grouping", "groupings", ""),
+				),
+			},
+		},
+	},
+	)
+}
+
+var MyTestCheckFunc = func(*terraform.State) error {
+	tflog.Debug(context.Background(), "MyTestCheckFunc")
+	return nil
 }
 
 func costReportTF(resourceTitle, filter string) string {
@@ -59,4 +89,31 @@ func costReportWithoutDatesTF(resourceTitle, filter string) string {
 		date_bin = "day"
 		date_interval = "last_month"
 }`, resourceTitle, filter)
+}
+
+func costReportWithGrouping() string {
+	return `
+  data "vantage_workspaces" "test" {}
+
+	resource "vantage_cost_report" "test-grouping" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "test"
+		filter = "costs.provider = 'aws'"
+		chart_type = "line"
+		date_bin = "day"
+		groupings = "service"
+}`
+}
+
+func costReportWithoutGrouping() string {
+	return `
+  data "vantage_workspaces" "test" {}
+
+	resource "vantage_cost_report" "test-grouping" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "test"
+		filter = "costs.provider = 'aws'"
+		chart_type = "line"
+		date_bin = "day"
+}`
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
@@ -70,6 +71,8 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Grouping aggregations applied to the filtered data.",
 				Optional:            true,
 				Computed:            true,
+				// https://discuss.hashicorp.com/t/framework-migration-test-produces-non-empty-plan/54523/8
+				Default: stringdefault.StaticString(""),
 			},
 			"start_date": schema.StringAttribute{
 				MarkdownDescription: "Start date to apply to the Cost Report.",
