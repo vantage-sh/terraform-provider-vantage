@@ -124,9 +124,9 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 
 	if m.DateInterval.ValueString() == "" || m.DateInterval.ValueString() == "custom" {
 		payload.StartDate = m.StartDate.ValueString()
-		payload.EndDate = m.EndDate.ValueStringPointer()
+		payload.EndDate = m.EndDate.ValueString()
 	} else {
-		payload.DateInterval = m.DateInterval.ValueString()
+		payload.DateInterval = m.DateInterval.ValueStringPointer()
 	}
 
 	return payload

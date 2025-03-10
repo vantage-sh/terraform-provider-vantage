@@ -127,6 +127,20 @@ func TestAccDashboard_basic(t *testing.T) {
 	})
 }
 
+func TestAccDashboard_nullDateInterval(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDashboard_nullDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", ""),
+				),
+			},
+		},
+	})
+}
 func testAccDashboard_basicTfDatasourceWorkspaces() string {
 	return `
 		data "vantage_workspaces" "test" {}
@@ -152,4 +166,15 @@ func testAccDashboard_basicTf(id, startDate, endDate, widgetsStr string) string 
 			%[4]s
 
 		}`, id, startDate, endDate, widgetsStr)
+}
+
+func testAccDashboard_nullDateInterval() string {
+	return `
+		data "vantage_workspaces" "test" {}
+
+		resource "vantage_dashboard" "test-date-interval" {
+			workspace_token = data.vantage_workspaces.test.workspaces[0].token
+			title = "test"
+		}
+	`
 }
