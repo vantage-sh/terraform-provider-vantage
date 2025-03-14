@@ -66,7 +66,8 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"end_date": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				Description:         "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},

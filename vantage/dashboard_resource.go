@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
@@ -33,6 +34,14 @@ func (r *DashboardResource) Metadata(_ context.Context, req resource.MetadataReq
 func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	s := resource_dashboard.DashboardResourceSchema(ctx)
 	attrs := s.GetAttributes()
+
+	s.Attributes["date_interval"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		Default:             stringdefault.StaticString(""),
+		MarkdownDescription: attrs["end_date"].GetMarkdownDescription(),
+	}
+
 	s.Attributes["end_date"] = schema.StringAttribute{
 		Computed:            true,
 		Optional:            true,

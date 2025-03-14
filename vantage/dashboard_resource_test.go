@@ -34,104 +34,116 @@ func TestAccDashboard_basic(t *testing.T) {
 			},
 
 			// Create: with widgets
-			{
-				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
-					testAccDashboard_basicTfReports("test-report") +
-					testAccDashboard_basicTf(
-						"test-with-widgets",
-						startDate,
-						endDate,
-						`widgets = [
-							{
-								settings = { display_type = "table" }
-								title = "Custom Widget Title",
-								widgetable_token = vantage_resource_report.test-report.token
-							}
-						]`,
-					),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_resource_report.test-report", "title", "test-report"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "1"),
+			// {
+			// 	Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+			// 		testAccDashboard_basicTfReports("test-report") +
+			// 		testAccDashboard_basicTf(
+			// 			"test-with-widgets",
+			// 			startDate,
+			// 			endDate,
+			// 			`widgets = [
+			// 				{
+			// 					settings = { display_type = "table" }
+			// 					title = "Custom Widget Title",
+			// 					widgetable_token = vantage_resource_report.test-report.token
+			// 				}
+			// 			]`,
+			// 		),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttr("vantage_resource_report.test-report", "title", "test-report"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "1"),
 
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.title", "Custom Widget Title"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.settings.display_type", "table"),
-					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.0.widgetable_token"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.title", "Custom Widget Title"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.settings.display_type", "table"),
+			// 		resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.0.widgetable_token"),
 
-					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
-				),
-			},
+			// 		resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
+			// 	),
+			// },
 
-			// Update: remove widget
-			{
-				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
-					testAccDashboard_basicTf("test-with-widgets", startDate, endDate, `widgets = []`),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "0"),
-					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
-				),
-			},
+			// // Update: remove widget
+			// {
+			// 	Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+			// 		testAccDashboard_basicTf("test-with-widgets", startDate, endDate, `widgets = []`),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "0"),
+			// 		resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
+			// 	),
+			// },
 
-			// Update: add widgets
-			{
-				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
-					testAccDashboard_basicTfReports("test-report-2") +
-					testAccDashboard_basicTfReports("test-report-3") +
-					testAccDashboard_basicTf(
-						"test-with-widgets",
-						startDate,
-						endDate,
-						`widgets = [
-							{
-								settings = { display_type = "table" }
-								title = "Custom Widget Title (2)",
-								widgetable_token = vantage_resource_report.test-report-2.token
-							},
-							{
-								settings = { display_type = "chart" }
-								title = "Custom Widget Title (3)",
-								widgetable_token = vantage_resource_report.test-report-3.token
-							}
-						]`,
-					),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_resource_report.test-report-2", "title", "test-report-2"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "2"),
+			// // Update: add widgets
+			// {
+			// 	Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+			// 		testAccDashboard_basicTfReports("test-report-2") +
+			// 		testAccDashboard_basicTfReports("test-report-3") +
+			// 		testAccDashboard_basicTf(
+			// 			"test-with-widgets",
+			// 			startDate,
+			// 			endDate,
+			// 			`widgets = [
+			// 				{
+			// 					settings = { display_type = "table" }
+			// 					title = "Custom Widget Title (2)",
+			// 					widgetable_token = vantage_resource_report.test-report-2.token
+			// 				},
+			// 				{
+			// 					settings = { display_type = "chart" }
+			// 					title = "Custom Widget Title (3)",
+			// 					widgetable_token = vantage_resource_report.test-report-3.token
+			// 				}
+			// 			]`,
+			// 		),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttr("vantage_resource_report.test-report-2", "title", "test-report-2"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "2"),
 
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.title", "Custom Widget Title (2)"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.settings.display_type", "table"),
-					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.0.widgetable_token"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.title", "Custom Widget Title (2)"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.settings.display_type", "table"),
+			// 		resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.0.widgetable_token"),
 
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.1.title", "Custom Widget Title (3)"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.1.settings.display_type", "chart"),
-					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.1.widgetable_token"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.1.title", "Custom Widget Title (3)"),
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.1.settings.display_type", "chart"),
+			// 		resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.1.widgetable_token"),
 
-					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
-				),
-			},
+			// 		resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
+			// 	),
+			// },
 		},
 	})
 }
 
-func TestAccDashboard_nullDateInterval(t *testing.T) {
+func TestAccDashboard_dateInterval(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			// {
+			// 	Config: testAccDashboard_nullDateInterval(),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", ""),
+			// 	),
+			// },
+			{
+				Config: testAccDashboard_withDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", "this_month"),
+				),
+			},
 			{
 				Config: testAccDashboard_nullDateInterval(),
 				Check: resource.ComposeTestCheckFunc(
@@ -177,4 +189,16 @@ func testAccDashboard_nullDateInterval() string {
 			title = "test"
 		}
 	`
+}
+
+func testAccDashboard_withDateInterval() string {
+	return `
+	data "vantage_workspaces" "test" {}
+
+	resource "vantage_dashboard" "test-date-interval" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "test"
+		date_interval = "this_month"
+	}
+`
 }

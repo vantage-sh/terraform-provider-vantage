@@ -15,6 +15,7 @@ type dashboardModel resource_dashboard.DashboardModel
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringValue(payload.DateBin)
+
 	m.DateInterval = types.StringValue(payload.DateInterval)
 	m.EndDate = types.StringValue(payload.EndDate)
 
@@ -120,14 +121,17 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		Title:             m.Title.ValueStringPointer(),
 		Widgets:           widgets,
 		WorkspaceToken:    m.WorkspaceToken.ValueString(),
+		DateInterval:      m.DateInterval.ValueString(),
 	}
 
-	if m.DateInterval.ValueString() == "" || m.DateInterval.ValueString() == "custom" {
+	if (m.DateInterval.ValueString() == "" && !m.StartDate.IsNull() && !m.EndDate.IsNull()) || m.DateInterval.ValueString() == "custom" {
+		// if m.DateInterval.ValueString() == "custom" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
-	} else {
-		payload.DateInterval = m.DateInterval.ValueStringPointer()
 	}
+	// else {
+	// 	payload.DateInterval = m.DateInterval.ValueString()
+	// }
 
 	return payload
 }
@@ -183,13 +187,17 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		Title:             m.Title.ValueString(),
 		Widgets:           widgets,
 		WorkspaceToken:    m.WorkspaceToken.ValueString(),
+		DateInterval:      m.DateInterval.ValueString(),
 	}
 
-	if m.DateInterval.ValueString() == "" || m.DateInterval.ValueString() == "custom" {
+	// if !m.DateInterval.IsNull() {
+	// 	dateInterval := m.DateInterval.ValueString()
+	// 	payload.DateInterval = dateInterval
+	// }
+
+	if (m.DateInterval.ValueString() == "" && !m.StartDate.IsNull() && !m.EndDate.IsNull()) || m.DateInterval.ValueString() == "custom" {
 		payload.StartDate = m.StartDate.ValueString()
-		payload.EndDate = m.EndDate.ValueStringPointer()
-	} else {
-		payload.DateInterval = m.DateInterval.ValueString()
+		payload.EndDate = m.EndDate.ValueString()
 	}
 
 	return payload
