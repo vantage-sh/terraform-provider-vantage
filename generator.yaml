@@ -98,6 +98,8 @@ resources:
       path: /dashboards/{dashboard_token}
       method: DELETE
     schema:
+      ignores:
+        - updated_at
       attributes:
         overrides:
           token:
