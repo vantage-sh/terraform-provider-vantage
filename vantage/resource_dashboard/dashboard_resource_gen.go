@@ -66,7 +66,8 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"end_date": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				Description:         "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},
@@ -92,11 +93,6 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "The token of the dashboard",
 				MarkdownDescription: "The token of the dashboard",
-			},
-			"updated_at": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The date and time, in UTC, the Dashboard was created. ISO 8601 Formatted.",
-				MarkdownDescription: "The date and time, in UTC, the Dashboard was created. ISO 8601 Formatted.",
 			},
 			"widgets": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
@@ -165,7 +161,6 @@ type DashboardModel struct {
 	StartDate         types.String `tfsdk:"start_date"`
 	Title             types.String `tfsdk:"title"`
 	Token             types.String `tfsdk:"token"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
 	Widgets           types.List   `tfsdk:"widgets"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 }

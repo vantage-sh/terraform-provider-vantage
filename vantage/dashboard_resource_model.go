@@ -15,8 +15,16 @@ type dashboardModel resource_dashboard.DashboardModel
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringValue(payload.DateBin)
-	m.DateInterval = types.StringValue(payload.DateInterval)
-	m.EndDate = types.StringValue(payload.EndDate)
+	if payload.DateInterval != "" {
+		m.DateInterval = types.StringValue(payload.DateInterval)
+	} else {
+		m.DateInterval = types.StringNull()
+	}
+
+	if payload.DateInterval == "custom" {
+		m.StartDate = types.StringValue(payload.StartDate)
+		m.EndDate = types.StringValue(payload.EndDate)
+	}
 
 	saved_filters, diag := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -24,10 +32,8 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 	}
 	m.SavedFilterTokens = saved_filters
 
-	m.StartDate = types.StringValue(payload.StartDate)
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
-	m.UpdatedAt = types.StringValue(payload.UpdatedAt)
 
 	tfWidgets := make([]basetypes.ObjectValue, 0, len(payload.Widgets))
 	for _, widget := range payload.Widgets {
@@ -120,14 +126,17 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		Title:             m.Title.ValueStringPointer(),
 		Widgets:           widgets,
 		WorkspaceToken:    m.WorkspaceToken.ValueString(),
+		DateInterval:      m.DateInterval.ValueString(),
 	}
 
-	if m.DateInterval.ValueString() == "" || m.DateInterval.ValueString() == "custom" {
+	if (m.DateInterval.ValueString() == "" && !m.StartDate.IsNull() && !m.EndDate.IsNull()) || m.DateInterval.ValueString() == "custom" {
+		// if m.DateInterval.ValueString() == "custom" {
 		payload.StartDate = m.StartDate.ValueString()
-		payload.EndDate = m.EndDate.ValueStringPointer()
-	} else {
-		payload.DateInterval = m.DateInterval.ValueString()
+		payload.EndDate = m.EndDate.ValueString()
 	}
+	// else {
+	// 	payload.DateInterval = m.DateInterval.ValueString()
+	// }
 
 	return payload
 }
@@ -176,6 +185,10 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 			widgets = append(widgets, widget)
 		}
 	}
+	var dateInterval string
+	if !m.DateInterval.IsNull() {
+		dateInterval = m.DateInterval.ValueString()
+	}
 
 	payload := &modelsv2.UpdateDashboard{
 		DateBin:           m.DateBin.ValueString(),
@@ -183,13 +196,12 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		Title:             m.Title.ValueString(),
 		Widgets:           widgets,
 		WorkspaceToken:    m.WorkspaceToken.ValueString(),
+		DateInterval:      dateInterval,
 	}
 
-	if m.DateInterval.ValueString() == "" || m.DateInterval.ValueString() == "custom" {
+	if m.DateInterval.ValueString() == "custom" && !m.StartDate.IsNull() && !m.EndDate.IsNull() {
 		payload.StartDate = m.StartDate.ValueString()
-		payload.EndDate = m.EndDate.ValueStringPointer()
-	} else {
-		payload.DateInterval = m.DateInterval.ValueString()
+		payload.EndDate = m.EndDate.ValueString()
 	}
 
 	return payload

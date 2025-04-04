@@ -7,7 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
 )
@@ -30,14 +33,93 @@ func (r *DashboardResource) Metadata(_ context.Context, req resource.MetadataReq
 	resp.TypeName = req.ProviderTypeName + "_dashboard"
 }
 
+type NullableModifier struct{}
+
+func (m *NullableModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+
+	if req.ConfigValue.IsNull() && !req.StateValue.IsNull() {
+		resp.PlanValue = types.StringUnknown()
+	}
+
+	// handle that the API sets the value of date_interval to "custom"
+	if req.ConfigValue.IsNull() && req.StateValue.Equal(types.StringValue("custom")) {
+		resp.PlanValue = types.StringValue("custom")
+	}
+}
+
+func (NullableModifier) Description(_ context.Context) string {
+	return "Custom plan modifier for handling nullable values"
+}
+
+func (NullableModifier) MarkdownDescription(_ context.Context) string {
+	return "Custom plan modifier for handling nullable values"
+}
+
+func (r DashboardResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+
+	var plan, state *dashboardModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if state == nil || plan == nil {
+		return
+	}
+	// Log the values for debugging
+	tflog.Debug(ctx, "ModifyPlan values",
+		map[string]interface{}{
+			"plan_date_interval_is_null":    plan.DateInterval.IsNull(),
+			"plan_date_interval_is_unknown": plan.DateInterval.IsUnknown(),
+			"plan_date_interval_value":      plan.DateInterval.ValueString(),
+			"state_date_interval_is_null":   state.DateInterval.IsNull(),
+			"state_date_interval_value":     state.DateInterval.ValueString(),
+		})
+
+	// If date_interval is removed from config (null in plan) but exists in state,
+	// mark that an update is required
+	if plan.DateInterval.IsNull() && !state.DateInterval.IsNull() {
+
+		// Ensure framework knows we need update for this attribute
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("date_interval"), types.StringNull())...)
+	}
+
+}
+
 func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	s := resource_dashboard.DashboardResourceSchema(ctx)
 	attrs := s.GetAttributes()
+
+	s.Attributes["date_interval"] = schema.StringAttribute{
+		Optional: true,
+		Computed: true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+			&NullableModifier{},
+		},
+		MarkdownDescription: attrs["end_date"].GetMarkdownDescription(),
+	}
+
+	s.Attributes["start_date"] = schema.StringAttribute{
+		Computed:            true,
+		Optional:            true,
+		MarkdownDescription: attrs["start_date"].GetMarkdownDescription(),
+		Default:             stringdefault.StaticString(""),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
 	s.Attributes["end_date"] = schema.StringAttribute{
 		Computed:            true,
 		Optional:            true,
 		MarkdownDescription: attrs["end_date"].GetMarkdownDescription(),
+		Default:             stringdefault.StaticString(""),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	}
+
 	s.Attributes["title"] = schema.StringAttribute{
 		Computed:            true,
 		Optional:            true,
@@ -60,6 +142,7 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	data.DateInterval = types.StringUnknown()
 	body := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -147,7 +230,6 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 		resp.Diagnostics.Append(diag...)
 		return
 	}
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

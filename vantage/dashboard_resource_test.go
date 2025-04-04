@@ -127,6 +127,48 @@ func TestAccDashboard_basic(t *testing.T) {
 	})
 }
 
+func TestAccDashboard_dateInterval(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDashboard_nullDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", ""),
+				),
+			},
+			{
+				Config: testAccDashboard_withDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", "this_month"),
+				),
+			},
+			{
+				Config: testAccDashboard_nullDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", ""),
+				),
+			},
+			{
+				Config: testAccDashboard_withDates(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", "2023-01-01"),
+				),
+			},
+			{
+				Config: testAccDashboard_nullDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", ""),
+				),
+			},
+		},
+	})
+}
 func testAccDashboard_basicTfDatasourceWorkspaces() string {
 	return `
 		data "vantage_workspaces" "test" {}
@@ -152,4 +194,40 @@ func testAccDashboard_basicTf(id, startDate, endDate, widgetsStr string) string 
 			%[4]s
 
 		}`, id, startDate, endDate, widgetsStr)
+}
+
+func testAccDashboard_nullDateInterval() string {
+	return `
+		data "vantage_workspaces" "test" {}
+
+		resource "vantage_dashboard" "test-date-interval" {
+			workspace_token = data.vantage_workspaces.test.workspaces[0].token
+			title = "test"
+		}
+	`
+}
+
+func testAccDashboard_withDateInterval() string {
+	return `
+	data "vantage_workspaces" "test" {}
+
+	resource "vantage_dashboard" "test-date-interval" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "test"
+		date_interval = "this_month"
+	}
+`
+}
+
+func testAccDashboard_withDates() string {
+	return `
+	data "vantage_workspaces" "test" {}
+
+	resource "vantage_dashboard" "test-date-interval" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "test"
+		start_date = "2023-01-01"
+		end_date = "2023-01-31"
+	}
+`
 }
