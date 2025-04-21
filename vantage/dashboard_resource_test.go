@@ -127,6 +127,34 @@ func TestAccDashboard_basic(t *testing.T) {
 	})
 }
 
+func TestAccDashboard_hasDateInterval(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDashboard_withDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", "this_month"),
+				),
+			},
+			{
+				Config: testAccDashboard_nullDateInterval(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", ""),
+				),
+			},
+			{
+				Config: testAccDashboard_withDates(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", "2023-01-01"),
+				),
+			},
+		}})
+}
+
 func TestAccDashboard_dateInterval(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
