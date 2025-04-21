@@ -98,7 +98,7 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 			stringplanmodifier.UseStateForUnknown(),
 			&NullableModifier{},
 		},
-		MarkdownDescription: attrs["end_date"].GetMarkdownDescription(),
+		MarkdownDescription: attrs["date_interval"].GetMarkdownDescription(),
 	}
 
 	s.Attributes["start_date"] = schema.StringAttribute{
@@ -142,7 +142,6 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	data.DateInterval = types.StringUnknown()
 	body := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

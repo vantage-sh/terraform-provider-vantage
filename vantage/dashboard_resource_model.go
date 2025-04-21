@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -15,6 +17,7 @@ type dashboardModel resource_dashboard.DashboardModel
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringValue(payload.DateBin)
+	tflog.Debug(ctx, fmt.Sprintf("DateInterval is not null %s", payload.DateInterval))
 	if payload.DateInterval != "" {
 		m.DateInterval = types.StringValue(payload.DateInterval)
 	} else {
@@ -119,7 +122,7 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 			widgets = append(widgets, widget)
 		}
 	}
-
+	tflog.Debug(ctx, fmt.Sprintf("DateInterval create %s", m.DateInterval.ValueString()))
 	payload := &modelsv2.CreateDashboard{
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
