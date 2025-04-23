@@ -944,22 +944,32 @@ func (v KubernetesEfficiencyReportsValue) String() string {
 func (v KubernetesEfficiencyReportsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"aggregated_by":   basetypes.StringType{},
+		"created_at":      basetypes.StringType{},
+		"date_bucket":     basetypes.StringType{},
+		"date_interval":   basetypes.StringType{},
+		"default":         basetypes.BoolType{},
+		"end_date":        basetypes.StringType{},
+		"filter":          basetypes.StringType{},
+		"groupings":       basetypes.StringType{},
+		"start_date":      basetypes.StringType{},
+		"title":           basetypes.StringType{},
+		"token":           basetypes.StringType{},
+		"user_token":      basetypes.StringType{},
+		"workspace_token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"aggregated_by":   basetypes.StringType{},
-			"created_at":      basetypes.StringType{},
-			"date_bucket":     basetypes.StringType{},
-			"date_interval":   basetypes.StringType{},
-			"default":         basetypes.BoolType{},
-			"end_date":        basetypes.StringType{},
-			"filter":          basetypes.StringType{},
-			"groupings":       basetypes.StringType{},
-			"start_date":      basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"user_token":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"aggregated_by":   v.AggregatedBy,
 			"created_at":      v.CreatedAt,
