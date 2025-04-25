@@ -127,6 +127,52 @@ func TestAccDashboard_basic(t *testing.T) {
 	})
 }
 
+func TestAccDashboard_withCostReportWidget(t *testing.T) {
+	now := time.Now()
+	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
+	endDate := beginningOfCurrentMonth.AddDate(0, 0, -1).Format("2006-01-02")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{ // Create: with widgets
+			{
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTfCostReport("test-report") +
+					testAccDashboard_basicTf(
+						"test-with-widgets",
+						startDate,
+						endDate,
+						`widgets = [
+							{
+								settings = { display_type = "table" }
+								title = "Custom Widget Title",
+								widgetable_token = vantage_cost_report.test-report.token
+							}
+						]`,
+					),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-report", "title", "test-report"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "date_interval", "custom"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "end_date", endDate),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "saved_filters.#", "0"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "start_date", startDate),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "title", "test-with-widgets"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.#", "1"),
+
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.title", "Custom Widget Title"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-with-widgets", "widgets.0.settings.display_type", "table"),
+					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "widgets.0.widgetable_token"),
+
+					resource.TestCheckResourceAttrSet("vantage_dashboard.test-with-widgets", "workspace_token"),
+				),
+			},
+		},
+	},
+	)
+
+}
+
 func TestAccDashboard_hasDateInterval(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
@@ -209,6 +255,17 @@ func testAccDashboard_basicTfReports(id string) string {
 			workspace_token = data.vantage_workspaces.test.workspaces[0].token
 			title = %[1]q
 			filter = "resources.provider = 'aws'"
+		}`, id)
+}
+
+func testAccDashboard_basicTfCostReport(id string) string {
+	return fmt.Sprintf(`
+		resource "vantage_cost_report" %[1]q {
+			workspace_token = data.vantage_workspaces.test.workspaces[0].token
+			title = %[1]q
+			filter = "costs.provider = 'aws'"
+			date_bin = "day"
+		  chart_type = "line"
 		}`, id)
 }
 
