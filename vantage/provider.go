@@ -161,6 +161,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewManagedAccountsDataSource,
 		NewBillingRulesDataSource,
 		NewNetworkFlowReportDataSource,
+		NewCostAlertsDataSource,
 	}
 }
 
@@ -186,5 +187,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewKubernetesEfficiencyReportResource,
 		NewFinancialCommitmentReportResource,
 		NewNetworkFlowReportResource,
+		NewCostAlertResource,
 	}
 }
