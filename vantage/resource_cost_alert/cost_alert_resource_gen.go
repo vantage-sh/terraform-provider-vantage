@@ -76,9 +76,9 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The date and time, in UTC, for when the alert was last updated. ISO 8601 Formatted.",
 			},
 			"workspace_token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The ID of the organization that owns the CostAlert.",
-				MarkdownDescription: "The ID of the organization that owns the CostAlert.",
+				Required:            true,
+				Description:         "The token of the Workspace to add the Cost Alert to.",
+				MarkdownDescription: "The token of the Workspace to add the Cost Alert to.",
 			},
 		},
 	}
