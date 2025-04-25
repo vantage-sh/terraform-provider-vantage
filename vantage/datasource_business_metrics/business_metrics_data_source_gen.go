@@ -525,15 +525,25 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"cost_report_tokens_with_metadata": basetypes.ListType{
-				ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
-			},
-			"created_by_token": basetypes.StringType{},
-			"title":            basetypes.StringType{},
-			"token":            basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"cost_report_tokens_with_metadata": basetypes.ListType{
+			ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
 		},
+		"created_by_token": basetypes.StringType{},
+		"title":            basetypes.StringType{},
+		"token":            basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"cost_report_tokens_with_metadata": costReportTokensWithMetadata,
 			"created_by_token":                 v.CreatedByToken,
@@ -962,11 +972,19 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	labelFilterVal, d := types.ListValue(types.StringType, v.LabelFilter.Elements())
+	var labelFilterVal basetypes.ListValue
+	switch {
+	case v.LabelFilter.IsUnknown():
+		labelFilterVal = types.ListUnknown(types.StringType)
+	case v.LabelFilter.IsNull():
+		labelFilterVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		labelFilterVal, d = types.ListValue(types.StringType, v.LabelFilter.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"cost_report_token": basetypes.StringType{},
 			"label_filter": basetypes.ListType{
@@ -976,14 +994,24 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		}), diags
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"label_filter": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"unit_scale": basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"cost_report_token": basetypes.StringType{},
+		"label_filter": basetypes.ListType{
+			ElemType: types.StringType,
 		},
+		"unit_scale": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"cost_report_token": v.CostReportToken,
 			"label_filter":      labelFilterVal,

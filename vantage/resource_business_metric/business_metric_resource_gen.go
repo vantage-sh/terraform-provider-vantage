@@ -481,11 +481,19 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	labelFilterVal, d := types.ListValue(types.StringType, v.LabelFilter.Elements())
+	var labelFilterVal basetypes.ListValue
+	switch {
+	case v.LabelFilter.IsUnknown():
+		labelFilterVal = types.ListUnknown(types.StringType)
+	case v.LabelFilter.IsNull():
+		labelFilterVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		labelFilterVal, d = types.ListValue(types.StringType, v.LabelFilter.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"cost_report_token": basetypes.StringType{},
 			"label_filter": basetypes.ListType{
@@ -495,14 +503,24 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		}), diags
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"label_filter": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"unit_scale": basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"cost_report_token": basetypes.StringType{},
+		"label_filter": basetypes.ListType{
+			ElemType: types.StringType,
 		},
+		"unit_scale": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"cost_report_token": v.CostReportToken,
 			"label_filter":      labelFilterVal,
@@ -923,12 +941,22 @@ func (v ValuesValue) String() string {
 func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"amount": basetypes.Float64Type{},
+		"date":   basetypes.StringType{},
+		"label":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"amount": basetypes.Float64Type{},
-			"date":   basetypes.StringType{},
-			"label":  basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"amount": v.Amount,
 			"date":   v.Date,

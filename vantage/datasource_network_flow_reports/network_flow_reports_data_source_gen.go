@@ -944,22 +944,32 @@ func (v NetworkFlowReportsValue) String() string {
 func (v NetworkFlowReportsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"created_at":       basetypes.StringType{},
+		"created_by_token": basetypes.StringType{},
+		"date_interval":    basetypes.StringType{},
+		"default":          basetypes.BoolType{},
+		"end_date":         basetypes.StringType{},
+		"filter":           basetypes.StringType{},
+		"flow_direction":   basetypes.StringType{},
+		"flow_weight":      basetypes.StringType{},
+		"groupings":        basetypes.StringType{},
+		"start_date":       basetypes.StringType{},
+		"title":            basetypes.StringType{},
+		"token":            basetypes.StringType{},
+		"workspace_token":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"created_at":       basetypes.StringType{},
-			"created_by_token": basetypes.StringType{},
-			"date_interval":    basetypes.StringType{},
-			"default":          basetypes.BoolType{},
-			"end_date":         basetypes.StringType{},
-			"filter":           basetypes.StringType{},
-			"flow_direction":   basetypes.StringType{},
-			"flow_weight":      basetypes.StringType{},
-			"groupings":        basetypes.StringType{},
-			"start_date":       basetypes.StringType{},
-			"title":            basetypes.StringType{},
-			"token":            basetypes.StringType{},
-			"workspace_token":  basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"created_at":       v.CreatedAt,
 			"created_by_token": v.CreatedByToken,

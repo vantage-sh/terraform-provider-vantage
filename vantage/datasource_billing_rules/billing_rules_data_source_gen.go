@@ -23,61 +23,76 @@ func BillingRulesDataSourceSchema(ctx context.Context) schema.Schema {
 					Attributes: map[string]schema.Attribute{
 						"amount": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The amount for the Billing Rule (Charge).",
-							MarkdownDescription: "The amount for the Billing Rule (Charge).",
+							Description:         "The amount for the BillingRule (Charge).",
+							MarkdownDescription: "The amount for the BillingRule (Charge).",
+						},
+						"apply_to_all": schema.StringAttribute{
+							Computed:            true,
+							Description:         "Whether the BillingRule applies to all future managed accounts.",
+							MarkdownDescription: "Whether the BillingRule applies to all future managed accounts.",
 						},
 						"category": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The category for the Billing Rule (Charge).",
-							MarkdownDescription: "The category for the Billing Rule (Charge).",
+							Description:         "The category for the BillingRule (Charge).",
+							MarkdownDescription: "The category for the BillingRule (Charge).",
 						},
 						"charge_type": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The charge type for the Billing Rule.",
-							MarkdownDescription: "The charge type for the Billing Rule.",
+							Description:         "The charge type for the BillingRule.",
+							MarkdownDescription: "The charge type for the BillingRule.",
 						},
 						"created_at": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.",
-							MarkdownDescription: "The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.",
+							Description:         "The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.",
+							MarkdownDescription: "The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.",
 						},
 						"created_by_token": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The token of the Creator of the Billing Rule.",
-							MarkdownDescription: "The token of the Creator of the Billing Rule.",
+							Description:         "The token of the Creator of the BillingRule.",
+							MarkdownDescription: "The token of the Creator of the BillingRule.",
+						},
+						"end_date": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The end date of the BillingRule.",
+							MarkdownDescription: "The end date of the BillingRule.",
 						},
 						"percentage": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The percentage of the cost shown for the Billing Rule (Adjustment).",
-							MarkdownDescription: "The percentage of the cost shown for the Billing Rule (Adjustment).",
+							Description:         "The percentage of the cost shown for the BillingRule (Adjustment).",
+							MarkdownDescription: "The percentage of the cost shown for the BillingRule (Adjustment).",
 						},
 						"service": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The service for the Billing Rule (Charge).",
-							MarkdownDescription: "The service for the Billing Rule (Charge).",
+							Description:         "The service for the BillingRule (Charge).",
+							MarkdownDescription: "The service for the BillingRule (Charge).",
+						},
+						"start_date": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The start date of the BillingRule.",
+							MarkdownDescription: "The start date of the BillingRule.",
 						},
 						"start_period": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The start period for the Billing Rule (Charge).",
-							MarkdownDescription: "The start period for the Billing Rule (Charge).",
+							Description:         "The start period for the BillingRule (Charge).",
+							MarkdownDescription: "The start period for the BillingRule (Charge).",
 						},
 						"sub_category": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The subcategory for the Billing Rule (Charge).",
-							MarkdownDescription: "The subcategory for the Billing Rule (Charge).",
+							Description:         "The subcategory for the BillingRule (Charge).",
+							MarkdownDescription: "The subcategory for the BillingRule (Charge).",
 						},
 						"title": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The title of the Billing Rule.",
-							MarkdownDescription: "The title of the Billing Rule.",
+							Description:         "The title of the BillingRule.",
+							MarkdownDescription: "The title of the BillingRule.",
 						},
 						"token": schema.StringAttribute{
 							Computed: true,
 						},
 						"type": schema.StringAttribute{
 							Computed:            true,
-							Description:         "The type of the Billing Rule.",
-							MarkdownDescription: "The type of the Billing Rule.",
+							Description:         "The type of the BillingRule.",
+							MarkdownDescription: "The type of the BillingRule.",
 						},
 					},
 					CustomType: BillingRulesType{
@@ -137,6 +152,24 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
+	}
+
+	applyToAllAttribute, ok := attributes["apply_to_all"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`apply_to_all is missing from object`)
+
+		return nil, diags
+	}
+
+	applyToAllVal, ok := applyToAllAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`apply_to_all expected to be basetypes.StringValue, was: %T`, applyToAllAttribute))
 	}
 
 	categoryAttribute, ok := attributes["category"]
@@ -211,6 +244,24 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	endDateAttribute, ok := attributes["end_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`end_date is missing from object`)
+
+		return nil, diags
+	}
+
+	endDateVal, ok := endDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
+	}
+
 	percentageAttribute, ok := attributes["percentage"]
 
 	if !ok {
@@ -245,6 +296,24 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`service expected to be basetypes.StringValue, was: %T`, serviceAttribute))
+	}
+
+	startDateAttribute, ok := attributes["start_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`start_date is missing from object`)
+
+		return nil, diags
+	}
+
+	startDateVal, ok := startDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`start_date expected to be basetypes.StringValue, was: %T`, startDateAttribute))
 	}
 
 	startPeriodAttribute, ok := attributes["start_period"]
@@ -343,12 +412,15 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 
 	return BillingRulesValue{
 		Amount:           amountVal,
+		ApplyToAll:       applyToAllVal,
 		Category:         categoryVal,
 		ChargeType:       chargeTypeVal,
 		CreatedAt:        createdAtVal,
 		CreatedByToken:   createdByTokenVal,
+		EndDate:          endDateVal,
 		Percentage:       percentageVal,
 		Service:          serviceVal,
+		StartDate:        startDateVal,
 		StartPeriod:      startPeriodVal,
 		SubCategory:      subCategoryVal,
 		Title:            titleVal,
@@ -439,6 +511,24 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
 	}
 
+	applyToAllAttribute, ok := attributes["apply_to_all"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`apply_to_all is missing from object`)
+
+		return NewBillingRulesValueUnknown(), diags
+	}
+
+	applyToAllVal, ok := applyToAllAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`apply_to_all expected to be basetypes.StringValue, was: %T`, applyToAllAttribute))
+	}
+
 	categoryAttribute, ok := attributes["category"]
 
 	if !ok {
@@ -511,6 +601,24 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	endDateAttribute, ok := attributes["end_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`end_date is missing from object`)
+
+		return NewBillingRulesValueUnknown(), diags
+	}
+
+	endDateVal, ok := endDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
+	}
+
 	percentageAttribute, ok := attributes["percentage"]
 
 	if !ok {
@@ -545,6 +653,24 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`service expected to be basetypes.StringValue, was: %T`, serviceAttribute))
+	}
+
+	startDateAttribute, ok := attributes["start_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`start_date is missing from object`)
+
+		return NewBillingRulesValueUnknown(), diags
+	}
+
+	startDateVal, ok := startDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`start_date expected to be basetypes.StringValue, was: %T`, startDateAttribute))
 	}
 
 	startPeriodAttribute, ok := attributes["start_period"]
@@ -643,12 +769,15 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 
 	return BillingRulesValue{
 		Amount:           amountVal,
+		ApplyToAll:       applyToAllVal,
 		Category:         categoryVal,
 		ChargeType:       chargeTypeVal,
 		CreatedAt:        createdAtVal,
 		CreatedByToken:   createdByTokenVal,
+		EndDate:          endDateVal,
 		Percentage:       percentageVal,
 		Service:          serviceVal,
+		StartDate:        startDateVal,
 		StartPeriod:      startPeriodVal,
 		SubCategory:      subCategoryVal,
 		Title:            titleVal,
@@ -727,12 +856,15 @@ var _ basetypes.ObjectValuable = BillingRulesValue{}
 
 type BillingRulesValue struct {
 	Amount           basetypes.StringValue `tfsdk:"amount"`
+	ApplyToAll       basetypes.StringValue `tfsdk:"apply_to_all"`
 	Category         basetypes.StringValue `tfsdk:"category"`
 	ChargeType       basetypes.StringValue `tfsdk:"charge_type"`
 	CreatedAt        basetypes.StringValue `tfsdk:"created_at"`
 	CreatedByToken   basetypes.StringValue `tfsdk:"created_by_token"`
+	EndDate          basetypes.StringValue `tfsdk:"end_date"`
 	Percentage       basetypes.StringValue `tfsdk:"percentage"`
 	Service          basetypes.StringValue `tfsdk:"service"`
+	StartDate        basetypes.StringValue `tfsdk:"start_date"`
 	StartPeriod      basetypes.StringValue `tfsdk:"start_period"`
 	SubCategory      basetypes.StringValue `tfsdk:"sub_category"`
 	Title            basetypes.StringValue `tfsdk:"title"`
@@ -742,18 +874,21 @@ type BillingRulesValue struct {
 }
 
 func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 12)
+	attrTypes := make(map[string]tftypes.Type, 15)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["apply_to_all"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["category"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["charge_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["percentage"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["service"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_period"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["sub_category"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
@@ -764,7 +899,7 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 12)
+		vals := make(map[string]tftypes.Value, 15)
 
 		val, err = v.Amount.ToTerraformValue(ctx)
 
@@ -773,6 +908,14 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 		}
 
 		vals["amount"] = val
+
+		val, err = v.ApplyToAll.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["apply_to_all"] = val
 
 		val, err = v.Category.ToTerraformValue(ctx)
 
@@ -806,6 +949,14 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 
 		vals["created_by_token"] = val
 
+		val, err = v.EndDate.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["end_date"] = val
+
 		val, err = v.Percentage.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -821,6 +972,14 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 		}
 
 		vals["service"] = val
+
+		val, err = v.StartDate.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["start_date"] = val
 
 		val, err = v.StartPeriod.ToTerraformValue(ctx)
 
@@ -891,29 +1050,45 @@ func (v BillingRulesValue) String() string {
 func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"amount":           basetypes.StringType{},
+		"apply_to_all":     basetypes.StringType{},
+		"category":         basetypes.StringType{},
+		"charge_type":      basetypes.StringType{},
+		"created_at":       basetypes.StringType{},
+		"created_by_token": basetypes.StringType{},
+		"end_date":         basetypes.StringType{},
+		"percentage":       basetypes.StringType{},
+		"service":          basetypes.StringType{},
+		"start_date":       basetypes.StringType{},
+		"start_period":     basetypes.StringType{},
+		"sub_category":     basetypes.StringType{},
+		"title":            basetypes.StringType{},
+		"token":            basetypes.StringType{},
+		"type":             basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"amount":           basetypes.StringType{},
-			"category":         basetypes.StringType{},
-			"charge_type":      basetypes.StringType{},
-			"created_at":       basetypes.StringType{},
-			"created_by_token": basetypes.StringType{},
-			"percentage":       basetypes.StringType{},
-			"service":          basetypes.StringType{},
-			"start_period":     basetypes.StringType{},
-			"sub_category":     basetypes.StringType{},
-			"title":            basetypes.StringType{},
-			"token":            basetypes.StringType{},
-			"type":             basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"amount":           v.Amount,
+			"apply_to_all":     v.ApplyToAll,
 			"category":         v.Category,
 			"charge_type":      v.ChargeType,
 			"created_at":       v.CreatedAt,
 			"created_by_token": v.CreatedByToken,
+			"end_date":         v.EndDate,
 			"percentage":       v.Percentage,
 			"service":          v.Service,
+			"start_date":       v.StartDate,
 			"start_period":     v.StartPeriod,
 			"sub_category":     v.SubCategory,
 			"title":            v.Title,
@@ -943,6 +1118,10 @@ func (v BillingRulesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.ApplyToAll.Equal(other.ApplyToAll) {
+		return false
+	}
+
 	if !v.Category.Equal(other.Category) {
 		return false
 	}
@@ -959,11 +1138,19 @@ func (v BillingRulesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.EndDate.Equal(other.EndDate) {
+		return false
+	}
+
 	if !v.Percentage.Equal(other.Percentage) {
 		return false
 	}
 
 	if !v.Service.Equal(other.Service) {
+		return false
+	}
+
+	if !v.StartDate.Equal(other.StartDate) {
 		return false
 	}
 
@@ -1001,12 +1188,15 @@ func (v BillingRulesValue) Type(ctx context.Context) attr.Type {
 func (v BillingRulesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"amount":           basetypes.StringType{},
+		"apply_to_all":     basetypes.StringType{},
 		"category":         basetypes.StringType{},
 		"charge_type":      basetypes.StringType{},
 		"created_at":       basetypes.StringType{},
 		"created_by_token": basetypes.StringType{},
+		"end_date":         basetypes.StringType{},
 		"percentage":       basetypes.StringType{},
 		"service":          basetypes.StringType{},
+		"start_date":       basetypes.StringType{},
 		"start_period":     basetypes.StringType{},
 		"sub_category":     basetypes.StringType{},
 		"title":            basetypes.StringType{},

@@ -84,6 +84,26 @@ resources:
             description: The token of the business metric
         aliases:
           business_metric_token: token
+  cost_alert:
+    create:
+      path: /cost_alerts
+      method: POST
+    read:
+      path: /cost_alerts/{cost_alert_token}
+      method: GET
+    update:
+      path: /cost_alerts/{cost_alert_token}
+      method: PUT
+    delete:
+      path: /cost_alerts/{cost_alert_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the cost alert
+        aliases:
+          cost_alert_token: token
   dashboard:
     create:
       path: /dashboards
@@ -241,6 +261,15 @@ data_sources:
   business_metrics:
     read:
       path: /business_metrics
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  cost_alerts:
+    read:
+      path: /cost_alerts
       method: GET
     schema:
       ignores:

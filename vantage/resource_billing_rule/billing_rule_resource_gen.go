@@ -16,28 +16,40 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 		Attributes: map[string]schema.Attribute{
 			"amount": schema.Float64Attribute{
 				Required:            true,
-				Description:         "The amount for the Billing Rule. Example value: 300",
-				MarkdownDescription: "The amount for the Billing Rule. Example value: 300",
+				Description:         "The amount for the BillingRule. Example value: 300",
+				MarkdownDescription: "The amount for the BillingRule. Example value: 300",
+			},
+			"apply_to_all": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Determines if the BillingRule applies to all current and future managed accounts.",
+				MarkdownDescription: "Determines if the BillingRule applies to all current and future managed accounts.",
 			},
 			"category": schema.StringAttribute{
 				Required:            true,
-				Description:         "The category of the Billing Rule.",
-				MarkdownDescription: "The category of the Billing Rule.",
+				Description:         "The category of the BillingRule.",
+				MarkdownDescription: "The category of the BillingRule.",
 			},
 			"charge_type": schema.StringAttribute{
 				Required:            true,
-				Description:         "The charge type of the Billing Rule.",
-				MarkdownDescription: "The charge type of the Billing Rule.",
+				Description:         "The charge type of the BillingRule.",
+				MarkdownDescription: "The charge type of the BillingRule.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
-				Description:         "The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.",
-				MarkdownDescription: "The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.",
+				Description:         "The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.",
+				MarkdownDescription: "The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.",
 			},
 			"created_by_token": schema.StringAttribute{
 				Computed:            true,
-				Description:         "The token of the Creator of the Billing Rule.",
-				MarkdownDescription: "The token of the Creator of the Billing Rule.",
+				Description:         "The token of the Creator of the BillingRule.",
+				MarkdownDescription: "The token of the Creator of the BillingRule.",
+			},
+			"end_date": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The end date of the BillingRule. ISO 8601 formatted.",
+				MarkdownDescription: "The end date of the BillingRule. ISO 8601 formatted.",
 			},
 			"percentage": schema.Float64Attribute{
 				Required:            true,
@@ -46,23 +58,29 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"service": schema.StringAttribute{
 				Required:            true,
-				Description:         "The service of the Billing Rule.",
-				MarkdownDescription: "The service of the Billing Rule.",
+				Description:         "The service of the BillingRule.",
+				MarkdownDescription: "The service of the BillingRule.",
+			},
+			"start_date": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The start date of the BillingRule. ISO 8601 formatted.",
+				MarkdownDescription: "The start date of the BillingRule. ISO 8601 formatted.",
 			},
 			"start_period": schema.StringAttribute{
 				Required:            true,
-				Description:         "The start period of the Billing Rule.",
-				MarkdownDescription: "The start period of the Billing Rule.",
+				Description:         "The start period of the BillingRule.",
+				MarkdownDescription: "The start period of the BillingRule.",
 			},
 			"sub_category": schema.StringAttribute{
 				Required:            true,
-				Description:         "The subcategory of the Billing Rule.",
-				MarkdownDescription: "The subcategory of the Billing Rule.",
+				Description:         "The subcategory of the BillingRule.",
+				MarkdownDescription: "The subcategory of the BillingRule.",
 			},
 			"title": schema.StringAttribute{
 				Required:            true,
-				Description:         "The title of the Billing Rule.",
-				MarkdownDescription: "The title of the Billing Rule.",
+				Description:         "The title of the BillingRule.",
+				MarkdownDescription: "The title of the BillingRule.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -71,8 +89,8 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"type": schema.StringAttribute{
 				Required:            true,
-				Description:         "The type of the Billing Rule. Note: the values are case insensitive.",
-				MarkdownDescription: "The type of the Billing Rule. Note: the values are case insensitive.",
+				Description:         "The type of the BillingRule. Note: the values are case insensitive.",
+				MarkdownDescription: "The type of the BillingRule. Note: the values are case insensitive.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"exclusion",
@@ -88,12 +106,15 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 
 type BillingRuleModel struct {
 	Amount         types.Float64 `tfsdk:"amount"`
+	ApplyToAll     types.Bool    `tfsdk:"apply_to_all"`
 	Category       types.String  `tfsdk:"category"`
 	ChargeType     types.String  `tfsdk:"charge_type"`
 	CreatedAt      types.String  `tfsdk:"created_at"`
 	CreatedByToken types.String  `tfsdk:"created_by_token"`
+	EndDate        types.String  `tfsdk:"end_date"`
 	Percentage     types.Float64 `tfsdk:"percentage"`
 	Service        types.String  `tfsdk:"service"`
+	StartDate      types.String  `tfsdk:"start_date"`
 	StartPeriod    types.String  `tfsdk:"start_period"`
 	SubCategory    types.String  `tfsdk:"sub_category"`
 	Title          types.String  `tfsdk:"title"`
