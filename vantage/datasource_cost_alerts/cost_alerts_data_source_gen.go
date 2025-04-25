@@ -55,7 +55,7 @@ func CostAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The Microsoft Teams channels that will receive the alert. Make sure your teams integration is connected at https://console.vantage.sh/settings/microsoft_teams.",
 							MarkdownDescription: "The Microsoft Teams channels that will receive the alert. Make sure your teams integration is connected at https://console.vantage.sh/settings/microsoft_teams.",
 						},
-						"threshold": schema.StringAttribute{
+						"threshold": schema.NumberAttribute{
 							Computed:            true,
 							Description:         "The cost change threshold to alert on.",
 							MarkdownDescription: "The cost change threshold to alert on.",
@@ -241,12 +241,12 @@ func (t CostAlertsType) ValueFromObject(ctx context.Context, in basetypes.Object
 		return nil, diags
 	}
 
-	thresholdVal, ok := thresholdAttribute.(basetypes.StringValue)
+	thresholdVal, ok := thresholdAttribute.(basetypes.NumberValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`threshold expected to be basetypes.StringValue, was: %T`, thresholdAttribute))
+			fmt.Sprintf(`threshold expected to be basetypes.NumberValue, was: %T`, thresholdAttribute))
 	}
 
 	titleAttribute, ok := attributes["title"]
@@ -541,12 +541,12 @@ func NewCostAlertsValue(attributeTypes map[string]attr.Type, attributes map[stri
 		return NewCostAlertsValueUnknown(), diags
 	}
 
-	thresholdVal, ok := thresholdAttribute.(basetypes.StringValue)
+	thresholdVal, ok := thresholdAttribute.(basetypes.NumberValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`threshold expected to be basetypes.StringValue, was: %T`, thresholdAttribute))
+			fmt.Sprintf(`threshold expected to be basetypes.NumberValue, was: %T`, thresholdAttribute))
 	}
 
 	titleAttribute, ok := attributes["title"]
@@ -734,7 +734,7 @@ type CostAlertsValue struct {
 	ReportTokens    basetypes.ListValue   `tfsdk:"report_tokens"`
 	SlackChannels   basetypes.ListValue   `tfsdk:"slack_channels"`
 	TeamsChannels   basetypes.ListValue   `tfsdk:"teams_channels"`
-	Threshold       basetypes.StringValue `tfsdk:"threshold"`
+	Threshold       basetypes.NumberValue `tfsdk:"threshold"`
 	Title           basetypes.StringValue `tfsdk:"title"`
 	Token           basetypes.StringValue `tfsdk:"token"`
 	UnitType        basetypes.StringValue `tfsdk:"unit_type"`
@@ -763,7 +763,7 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 	attrTypes["teams_channels"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
-	attrTypes["threshold"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["threshold"] = basetypes.NumberType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["unit_type"] = basetypes.StringType{}.TerraformType(ctx)
@@ -929,7 +929,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"teams_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"threshold":       basetypes.StringType{},
+			"threshold":       basetypes.NumberType{},
 			"title":           basetypes.StringType{},
 			"token":           basetypes.StringType{},
 			"unit_type":       basetypes.StringType{},
@@ -966,7 +966,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"teams_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"threshold":       basetypes.StringType{},
+			"threshold":       basetypes.NumberType{},
 			"title":           basetypes.StringType{},
 			"token":           basetypes.StringType{},
 			"unit_type":       basetypes.StringType{},
@@ -1003,7 +1003,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"teams_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"threshold":       basetypes.StringType{},
+			"threshold":       basetypes.NumberType{},
 			"title":           basetypes.StringType{},
 			"token":           basetypes.StringType{},
 			"unit_type":       basetypes.StringType{},
@@ -1040,7 +1040,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"teams_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"threshold":       basetypes.StringType{},
+			"threshold":       basetypes.NumberType{},
 			"title":           basetypes.StringType{},
 			"token":           basetypes.StringType{},
 			"unit_type":       basetypes.StringType{},
@@ -1064,7 +1064,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		"teams_channels": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"threshold":       basetypes.StringType{},
+		"threshold":       basetypes.NumberType{},
 		"title":           basetypes.StringType{},
 		"token":           basetypes.StringType{},
 		"unit_type":       basetypes.StringType{},
@@ -1190,7 +1190,7 @@ func (v CostAlertsValue) AttributeTypes(ctx context.Context) map[string]attr.Typ
 		"teams_channels": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"threshold":       basetypes.StringType{},
+		"threshold":       basetypes.NumberType{},
 		"title":           basetypes.StringType{},
 		"token":           basetypes.StringType{},
 		"unit_type":       basetypes.StringType{},

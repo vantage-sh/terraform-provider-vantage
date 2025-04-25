@@ -2,11 +2,9 @@ package vantage
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_alert"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -21,15 +19,9 @@ func (m *costAlertModel) applyPayload(ctx context.Context, payload *modelsv2.Cos
 	m.Title = types.StringValue(payload.Title)
 	m.Interval = types.StringValue(payload.Interval)
 	m.UnitType = types.StringValue(payload.UnitType)
-	tflog.Debug(ctx, "cost alert model payload", map[string]interface{}{
-		"payload": payload,
-	})
-	thresholdFloat, err := strconv.ParseFloat(payload.Threshold, 64)
-	if err != nil {
-		diag.AddError("Invalid Threshold", "Failed to parse threshold value: "+err.Error())
-		return diag
-	}
-	m.Threshold = types.Float64Value(thresholdFloat)
+	m.Threshold = types.Float64Value(payload.Threshold)
+	m.CreatedAt = types.StringValue(payload.CreatedAt)
+	m.UpdatedAt = types.StringValue(payload.UpdatedAt)
 
 	list, diag = types.ListValueFrom(ctx, types.StringType, payload.EmailRecipients)
 	if diag.HasError() {
@@ -64,7 +56,6 @@ func (m *costAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		parsedFloat := float32(m.Threshold.ValueFloat64())
 		threshold = &parsedFloat
 	}
-	tflog.Debug(ctx, "andy")
 
 	return &modelsv2.CreateCostAlert{
 		Title:           m.Title.ValueStringPointer(),

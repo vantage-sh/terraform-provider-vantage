@@ -11,8 +11,7 @@ import (
 
 func TestCostAlert(t *testing.T) {
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
-
-	// rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
@@ -26,13 +25,12 @@ func TestCostAlert(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vantage_cost_alert.test", "token"),
 				),
 			},
-			// {
-			// 	Config: testAccCostAlertConfig(rUpdatedTitle),
-			// 	Check: resource.ComposeTestCheckFunc(
-			// 		resource.TestCheckResourceAttr("vantage_cost_alert.test", "title", rUpdatedTitle),
-			// 		resource.TestCheckResourceAttr("vantage_cost_alert.test", "filter", "aws.product = 'S3'"),
-			// 	),
-			// },
+			{
+				Config: testAccCostReport() + testAccCostAlertConfig(rUpdatedTitle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_alert.test", "title", rUpdatedTitle),
+				),
+			},
 		},
 	})
 }
