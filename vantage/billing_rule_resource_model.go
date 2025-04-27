@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_rule"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -47,7 +49,9 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 	}
 }
 
-func (m *billingRuleModel) applyPayload(_ context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
+func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
+	tflog.Debug(ctx, fmt.Sprintf("apply_payload: %v", payload))
+
 	m.Token = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
 	if payload.Percentage != "" {
@@ -70,7 +74,31 @@ func (m *billingRuleModel) applyPayload(_ context.Context, payload *modelsv2.Bil
 		}
 		m.Amount = types.Float64Value(amount)
 	}
+	tflog.Debug(ctx, fmt.Sprintf("apply_to_all: %s", payload.ApplyToAll))
 
+	if payload.ApplyToAll != "" {
+		applyToAll, err := strconv.ParseBool(payload.ApplyToAll)
+		if err != nil {
+			d := diag.Diagnostics{}
+			d.AddError("error converting applyToAll to bool", err.Error())
+			return d
+		}
+		m.ApplyToAll = types.BoolValue(applyToAll)
+	} else {
+		m.ApplyToAll = types.BoolValue(false)
+	}
+
+	if payload.EndDate != "" {
+		m.EndDate = types.StringValue(payload.EndDate)
+	} else {
+		m.EndDate = types.StringNull()
+	}
+
+	if payload.StartDate != "" {
+		m.StartDate = types.StringValue(payload.StartDate)
+	} else {
+		m.StartDate = types.StringNull()
+	}
 	if payload.Category != "" {
 		m.Category = types.StringValue(payload.Category)
 	}
