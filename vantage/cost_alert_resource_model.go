@@ -58,6 +58,7 @@ func (m *costAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 	}
 
 	return &modelsv2.CreateCostAlert{
+		WorkspaceToken:  m.WorkspaceToken.ValueStringPointer(),
 		Title:           m.Title.ValueStringPointer(),
 		Interval:        m.Interval.ValueStringPointer(),
 		Threshold:       threshold,

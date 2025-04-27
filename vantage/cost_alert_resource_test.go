@@ -18,7 +18,7 @@ func TestCostAlert(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCostReport() + testAccCostAlertConfig(rTitle),
+				Config: testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertConfig(rTitle),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_cost_alert.test", "title", rTitle),
 					resource.TestCheckResourceAttr("vantage_cost_alert.test", "threshold", "100"),
@@ -26,7 +26,7 @@ func TestCostAlert(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCostReport() + testAccCostAlertConfig(rUpdatedTitle),
+				Config: testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertConfig(rUpdatedTitle),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_cost_alert.test", "title", rUpdatedTitle),
 				),
@@ -35,9 +35,14 @@ func TestCostAlert(t *testing.T) {
 	})
 }
 
-func testAccCostReport() string {
+func testAccWorkspacesDatasource() string {
 	return `
 data "vantage_workspaces" "test_workspace" {}
+
+`
+}
+func testAccCostReport() string {
+	return `
 
 resource "vantage_cost_report" "test_cost_report" {
 	workspace_token = data.vantage_workspaces.test_workspace.workspaces[0].token
@@ -45,11 +50,14 @@ resource "vantage_cost_report" "test_cost_report" {
 	chart_type = "line"
 	date_bin = "day"
 	date_interval = "last_month"
-}`
+}
+	
+`
 }
 
 func testAccCostAlertConfig(title string) string {
 	return fmt.Sprintf(`
+
 resource "vantage_cost_alert" "test" {
 	workspace_token = data.vantage_workspaces.test_workspace.workspaces[0].token
 	title           = %[1]q
@@ -58,5 +66,6 @@ resource "vantage_cost_alert" "test" {
 	unit_type       = "percentage"
 	report_tokens   = [vantage_cost_report.test_cost_report.token]
 }
+
 `, title)
 }
