@@ -133,6 +133,12 @@ func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaReq
 				Description:         "The credit amount for the Billing Rule. Example value: 300",
 				MarkdownDescription: "The credit amount for the Billing Rule. Example value: 300",
 			},
+			"apply_to_all": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Determines if the BillingRule applies to all current and future managed accounts.",
+				MarkdownDescription: "Determines if the BillingRule applies to all current and future managed accounts.",
+			},
 			"category": schema.StringAttribute{
 				Optional:            true,
 				Description:         "The category of the Billing Rule.",
@@ -153,6 +159,12 @@ func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaReq
 				Description:         "The token of the User who created the Billing Rule.",
 				MarkdownDescription: "The token of the User who created the Billing Rule.",
 			},
+			"end_date": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The end date of the BillingRule. ISO 8601 formatted.",
+				MarkdownDescription: "The end date of the BillingRule. ISO 8601 formatted.",
+			},
 			"percentage": schema.Float64Attribute{
 				Optional:            true,
 				Description:         "The percentage of the cost shown. Example value: 75.0",
@@ -162,6 +174,12 @@ func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:            true,
 				Description:         "The service of the Billing Rule.",
 				MarkdownDescription: "The service of the Billing Rule.",
+			},
+			"start_date": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The start date of the BillingRule. ISO 8601 formatted.",
+				MarkdownDescription: "The start date of the BillingRule. ISO 8601 formatted.",
 			},
 			"start_period": schema.StringAttribute{
 				Optional:            true,
