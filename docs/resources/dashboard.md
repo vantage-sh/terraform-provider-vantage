@@ -44,7 +44,6 @@ resource "vantage_dashboard" "demo_dashboard" {
 
 - `created_at` (String) The date and time, in UTC, the Dashboard was created. ISO 8601 Formatted.
 - `token` (String) The token of the dashboard
-- `updated_at` (String) The date and time, in UTC, the Dashboard was created. ISO 8601 Formatted.
 
 <a id="nestedatt--widgets"></a>
 ### Nested Schema for `widgets`

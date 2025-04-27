@@ -24,17 +24,20 @@ description: |-
 
 Read-Only:
 
-- `amount` (String) The amount for the Billing Rule (Charge).
-- `category` (String) The category for the Billing Rule (Charge).
-- `charge_type` (String) The charge type for the Billing Rule.
-- `created_at` (String) The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.
-- `created_by_token` (String) The token of the Creator of the Billing Rule.
-- `percentage` (String) The percentage of the cost shown for the Billing Rule (Adjustment).
-- `service` (String) The service for the Billing Rule (Charge).
-- `start_period` (String) The start period for the Billing Rule (Charge).
-- `sub_category` (String) The subcategory for the Billing Rule (Charge).
-- `title` (String) The title of the Billing Rule.
+- `amount` (String) The amount for the BillingRule (Charge).
+- `apply_to_all` (String) Whether the BillingRule applies to all future managed accounts.
+- `category` (String) The category for the BillingRule (Charge).
+- `charge_type` (String) The charge type for the BillingRule.
+- `created_at` (String) The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.
+- `created_by_token` (String) The token of the Creator of the BillingRule.
+- `end_date` (String) The end date of the BillingRule.
+- `percentage` (String) The percentage of the cost shown for the BillingRule (Adjustment).
+- `service` (String) The service for the BillingRule (Charge).
+- `start_date` (String) The start date of the BillingRule.
+- `start_period` (String) The start period for the BillingRule (Charge).
+- `sub_category` (String) The subcategory for the BillingRule (Charge).
+- `title` (String) The title of the BillingRule.
 - `token` (String)
-- `type` (String) The type of the Billing Rule.
+- `type` (String) The type of the BillingRule.
 
 
