@@ -14,20 +14,20 @@ func TestAccAnomalyNotification_basic(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAnomalyNotificationUsers() + testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(10, "", "user_tokens = [data.vantage_users.users.users[0].token]"),
+				Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(10, "", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vantage_anomaly_notification.test", "token"),
 					resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "10"),
 				),
 			},
 			{ // update the threshold
-				Config: testAccAnomalyNotificationUsers() + testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "", "user_tokens = [data.vantage_users.users.users[0].token]"),
+				Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "20"),
 				),
 			},
 			{ // update the channels
-				Config: testAccAnomalyNotificationUsers() + testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "recipient_channels = [\"#test\"]", "user_tokens = [data.vantage_users.users.users[0].token]"),
+				Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "recipient_channels = [\"#test\"]", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "20"),
 				),
@@ -36,12 +36,12 @@ func TestAccAnomalyNotification_basic(t *testing.T) {
 	})
 }
 
-func testAccAnomalyNotificationUsers() string {
-	return `
-	data "vantage_users" "users" {}
+// func testAccAnomalyNotificationUsers() string {
+// 	return `
+// 	data "vantage_users" "users" {}
 
-	`
-}
+// 	`
+// }
 
 func testAccAnomalyNotificationCostReport() string {
 	return `
