@@ -20,7 +20,6 @@ type testAccVantageVirtualTagConfig_basicContext struct {
 }
 
 func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
-	t.Skip()
 
 	keyV0 := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	now := time.Now()
