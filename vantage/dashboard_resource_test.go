@@ -10,7 +10,6 @@ import (
 )
 
 func TestAccDashboard_basic(t *testing.T) {
-	t.Skip()
 	now := time.Now()
 	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
@@ -129,8 +128,6 @@ func TestAccDashboard_basic(t *testing.T) {
 }
 
 func TestAccDashboard_withCostReportWidget(t *testing.T) {
-	t.Skip()
-
 	now := time.Now()
 	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
@@ -177,8 +174,6 @@ func TestAccDashboard_withCostReportWidget(t *testing.T) {
 }
 
 func TestAccDashboard_hasDateInterval(t *testing.T) {
-	t.Skip()
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -207,8 +202,6 @@ func TestAccDashboard_hasDateInterval(t *testing.T) {
 }
 
 func TestAccDashboard_dateInterval(t *testing.T) {
-	t.Skip()
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
