@@ -30,6 +30,8 @@ func TestAccManagedAccount_basic(t *testing.T) {
 func testAccManagedAccountResource() string {
 	return fmt.Sprintf(`
 
+data "vantage_billing_rules" "rules" {}
+
 resource "vantage_managed_account" "test" {
 	name                   = "Test Account"
 	contact_email           = "test@vantage.sh"

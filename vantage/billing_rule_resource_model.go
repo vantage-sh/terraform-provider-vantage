@@ -2,12 +2,10 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_rule"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -58,7 +56,6 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 }
 
 func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
-	tflog.Debug(ctx, fmt.Sprintf("apply_payload: %s", payload))
 
 	m.Token = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
@@ -82,7 +79,6 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		}
 		m.Amount = types.Float64Value(amount)
 	}
-	tflog.Debug(ctx, fmt.Sprintf("apply_to_all: %t", payload.ApplyToAll))
 
 	m.ApplyToAll = types.BoolValue(payload.ApplyToAll)
 
