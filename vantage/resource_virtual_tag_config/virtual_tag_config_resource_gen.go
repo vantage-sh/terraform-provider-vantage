@@ -554,25 +554,15 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"business_metric_token": basetypes.StringType{},
-		"cost_metric": basetypes.ObjectType{
-			AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
-		},
-		"filter": basetypes.StringType{},
-		"name":   basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"business_metric_token": basetypes.StringType{},
+			"cost_metric": basetypes.ObjectType{
+				AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
+			},
+			"filter": basetypes.StringType{},
+			"name":   basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"business_metric_token": v.BusinessMetricToken,
 			"cost_metric":           costMetric,
@@ -974,23 +964,13 @@ func (v CostMetricValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"aggregation": basetypes.ObjectType{
-			AttrTypes: AggregationValue{}.AttributeTypes(ctx),
-		},
-		"filter": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"aggregation": basetypes.ObjectType{
+				AttrTypes: AggregationValue{}.AttributeTypes(ctx),
+			},
+			"filter": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"aggregation": aggregation,
 			"filter":      v.Filter,
@@ -1309,20 +1289,10 @@ func (v AggregationValue) String() string {
 func (v AggregationValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"tag": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"tag": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"tag": v.Tag,
 		})

@@ -551,24 +551,14 @@ func (v WidgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"settings": basetypes.ObjectType{
-			AttrTypes: SettingsValue{}.AttributeTypes(ctx),
-		},
-		"title":            basetypes.StringType{},
-		"widgetable_token": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"settings": basetypes.ObjectType{
+				AttrTypes: SettingsValue{}.AttributeTypes(ctx),
+			},
+			"title":            basetypes.StringType{},
+			"widgetable_token": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"settings":         settings,
 			"title":            v.Title,
@@ -893,20 +883,10 @@ func (v SettingsValue) String() string {
 func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"display_type": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"display_type": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"display_type": v.DisplayType,
 		})

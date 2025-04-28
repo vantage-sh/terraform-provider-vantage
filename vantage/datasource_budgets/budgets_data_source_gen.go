@@ -954,19 +954,11 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 		)
 	}
 
-	var budgetAlertTokensVal basetypes.ListValue
-	switch {
-	case v.BudgetAlertTokens.IsUnknown():
-		budgetAlertTokensVal = types.ListUnknown(types.StringType)
-	case v.BudgetAlertTokens.IsNull():
-		budgetAlertTokensVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		budgetAlertTokensVal, d = types.ListValue(types.StringType, v.BudgetAlertTokens.Elements())
-		diags.Append(d...)
-	}
+	budgetAlertTokensVal, d := types.ListValue(types.StringType, v.BudgetAlertTokens.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"budget_alert_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -990,19 +982,11 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 		}), diags
 	}
 
-	var childBudgetTokensVal basetypes.ListValue
-	switch {
-	case v.ChildBudgetTokens.IsUnknown():
-		childBudgetTokensVal = types.ListUnknown(types.StringType)
-	case v.ChildBudgetTokens.IsNull():
-		childBudgetTokensVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		childBudgetTokensVal, d = types.ListValue(types.StringType, v.ChildBudgetTokens.Elements())
-		diags.Append(d...)
-	}
+	childBudgetTokensVal, d := types.ListValue(types.StringType, v.ChildBudgetTokens.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"budget_alert_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -1024,40 +1008,30 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"user_token":      basetypes.StringType{},
 			"workspace_token": basetypes.StringType{},
 		}), diags
-	}
-
-	attributeTypes := map[string]attr.Type{
-		"budget_alert_tokens": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"child_budget_tokens": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"cost_report_token": basetypes.StringType{},
-		"created_at":        basetypes.StringType{},
-		"created_by_token":  basetypes.StringType{},
-		"name":              basetypes.StringType{},
-		"performance": basetypes.ListType{
-			ElemType: PerformanceValue{}.Type(ctx),
-		},
-		"periods": basetypes.ListType{
-			ElemType: PeriodsValue{}.Type(ctx),
-		},
-		"token":           basetypes.StringType{},
-		"user_token":      basetypes.StringType{},
-		"workspace_token": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
 	}
 
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"budget_alert_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"child_budget_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"cost_report_token": basetypes.StringType{},
+			"created_at":        basetypes.StringType{},
+			"created_by_token":  basetypes.StringType{},
+			"name":              basetypes.StringType{},
+			"performance": basetypes.ListType{
+				ElemType: PerformanceValue{}.Type(ctx),
+			},
+			"periods": basetypes.ListType{
+				ElemType: PeriodsValue{}.Type(ctx),
+			},
+			"token":           basetypes.StringType{},
+			"user_token":      basetypes.StringType{},
+			"workspace_token": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"budget_alert_tokens": budgetAlertTokensVal,
 			"child_budget_tokens": childBudgetTokensVal,
@@ -1532,22 +1506,12 @@ func (v PerformanceValue) String() string {
 func (v PerformanceValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"actual": basetypes.StringType{},
-		"amount": basetypes.StringType{},
-		"date":   basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"actual": basetypes.StringType{},
+			"amount": basetypes.StringType{},
+			"date":   basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"actual": v.Actual,
 			"amount": v.Amount,
@@ -1966,22 +1930,12 @@ func (v PeriodsValue) String() string {
 func (v PeriodsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"amount":   basetypes.StringType{},
-		"end_at":   basetypes.StringType{},
-		"start_at": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"amount":   basetypes.StringType{},
+			"end_at":   basetypes.StringType{},
+			"start_at": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"amount":   v.Amount,
 			"end_at":   v.EndAt,

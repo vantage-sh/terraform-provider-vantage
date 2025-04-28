@@ -1050,34 +1050,24 @@ func (v BillingRulesValue) String() string {
 func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"amount":           basetypes.StringType{},
-		"apply_to_all":     basetypes.StringType{},
-		"category":         basetypes.StringType{},
-		"charge_type":      basetypes.StringType{},
-		"created_at":       basetypes.StringType{},
-		"created_by_token": basetypes.StringType{},
-		"end_date":         basetypes.StringType{},
-		"percentage":       basetypes.StringType{},
-		"service":          basetypes.StringType{},
-		"start_date":       basetypes.StringType{},
-		"start_period":     basetypes.StringType{},
-		"sub_category":     basetypes.StringType{},
-		"title":            basetypes.StringType{},
-		"token":            basetypes.StringType{},
-		"type":             basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"amount":           basetypes.StringType{},
+			"apply_to_all":     basetypes.StringType{},
+			"category":         basetypes.StringType{},
+			"charge_type":      basetypes.StringType{},
+			"created_at":       basetypes.StringType{},
+			"created_by_token": basetypes.StringType{},
+			"end_date":         basetypes.StringType{},
+			"percentage":       basetypes.StringType{},
+			"service":          basetypes.StringType{},
+			"start_date":       basetypes.StringType{},
+			"start_period":     basetypes.StringType{},
+			"sub_category":     basetypes.StringType{},
+			"title":            basetypes.StringType{},
+			"token":            basetypes.StringType{},
+			"type":             basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"amount":           v.Amount,
 			"apply_to_all":     v.ApplyToAll,

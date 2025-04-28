@@ -575,19 +575,11 @@ func (v ManagedAccountsValue) String() string {
 func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var accessCredentialTokensVal basetypes.ListValue
-	switch {
-	case v.AccessCredentialTokens.IsUnknown():
-		accessCredentialTokensVal = types.ListUnknown(types.StringType)
-	case v.AccessCredentialTokens.IsNull():
-		accessCredentialTokensVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		accessCredentialTokensVal, d = types.ListValue(types.StringType, v.AccessCredentialTokens.Elements())
-		diags.Append(d...)
-	}
+	accessCredentialTokensVal, d := types.ListValue(types.StringType, v.AccessCredentialTokens.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"access_credential_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -602,19 +594,11 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		}), diags
 	}
 
-	var billingRuleTokensVal basetypes.ListValue
-	switch {
-	case v.BillingRuleTokens.IsUnknown():
-		billingRuleTokensVal = types.ListUnknown(types.StringType)
-	case v.BillingRuleTokens.IsNull():
-		billingRuleTokensVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		billingRuleTokensVal, d = types.ListValue(types.StringType, v.BillingRuleTokens.Elements())
-		diags.Append(d...)
-	}
+	billingRuleTokensVal, d := types.ListValue(types.StringType, v.BillingRuleTokens.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"access_credential_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -627,31 +611,21 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"parent_account_token": basetypes.StringType{},
 			"token":                basetypes.StringType{},
 		}), diags
-	}
-
-	attributeTypes := map[string]attr.Type{
-		"access_credential_tokens": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"billing_rule_tokens": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"contact_email":        basetypes.StringType{},
-		"name":                 basetypes.StringType{},
-		"parent_account_token": basetypes.StringType{},
-		"token":                basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
 	}
 
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"access_credential_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"billing_rule_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"contact_email":        basetypes.StringType{},
+			"name":                 basetypes.StringType{},
+			"parent_account_token": basetypes.StringType{},
+			"token":                basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"access_credential_tokens": accessCredentialTokensVal,
 			"billing_rule_tokens":      billingRuleTokensVal,
