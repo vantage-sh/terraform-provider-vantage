@@ -47,7 +47,6 @@ func (d *billingRulesDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	// Read API call logic
 	params := billingrulesv2.NewGetBillingRulesParams()
 	apiRes, err := d.client.V2.BillingRules.GetBillingRules(params, d.client.Auth)

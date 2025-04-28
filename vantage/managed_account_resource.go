@@ -9,8 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_managed_account"
 	managedaccountsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/managed_accounts"
 )
 
@@ -40,48 +40,16 @@ func (r *managedAccountResource) Metadata(ctx context.Context, req resource.Meta
 }
 
 func (r *managedAccountResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"access_credential_tokens": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Optional:            true,
-				Computed:            true,
-				Description:         "Access Credential (aka Integrations) tokens to assign to the Managed Account.",
-				MarkdownDescription: "Access Credential (aka Integrations) tokens to assign to the Managed Account.",
-			},
-			"billing_rule_tokens": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Optional:            true,
-				Computed:            true,
-				Description:         "Billing Rule tokens to assign to the Managed Account.",
-				MarkdownDescription: "Billing Rule tokens to assign to the Managed Account.",
-			},
-			"contact_email": schema.StringAttribute{
-				Required:            true,
-				Description:         "The contact email address for the Managed Account.",
-				MarkdownDescription: "The contact email address for the Managed Account.",
-			},
-			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "The name of the Managed Account.",
-				MarkdownDescription: "The name of the Managed Account.",
-			},
-			"parent_account_token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token for the parent Account.",
-				MarkdownDescription: "The token for the parent Account.",
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token of the managed account",
-				MarkdownDescription: "The token of the managed account",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+	s := resource_managed_account.ManagedAccountResourceSchema(ctx)
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         "The token of the managed account",
+		MarkdownDescription: "The token of the managed account",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
-
+	resp.Schema = s
 }
 
 func (r *managedAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

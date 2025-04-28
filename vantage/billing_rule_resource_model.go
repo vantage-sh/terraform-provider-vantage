@@ -15,6 +15,9 @@ import (
 type datasourceBillingRuleModel struct {
 	Percentage     types.String `tfsdk:"percentage"`
 	Amount         types.String `tfsdk:"amount"`
+	ApplyToAll     types.Bool   `tfsdk:"apply_to_all"`
+	EndDate        types.String `tfsdk:"end_date"`
+	StartDate      types.String `tfsdk:"start_date"`
 	Category       types.String `tfsdk:"category"`
 	ChargeType     types.String `tfsdk:"charge_type"`
 	CreatedAt      types.String `tfsdk:"created_at"`
@@ -29,6 +32,8 @@ type datasourceBillingRuleModel struct {
 
 type billingRuleModel resource_billing_rule.BillingRuleModel
 
+// try aliasing the datasource model to the billing rule model
+
 func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 	percentage := strconv.FormatFloat(m.Percentage.ValueFloat64(), 'g', -1, 64)
 	amount := strconv.FormatFloat(m.Amount.ValueFloat64(), 'g', -1, 64)
@@ -36,6 +41,9 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 	return datasourceBillingRuleModel{
 		Percentage:     types.StringValue(percentage),
 		Amount:         types.StringValue(amount),
+		ApplyToAll:     m.ApplyToAll,
+		EndDate:        m.EndDate,
+		StartDate:      m.StartDate,
 		Category:       m.Category,
 		ChargeType:     m.ChargeType,
 		CreatedAt:      m.CreatedAt,
@@ -50,7 +58,7 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 }
 
 func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
-	tflog.Debug(ctx, fmt.Sprintf("apply_payload: %v", payload))
+	tflog.Debug(ctx, fmt.Sprintf("apply_payload: %s", payload))
 
 	m.Token = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
