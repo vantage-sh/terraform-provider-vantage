@@ -632,19 +632,11 @@ func (v ReportNotificationsValue) String() string {
 func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var recipientChannelsVal basetypes.ListValue
-	switch {
-	case v.RecipientChannels.IsUnknown():
-		recipientChannelsVal = types.ListUnknown(types.StringType)
-	case v.RecipientChannels.IsNull():
-		recipientChannelsVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		recipientChannelsVal, d = types.ListValue(types.StringType, v.RecipientChannels.Elements())
-		diags.Append(d...)
-	}
+	recipientChannelsVal, d := types.ListValue(types.StringType, v.RecipientChannels.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"change":            basetypes.StringType{},
 			"cost_report_token": basetypes.StringType{},
@@ -660,19 +652,11 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 		}), diags
 	}
 
-	var userTokensVal basetypes.ListValue
-	switch {
-	case v.UserTokens.IsUnknown():
-		userTokensVal = types.ListUnknown(types.StringType)
-	case v.UserTokens.IsNull():
-		userTokensVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		userTokensVal, d = types.ListValue(types.StringType, v.UserTokens.Elements())
-		diags.Append(d...)
-	}
+	userTokensVal, d := types.ListValue(types.StringType, v.UserTokens.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"change":            basetypes.StringType{},
 			"cost_report_token": basetypes.StringType{},
@@ -686,32 +670,22 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 				ElemType: types.StringType,
 			},
 		}), diags
-	}
-
-	attributeTypes := map[string]attr.Type{
-		"change":            basetypes.StringType{},
-		"cost_report_token": basetypes.StringType{},
-		"frequency":         basetypes.StringType{},
-		"recipient_channels": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"title": basetypes.StringType{},
-		"token": basetypes.StringType{},
-		"user_tokens": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
 	}
 
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"change":            basetypes.StringType{},
+			"cost_report_token": basetypes.StringType{},
+			"frequency":         basetypes.StringType{},
+			"recipient_channels": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"title": basetypes.StringType{},
+			"token": basetypes.StringType{},
+			"user_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+		},
 		map[string]attr.Value{
 			"change":             v.Change,
 			"cost_report_token":  v.CostReportToken,

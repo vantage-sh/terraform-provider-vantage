@@ -900,19 +900,11 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		)
 	}
 
-	var savedFilterTokensVal basetypes.ListValue
-	switch {
-	case v.SavedFilterTokens.IsUnknown():
-		savedFilterTokensVal = types.ListUnknown(types.StringType)
-	case v.SavedFilterTokens.IsNull():
-		savedFilterTokensVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		savedFilterTokensVal, d = types.ListValue(types.StringType, v.SavedFilterTokens.Elements())
-		diags.Append(d...)
-	}
+	savedFilterTokensVal, d := types.ListValue(types.StringType, v.SavedFilterTokens.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"created_at":    basetypes.StringType{},
 			"date_bin":      basetypes.StringType{},
@@ -932,34 +924,24 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		}), diags
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"created_at":    basetypes.StringType{},
-		"date_bin":      basetypes.StringType{},
-		"date_interval": basetypes.StringType{},
-		"end_date":      basetypes.StringType{},
-		"saved_filter_tokens": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"start_date": basetypes.StringType{},
-		"title":      basetypes.StringType{},
-		"token":      basetypes.StringType{},
-		"updated_at": basetypes.StringType{},
-		"widgets": basetypes.ListType{
-			ElemType: WidgetsValue{}.Type(ctx),
-		},
-		"workspace_token": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"created_at":    basetypes.StringType{},
+			"date_bin":      basetypes.StringType{},
+			"date_interval": basetypes.StringType{},
+			"end_date":      basetypes.StringType{},
+			"saved_filter_tokens": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"start_date": basetypes.StringType{},
+			"title":      basetypes.StringType{},
+			"token":      basetypes.StringType{},
+			"updated_at": basetypes.StringType{},
+			"widgets": basetypes.ListType{
+				ElemType: WidgetsValue{}.Type(ctx),
+			},
+			"workspace_token": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"created_at":          v.CreatedAt,
 			"date_bin":            v.DateBin,
@@ -1453,24 +1435,14 @@ func (v WidgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"settings": basetypes.ObjectType{
-			AttrTypes: SettingsValue{}.AttributeTypes(ctx),
-		},
-		"title":            basetypes.StringType{},
-		"widgetable_token": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"settings": basetypes.ObjectType{
+				AttrTypes: SettingsValue{}.AttributeTypes(ctx),
+			},
+			"title":            basetypes.StringType{},
+			"widgetable_token": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"settings":         settings,
 			"title":            v.Title,
@@ -1795,20 +1767,10 @@ func (v SettingsValue) String() string {
 func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"display_type": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"display_type": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"display_type": v.DisplayType,
 		})
