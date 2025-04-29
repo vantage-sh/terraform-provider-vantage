@@ -27,7 +27,7 @@ func TestAccAnomalyNotification_basic(t *testing.T) {
 				),
 			},
 			{ // update the channels
-				Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "recipient_channels = [\"#test\"]", ""),
+				Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "recipient_channels = [\"test\"]", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "20"),
 				),
