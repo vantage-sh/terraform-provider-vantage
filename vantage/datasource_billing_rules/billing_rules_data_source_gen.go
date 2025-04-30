@@ -26,7 +26,7 @@ func BillingRulesDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The amount for the BillingRule (Charge).",
 							MarkdownDescription: "The amount for the BillingRule (Charge).",
 						},
-						"apply_to_all": schema.StringAttribute{
+						"apply_to_all": schema.BoolAttribute{
 							Computed:            true,
 							Description:         "Whether the BillingRule applies to all future managed accounts.",
 							MarkdownDescription: "Whether the BillingRule applies to all future managed accounts.",
@@ -164,12 +164,12 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 		return nil, diags
 	}
 
-	applyToAllVal, ok := applyToAllAttribute.(basetypes.StringValue)
+	applyToAllVal, ok := applyToAllAttribute.(basetypes.BoolValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`apply_to_all expected to be basetypes.StringValue, was: %T`, applyToAllAttribute))
+			fmt.Sprintf(`apply_to_all expected to be basetypes.BoolValue, was: %T`, applyToAllAttribute))
 	}
 
 	categoryAttribute, ok := attributes["category"]
@@ -521,12 +521,12 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 		return NewBillingRulesValueUnknown(), diags
 	}
 
-	applyToAllVal, ok := applyToAllAttribute.(basetypes.StringValue)
+	applyToAllVal, ok := applyToAllAttribute.(basetypes.BoolValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`apply_to_all expected to be basetypes.StringValue, was: %T`, applyToAllAttribute))
+			fmt.Sprintf(`apply_to_all expected to be basetypes.BoolValue, was: %T`, applyToAllAttribute))
 	}
 
 	categoryAttribute, ok := attributes["category"]
@@ -856,7 +856,7 @@ var _ basetypes.ObjectValuable = BillingRulesValue{}
 
 type BillingRulesValue struct {
 	Amount           basetypes.StringValue `tfsdk:"amount"`
-	ApplyToAll       basetypes.StringValue `tfsdk:"apply_to_all"`
+	ApplyToAll       basetypes.BoolValue   `tfsdk:"apply_to_all"`
 	Category         basetypes.StringValue `tfsdk:"category"`
 	ChargeType       basetypes.StringValue `tfsdk:"charge_type"`
 	CreatedAt        basetypes.StringValue `tfsdk:"created_at"`
@@ -880,7 +880,7 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 	var err error
 
 	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["apply_to_all"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["apply_to_all"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["category"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["charge_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
@@ -1053,7 +1053,7 @@ func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectV
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
 			"amount":           basetypes.StringType{},
-			"apply_to_all":     basetypes.StringType{},
+			"apply_to_all":     basetypes.BoolType{},
 			"category":         basetypes.StringType{},
 			"charge_type":      basetypes.StringType{},
 			"created_at":       basetypes.StringType{},
@@ -1178,7 +1178,7 @@ func (v BillingRulesValue) Type(ctx context.Context) attr.Type {
 func (v BillingRulesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"amount":           basetypes.StringType{},
-		"apply_to_all":     basetypes.StringType{},
+		"apply_to_all":     basetypes.BoolType{},
 		"category":         basetypes.StringType{},
 		"charge_type":      basetypes.StringType{},
 		"created_at":       basetypes.StringType{},

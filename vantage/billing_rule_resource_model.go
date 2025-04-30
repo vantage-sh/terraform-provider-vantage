@@ -74,19 +74,9 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		}
 		m.Amount = types.Float64Value(amount)
 	}
-	tflog.Debug(ctx, fmt.Sprintf("apply_to_all: %s", payload.ApplyToAll))
+	tflog.Debug(ctx, fmt.Sprintf("apply_to_all: %t", payload.ApplyToAll))
 
-	if payload.ApplyToAll != "" {
-		applyToAll, err := strconv.ParseBool(payload.ApplyToAll)
-		if err != nil {
-			d := diag.Diagnostics{}
-			d.AddError("error converting applyToAll to bool", err.Error())
-			return d
-		}
-		m.ApplyToAll = types.BoolValue(applyToAll)
-	} else {
-		m.ApplyToAll = types.BoolValue(false)
-	}
+	m.ApplyToAll = types.BoolValue(payload.ApplyToAll)
 
 	if payload.EndDate != "" {
 		m.EndDate = types.StringValue(payload.EndDate)
