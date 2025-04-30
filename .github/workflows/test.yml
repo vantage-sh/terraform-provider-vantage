@@ -29,5 +29,5 @@ jobs:
       - name: Run Acceptance Tests
         env:
           VANTAGE_API_TOKEN: ${{ secrets.VANTAGE_API_TOKEN }}
-          VANTAGE_TEST_HOST: ${{ vars.VANTAGE_TEST_HOST }}
+          MANAGED_ACCOUNT_DOMAIN: ${{ secrets.MANAGED_ACCOUNT_DOMAIN }}
         run: TF_ACC=1 go test -v ./vantage

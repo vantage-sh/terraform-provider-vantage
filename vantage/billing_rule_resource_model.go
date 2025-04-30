@@ -30,8 +30,6 @@ type datasourceBillingRuleModel struct {
 
 type billingRuleModel resource_billing_rule.BillingRuleModel
 
-// try aliasing the datasource model to the billing rule model
-
 func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 	percentage := strconv.FormatFloat(m.Percentage.ValueFloat64(), 'g', -1, 64)
 	amount := strconv.FormatFloat(m.Amount.ValueFloat64(), 'g', -1, 64)
