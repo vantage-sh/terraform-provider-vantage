@@ -36,13 +36,6 @@ func TestAccAnomalyNotification_basic(t *testing.T) {
 	})
 }
 
-// func testAccAnomalyNotificationUsers() string {
-// 	return `
-// 	data "vantage_users" "users" {}
-
-// 	`
-// }
-
 func testAccAnomalyNotificationCostReport() string {
 	return `
 
