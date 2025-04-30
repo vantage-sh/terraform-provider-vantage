@@ -10,24 +10,29 @@ import (
 )
 
 func TestAccManagedAccount_basic(t *testing.T) {
-	t.Logf("Managed Account Domain name: %s", os.Getenv("MANAGED_ACCOUNT_DOMAIN"))
+	domain := os.Getenv("TEST_VANTAGE_HOST")
+	if domain == "" {
+		domain = "vantage.sh"
+	}
+
+	contactEmail := fmt.Sprintf("test@%s", domain)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccManagedAccountBillingRules() + testAccManagedAccountResource("br-1"),
+				Config: testAccManagedAccountBillingRules() + testAccManagedAccountResource("br-1", contactEmail),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "name", "Test Account"),
-					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", "test@vantage.sh"),
+					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", contactEmail),
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "billing_rule_tokens.#", "1"),
 				),
 			},
 			{
-				Config: testAccManagedAccountBillingRules() + testAccManagedAccountResource("br-2"),
+				Config: testAccManagedAccountBillingRules() + testAccManagedAccountResource("br-2", contactEmail),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "name", "Test Account"),
-					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", "test@vantage.sh"),
+					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", contactEmail),
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "billing_rule_tokens.#", "1"),
 				),
 			},
@@ -54,18 +59,13 @@ resource "vantage_billing_rule" "br-2" {
 
 `
 }
-func testAccManagedAccountResource(billing_rule_id string) string {
-	domain := os.Getenv("MANAGED_ACCOUNT_DOMAIN")
-	if domain == "" {
-		domain = "vantage.sh"
-	}
-
+func testAccManagedAccountResource(billingRuleId, contactEmail string) string {
 	return fmt.Sprintf(`
 
 resource "vantage_managed_account" "test" {
 	name                   = "Test Account"
-	contact_email           = "test@%[1]s"
+	contact_email           = "%[1]s"
 	billing_rule_tokens = [vantage_billing_rule.%[2]s.token]
 }
-	`, domain, billing_rule_id)
+	`, contactEmail, billingRuleId)
 }
