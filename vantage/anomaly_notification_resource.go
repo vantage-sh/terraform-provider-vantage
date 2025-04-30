@@ -43,53 +43,17 @@ func (r *anomalyNotificationResource) Metadata(ctx context.Context, req resource
 }
 
 func (r *anomalyNotificationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"cost_report_token": schema.StringAttribute{
-				Required:            true,
-				Description:         "The token of the Cost Report folder that has the notification.",
-				MarkdownDescription: "The token of the Cost Report folder that has the notification.",
-			},
-			"created_at": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.",
-				MarkdownDescription: "The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.",
-			},
-			"recipient_channels": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Optional:            true,
-				Computed:            true,
-				Description:         "The Slack/MS Teams channels that receive the notification.",
-				MarkdownDescription: "The Slack/MS Teams channels that receive the notification.",
-			},
-			"threshold": schema.Int64Attribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The threshold amount that must be met for the notification to fire.",
-				MarkdownDescription: "The threshold amount that must be met for the notification to fire.",
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token of the report alert",
-				MarkdownDescription: "The token of the report alert",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"updated_at": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.",
-				MarkdownDescription: "The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.",
-			},
-			"user_tokens": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Optional:            true,
-				Computed:            true,
-				Description:         "The tokens of the users that receive the notification.",
-				MarkdownDescription: "The tokens of the users that receive the notification.",
-			},
+	s := resource_anomaly_notification.AnomalyNotificationResourceSchema(ctx)
+
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         "The token of the AnomalyNotification",
+		MarkdownDescription: "The token of the AnomalyNotification",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+	resp.Schema = s
 }
 
 func (r *anomalyNotificationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -193,28 +157,28 @@ func (r *anomalyNotificationResource) Update(ctx context.Context, req resource.U
 	params := anomalynotifsv2.NewUpdateAnomalyNotificationParams()
 	params.SetAnomalyNotificationToken(data.Token.ValueString())
 
-	userTokensList, diag := types.ListValueFrom(ctx, types.StringType, data.UserTokens)
-	if diag.HasError() {
-		resp.Diagnostics.Append(diag...)
-		return
+	var userTokens []types.String
+	if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
+		userTokens = make([]types.String, 0, len(data.UserTokens.Elements()))
+		resp.Diagnostics.Append(data.UserTokens.ElementsAs(ctx, &userTokens, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	var userTokens []string
-	userTokensList.ElementsAs(ctx, userTokens, false)
-
-	recipientChannelsList, diag := types.ListValueFrom(ctx, types.StringType, data.RecipientChannels)
-	if diag.HasError() {
-		resp.Diagnostics.Append(diag...)
-		return
+	var recipientChannels []types.String
+	if !data.RecipientChannels.IsNull() && !data.RecipientChannels.IsUnknown() {
+		recipientChannels = make([]types.String, 0, len(data.RecipientChannels.Elements()))
+		resp.Diagnostics.Append(data.RecipientChannels.ElementsAs(ctx, &recipientChannels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
-
-	var recipientChannels []string
-	recipientChannelsList.ElementsAs(ctx, recipientChannels, false)
 
 	updateAnomalyNotification := &modelsv2.UpdateAnomalyNotification{
 		Threshold:         int32(data.Threshold.ValueInt64()),
-		UserTokens:        userTokens,
-		RecipientChannels: recipientChannels,
+		UserTokens:        fromStringsValue(userTokens),
+		RecipientChannels: fromStringsValue(recipientChannels),
 	}
 
 	params.WithUpdateAnomalyNotification(updateAnomalyNotification)
