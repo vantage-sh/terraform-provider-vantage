@@ -9,21 +9,35 @@ import (
 )
 
 func TestAccVantageSavedFilter_basic(t *testing.T) {
-	hasFilterId := "test-has-filter"
-	hasFilterResourceName := "vantage_saved_filter.test-has-filter"
-	hasFilterTitle := "Test Saved Filter with Filter"
+
+	id := "test-0"
+	resourceName := "vantage_saved_filter.test-0"
+	filter := "(costs.provider = 'aws')"
+	title := "Test SavedFilter"
+	titleUpdated := "Test SavedFilter Updated"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			// Create: with filter
 			{
-				Config: testAccVantageSavedFilter_basicTf(hasFilterId, hasFilterTitle, "(costs.provider = 'aws')"),
+				Config: testAccVantageSavedFilter_basicTf(id, title, filter),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(hasFilterResourceName, "title", hasFilterTitle),
-					resource.TestCheckResourceAttr(hasFilterResourceName, "filter", "(costs.provider = 'aws')"),
-					resource.TestCheckResourceAttrSet(hasFilterResourceName, "token"),
-					resource.TestCheckResourceAttrSet(hasFilterResourceName, "workspace_token"),
+					resource.TestCheckResourceAttr(resourceName, "title", title),
+					resource.TestCheckResourceAttr(resourceName, "filter", filter),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
+				),
+			},
+			// Update: title
+			{
+				Config: testAccVantageSavedFilter_titleOnlyTf(id, titleUpdated),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", titleUpdated),
+					resource.TestCheckResourceAttr(resourceName, "filter", filter),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
 				),
 			},
 		},
@@ -31,8 +45,7 @@ func TestAccVantageSavedFilter_basic(t *testing.T) {
 }
 
 func testAccVantageSavedFilter_basicTf(id, title, filter string) string {
-	return fmt.Sprintf(
-		`
+	return fmt.Sprintf(`
 		data "vantage_workspaces" "test" {}
 		data "vantage_saved_filters" %[1]q {}
 
@@ -40,7 +53,18 @@ func testAccVantageSavedFilter_basicTf(id, title, filter string) string {
 		   title = %[2]q
 			 filter = %[3]q
 			 workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
-		 }
-		`, id, title, filter,
+		 }`, id, title, filter,
+	)
+}
+
+func testAccVantageSavedFilter_titleOnlyTf(id, title string) string {
+	return fmt.Sprintf(`
+		data "vantage_workspaces" "test" {}
+		data "vantage_saved_filters" %[1]q {}
+
+		resource "vantage_saved_filter" %[1]q {
+		  title = %[2]q
+			 workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+		}`, id, title,
 	)
 }
