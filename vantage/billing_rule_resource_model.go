@@ -123,6 +123,9 @@ func (m *billingRuleModel) toCreateModel(_ context.Context, _ *diag.Diagnostics)
 	return &modelsv2.CreateBillingRule{
 		Percentage:  m.Percentage.ValueFloat64Pointer(),
 		Amount:      m.Amount.ValueFloat64Pointer(),
+		ApplyToAll:  m.ApplyToAll.ValueBool(),
+		StartDate:   m.StartDate.ValueString(),
+		EndDate:     m.EndDate.ValueString(),
 		Category:    m.Category.ValueStringPointer(),
 		ChargeType:  m.ChargeType.ValueStringPointer(),
 		Service:     m.Service.ValueStringPointer(),
@@ -138,6 +141,9 @@ func (m *billingRuleModel) toUpdateModel(_ context.Context, _ *diag.Diagnostics)
 	return &modelsv2.UpdateBillingRule{
 		Percentage:  m.Percentage.ValueFloat64(),
 		Amount:      m.Amount.ValueFloat64(),
+		ApplyToAll:  m.ApplyToAll.ValueBool(),
+		StartDate:   m.StartDate.ValueString(),
+		EndDate:     m.EndDate.ValueString(),
 		Category:    m.Category.ValueString(),
 		ChargeType:  m.ChargeType.ValueString(),
 		Service:     m.Service.ValueString(),
