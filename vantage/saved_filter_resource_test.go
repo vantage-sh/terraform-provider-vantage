@@ -16,27 +16,46 @@ func TestAccVantageSavedFilter_basic(t *testing.T) {
 	title := "Test SavedFilter"
 	titleUpdated := "Test SavedFilter Updated"
 
+	var token string
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create: with filter
+			// Create
 			{
 				Config: testAccVantageSavedFilter_basicTf(id, title, filter),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", title),
 					resource.TestCheckResourceAttr(resourceName, "filter", filter),
-					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						token = value
+						if token == "" {
+							return fmt.Errorf("token is empty")
+						}
+						return nil
+					}),
+
 					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
 				),
 			},
-			// Update: title
+			// Update (title)
 			{
-				Config: testAccVantageSavedFilter_titleOnlyTf(id, titleUpdated),
+				Config: testAccVantageSavedFilter_basicTf(id, titleUpdated, filter),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", titleUpdated),
+					// TODO(cp): Filter is passed in since a.t.m. update operations don't use
+					// the response to populate it (I _believe_ this is because we don't preserve
+					// the filter exactly as the user originally entered it)
 					resource.TestCheckResourceAttr(resourceName, "filter", filter),
-					resource.TestCheckResourceAttrSet(resourceName, "token"),
+
+					// Gratuitious sanity check to verify we're updating
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						if value != token {
+							return fmt.Errorf("token should not change")
+						}
+						return nil
+					}),
 					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
 				),
 			},
@@ -54,17 +73,5 @@ func testAccVantageSavedFilter_basicTf(id, title, filter string) string {
 			 filter = %[3]q
 			 workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
 		 }`, id, title, filter,
-	)
-}
-
-func testAccVantageSavedFilter_titleOnlyTf(id, title string) string {
-	return fmt.Sprintf(`
-		data "vantage_workspaces" "test" {}
-		data "vantage_saved_filters" %[1]q {}
-
-		resource "vantage_saved_filter" %[1]q {
-		  title = %[2]q
-			 workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
-		}`, id, title,
 	)
 }
