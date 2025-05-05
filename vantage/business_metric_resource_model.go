@@ -263,7 +263,7 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 
 	if !m.CloudwatchFields.IsNull() && !m.CloudwatchFields.IsUnknown() {
 		cloudwatchFields := &modelsv2.CreateBusinessMetricCloudwatchFields{
-			IntegrationToken: m.CloudwatchFields.IntegrationToken.String(),
+			IntegrationToken: m.CloudwatchFields.IntegrationToken.ValueString(),
 			MetricName:       m.CloudwatchFields.MetricName.ValueString(),
 			Namespace:        m.CloudwatchFields.Namespace.ValueString(),
 			Region:           m.CloudwatchFields.Region.ValueString(),
@@ -275,7 +275,7 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 			dimsLen := len(m.CloudwatchFields.Dimensions.Elements())
 			if dimsLen > 0 {
 				dimensions := make([]*modelsv2.CreateBusinessMetricCloudwatchFieldsDimensionsItems0, 0, dimsLen)
-				tfDimensions := []*resource_business_metric.DimensionsValue{}
+				var tfDimensions []resource_business_metric.DimensionsValue
 				diags.Append(m.CloudwatchFields.Dimensions.ElementsAs(ctx, &tfDimensions, false)...)
 				if diags.HasError() {
 					return nil
@@ -387,13 +387,12 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 			LabelDimension:   m.CloudwatchFields.LabelDimension.ValueString(),
 		}
 
-		// Process dimensions if they exist
 		if !m.CloudwatchFields.Dimensions.IsNull() && !m.CloudwatchFields.Dimensions.IsUnknown() {
 			dimsLen := len(m.CloudwatchFields.Dimensions.Elements())
 			if dimsLen > 0 {
 				// Convert TF dimensions to API model dimensions
 				dimensions := make([]*modelsv2.UpdateBusinessMetricCloudwatchFieldsDimensionsItems0, 0, dimsLen)
-				tfDimensions := []*resource_business_metric.DimensionsValue{}
+				var tfDimensions []resource_business_metric.DimensionsValue
 				diags.Append(m.CloudwatchFields.Dimensions.ElementsAs(ctx, &tfDimensions, false)...)
 				if diags.HasError() {
 					return nil
@@ -577,7 +576,7 @@ func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Cloud
 			"region":            types.StringValue(apiFields.Region),
 			"label_dimension":   types.StringValue(apiFields.LabelDimension),
 			"dimensions":        dimensionsListValue,
-			"integration_token": types.StringValue(""), // Placeholder for datasource
+			"integration_token": types.StringValue(integrationToken),
 		},
 	)
 	diags.Append(d...)
