@@ -263,11 +263,12 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 
 	if !m.CloudwatchFields.IsNull() && !m.CloudwatchFields.IsUnknown() {
 		cloudwatchFields := &modelsv2.CreateBusinessMetricCloudwatchFields{
-			MetricName:     m.CloudwatchFields.MetricName.ValueString(),
-			Namespace:      m.CloudwatchFields.Namespace.ValueString(),
-			Region:         m.CloudwatchFields.Region.ValueString(),
-			Stat:           m.CloudwatchFields.Stat.ValueString(),
-			LabelDimension: m.CloudwatchFields.LabelDimension.ValueString(),
+			IntegrationToken: m.CloudwatchFields.IntegrationToken.String(),
+			MetricName:       m.CloudwatchFields.MetricName.ValueString(),
+			Namespace:        m.CloudwatchFields.Namespace.ValueString(),
+			Region:           m.CloudwatchFields.Region.ValueString(),
+			Stat:             m.CloudwatchFields.Stat.ValueString(),
+			LabelDimension:   m.CloudwatchFields.LabelDimension.ValueString(),
 		}
 
 		if !m.CloudwatchFields.Dimensions.IsNull() && !m.CloudwatchFields.Dimensions.IsUnknown() {

@@ -52,6 +52,36 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+
+	s.Attributes["datadog_metric_fields"] = schema.SingleNestedAttribute{
+		Attributes: map[string]schema.Attribute{
+			"integration_token": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Integration token for the account from which you would like to fetch metrics.",
+				MarkdownDescription: "Integration token for the account from which you would like to fetch metrics.",
+			},
+			"query": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Datadog metrics query string. e.g. sum:aws.applicationelb.request_count{region:us-east-1}.rollup(avg,daily)",
+				MarkdownDescription: "Datadog metrics query string. e.g. sum:aws.applicationelb.request_count{region:us-east-1}.rollup(avg,daily)",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
+		CustomType: resource_business_metric.DatadogMetricFieldsType{
+			ObjectType: types.ObjectType{
+				AttrTypes: resource_business_metric.DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+			},
+		},
+		Optional:            true,
+		Computed:            true,
+		Description:         "Datadog metric configuration fields",
+		MarkdownDescription: "Datadog metric configuration fields",
+	}
+
 	resp.Schema = s
 }
 
