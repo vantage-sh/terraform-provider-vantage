@@ -53,6 +53,12 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 		},
 	}
 
+	// Query is Optional+Computed and we are explicitely adding a PlanModifier. Since the API response query value can be different from the configuration,
+	// use the prior state value during planning if the planned value is unknown.
+	// FIXME(Nacho):
+	// - Intent is the above mentioned, but it's not working...
+	// - We only need to modify the query field by adding a PlanModifier. Should minimized the surface area of what we're overwriting
+	//   from generated code.
 	s.Attributes["datadog_metric_fields"] = schema.SingleNestedAttribute{
 		Attributes: map[string]schema.Attribute{
 			"integration_token": schema.StringAttribute{

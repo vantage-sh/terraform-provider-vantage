@@ -124,6 +124,9 @@ func testAccVantageBusinessMetricTf_basic(id string, title string, valuesStr str
 }
 
 func TestAccBusinessMetric_cloudwatch(t *testing.T) {
+	t.Skip("Skipping until we have support for Integrations/AccessCredentials")
+	// NOTE: You will also have to replace the hard coded access credential token in the test data.
+	//
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -140,17 +143,16 @@ func TestAccBusinessMetric_cloudwatch(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.label_dimension", "InstanceId"),
 				),
 			},
-			// FIXME(Nacho): Actual is TF state from first step
-			// {
-			// 	// Test updating CloudWatch fields
-			// 	Config: testAccVantageBusinessMetricTf_cloudwatch_updated("test-cloudwatch", "CloudWatch Test Updated"),
-			// 	Check: resource.ComposeTestCheckFunc(
-			// 		resource.TestCheckResourceAttrSet("vantage_business_metric.test-cloudwatch", "token"),
-			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "title", "CloudWatch Test Updated"),
-			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.metric_name", "MemoryUtilization"),
-			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.namespace", "AWS/ECS"),
-			// 	),
-			// },
+			{
+				// Test updating CloudWatch fields
+				Config: testAccVantageBusinessMetricTf_cloudwatch_updated("test-cloudwatch", "CloudWatch Test Updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-cloudwatch", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "title", "CloudWatch Test Updated"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.metric_name", "MemoryUtilization"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.namespace", "AWS/ECS"),
+				),
+			},
 		},
 	})
 }
@@ -202,6 +204,9 @@ resource "vantage_business_metric" %[1]q {
 }
 
 func TestAccBusinessMetric_datadog(t *testing.T) {
+	t.Skip("Skipping until we have support for Integrations/AccessCredentials")
+	// NOTE: You will also have to replace the hard coded access credential token in the test data.
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -214,16 +219,15 @@ func TestAccBusinessMetric_datadog(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.cpu.user{*}.rollup(avg, daily)"),
 				),
 			},
-			// FIXME(Nacho): Actual is TF state from first step
-			// {
-			// 	// Test updating Datadog query
-			// 	Config: testAccVantageBusinessMetricTf_datadog_updated("test-datadog", "Datadog Test Updated"),
-			// 	Check: resource.ComposeTestCheckFunc(
-			// 		resource.TestCheckResourceAttrSet("vantage_business_metric.test-datadog", "token"),
-			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "title", "Datadog Test Updated"),
-			// 		resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.memory.used{*}.rollup(avg, daily)"),
-			// 	),
-			// },
+			{
+				// Test updating Datadog query
+				Config: testAccVantageBusinessMetricTf_datadog_updated("test-datadog", "Datadog Test Updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-datadog", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "title", "Datadog Test Updated"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.memory.used{*}.rollup(avg, daily)"),
+				),
+			},
 		},
 	})
 }
