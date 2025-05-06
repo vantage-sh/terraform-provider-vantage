@@ -5,6 +5,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+    "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+    "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
@@ -20,15 +24,63 @@ type CostReportResource struct {
 }
 
 func (r *CostReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-		s := resource_cost_report.CostReportResourceSchema(ctx)
-	
-		resp.Schema = s
+	s := resource_cost_report.CostReportResourceSchema(ctx)
+	attrs := s.GetAttributes()
+
+	// Override the previous_period_start_date field with a PlanModifier
+	s.Attributes["groupings"] = schema.StringAttribute{
+		Optional:            attrs["groupings"].IsOptional(),
+		Computed:            attrs["groupings"].IsComputed(),
+		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
+		// https://discuss.hashicorp.com/t/framework-migration-test-produces-non-empty-plan/54523/8
+		Default: stringdefault.StaticString(""),
+	}
+
+	// Override the previous_period_start_date field with a PlanModifier
+	s.Attributes["previous_period_start_date"] = schema.StringAttribute{
+		Optional:            attrs["previous_period_start_date"].IsOptional(),
+		Computed:            attrs["previous_period_start_date"].IsComputed(),
+		MarkdownDescription: attrs["previous_period_start_date"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	// Override the previous_period_end_date field with a PlanModifier
+	s.Attributes["previous_period_end_date"] = schema.StringAttribute{
+		Optional:            attrs["previous_period_end_date"].IsOptional(),
+		Computed:            attrs["previous_period_end_date"].IsComputed(),
+		MarkdownDescription: attrs["previous_period_end_date"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	// Override the workspace_token field with a PlanModifier
+	s.Attributes["workspace_token"] = schema.StringAttribute{
+		Optional:            attrs["workspace_token"].IsOptional(),
+		Computed:            attrs["workspace_token"].IsComputed(),
+		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	// Override the token field with a PlanModifier
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            attrs["workspace_token"].IsComputed(),
+		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	resp.Schema = s
 }
 
 func NewCostReportResource() resource.Resource {
 	return &CostReportResource{}
 }
-
 
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_cost_report"
