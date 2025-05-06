@@ -27,7 +27,7 @@ func (r *CostReportResource) Schema(ctx context.Context, req resource.SchemaRequ
 	s := resource_cost_report.CostReportResourceSchema(ctx)
 	attrs := s.GetAttributes()
 
-	// Override the previous_period_start_date field with a PlanModifier
+	// Override the groupings field with a PlanModifier
 	s.Attributes["groupings"] = schema.StringAttribute{
 		Optional:            attrs["groupings"].IsOptional(),
 		Computed:            attrs["groupings"].IsComputed(),
