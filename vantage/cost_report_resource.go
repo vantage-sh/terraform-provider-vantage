@@ -122,7 +122,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 			handleBadRequest("Update Cost Report Resource", &resp.Diagnostics, e.GetPayload())
 			return
 		}
-		handleError("Create Cost Report Resource", &resp.Diagnostics, err)
+		handleError("Update Cost Report Resource", &resp.Diagnostics, err)
 		return
 	}
 
