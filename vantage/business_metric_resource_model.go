@@ -98,7 +98,6 @@ func (m *businessMetricDataSourceValue) SetIntegrationToken(integrationToken typ
 func (m *businessMetricDataSourceValue) SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue) {
 	ctx := context.Background()
 
-	// Create an empty dimensions list with proper type information
 	emptyDimensions, _ := types.ListValue(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
@@ -106,7 +105,7 @@ func (m *businessMetricDataSourceValue) SetCloudwatchFields(cloudwatchFields res
 				"value": types.StringType,
 			},
 		},
-		[]attr.Value{}, // Empty list
+		[]attr.Value{},
 	)
 
 	labelDimension := cloudwatchFields.LabelDimension
@@ -375,9 +374,7 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		model.Title = m.Title.ValueString()
 	}
 
-	// Add CloudwatchFields processing for update
 	if !m.CloudwatchFields.IsNull() && !m.CloudwatchFields.IsUnknown() {
-		// Convert CloudwatchFields to API model
 		cloudwatchFields := &modelsv2.UpdateBusinessMetricCloudwatchFields{
 			IntegrationToken: m.CloudwatchFields.IntegrationToken.ValueString(),
 			MetricName:       m.CloudwatchFields.MetricName.ValueString(),
@@ -390,7 +387,6 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		if !m.CloudwatchFields.Dimensions.IsNull() && !m.CloudwatchFields.Dimensions.IsUnknown() {
 			dimsLen := len(m.CloudwatchFields.Dimensions.Elements())
 			if dimsLen > 0 {
-				// Convert TF dimensions to API model dimensions
 				dimensions := make([]*modelsv2.UpdateBusinessMetricCloudwatchFieldsDimensionsItems0, 0, dimsLen)
 				var tfDimensions []resource_business_metric.DimensionsValue
 				diags.Append(m.CloudwatchFields.Dimensions.ElementsAs(ctx, &tfDimensions, false)...)
@@ -529,12 +525,10 @@ func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Cloud
 
 	tfDimensionObjects := []attr.Value{}
 
-	// Iterate over the dimensions from the API response
 	for _, apiDimension := range apiFields.Dimensions {
 		if apiDimension == nil {
 			continue
 		}
-		// Create an ObjectValue for each dimension
 		dimensionObjectValue, d := types.ObjectValue(
 			dimensionAttrTypes,
 			map[string]attr.Value{
@@ -544,13 +538,11 @@ func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Cloud
 		)
 		diags.Append(d...)
 		if diags.HasError() {
-			// Return an unknown value if there's an error creating the object
 			return resource_business_metric.NewCloudwatchFieldsValueUnknown(), diags
 		}
 		tfDimensionObjects = append(tfDimensionObjects, dimensionObjectValue)
 	}
 
-	// Create the ListValue for dimensions
 	dimensionsListValue, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: dimensionAttrTypes}, tfDimensionObjects)
 	diags.Append(d...)
 	if diags.HasError() {
