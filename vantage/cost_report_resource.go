@@ -19,7 +19,6 @@ type CostReportResource struct {
 	client *Client
 }
 
-// Schema defines the schema for the resource.
 func (r *CostReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 		s := resource_cost_report.CostReportResourceSchema(ctx)
 	
