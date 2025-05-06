@@ -21,6 +21,61 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 			"business_metrics": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"cloudwatch_fields": schema.SingleNestedAttribute{
+							Attributes: map[string]schema.Attribute{
+								"dimensions": schema.ListNestedAttribute{
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"name": schema.StringAttribute{
+												Computed: true,
+											},
+											"value": schema.StringAttribute{
+												Computed: true,
+											},
+										},
+										CustomType: DimensionsType{
+											ObjectType: types.ObjectType{
+												AttrTypes: DimensionsValue{}.AttributeTypes(ctx),
+											},
+										},
+									},
+									Computed:            true,
+									Description:         "The dimensions used to pull specific statistical data for Cloudwatch metrics.",
+									MarkdownDescription: "The dimensions used to pull specific statistical data for Cloudwatch metrics.",
+								},
+								"label_dimension": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The dimension used to aggregate the Cloudwatch metrics.",
+									MarkdownDescription: "The dimension used to aggregate the Cloudwatch metrics.",
+								},
+								"metric_name": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The metric name used to import Cloudwatch metrics.",
+									MarkdownDescription: "The metric name used to import Cloudwatch metrics.",
+								},
+								"namespace": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The namespace used to import Cloudwatch metrics.",
+									MarkdownDescription: "The namespace used to import Cloudwatch metrics.",
+								},
+								"region": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The region used to import Cloudwatch metrics.",
+									MarkdownDescription: "The region used to import Cloudwatch metrics.",
+								},
+								"stat": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The time aggregation function used to import Cloudwatch metrics.",
+									MarkdownDescription: "The time aggregation function used to import Cloudwatch metrics.",
+								},
+							},
+							CustomType: CloudwatchFieldsType{
+								ObjectType: types.ObjectType{
+									AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
+								},
+							},
+							Computed: true,
+						},
 						"cost_report_tokens_with_metadata": schema.ListNestedAttribute{
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
@@ -55,6 +110,31 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 							Computed:            true,
 							Description:         "The token of the Creator of the BusinessMetric.",
 							MarkdownDescription: "The token of the Creator of the BusinessMetric.",
+						},
+						"datadog_metric_fields": schema.SingleNestedAttribute{
+							Attributes: map[string]schema.Attribute{
+								"query": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The query used to import Datadog metrics.",
+									MarkdownDescription: "The query used to import Datadog metrics.",
+								},
+							},
+							CustomType: DatadogMetricFieldsType{
+								ObjectType: types.ObjectType{
+									AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+								},
+							},
+							Computed: true,
+						},
+						"import_type": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The type of import for the BusinessMetric.",
+							MarkdownDescription: "The type of import for the BusinessMetric.",
+						},
+						"integration_token": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The Integration token used to import the BusinessMetric.",
+							MarkdownDescription: "The Integration token used to import the BusinessMetric.",
 						},
 						"title": schema.StringAttribute{
 							Computed:            true,
@@ -108,6 +188,24 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 
 	attributes := in.Attributes()
 
+	cloudwatchFieldsAttribute, ok := attributes["cloudwatch_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`cloudwatch_fields is missing from object`)
+
+		return nil, diags
+	}
+
+	cloudwatchFieldsVal, ok := cloudwatchFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`cloudwatch_fields expected to be basetypes.ObjectValue, was: %T`, cloudwatchFieldsAttribute))
+	}
+
 	costReportTokensWithMetadataAttribute, ok := attributes["cost_report_tokens_with_metadata"]
 
 	if !ok {
@@ -142,6 +240,60 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
+	}
+
+	datadogMetricFieldsAttribute, ok := attributes["datadog_metric_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`datadog_metric_fields is missing from object`)
+
+		return nil, diags
+	}
+
+	datadogMetricFieldsVal, ok := datadogMetricFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`datadog_metric_fields expected to be basetypes.ObjectValue, was: %T`, datadogMetricFieldsAttribute))
+	}
+
+	importTypeAttribute, ok := attributes["import_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`import_type is missing from object`)
+
+		return nil, diags
+	}
+
+	importTypeVal, ok := importTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`import_type expected to be basetypes.StringValue, was: %T`, importTypeAttribute))
+	}
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return nil, diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
 	}
 
 	titleAttribute, ok := attributes["title"]
@@ -185,8 +337,12 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 	}
 
 	return BusinessMetricsValue{
+		CloudwatchFields:             cloudwatchFieldsVal,
 		CostReportTokensWithMetadata: costReportTokensWithMetadataVal,
 		CreatedByToken:               createdByTokenVal,
+		DatadogMetricFields:          datadogMetricFieldsVal,
+		ImportType:                   importTypeVal,
+		IntegrationToken:             integrationTokenVal,
 		Title:                        titleVal,
 		Token:                        tokenVal,
 		state:                        attr.ValueStateKnown,
@@ -256,6 +412,24 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 		return NewBusinessMetricsValueUnknown(), diags
 	}
 
+	cloudwatchFieldsAttribute, ok := attributes["cloudwatch_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`cloudwatch_fields is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	cloudwatchFieldsVal, ok := cloudwatchFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`cloudwatch_fields expected to be basetypes.ObjectValue, was: %T`, cloudwatchFieldsAttribute))
+	}
+
 	costReportTokensWithMetadataAttribute, ok := attributes["cost_report_tokens_with_metadata"]
 
 	if !ok {
@@ -290,6 +464,60 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
+	}
+
+	datadogMetricFieldsAttribute, ok := attributes["datadog_metric_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`datadog_metric_fields is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	datadogMetricFieldsVal, ok := datadogMetricFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`datadog_metric_fields expected to be basetypes.ObjectValue, was: %T`, datadogMetricFieldsAttribute))
+	}
+
+	importTypeAttribute, ok := attributes["import_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`import_type is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	importTypeVal, ok := importTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`import_type expected to be basetypes.StringValue, was: %T`, importTypeAttribute))
+	}
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
 	}
 
 	titleAttribute, ok := attributes["title"]
@@ -333,8 +561,12 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 	}
 
 	return BusinessMetricsValue{
+		CloudwatchFields:             cloudwatchFieldsVal,
 		CostReportTokensWithMetadata: costReportTokensWithMetadataVal,
 		CreatedByToken:               createdByTokenVal,
+		DatadogMetricFields:          datadogMetricFieldsVal,
+		ImportType:                   importTypeVal,
+		IntegrationToken:             integrationTokenVal,
 		Title:                        titleVal,
 		Token:                        tokenVal,
 		state:                        attr.ValueStateKnown,
@@ -409,23 +641,35 @@ func (t BusinessMetricsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = BusinessMetricsValue{}
 
 type BusinessMetricsValue struct {
+	CloudwatchFields             basetypes.ObjectValue `tfsdk:"cloudwatch_fields"`
 	CostReportTokensWithMetadata basetypes.ListValue   `tfsdk:"cost_report_tokens_with_metadata"`
 	CreatedByToken               basetypes.StringValue `tfsdk:"created_by_token"`
+	DatadogMetricFields          basetypes.ObjectValue `tfsdk:"datadog_metric_fields"`
+	ImportType                   basetypes.StringValue `tfsdk:"import_type"`
+	IntegrationToken             basetypes.StringValue `tfsdk:"integration_token"`
 	Title                        basetypes.StringValue `tfsdk:"title"`
 	Token                        basetypes.StringValue `tfsdk:"token"`
 	state                        attr.ValueState
 }
 
 func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 4)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
 
+	attrTypes["cloudwatch_fields"] = basetypes.ObjectType{
+		AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
 	attrTypes["cost_report_tokens_with_metadata"] = basetypes.ListType{
 		ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
 	}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["datadog_metric_fields"] = basetypes.ObjectType{
+		AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
+	attrTypes["import_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -433,7 +677,15 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 4)
+		vals := make(map[string]tftypes.Value, 8)
+
+		val, err = v.CloudwatchFields.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["cloudwatch_fields"] = val
 
 		val, err = v.CostReportTokensWithMetadata.ToTerraformValue(ctx)
 
@@ -450,6 +702,30 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["created_by_token"] = val
+
+		val, err = v.DatadogMetricFields.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["datadog_metric_fields"] = val
+
+		val, err = v.ImportType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["import_type"] = val
+
+		val, err = v.IntegrationToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["integration_token"] = val
 
 		val, err = v.Title.ToTerraformValue(ctx)
 
@@ -496,6 +772,27 @@ func (v BusinessMetricsValue) String() string {
 func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var cloudwatchFields basetypes.ObjectValue
+
+	if v.CloudwatchFields.IsNull() {
+		cloudwatchFields = types.ObjectNull(
+			CloudwatchFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.CloudwatchFields.IsUnknown() {
+		cloudwatchFields = types.ObjectUnknown(
+			CloudwatchFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.CloudwatchFields.IsNull() && !v.CloudwatchFields.IsUnknown() {
+		cloudwatchFields = types.ObjectValueMust(
+			CloudwatchFieldsValue{}.AttributeTypes(ctx),
+			v.CloudwatchFields.Attributes(),
+		)
+	}
+
 	costReportTokensWithMetadata := types.ListValueMust(
 		CostReportTokensWithMetadataType{
 			basetypes.ObjectType{
@@ -525,18 +822,51 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
+	var datadogMetricFields basetypes.ObjectValue
+
+	if v.DatadogMetricFields.IsNull() {
+		datadogMetricFields = types.ObjectNull(
+			DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.DatadogMetricFields.IsUnknown() {
+		datadogMetricFields = types.ObjectUnknown(
+			DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.DatadogMetricFields.IsNull() && !v.DatadogMetricFields.IsUnknown() {
+		datadogMetricFields = types.ObjectValueMust(
+			DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+			v.DatadogMetricFields.Attributes(),
+		)
+	}
+
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
+			"cloudwatch_fields": basetypes.ObjectType{
+				AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
+			},
 			"cost_report_tokens_with_metadata": basetypes.ListType{
 				ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
 			},
 			"created_by_token": basetypes.StringType{},
-			"title":            basetypes.StringType{},
-			"token":            basetypes.StringType{},
+			"datadog_metric_fields": basetypes.ObjectType{
+				AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+			},
+			"import_type":       basetypes.StringType{},
+			"integration_token": basetypes.StringType{},
+			"title":             basetypes.StringType{},
+			"token":             basetypes.StringType{},
 		},
 		map[string]attr.Value{
+			"cloudwatch_fields":                cloudwatchFields,
 			"cost_report_tokens_with_metadata": costReportTokensWithMetadata,
 			"created_by_token":                 v.CreatedByToken,
+			"datadog_metric_fields":            datadogMetricFields,
+			"import_type":                      v.ImportType,
+			"integration_token":                v.IntegrationToken,
 			"title":                            v.Title,
 			"token":                            v.Token,
 		})
@@ -559,11 +889,27 @@ func (v BusinessMetricsValue) Equal(o attr.Value) bool {
 		return true
 	}
 
+	if !v.CloudwatchFields.Equal(other.CloudwatchFields) {
+		return false
+	}
+
 	if !v.CostReportTokensWithMetadata.Equal(other.CostReportTokensWithMetadata) {
 		return false
 	}
 
 	if !v.CreatedByToken.Equal(other.CreatedByToken) {
+		return false
+	}
+
+	if !v.DatadogMetricFields.Equal(other.DatadogMetricFields) {
+		return false
+	}
+
+	if !v.ImportType.Equal(other.ImportType) {
+		return false
+	}
+
+	if !v.IntegrationToken.Equal(other.IntegrationToken) {
 		return false
 	}
 
@@ -588,12 +934,1013 @@ func (v BusinessMetricsValue) Type(ctx context.Context) attr.Type {
 
 func (v BusinessMetricsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
+		"cloudwatch_fields": basetypes.ObjectType{
+			AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
+		},
 		"cost_report_tokens_with_metadata": basetypes.ListType{
 			ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
 		},
 		"created_by_token": basetypes.StringType{},
-		"title":            basetypes.StringType{},
-		"token":            basetypes.StringType{},
+		"datadog_metric_fields": basetypes.ObjectType{
+			AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+		},
+		"import_type":       basetypes.StringType{},
+		"integration_token": basetypes.StringType{},
+		"title":             basetypes.StringType{},
+		"token":             basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = CloudwatchFieldsType{}
+
+type CloudwatchFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t CloudwatchFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(CloudwatchFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t CloudwatchFieldsType) String() string {
+	return "CloudwatchFieldsType"
+}
+
+func (t CloudwatchFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	dimensionsAttribute, ok := attributes["dimensions"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`dimensions is missing from object`)
+
+		return nil, diags
+	}
+
+	dimensionsVal, ok := dimensionsAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`dimensions expected to be basetypes.ListValue, was: %T`, dimensionsAttribute))
+	}
+
+	labelDimensionAttribute, ok := attributes["label_dimension"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_dimension is missing from object`)
+
+		return nil, diags
+	}
+
+	labelDimensionVal, ok := labelDimensionAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_dimension expected to be basetypes.StringValue, was: %T`, labelDimensionAttribute))
+	}
+
+	metricNameAttribute, ok := attributes["metric_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metric_name is missing from object`)
+
+		return nil, diags
+	}
+
+	metricNameVal, ok := metricNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metric_name expected to be basetypes.StringValue, was: %T`, metricNameAttribute))
+	}
+
+	namespaceAttribute, ok := attributes["namespace"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`namespace is missing from object`)
+
+		return nil, diags
+	}
+
+	namespaceVal, ok := namespaceAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`namespace expected to be basetypes.StringValue, was: %T`, namespaceAttribute))
+	}
+
+	regionAttribute, ok := attributes["region"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`region is missing from object`)
+
+		return nil, diags
+	}
+
+	regionVal, ok := regionAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`region expected to be basetypes.StringValue, was: %T`, regionAttribute))
+	}
+
+	statAttribute, ok := attributes["stat"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`stat is missing from object`)
+
+		return nil, diags
+	}
+
+	statVal, ok := statAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`stat expected to be basetypes.StringValue, was: %T`, statAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return CloudwatchFieldsValue{
+		Dimensions:     dimensionsVal,
+		LabelDimension: labelDimensionVal,
+		MetricName:     metricNameVal,
+		Namespace:      namespaceVal,
+		Region:         regionVal,
+		Stat:           statVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewCloudwatchFieldsValueNull() CloudwatchFieldsValue {
+	return CloudwatchFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewCloudwatchFieldsValueUnknown() CloudwatchFieldsValue {
+	return CloudwatchFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewCloudwatchFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (CloudwatchFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing CloudwatchFieldsValue Attribute Value",
+				"While creating a CloudwatchFieldsValue value, a missing attribute value was detected. "+
+					"A CloudwatchFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("CloudwatchFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid CloudwatchFieldsValue Attribute Type",
+				"While creating a CloudwatchFieldsValue value, an invalid attribute value was detected. "+
+					"A CloudwatchFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("CloudwatchFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("CloudwatchFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra CloudwatchFieldsValue Attribute Value",
+				"While creating a CloudwatchFieldsValue value, an extra attribute value was detected. "+
+					"A CloudwatchFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra CloudwatchFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	dimensionsAttribute, ok := attributes["dimensions"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`dimensions is missing from object`)
+
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	dimensionsVal, ok := dimensionsAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`dimensions expected to be basetypes.ListValue, was: %T`, dimensionsAttribute))
+	}
+
+	labelDimensionAttribute, ok := attributes["label_dimension"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_dimension is missing from object`)
+
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	labelDimensionVal, ok := labelDimensionAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_dimension expected to be basetypes.StringValue, was: %T`, labelDimensionAttribute))
+	}
+
+	metricNameAttribute, ok := attributes["metric_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metric_name is missing from object`)
+
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	metricNameVal, ok := metricNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metric_name expected to be basetypes.StringValue, was: %T`, metricNameAttribute))
+	}
+
+	namespaceAttribute, ok := attributes["namespace"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`namespace is missing from object`)
+
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	namespaceVal, ok := namespaceAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`namespace expected to be basetypes.StringValue, was: %T`, namespaceAttribute))
+	}
+
+	regionAttribute, ok := attributes["region"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`region is missing from object`)
+
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	regionVal, ok := regionAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`region expected to be basetypes.StringValue, was: %T`, regionAttribute))
+	}
+
+	statAttribute, ok := attributes["stat"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`stat is missing from object`)
+
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	statVal, ok := statAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`stat expected to be basetypes.StringValue, was: %T`, statAttribute))
+	}
+
+	if diags.HasError() {
+		return NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	return CloudwatchFieldsValue{
+		Dimensions:     dimensionsVal,
+		LabelDimension: labelDimensionVal,
+		MetricName:     metricNameVal,
+		Namespace:      namespaceVal,
+		Region:         regionVal,
+		Stat:           statVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewCloudwatchFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) CloudwatchFieldsValue {
+	object, diags := NewCloudwatchFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewCloudwatchFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t CloudwatchFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewCloudwatchFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewCloudwatchFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewCloudwatchFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewCloudwatchFieldsValueMust(CloudwatchFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t CloudwatchFieldsType) ValueType(ctx context.Context) attr.Value {
+	return CloudwatchFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = CloudwatchFieldsValue{}
+
+type CloudwatchFieldsValue struct {
+	Dimensions     basetypes.ListValue   `tfsdk:"dimensions"`
+	LabelDimension basetypes.StringValue `tfsdk:"label_dimension"`
+	MetricName     basetypes.StringValue `tfsdk:"metric_name"`
+	Namespace      basetypes.StringValue `tfsdk:"namespace"`
+	Region         basetypes.StringValue `tfsdk:"region"`
+	Stat           basetypes.StringValue `tfsdk:"stat"`
+	state          attr.ValueState
+}
+
+func (v CloudwatchFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 6)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["dimensions"] = basetypes.ListType{
+		ElemType: DimensionsValue{}.Type(ctx),
+	}.TerraformType(ctx)
+	attrTypes["label_dimension"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["metric_name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["namespace"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["region"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["stat"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 6)
+
+		val, err = v.Dimensions.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["dimensions"] = val
+
+		val, err = v.LabelDimension.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label_dimension"] = val
+
+		val, err = v.MetricName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["metric_name"] = val
+
+		val, err = v.Namespace.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["namespace"] = val
+
+		val, err = v.Region.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["region"] = val
+
+		val, err = v.Stat.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["stat"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v CloudwatchFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v CloudwatchFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v CloudwatchFieldsValue) String() string {
+	return "CloudwatchFieldsValue"
+}
+
+func (v CloudwatchFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	dimensions := types.ListValueMust(
+		DimensionsType{
+			basetypes.ObjectType{
+				AttrTypes: DimensionsValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.Dimensions.Elements(),
+	)
+
+	if v.Dimensions.IsNull() {
+		dimensions = types.ListNull(
+			DimensionsType{
+				basetypes.ObjectType{
+					AttrTypes: DimensionsValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	if v.Dimensions.IsUnknown() {
+		dimensions = types.ListUnknown(
+			DimensionsType{
+				basetypes.ObjectType{
+					AttrTypes: DimensionsValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	objVal, diags := types.ObjectValue(
+		map[string]attr.Type{
+			"dimensions": basetypes.ListType{
+				ElemType: DimensionsValue{}.Type(ctx),
+			},
+			"label_dimension": basetypes.StringType{},
+			"metric_name":     basetypes.StringType{},
+			"namespace":       basetypes.StringType{},
+			"region":          basetypes.StringType{},
+			"stat":            basetypes.StringType{},
+		},
+		map[string]attr.Value{
+			"dimensions":      dimensions,
+			"label_dimension": v.LabelDimension,
+			"metric_name":     v.MetricName,
+			"namespace":       v.Namespace,
+			"region":          v.Region,
+			"stat":            v.Stat,
+		})
+
+	return objVal, diags
+}
+
+func (v CloudwatchFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(CloudwatchFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Dimensions.Equal(other.Dimensions) {
+		return false
+	}
+
+	if !v.LabelDimension.Equal(other.LabelDimension) {
+		return false
+	}
+
+	if !v.MetricName.Equal(other.MetricName) {
+		return false
+	}
+
+	if !v.Namespace.Equal(other.Namespace) {
+		return false
+	}
+
+	if !v.Region.Equal(other.Region) {
+		return false
+	}
+
+	if !v.Stat.Equal(other.Stat) {
+		return false
+	}
+
+	return true
+}
+
+func (v CloudwatchFieldsValue) Type(ctx context.Context) attr.Type {
+	return CloudwatchFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v CloudwatchFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"dimensions": basetypes.ListType{
+			ElemType: DimensionsValue{}.Type(ctx),
+		},
+		"label_dimension": basetypes.StringType{},
+		"metric_name":     basetypes.StringType{},
+		"namespace":       basetypes.StringType{},
+		"region":          basetypes.StringType{},
+		"stat":            basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = DimensionsType{}
+
+type DimensionsType struct {
+	basetypes.ObjectType
+}
+
+func (t DimensionsType) Equal(o attr.Type) bool {
+	other, ok := o.(DimensionsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t DimensionsType) String() string {
+	return "DimensionsType"
+}
+
+func (t DimensionsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	nameAttribute, ok := attributes["name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`name is missing from object`)
+
+		return nil, diags
+	}
+
+	nameVal, ok := nameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`name expected to be basetypes.StringValue, was: %T`, nameAttribute))
+	}
+
+	valueAttribute, ok := attributes["value"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`value is missing from object`)
+
+		return nil, diags
+	}
+
+	valueVal, ok := valueAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return DimensionsValue{
+		Name:  nameVal,
+		Value: valueVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDimensionsValueNull() DimensionsValue {
+	return DimensionsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewDimensionsValueUnknown() DimensionsValue {
+	return DimensionsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewDimensionsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (DimensionsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing DimensionsValue Attribute Value",
+				"While creating a DimensionsValue value, a missing attribute value was detected. "+
+					"A DimensionsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DimensionsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid DimensionsValue Attribute Type",
+				"While creating a DimensionsValue value, an invalid attribute value was detected. "+
+					"A DimensionsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DimensionsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("DimensionsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra DimensionsValue Attribute Value",
+				"While creating a DimensionsValue value, an extra attribute value was detected. "+
+					"A DimensionsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra DimensionsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewDimensionsValueUnknown(), diags
+	}
+
+	nameAttribute, ok := attributes["name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`name is missing from object`)
+
+		return NewDimensionsValueUnknown(), diags
+	}
+
+	nameVal, ok := nameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`name expected to be basetypes.StringValue, was: %T`, nameAttribute))
+	}
+
+	valueAttribute, ok := attributes["value"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`value is missing from object`)
+
+		return NewDimensionsValueUnknown(), diags
+	}
+
+	valueVal, ok := valueAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute))
+	}
+
+	if diags.HasError() {
+		return NewDimensionsValueUnknown(), diags
+	}
+
+	return DimensionsValue{
+		Name:  nameVal,
+		Value: valueVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDimensionsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) DimensionsValue {
+	object, diags := NewDimensionsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewDimensionsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t DimensionsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewDimensionsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewDimensionsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewDimensionsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewDimensionsValueMust(DimensionsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t DimensionsType) ValueType(ctx context.Context) attr.Value {
+	return DimensionsValue{}
+}
+
+var _ basetypes.ObjectValuable = DimensionsValue{}
+
+type DimensionsValue struct {
+	Name  basetypes.StringValue `tfsdk:"name"`
+	Value basetypes.StringValue `tfsdk:"value"`
+	state attr.ValueState
+}
+
+func (v DimensionsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["value"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.Name.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["name"] = val
+
+		val, err = v.Value.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["value"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v DimensionsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v DimensionsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v DimensionsValue) String() string {
+	return "DimensionsValue"
+}
+
+func (v DimensionsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	objVal, diags := types.ObjectValue(
+		map[string]attr.Type{
+			"name":  basetypes.StringType{},
+			"value": basetypes.StringType{},
+		},
+		map[string]attr.Value{
+			"name":  v.Name,
+			"value": v.Value,
+		})
+
+	return objVal, diags
+}
+
+func (v DimensionsValue) Equal(o attr.Value) bool {
+	other, ok := o.(DimensionsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Name.Equal(other.Name) {
+		return false
+	}
+
+	if !v.Value.Equal(other.Value) {
+		return false
+	}
+
+	return true
+}
+
+func (v DimensionsValue) Type(ctx context.Context) attr.Type {
+	return DimensionsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v DimensionsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"name":  basetypes.StringType{},
+		"value": basetypes.StringType{},
 	}
 }
 
@@ -1038,5 +2385,319 @@ func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) m
 			ElemType: types.StringType,
 		},
 		"unit_scale": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = DatadogMetricFieldsType{}
+
+type DatadogMetricFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t DatadogMetricFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(DatadogMetricFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t DatadogMetricFieldsType) String() string {
+	return "DatadogMetricFieldsType"
+}
+
+func (t DatadogMetricFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	queryAttribute, ok := attributes["query"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query is missing from object`)
+
+		return nil, diags
+	}
+
+	queryVal, ok := queryAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query expected to be basetypes.StringValue, was: %T`, queryAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return DatadogMetricFieldsValue{
+		Query: queryVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDatadogMetricFieldsValueNull() DatadogMetricFieldsValue {
+	return DatadogMetricFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewDatadogMetricFieldsValueUnknown() DatadogMetricFieldsValue {
+	return DatadogMetricFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewDatadogMetricFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (DatadogMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing DatadogMetricFieldsValue Attribute Value",
+				"While creating a DatadogMetricFieldsValue value, a missing attribute value was detected. "+
+					"A DatadogMetricFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DatadogMetricFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid DatadogMetricFieldsValue Attribute Type",
+				"While creating a DatadogMetricFieldsValue value, an invalid attribute value was detected. "+
+					"A DatadogMetricFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DatadogMetricFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("DatadogMetricFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra DatadogMetricFieldsValue Attribute Value",
+				"While creating a DatadogMetricFieldsValue value, an extra attribute value was detected. "+
+					"A DatadogMetricFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra DatadogMetricFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewDatadogMetricFieldsValueUnknown(), diags
+	}
+
+	queryAttribute, ok := attributes["query"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query is missing from object`)
+
+		return NewDatadogMetricFieldsValueUnknown(), diags
+	}
+
+	queryVal, ok := queryAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query expected to be basetypes.StringValue, was: %T`, queryAttribute))
+	}
+
+	if diags.HasError() {
+		return NewDatadogMetricFieldsValueUnknown(), diags
+	}
+
+	return DatadogMetricFieldsValue{
+		Query: queryVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDatadogMetricFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) DatadogMetricFieldsValue {
+	object, diags := NewDatadogMetricFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewDatadogMetricFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t DatadogMetricFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewDatadogMetricFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewDatadogMetricFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewDatadogMetricFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewDatadogMetricFieldsValueMust(DatadogMetricFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t DatadogMetricFieldsType) ValueType(ctx context.Context) attr.Value {
+	return DatadogMetricFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = DatadogMetricFieldsValue{}
+
+type DatadogMetricFieldsValue struct {
+	Query basetypes.StringValue `tfsdk:"query"`
+	state attr.ValueState
+}
+
+func (v DatadogMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 1)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["query"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 1)
+
+		val, err = v.Query.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["query"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v DatadogMetricFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v DatadogMetricFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v DatadogMetricFieldsValue) String() string {
+	return "DatadogMetricFieldsValue"
+}
+
+func (v DatadogMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	objVal, diags := types.ObjectValue(
+		map[string]attr.Type{
+			"query": basetypes.StringType{},
+		},
+		map[string]attr.Value{
+			"query": v.Query,
+		})
+
+	return objVal, diags
+}
+
+func (v DatadogMetricFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(DatadogMetricFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Query.Equal(other.Query) {
+		return false
+	}
+
+	return true
+}
+
+func (v DatadogMetricFieldsValue) Type(ctx context.Context) attr.Type {
+	return DatadogMetricFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v DatadogMetricFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"query": basetypes.StringType{},
 	}
 }
