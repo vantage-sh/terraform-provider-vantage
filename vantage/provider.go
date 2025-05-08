@@ -161,6 +161,7 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewManagedAccountsDataSource,
 		NewBillingRulesDataSource,
 		NewNetworkFlowReportDataSource,
+		NewCostAlertsDataSource,
 	}
 }
 

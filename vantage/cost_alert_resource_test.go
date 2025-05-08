@@ -31,8 +31,21 @@ func TestCostAlert(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_cost_alert.test", "title", rUpdatedTitle),
 				),
 			},
+			{
+				Config: testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertConfig(rUpdatedTitle) + testAccCostAlertsDataSource(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.vantage_cost_alerts.test", "cost_alerts.0.token"),
+					resource.TestCheckResourceAttr("data.vantage_cost_alerts.test", "cost_alerts.0.title", rUpdatedTitle),
+				),
+			},
 		},
 	})
+}
+
+func testAccCostAlertsDataSource() string {
+	return `
+data "vantage_cost_alerts" "test" {}
+`
 }
 
 func testAccWorkspacesDatasource() string {
