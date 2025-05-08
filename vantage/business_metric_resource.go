@@ -52,6 +52,7 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+
 	resp.Schema = s
 }
 

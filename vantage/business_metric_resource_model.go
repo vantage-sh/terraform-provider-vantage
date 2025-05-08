@@ -19,6 +19,10 @@ type BusinessMetricPayloadApplier interface {
 	SetToken(token types.String)
 	SetCreatedByToken(createdByToken types.String)
 	SetCostReportTokensWithMetadata(costReportTokens types.List)
+	SetImportType(importType types.String)
+	SetIntegrationToken(integrationToken types.String)
+	SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue)
+	SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue)
 }
 
 type businessMetricResourceModel resource_business_metric.BusinessMetricModel
@@ -51,6 +55,22 @@ func (m *businessMetricResourceModel) SetCostReportTokensWithMetadata(costReport
 	m.CostReportTokensWithMetadata = costReportTokens
 }
 
+func (m *businessMetricResourceModel) SetImportType(importType types.String) {
+	m.ImportType = importType
+}
+
+func (m *businessMetricResourceModel) SetIntegrationToken(integrationToken types.String) {
+	m.IntegrationToken = integrationToken
+}
+
+func (m *businessMetricResourceModel) SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue) {
+	m.CloudwatchFields = cloudwatchFields
+}
+
+func (m *businessMetricResourceModel) SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue) {
+	m.DatadogMetricFields = datadogMetricFields
+}
+
 func (m *businessMetricDataSourceValue) SetTitle(title types.String) {
 	m.Title = title
 }
@@ -67,10 +87,131 @@ func (m *businessMetricDataSourceValue) SetCostReportTokensWithMetadata(costRepo
 	m.CostReportTokensWithMetadata = costReportTokens
 }
 
+func (m *businessMetricDataSourceValue) SetImportType(importType types.String) {
+	m.ImportType = importType
+}
+
+func (m *businessMetricDataSourceValue) SetIntegrationToken(integrationToken types.String) {
+	m.IntegrationToken = integrationToken
+}
+
+func (m *businessMetricDataSourceValue) SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue) {
+	ctx := context.Background()
+
+	emptyDimensions, _ := types.ListValue(
+		types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"name":  types.StringType,
+				"value": types.StringType,
+			},
+		},
+		[]attr.Value{},
+	)
+
+	labelDimension := cloudwatchFields.LabelDimension
+	if labelDimension.IsNull() || labelDimension.IsUnknown() {
+		labelDimension = types.StringValue("")
+	}
+
+	metricName := cloudwatchFields.MetricName
+	if metricName.IsNull() || metricName.IsUnknown() {
+		metricName = types.StringValue("")
+	}
+
+	namespace := cloudwatchFields.Namespace
+	if namespace.IsNull() || namespace.IsUnknown() {
+		namespace = types.StringValue("")
+	}
+
+	region := cloudwatchFields.Region
+	if region.IsNull() || region.IsUnknown() {
+		region = types.StringValue("")
+	}
+
+	stat := cloudwatchFields.Stat
+	if stat.IsNull() || stat.IsUnknown() {
+		stat = types.StringValue("")
+	}
+
+	// Use the configured dimensions if available, or empty list if not
+	dimensions := emptyDimensions
+	if !cloudwatchFields.Dimensions.IsNull() && !cloudwatchFields.Dimensions.IsUnknown() {
+		dims, dimsErr := types.ListValueFrom(
+			ctx,
+			types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"name":  types.StringType,
+					"value": types.StringType,
+				},
+			},
+			cloudwatchFields.Dimensions,
+		)
+		if dimsErr == nil {
+			dimensions = dims
+		}
+	}
+
+	objVal, _ := types.ObjectValue(
+		map[string]attr.Type{
+			"label_dimension": types.StringType,
+			"metric_name":     types.StringType,
+			"namespace":       types.StringType,
+			"region":          types.StringType,
+			"stat":            types.StringType,
+			"dimensions": types.ListType{ElemType: types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"name":  types.StringType,
+					"value": types.StringType,
+				},
+			}},
+		},
+		map[string]attr.Value{
+			"label_dimension": labelDimension,
+			"metric_name":     metricName,
+			"namespace":       namespace,
+			"region":          region,
+			"stat":            stat,
+			"dimensions":      dimensions,
+		},
+	)
+	m.CloudwatchFields = objVal
+}
+
+func (m *businessMetricDataSourceValue) SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue) {
+	query := datadogMetricFields.Query
+	if query.IsNull() || query.IsUnknown() {
+		query = types.StringValue("")
+	}
+
+	objVal, _ := types.ObjectValue(
+		map[string]attr.Type{
+			"query": types.StringType,
+		},
+		map[string]attr.Value{
+			"query": query,
+		})
+
+	m.DatadogMetricFields = objVal
+}
+
 func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payload *modelsv2.BusinessMetric) diag.Diagnostics {
 	m.SetTitle(types.StringValue(payload.Title))
 	m.SetToken(types.StringValue(payload.Token))
 	m.SetCreatedByToken(types.StringValue(payload.CreatedByToken))
+	m.SetImportType(types.StringValue(payload.ImportType))
+	m.SetIntegrationToken(types.StringValue(payload.IntegrationToken))
+
+	tfCloudwatchFields, diag := cloudwatchFieldsFromApiModel(ctx, payload.CloudwatchFields, payload.IntegrationToken)
+	if diag.HasError() {
+		return diag
+	}
+	m.SetCloudwatchFields(tfCloudwatchFields)
+
+	tfDatadogMetricFields, diag := datadogMetricFieldsFromApiModel(ctx, payload.DatadogMetricFields, payload.IntegrationToken)
+	if diag.HasError() {
+		return diag
+	}
+	m.SetDatadogMetricFields(tfDatadogMetricFields)
 
 	if payload.CostReportTokensWithMetadata != nil {
 		tfCostReportTokens := []businessMetricResourceModelCostReportToken{}
@@ -117,6 +258,47 @@ func (m *businessMetricResourceModel) applyPayload(ctx context.Context, payload 
 func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.Diagnostics) *modelsv2.CreateBusinessMetric {
 	model := &modelsv2.CreateBusinessMetric{
 		Title: m.Title.ValueStringPointer(),
+	}
+
+	if !m.CloudwatchFields.IsNull() && !m.CloudwatchFields.IsUnknown() {
+		cloudwatchFields := &modelsv2.CreateBusinessMetricCloudwatchFields{
+			IntegrationToken: m.CloudwatchFields.IntegrationToken.ValueString(),
+			MetricName:       m.CloudwatchFields.MetricName.ValueString(),
+			Namespace:        m.CloudwatchFields.Namespace.ValueString(),
+			Region:           m.CloudwatchFields.Region.ValueString(),
+			Stat:             m.CloudwatchFields.Stat.ValueString(),
+			LabelDimension:   m.CloudwatchFields.LabelDimension.ValueString(),
+		}
+
+		if !m.CloudwatchFields.Dimensions.IsNull() && !m.CloudwatchFields.Dimensions.IsUnknown() {
+			dimsLen := len(m.CloudwatchFields.Dimensions.Elements())
+			if dimsLen > 0 {
+				dimensions := make([]*modelsv2.CreateBusinessMetricCloudwatchFieldsDimensionsItems0, 0, dimsLen)
+				var tfDimensions []resource_business_metric.DimensionsValue
+				diags.Append(m.CloudwatchFields.Dimensions.ElementsAs(ctx, &tfDimensions, false)...)
+				if diags.HasError() {
+					return nil
+				}
+
+				for _, dim := range tfDimensions {
+					dimensions = append(dimensions, &modelsv2.CreateBusinessMetricCloudwatchFieldsDimensionsItems0{
+						Name:  dim.Name.ValueString(),
+						Value: dim.Value.ValueString(),
+					})
+				}
+				cloudwatchFields.Dimensions = dimensions
+			}
+		}
+
+		model.CloudwatchFields = cloudwatchFields
+	}
+
+	if !m.DatadogMetricFields.IsNull() && !m.DatadogMetricFields.IsUnknown() {
+		datadogMetricFields := &modelsv2.CreateBusinessMetricDatadogMetricFields{
+			IntegrationToken: m.DatadogMetricFields.IntegrationToken.ValueString(),
+			Query:            m.DatadogMetricFields.Query.ValueString(),
+		}
+		model.DatadogMetricFields = datadogMetricFields
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
@@ -190,6 +372,47 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 	// TODO need IsUnknown check here?
 	if !m.Title.IsNull() {
 		model.Title = m.Title.ValueString()
+	}
+
+	if !m.CloudwatchFields.IsNull() && !m.CloudwatchFields.IsUnknown() {
+		cloudwatchFields := &modelsv2.UpdateBusinessMetricCloudwatchFields{
+			IntegrationToken: m.CloudwatchFields.IntegrationToken.ValueString(),
+			MetricName:       m.CloudwatchFields.MetricName.ValueString(),
+			Namespace:        m.CloudwatchFields.Namespace.ValueString(),
+			Region:           m.CloudwatchFields.Region.ValueString(),
+			Stat:             m.CloudwatchFields.Stat.ValueString(),
+			LabelDimension:   m.CloudwatchFields.LabelDimension.ValueString(),
+		}
+
+		if !m.CloudwatchFields.Dimensions.IsNull() && !m.CloudwatchFields.Dimensions.IsUnknown() {
+			dimsLen := len(m.CloudwatchFields.Dimensions.Elements())
+			if dimsLen > 0 {
+				dimensions := make([]*modelsv2.UpdateBusinessMetricCloudwatchFieldsDimensionsItems0, 0, dimsLen)
+				var tfDimensions []resource_business_metric.DimensionsValue
+				diags.Append(m.CloudwatchFields.Dimensions.ElementsAs(ctx, &tfDimensions, false)...)
+				if diags.HasError() {
+					return nil
+				}
+
+				for _, dim := range tfDimensions {
+					dimensions = append(dimensions, &modelsv2.UpdateBusinessMetricCloudwatchFieldsDimensionsItems0{
+						Name:  dim.Name.ValueString(),
+						Value: dim.Value.ValueString(),
+					})
+				}
+				cloudwatchFields.Dimensions = dimensions
+			}
+		}
+
+		model.CloudwatchFields = cloudwatchFields
+	}
+
+	if !m.DatadogMetricFields.IsNull() && !m.DatadogMetricFields.IsUnknown() {
+		datadogMetricFields := &modelsv2.UpdateBusinessMetricDatadogMetricFields{
+			IntegrationToken: m.DatadogMetricFields.IntegrationToken.ValueString(),
+			Query:            m.DatadogMetricFields.Query.ValueString(),
+		}
+		model.DatadogMetricFields = datadogMetricFields
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
@@ -266,4 +489,93 @@ func (m *businessMetricResourceModel) costReportTokensFromTf(ctx context.Context
 		return nil
 	}
 	return costReportTokens
+}
+
+func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.DatadogMetricFields, integrationToken string) (resource_business_metric.DatadogMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if apiFields == nil {
+		return resource_business_metric.NewDatadogMetricFieldsValueNull(), diags
+	}
+
+	tfValue, d := resource_business_metric.NewDatadogMetricFieldsValue(
+		map[string]attr.Type{
+			"query":             types.StringType,
+			"integration_token": types.StringType,
+		},
+		map[string]attr.Value{
+			"query":             types.StringValue(apiFields.Query),
+			"integration_token": types.StringValue(integrationToken),
+		},
+	)
+	diags.Append(d...)
+
+	return tfValue, diags
+}
+
+func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.CloudwatchFields, integrationToken string) (resource_business_metric.CloudwatchFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if apiFields == nil {
+		return resource_business_metric.NewCloudwatchFieldsValueNull(), diags
+	}
+
+	dimensionAttrTypes := map[string]attr.Type{
+		"name":  types.StringType,
+		"value": types.StringType,
+	}
+
+	tfDimensionObjects := []attr.Value{}
+
+	for _, apiDimension := range apiFields.Dimensions {
+		if apiDimension == nil {
+			continue
+		}
+		dimensionObjectValue, d := types.ObjectValue(
+			dimensionAttrTypes,
+			map[string]attr.Value{
+				"name":  types.StringValue(apiDimension.Name),
+				"value": types.StringValue(apiDimension.Value),
+			},
+		)
+		diags.Append(d...)
+		if diags.HasError() {
+			return resource_business_metric.NewCloudwatchFieldsValueUnknown(), diags
+		}
+		tfDimensionObjects = append(tfDimensionObjects, dimensionObjectValue)
+	}
+
+	dimensionsListValue, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: dimensionAttrTypes}, tfDimensionObjects)
+	diags.Append(d...)
+	if diags.HasError() {
+		return resource_business_metric.NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	cloudwatchAttrTypes := map[string]attr.Type{
+		"stat":              types.StringType,
+		"metric_name":       types.StringType,
+		"namespace":         types.StringType,
+		"region":            types.StringType,
+		"label_dimension":   types.StringType,
+		"dimensions":        types.ListType{ElemType: types.ObjectType{AttrTypes: dimensionAttrTypes}},
+		"integration_token": types.StringType,
+	}
+
+	tfValue, d := resource_business_metric.NewCloudwatchFieldsValue(
+		cloudwatchAttrTypes,
+		map[string]attr.Value{
+			"stat":              types.StringValue(apiFields.Stat),
+			"metric_name":       types.StringValue(apiFields.MetricName),
+			"namespace":         types.StringValue(apiFields.Namespace),
+			"region":            types.StringValue(apiFields.Region),
+			"label_dimension":   types.StringValue(apiFields.LabelDimension),
+			"dimensions":        dimensionsListValue,
+			"integration_token": types.StringValue(integrationToken),
+		},
+	)
+	diags.Append(d...)
+
+	if diags.HasError() {
+		return resource_business_metric.NewCloudwatchFieldsValueUnknown(), diags
+	}
+
+	return tfValue, diags
 }

@@ -25,7 +25,7 @@ description: |-
 Read-Only:
 
 - `amount` (String) The amount for the BillingRule (Charge).
-- `apply_to_all` (String) Whether the BillingRule applies to all future managed accounts.
+- `apply_to_all` (Boolean) Whether the BillingRule applies to all future managed accounts.
 - `category` (String) The category for the BillingRule (Charge).
 - `charge_type` (String) The charge type for the BillingRule.
 - `created_at` (String) The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.

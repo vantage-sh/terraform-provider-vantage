@@ -122,3 +122,136 @@ func testAccVantageBusinessMetricTf_basic(id string, title string, valuesStr str
 		`, id, title, valuesStr,
 	)
 }
+
+func TestAccBusinessMetric_cloudwatch(t *testing.T) {
+	t.Skip("Skipping until we have support for Integrations/AccessCredentials")
+	// NOTE: You will also have to replace the hard coded access credential token in the test data.
+	//
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBusinessMetricTf_cloudwatch("test-cloudwatch", "CloudWatch Test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-cloudwatch", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "title", "CloudWatch Test"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.metric_name", "CPUUtilization"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.namespace", "AWS/EC2"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.region", "us-east-1"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.stat", "Average"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.label_dimension", "InstanceId"),
+				),
+			},
+			{
+				// Test updating CloudWatch fields
+				Config: testAccVantageBusinessMetricTf_cloudwatch_updated("test-cloudwatch", "CloudWatch Test Updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-cloudwatch", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "title", "CloudWatch Test Updated"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.metric_name", "MemoryUtilization"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-cloudwatch", "cloudwatch_fields.namespace", "AWS/ECS"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_cloudwatch(id string, title string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+
+  cloudwatch_fields = {
+    dimensions = [
+      {
+        name = "InstanceId"
+        value = "12345"
+      }
+    ]
+		metric_name = "CPUUtilization"
+    namespace = "AWS/EC2"
+    region = "us-east-1"
+    stat = "Average"
+    label_dimension = "InstanceId"
+    integration_token = "accss_crdntl_4e4a878a8f885856"
+  }
+}
+`, id, title)
+}
+
+func testAccVantageBusinessMetricTf_cloudwatch_updated(id string, title string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+
+  cloudwatch_fields = {
+	  dimensions = [
+	    {
+	      name = "InstanceId"
+	      value = "12345"
+	    }
+	  ]
+    metric_name = "MemoryUtilization"
+    namespace = "AWS/ECS"
+    region = "us-east-1"
+    stat = "Maximum"
+    label_dimension = "ClusterName"
+    integration_token = "accss_crdntl_4e4a878a8f885856"
+  }
+}
+`, id, title)
+}
+
+func TestAccBusinessMetric_datadog(t *testing.T) {
+	t.Skip("Skipping until we have support for Integrations/AccessCredentials")
+	// NOTE: You will also have to replace the hard coded access credential token in the test data.
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBusinessMetricTf_datadog("test-datadog", "Datadog Test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-datadog", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "title", "Datadog Test"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.cpu.user{*}.rollup(avg, daily)"),
+				),
+			},
+			{
+				// Test updating Datadog query
+				Config: testAccVantageBusinessMetricTf_datadog_updated("test-datadog", "Datadog Test Updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-datadog", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "title", "Datadog Test Updated"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.memory.used{*}.rollup(avg, daily)"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_datadog(id string, title string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+  datadog_metric_fields = {
+    query = "avg:system.cpu.user{*}.rollup(avg, daily)"
+    integration_token = "accss_crdntl_27a4dff7012ecce3"
+  }
+}
+`, id, title)
+}
+
+func testAccVantageBusinessMetricTf_datadog_updated(id string, title string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+  datadog_metric_fields = {
+    query = "avg:system.memory.used{*}.rollup(avg, daily)"
+    integration_token = "accss_crdntl_27a4dff7012ecce3"
+  }
+}
+`, id, title)
+}

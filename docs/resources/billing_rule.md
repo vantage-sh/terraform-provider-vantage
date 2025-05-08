@@ -23,10 +23,13 @@ description: |-
 ### Optional
 
 - `amount` (Number) The credit amount for the Billing Rule. Example value: 300
+- `apply_to_all` (Boolean) Determines if the BillingRule applies to all current and future managed accounts.
 - `category` (String) The category of the Billing Rule.
 - `charge_type` (String) The charge type of the Billing Rule.
+- `end_date` (String) The end date of the BillingRule. ISO 8601 formatted.
 - `percentage` (Number) The percentage of the cost shown. Example value: 75.0
 - `service` (String) The service of the Billing Rule.
+- `start_date` (String) The start date of the BillingRule. ISO 8601 formatted.
 - `start_period` (String) The start period of the Billing Rule.
 - `sub_category` (String) The subcategory of the Billing Rule.
 
