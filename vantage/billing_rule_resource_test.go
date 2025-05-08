@@ -72,6 +72,26 @@ func TestAccBillingRule_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_charge", "amount", "0.8"),
 				),
 			},
+			{
+				// create apply to all rule
+				Config: testAccBillingRule_applyToAll(true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "title", "test_apply_to_all"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "type", "exclusion"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "charge_type", "RIFee"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "apply_to_all", "true"),
+				),
+			},
+			{
+				// update apply to all rule
+				Config: testAccBillingRule_applyToAll(false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "title", "test_apply_to_all"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "type", "exclusion"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "charge_type", "RIFee"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "apply_to_all", "false"),
+				),
+			},
 		},
 	})
 }
@@ -86,6 +106,16 @@ resource "vantage_billing_rule" "test_exclusion" {
 `, title, chargeType)
 }
 
+func testAccBillingRule_applyToAll(applyToAll bool) string {
+	return fmt.Sprintf(`
+resource "vantage_billing_rule" "test_apply_to_all" {
+	title = "test_apply_to_all"
+	type = "exclusion"
+	charge_type = "RIFee"
+	apply_to_all = %[1]t
+}
+	`, applyToAll)
+}
 func testAccBillingRule_adjustment(title, service, category string, percentage float32) string {
 	return fmt.Sprintf(`
 resource "vantage_billing_rule" "test_adjustment" {

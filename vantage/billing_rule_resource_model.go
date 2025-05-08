@@ -2,12 +2,10 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_rule"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -15,6 +13,9 @@ import (
 type datasourceBillingRuleModel struct {
 	Percentage     types.String `tfsdk:"percentage"`
 	Amount         types.String `tfsdk:"amount"`
+	ApplyToAll     types.Bool   `tfsdk:"apply_to_all"`
+	EndDate        types.String `tfsdk:"end_date"`
+	StartDate      types.String `tfsdk:"start_date"`
 	Category       types.String `tfsdk:"category"`
 	ChargeType     types.String `tfsdk:"charge_type"`
 	CreatedAt      types.String `tfsdk:"created_at"`
@@ -36,6 +37,9 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 	return datasourceBillingRuleModel{
 		Percentage:     types.StringValue(percentage),
 		Amount:         types.StringValue(amount),
+		ApplyToAll:     m.ApplyToAll,
+		EndDate:        m.EndDate,
+		StartDate:      m.StartDate,
 		Category:       m.Category,
 		ChargeType:     m.ChargeType,
 		CreatedAt:      m.CreatedAt,
@@ -50,7 +54,6 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 }
 
 func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
-	tflog.Debug(ctx, fmt.Sprintf("apply_payload: %v", payload))
 
 	m.Token = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
@@ -74,7 +77,6 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		}
 		m.Amount = types.Float64Value(amount)
 	}
-	tflog.Debug(ctx, fmt.Sprintf("apply_to_all: %t", payload.ApplyToAll))
 
 	m.ApplyToAll = types.BoolValue(payload.ApplyToAll)
 
@@ -121,6 +123,9 @@ func (m *billingRuleModel) toCreateModel(_ context.Context, _ *diag.Diagnostics)
 	return &modelsv2.CreateBillingRule{
 		Percentage:  m.Percentage.ValueFloat64Pointer(),
 		Amount:      m.Amount.ValueFloat64Pointer(),
+		ApplyToAll:  m.ApplyToAll.ValueBool(),
+		StartDate:   m.StartDate.ValueString(),
+		EndDate:     m.EndDate.ValueString(),
 		Category:    m.Category.ValueStringPointer(),
 		ChargeType:  m.ChargeType.ValueStringPointer(),
 		Service:     m.Service.ValueStringPointer(),
@@ -136,6 +141,9 @@ func (m *billingRuleModel) toUpdateModel(_ context.Context, _ *diag.Diagnostics)
 	return &modelsv2.UpdateBillingRule{
 		Percentage:  m.Percentage.ValueFloat64(),
 		Amount:      m.Amount.ValueFloat64(),
+		ApplyToAll:  m.ApplyToAll.ValueBool(),
+		StartDate:   m.StartDate.ValueString(),
+		EndDate:     m.EndDate.ValueString(),
 		Category:    m.Category.ValueString(),
 		ChargeType:  m.ChargeType.ValueString(),
 		Service:     m.Service.ValueString(),
