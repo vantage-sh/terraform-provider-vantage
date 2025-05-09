@@ -21,13 +21,40 @@ description: |-
 
 ### Optional
 
+- `cloudwatch_fields` (Attributes) Cloudwatch configuration fields. (see [below for nested schema](#nestedatt--cloudwatch_fields))
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
+- `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
 
 - `created_by_token` (String) The token of the Creator of the BusinessMetric.
+- `import_type` (String) The type of import for the BusinessMetric.
+- `integration_token` (String) The Integration token used to import the BusinessMetric.
 - `token` (String) The token of the business metric
+
+<a id="nestedatt--cloudwatch_fields"></a>
+### Nested Schema for `cloudwatch_fields`
+
+Optional:
+
+- `dimensions` (Attributes List) The dimensions used to pull specific statistical data for Cloudwatch metrics. (see [below for nested schema](#nestedatt--cloudwatch_fields--dimensions))
+- `integration_token` (String) Integration token for the account from which you would like to fetch metrics.
+- `label_dimension` (String) The dimension used to aggregate the Cloudwatch metrics.
+- `metric_name` (String) The metric name used to import Cloudwatch metrics.
+- `namespace` (String) The namespace used to import Cloudwatch metrics.
+- `region` (String) The region used to import Cloudwatch metrics.
+- `stat` (String) The time aggregation function used to import Cloudwatch metrics.
+
+<a id="nestedatt--cloudwatch_fields--dimensions"></a>
+### Nested Schema for `cloudwatch_fields.dimensions`
+
+Optional:
+
+- `name` (String)
+- `value` (String)
+
+
 
 <a id="nestedatt--cost_report_tokens_with_metadata"></a>
 ### Nested Schema for `cost_report_tokens_with_metadata`
@@ -40,6 +67,15 @@ Optional:
 
 - `label_filter` (List of String) Include only values with these labels in the CostReport.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within the CostReport.
+
+
+<a id="nestedatt--datadog_metric_fields"></a>
+### Nested Schema for `datadog_metric_fields`
+
+Optional:
+
+- `integration_token` (String) Integration token for the account from which you would like to fetch metrics.
+- `query` (String) Datadog metrics query string. e.g. sum:aws.applicationelb.request_count{region:us-east-1}.rollup(avg,daily)
 
 
 <a id="nestedatt--values"></a>
