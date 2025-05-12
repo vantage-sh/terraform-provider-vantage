@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccManagedAccount_basic(t *testing.T) {
-	t.Skip()
+
 	domain := os.Getenv("MANAGED_ACCOUNT_DOMAIN")
 	if domain == "" {
 		domain = "vantage.sh"
