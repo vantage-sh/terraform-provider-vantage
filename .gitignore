@@ -1,6 +1,7 @@
 .envrc
 .terraform
 .terraform.lock.hcl
+.idea
 terraform.tfstate
 terraform.tfstate.backup
 spec.json
