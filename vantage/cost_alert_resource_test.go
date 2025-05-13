@@ -58,6 +58,10 @@ func TestCostAlert(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vantage_cost_alerts.test", "cost_alerts.#", "0"),
 				),
 			},
+			// Step 7: Delete the created test cost report
+			{
+				Config: testAccWorkspacesDatasource(),
+			},
 		},
 	})
 }
