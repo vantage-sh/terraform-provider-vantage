@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-	"log"
 	"math/big"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -50,13 +49,9 @@ func (d *costAlertsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	params := costalertsv2.NewGetCostAlertsParams()
 	out, err := d.client.V2.CostAlerts.GetCostAlerts(params, d.client.Auth)
 
-	log.Printf("[DEBUG] Retrieved %d cost alerts", len(out.Payload.CostAlerts))
-
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Cost Alerts",
-			err.Error(),
-		)
+		resp.Diagnostics.AddError("Unable to Get Vantage Cost Alerts", err.Error())
+        return
 	}
 
 	var alerts []costAlertDataSourceValue
