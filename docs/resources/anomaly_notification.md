@@ -25,18 +25,18 @@ resource "vantage_anomaly_notification" "demo_anomaly_notification" {
 
 ### Required
 
-- `cost_report_token` (String) The token of the Cost Report folder that has the notification.
+- `cost_report_token` (String) The token of the Cost Report that has the notification.
 
 ### Optional
 
 - `recipient_channels` (List of String) The Slack/MS Teams channels that receive the notification.
 - `threshold` (Number) The threshold amount that must be met for the notification to fire.
-- `user_tokens` (List of String) The tokens of the users that receive the notification.
+- `user_tokens` (List of String) The tokens of the Users that receive the notification.
 
 ### Read-Only
 
 - `created_at` (String) The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.
-- `token` (String) The token of the report alert
+- `token` (String) The token of the AnomalyNotification
 - `updated_at` (String) The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.
 
 

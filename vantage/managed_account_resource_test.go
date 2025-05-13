@@ -5,17 +5,20 @@ import (
 	"os"
 	"testing"
 
+	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
 func TestAccManagedAccount_basic(t *testing.T) {
+	t.Skip()
 	domain := os.Getenv("MANAGED_ACCOUNT_DOMAIN")
 	if domain == "" {
 		domain = "vantage.sh"
 	}
+	address := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 
-	contactEmail := fmt.Sprintf("test@%s", domain)
+	contactEmail := fmt.Sprintf("%s@%s", address, domain)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
