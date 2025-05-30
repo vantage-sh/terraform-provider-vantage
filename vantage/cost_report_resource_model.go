@@ -44,7 +44,6 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 		m.EndDate = types.StringValue(payload.EndDate)
 	}
 
-	m.ChartType = types.StringValue(payload.ChartType)
 	m.DateBin = types.StringValue(payload.DateBin)
 
 	m.Token = types.StringValue(payload.Token)
