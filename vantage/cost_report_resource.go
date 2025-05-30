@@ -68,7 +68,7 @@ func (r *CostReportResource) Schema(ctx context.Context, req resource.SchemaRequ
 
 	// Override the token field with a PlanModifier
 	s.Attributes["token"] = schema.StringAttribute{
-		Computed:            attrs["workspace_token"].IsComputed(),
+		Computed:            attrs["token"].IsComputed(),
 		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
