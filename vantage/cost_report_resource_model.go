@@ -108,7 +108,7 @@ func (m *costReportModel) toUpdate(ctx context.Context, diags *diag.Diagnostics)
 		DateInterval:        m.DateInterval.ValueString(),
 		ChartType:           m.ChartType.ValueStringPointer(),
 		DateBin:             m.DateBin.ValueStringPointer(),
-		SavedFilterTokens:   strings.Split(m.SavedFilterTokens.String(), ","),
+		SavedFilterTokens:   fromStringsValue(savedFilterTokens),
 	}
 
 	return payload
