@@ -44,8 +44,6 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 		m.EndDate = types.StringValue(payload.EndDate)
 	}
 
-	m.PreviousPeriodStartDate = types.StringValue(payload.PreviousPeriodStartDate)
-	m.PreviousPeriodEndDate = types.StringValue(payload.PreviousPeriodEndDate)
 	m.ChartType = types.StringValue(payload.ChartType)
 	m.DateBin = types.StringValue(payload.DateBin)
 
