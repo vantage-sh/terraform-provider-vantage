@@ -94,7 +94,7 @@ func (m *costReportModel) toUpdate(ctx context.Context, diags *diag.Diagnostics)
 		}
 	}
 
-	tflog.Debug(ctx, fmt.Sprintf("DateInterval create %s", m.DateInterval.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("DateInterval update %s", m.DateInterval.ValueString()))
 	payload := &modelsv2.UpdateCostReport{
 		Title:               m.Title.ValueString(),
 		FolderToken:         m.FolderToken.ValueString(),
