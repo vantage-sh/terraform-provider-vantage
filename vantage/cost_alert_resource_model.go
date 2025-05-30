@@ -5,11 +5,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_cost_alerts"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_alert"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
 type costAlertModel resource_cost_alert.CostAlertModel
+type costAlertDataSourceValue datasource_cost_alerts.CostAlertsValue
 
 func (m *costAlertModel) applyPayload(ctx context.Context, payload *modelsv2.CostAlert) diag.Diagnostics {
 	var diag diag.Diagnostics
