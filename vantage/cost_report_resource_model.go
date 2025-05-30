@@ -67,7 +67,7 @@ func (m *costReportModel) toCreate(ctx context.Context, diags *diag.Diagnostics)
 		FolderToken:         m.FolderToken.ValueString(),
 		Filter:              m.Filter.ValueString(),
 		Groupings:           m.Groupings.ValueString(),
-		SavedFilterTokens:   strings.Split(m.SavedFilterTokens.String(), ","),
+		SavedFilterTokens:   fromStringsValue(savedFilterTokens),
 		WorkspaceToken:      m.WorkspaceToken.ValueString(),
 		DateInterval:        m.DateInterval.ValueString(),
 		DateBin:             m.DateBin.ValueStringPointer(),
