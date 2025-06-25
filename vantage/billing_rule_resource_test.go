@@ -92,6 +92,24 @@ func TestAccBillingRule_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "apply_to_all", "false"),
 				),
 			},
+			{
+				// create custom rule
+				Config: testAccBillingRule_custom("UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee' AND aws.product/ProductName = 'AWS Support'"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "title", "test_custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "type", "custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "sql_query", "UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee' AND aws.product/ProductName = 'AWS Support'"),
+				),
+			},
+			{
+				// update custom rule
+				Config: testAccBillingRule_custom("UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee'"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "title", "test_custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "type", "custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "sql_query", "UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee'"),
+				),
+			},
 		},
 	})
 }
@@ -140,4 +158,14 @@ func testAccBillingRule_charge(title, service, category, subCategory, startPerio
 		amount = %[6]f
 	}
 	`, title, service, category, subCategory, startPeriod, amount)
+}
+
+func testAccBillingRule_custom(query string) string {
+	return fmt.Sprintf(`
+resource "vantage_billing_rule" "test_custom" {
+	title = "test_custom"
+	type = "custom"
+	sql_query = %[1]q
+}
+	`, query)
 }

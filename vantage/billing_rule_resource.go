@@ -123,6 +123,15 @@ func (r *billingRuleResource) ValidateConfig(ctx context.Context, req resource.V
 		}
 	}
 
+	if data.Type.ValueString() == "custom" {
+		if data.SqlQuery.IsNull() {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("sql_query"),
+				"Missing Attribute Configuration",
+				"Expected sql_query to be present with custom type",
+			)
+		}
+	}
 }
 
 func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -191,6 +200,11 @@ func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaReq
 				Description:         "The subcategory of the Billing Rule.",
 				MarkdownDescription: "The subcategory of the Billing Rule.",
 			},
+			"sql_query": schema.StringAttribute{
+				Optional:            true,
+				Description:         "The SQL query of the Billing Rule.",
+				MarkdownDescription: "The SQL query of the Billing Rule.",
+			},
 			"title": schema.StringAttribute{
 				Required:            true,
 				Description:         "The title of the Billing Rule.",
@@ -214,6 +228,7 @@ func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaReq
 						"adjustment",
 						"credit",
 						"charge",
+						"custom",
 					),
 				},
 			},

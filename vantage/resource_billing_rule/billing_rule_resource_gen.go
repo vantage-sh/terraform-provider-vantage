@@ -61,6 +61,11 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The service of the BillingRule.",
 				MarkdownDescription: "The service of the BillingRule.",
 			},
+			"sql_query": schema.StringAttribute{
+				Required:            true,
+				Description:         "UPDATE costs SET costs.amount = costs.amount * 0.95",
+				MarkdownDescription: "UPDATE costs SET costs.amount = costs.amount * 0.95",
+			},
 			"start_date": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -97,6 +102,7 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 						"adjustment",
 						"credit",
 						"charge",
+						"custom",
 					),
 				},
 			},
@@ -114,6 +120,7 @@ type BillingRuleModel struct {
 	EndDate        types.String  `tfsdk:"end_date"`
 	Percentage     types.Float64 `tfsdk:"percentage"`
 	Service        types.String  `tfsdk:"service"`
+	SqlQuery       types.String  `tfsdk:"sql_query"`
 	StartDate      types.String  `tfsdk:"start_date"`
 	StartPeriod    types.String  `tfsdk:"start_period"`
 	SubCategory    types.String  `tfsdk:"sub_category"`
