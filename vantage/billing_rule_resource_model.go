@@ -115,9 +115,9 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		m.SubCategory = types.StringValue(payload.SubCategory)
 	}
 
-		if payload.SQLQuery != "" {
-			m.SqlQuery = types.StringValue(payload.SQLQuery)
-		}
+	if payload.SQLQuery != "" {
+		m.SqlQuery = types.StringValue(payload.SQLQuery)
+	}
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
 	m.Type = types.StringValue(payload.Type)
