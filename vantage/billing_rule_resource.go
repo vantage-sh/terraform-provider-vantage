@@ -3,13 +3,12 @@ package vantage
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_rule"
 	billingrulesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/billing_rules"
 )
 
@@ -135,105 +134,20 @@ func (r *billingRuleResource) ValidateConfig(ctx context.Context, req resource.V
 }
 
 func (r *billingRuleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"amount": schema.Float64Attribute{
-				Optional:            true,
-				Description:         "The credit amount for the Billing Rule. Example value: 300",
-				MarkdownDescription: "The credit amount for the Billing Rule. Example value: 300",
-			},
-			"apply_to_all": schema.BoolAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Determines if the BillingRule applies to all current and future managed accounts.",
-				MarkdownDescription: "Determines if the BillingRule applies to all current and future managed accounts.",
-			},
-			"category": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The category of the Billing Rule.",
-				MarkdownDescription: "The category of the Billing Rule.",
-			},
-			"charge_type": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The charge type of the Billing Rule.",
-				MarkdownDescription: "The charge type of the Billing Rule.",
-			},
-			"created_at": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.",
-				MarkdownDescription: "The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.",
-			},
-			"created_by_token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token of the User who created the Billing Rule.",
-				MarkdownDescription: "The token of the User who created the Billing Rule.",
-			},
-			"end_date": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The end date of the BillingRule. ISO 8601 formatted.",
-				MarkdownDescription: "The end date of the BillingRule. ISO 8601 formatted.",
-			},
-			"percentage": schema.Float64Attribute{
-				Optional:            true,
-				Description:         "The percentage of the cost shown. Example value: 75.0",
-				MarkdownDescription: "The percentage of the cost shown. Example value: 75.0",
-			},
-			"service": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The service of the Billing Rule.",
-				MarkdownDescription: "The service of the Billing Rule.",
-			},
-			"start_date": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The start date of the BillingRule. ISO 8601 formatted.",
-				MarkdownDescription: "The start date of the BillingRule. ISO 8601 formatted.",
-			},
-			"start_period": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The start period of the Billing Rule.",
-				MarkdownDescription: "The start period of the Billing Rule.",
-			},
-			"sub_category": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The subcategory of the Billing Rule.",
-				MarkdownDescription: "The subcategory of the Billing Rule.",
-			},
-			"sql_query": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The SQL query of the Billing Rule.",
-				MarkdownDescription: "The SQL query of the Billing Rule.",
-			},
-			"title": schema.StringAttribute{
-				Required:            true,
-				Description:         "The title of the Billing Rule.",
-				MarkdownDescription: "The title of the Billing Rule.",
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The token of the billing rule",
-				MarkdownDescription: "The token of the billing rule",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"type": schema.StringAttribute{
-				Required:            true,
-				Description:         "The type of the Billing Rule. Note: the values are case insensitive.",
-				MarkdownDescription: "The type of the Billing Rule. Note: the values are case insensitive.",
-				Validators: []validator.String{
-					stringvalidator.OneOf(
-						"exclusion",
-						"adjustment",
-						"credit",
-						"charge",
-						"custom",
-					),
-				},
-			},
+	s := resource_billing_rule.BillingRuleResourceSchema(ctx)
+
+	attrs := s.GetAttributes()
+
+	// Override the token field with a PlanModifier
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+
+	resp.Schema = s
 }
 
 func (r *billingRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
