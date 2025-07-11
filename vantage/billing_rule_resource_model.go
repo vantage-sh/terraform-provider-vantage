@@ -127,17 +127,17 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 
 func (m *billingRuleModel) toCreateModel(_ context.Context, _ *diag.Diagnostics) *modelsv2.CreateBillingRule {
 	return &modelsv2.CreateBillingRule{
-		Percentage:  m.Percentage.ValueFloat64Pointer(),
-		Amount:      m.Amount.ValueFloat64Pointer(),
+		Percentage:  m.Percentage.ValueFloat64(),
+		Amount:      m.Amount.ValueFloat64(),
 		ApplyToAll:  m.ApplyToAll.ValueBool(),
 		StartDate:   m.StartDate.ValueString(),
 		EndDate:     m.EndDate.ValueString(),
-		Category:    m.Category.ValueStringPointer(),
-		ChargeType:  m.ChargeType.ValueStringPointer(),
-		Service:     m.Service.ValueStringPointer(),
-		StartPeriod: m.StartPeriod.ValueStringPointer(),
-		SubCategory: m.SubCategory.ValueStringPointer(),
-		SQLQuery:    m.SqlQuery.ValueStringPointer(),
+		Category:    m.Category.ValueString(),
+		ChargeType:  m.ChargeType.ValueString(),
+		Service:     m.Service.ValueString(),
+		StartPeriod: m.StartPeriod.ValueString(),
+		SubCategory: m.SubCategory.ValueString(),
+		SQLQuery:    m.SqlQuery.ValueString(),
 		Title:       m.Title.ValueStringPointer(),
 		Type:        m.Type.ValueStringPointer(),
 	}
