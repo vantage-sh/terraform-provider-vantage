@@ -15,9 +15,10 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"amount": schema.Float64Attribute{
-				Required:            true,
-				Description:         "The amount for the BillingRule. Example value: 300",
-				MarkdownDescription: "The amount for the BillingRule. Example value: 300",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The amount for the BillingRule. Required for Charge and Credit rules. Example value: 300",
+				MarkdownDescription: "The amount for the BillingRule. Required for Charge and Credit rules. Example value: 300",
 			},
 			"apply_to_all": schema.BoolAttribute{
 				Optional:            true,
@@ -26,14 +27,16 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Determines if the BillingRule applies to all current and future managed accounts.",
 			},
 			"category": schema.StringAttribute{
-				Required:            true,
-				Description:         "The category of the BillingRule.",
-				MarkdownDescription: "The category of the BillingRule.",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The category of the BillingRule. Required for Charge and Credit rules.",
+				MarkdownDescription: "The category of the BillingRule. Required for Charge and Credit rules.",
 			},
 			"charge_type": schema.StringAttribute{
-				Required:            true,
-				Description:         "The charge type of the BillingRule.",
-				MarkdownDescription: "The charge type of the BillingRule.",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The charge type of the BillingRule. Required for Exclusion rules.",
+				MarkdownDescription: "The charge type of the BillingRule. Required for Exclusion rules.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
@@ -52,14 +55,22 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The end date of the BillingRule. ISO 8601 formatted.",
 			},
 			"percentage": schema.Float64Attribute{
-				Required:            true,
-				Description:         "The percentage of the cost shown. Example value: 75.0",
-				MarkdownDescription: "The percentage of the cost shown. Example value: 75.0",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The percentage of the cost shown. Required for Adjustment rules. Example value: 75.0",
+				MarkdownDescription: "The percentage of the cost shown. Required for Adjustment rules. Example value: 75.0",
 			},
 			"service": schema.StringAttribute{
-				Required:            true,
-				Description:         "The service of the BillingRule.",
-				MarkdownDescription: "The service of the BillingRule.",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The service of the BillingRule. Required for Charge and Credit rules.",
+				MarkdownDescription: "The service of the BillingRule. Required for Charge and Credit rules.",
+			},
+			"sql_query": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The SQL query for the BillingRule. Required for Custom rules. Example value: UPDATE costs SET costs.amount = costs.amount * 0.95",
+				MarkdownDescription: "The SQL query for the BillingRule. Required for Custom rules. Example value: UPDATE costs SET costs.amount = costs.amount * 0.95",
 			},
 			"start_date": schema.StringAttribute{
 				Optional:            true,
@@ -68,14 +79,16 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The start date of the BillingRule. ISO 8601 formatted.",
 			},
 			"start_period": schema.StringAttribute{
-				Required:            true,
-				Description:         "The start period of the BillingRule.",
-				MarkdownDescription: "The start period of the BillingRule.",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The start period of the BillingRule. DEPRECATED: use start_date instead.",
+				MarkdownDescription: "The start period of the BillingRule. DEPRECATED: use start_date instead.",
 			},
 			"sub_category": schema.StringAttribute{
-				Required:            true,
-				Description:         "The subcategory of the BillingRule.",
-				MarkdownDescription: "The subcategory of the BillingRule.",
+				Optional:            true,
+				Computed:            true,
+				Description:         "The subcategory of the BillingRule. Required for Charge and Credit rules.",
+				MarkdownDescription: "The subcategory of the BillingRule. Required for Charge and Credit rules.",
 			},
 			"title": schema.StringAttribute{
 				Required:            true,
@@ -97,6 +110,7 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 						"adjustment",
 						"credit",
 						"charge",
+						"custom",
 					),
 				},
 			},
@@ -114,6 +128,7 @@ type BillingRuleModel struct {
 	EndDate        types.String  `tfsdk:"end_date"`
 	Percentage     types.Float64 `tfsdk:"percentage"`
 	Service        types.String  `tfsdk:"service"`
+	SqlQuery       types.String  `tfsdk:"sql_query"`
 	StartDate      types.String  `tfsdk:"start_date"`
 	StartPeriod    types.String  `tfsdk:"start_period"`
 	SubCategory    types.String  `tfsdk:"sub_category"`

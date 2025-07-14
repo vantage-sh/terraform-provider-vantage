@@ -23,6 +23,7 @@ type datasourceBillingRuleModel struct {
 	Service        types.String `tfsdk:"service"`
 	StartPeriod    types.String `tfsdk:"start_period"`
 	SubCategory    types.String `tfsdk:"sub_category"`
+	SqlQuery       types.String `tfsdk:"sql_query"`
 	Title          types.String `tfsdk:"title"`
 	Token          types.String `tfsdk:"token"`
 	Type           types.String `tfsdk:"type"`
@@ -47,6 +48,7 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 		Service:        m.Service,
 		StartPeriod:    m.StartPeriod,
 		SubCategory:    m.SubCategory,
+		SqlQuery:       m.SqlQuery,
 		Title:          m.Title,
 		Token:          m.Token,
 		Type:           m.Type,
@@ -112,6 +114,10 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 	if payload.SubCategory != "" {
 		m.SubCategory = types.StringValue(payload.SubCategory)
 	}
+
+	if payload.SQLQuery != "" {
+		m.SqlQuery = types.StringValue(payload.SQLQuery)
+	}
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
 	m.Type = types.StringValue(payload.Type)
@@ -121,16 +127,17 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 
 func (m *billingRuleModel) toCreateModel(_ context.Context, _ *diag.Diagnostics) *modelsv2.CreateBillingRule {
 	return &modelsv2.CreateBillingRule{
-		Percentage:  m.Percentage.ValueFloat64Pointer(),
-		Amount:      m.Amount.ValueFloat64Pointer(),
+		Percentage:  m.Percentage.ValueFloat64(),
+		Amount:      m.Amount.ValueFloat64(),
 		ApplyToAll:  m.ApplyToAll.ValueBool(),
 		StartDate:   m.StartDate.ValueString(),
 		EndDate:     m.EndDate.ValueString(),
-		Category:    m.Category.ValueStringPointer(),
-		ChargeType:  m.ChargeType.ValueStringPointer(),
-		Service:     m.Service.ValueStringPointer(),
-		StartPeriod: m.StartPeriod.ValueStringPointer(),
-		SubCategory: m.SubCategory.ValueStringPointer(),
+		Category:    m.Category.ValueString(),
+		ChargeType:  m.ChargeType.ValueString(),
+		Service:     m.Service.ValueString(),
+		StartPeriod: m.StartPeriod.ValueString(),
+		SubCategory: m.SubCategory.ValueString(),
+		SQLQuery:    m.SqlQuery.ValueString(),
 		Title:       m.Title.ValueStringPointer(),
 		Type:        m.Type.ValueStringPointer(),
 	}
@@ -149,6 +156,7 @@ func (m *billingRuleModel) toUpdateModel(_ context.Context, _ *diag.Diagnostics)
 		Service:     m.Service.ValueString(),
 		StartPeriod: m.StartPeriod.ValueString(),
 		SubCategory: m.SubCategory.ValueString(),
+		SQLQuery:    m.SqlQuery.ValueString(),
 		Title:       m.Title.ValueString(),
 	}
 }
