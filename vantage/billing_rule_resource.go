@@ -62,22 +62,6 @@ func (r *billingRuleResource) ValidateConfig(ctx context.Context, req resource.V
 				"Expected percentage to be configured with adjustment type",
 			)
 		}
-
-		if data.Service.IsNull() {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("service"),
-				"Missing Attribute Configuration",
-				"Expected service to be configured with adjustment type",
-			)
-		}
-
-		if data.Category.IsNull() {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("category"),
-				"Missing Attribute Configuration",
-				"Expected category to be configured with adjustment type",
-			)
-		}
 	}
 
 	if data.Type.ValueString() == "credit" || data.Type.ValueString() == "charge" {
@@ -105,11 +89,11 @@ func (r *billingRuleResource) ValidateConfig(ctx context.Context, req resource.V
 			)
 		}
 
-		if data.StartPeriod.IsNull() {
+		if data.StartDate.IsNull() && data.StartPeriod.IsNull() {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("start_period"),
+				path.Root("start_date"),
 				"Missing Attribute Configuration",
-				"Expected start_period to be configured with credit or charge type",
+				"Expected start_date to be configured with credit or charge type",
 			)
 		}
 
