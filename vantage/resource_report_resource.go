@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	resourcereportsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/resource_reports"
 )
 
@@ -44,6 +45,13 @@ func (r *resourceReportResource) Metadata(ctx context.Context, req resource.Meta
 func (r *resourceReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"columns": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Array of column names to display in the table. Column names should match those returned by the /resource_reports/columns endpoint. The order determines the display order. Only available for reports with a single resource type filter.",
+				MarkdownDescription: "Array of column names to display in the table. Column names should match those returned by the /resource_reports/columns endpoint. The order determines the display order. Only available for reports with a single resource type filter.",
+			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The date and time, in UTC, the report was created. ISO 8601 Formatted.",
