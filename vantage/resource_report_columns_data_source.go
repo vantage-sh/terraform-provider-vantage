@@ -27,7 +27,6 @@ type resourceReportColumnsDataSource struct {
 	client *Client
 }
 
-// Configure implements datasource.DataSourceWithConfigure.
 func (d *resourceReportColumnsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -36,12 +35,10 @@ func (d *resourceReportColumnsDataSource) Configure(_ context.Context, req datas
 	d.client = req.ProviderData.(*Client)
 }
 
-// Metadata implements datasource.DataSource.
 func (d *resourceReportColumnsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_resource_report_columns"
 }
 
-// Read implements datasource.DataSource.
 func (d *resourceReportColumnsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config resourceReportColumnsDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
@@ -50,7 +47,7 @@ func (d *resourceReportColumnsDataSource) Read(ctx context.Context, req datasour
 	}
 
 	resourceType := config.ResourceType.ValueString()
-	
+
 	params := resourcereportsv2.NewGetResourceReportColumnsParams().WithResourceType(resourceType)
 	out, err := d.client.V2.ResourceReports.GetResourceReportColumns(params, d.client.Auth)
 	if err != nil {
@@ -64,8 +61,7 @@ func (d *resourceReportColumnsDataSource) Read(ctx context.Context, req datasour
 
 	var state resourceReportColumnsDataSourceModel
 	state.ResourceType = types.StringValue(resourceType)
-	
-	// Convert response columns to terraform types
+
 	state.Columns = make([]types.String, len(out.Payload.Columns))
 	for i, column := range out.Payload.Columns {
 		state.Columns[i] = types.StringValue(column)
@@ -75,7 +71,6 @@ func (d *resourceReportColumnsDataSource) Read(ctx context.Context, req datasour
 	resp.Diagnostics.Append(diags...)
 }
 
-// Schema implements datasource.DataSource.
 func (d *resourceReportColumnsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         "Data source for retrieving available columns for a specific resource type in resource reports.",
