@@ -348,3 +348,9 @@ data_sources:
         - limit
         - links
         - page
+  resource_report_columns:
+    read:
+      path: /resource_reports/columns
+      method: GET
+    schema:
+      ignores: []
