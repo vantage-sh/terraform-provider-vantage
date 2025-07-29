@@ -29,6 +29,7 @@ resource "vantage_resource_report" "demo_resource_report" {
 
 ### Optional
 
+- `columns` (List of String) Array of column names to display in the table. Column names should match those returned by the /resource_reports/columns endpoint. The order determines the display order. Only available for reports with a single resource type filter.
 - `filter` (String) The VQL filter for the ResourceReport.
 - `title` (String) The title of the ResourceReport.
 
