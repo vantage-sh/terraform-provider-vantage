@@ -49,6 +49,17 @@ func TestAccBillingRule_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment", "percentage", "60"),
 				),
 			},
+			{ // create adjustment without service or category
+				Config: testAccBillingRule_adjustmentRequiredOnly("test_adjustment_required_only_title", 50),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment_required_only", "title", "test_adjustment_required_only_title"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment_required_only", "type", "adjustment"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment_required_only", "service", ""),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment_required_only", "category", ""),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_adjustment_required_only", "percentage", "50"),
+					resource.TestCheckResourceAttrSet("vantage_billing_rule.test_adjustment_required_only", "token"),
+				),
+			},
 			{
 				Config: testAccBillingRule_charge("test5", "service", "category", "subCategory", "2023-01-01", 0.7),
 				Check: resource.ComposeTestCheckFunc(
@@ -73,6 +84,19 @@ func TestAccBillingRule_basic(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccBillingRule_credit("test_credit_title", "service", "category", "subCategory", "2023-01-01", 0.7),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "title", "test_credit_title"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "service", "service"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "category", "category"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "sub_category", "subCategory"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "start_date", "2023-01-01"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "start_period", ""),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_credit", "amount", "0.7"),
+					resource.TestCheckResourceAttrSet("vantage_billing_rule.test_credit", "token"),
+				),
+			},
+			{
 				// create apply to all rule
 				Config: testAccBillingRule_applyToAll(true),
 				Check: resource.ComposeTestCheckFunc(
@@ -92,6 +116,24 @@ func TestAccBillingRule_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_rule.test_apply_to_all", "apply_to_all", "false"),
 				),
 			},
+			{
+				// create custom rule
+				Config: testAccBillingRule_custom("UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee' AND aws.product/ProductName = 'AWS Support'"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "title", "test_custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "type", "custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "sql_query", "UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee' AND aws.product/ProductName = 'AWS Support'"),
+				),
+			},
+			{
+				// update custom rule
+				Config: testAccBillingRule_custom("UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee'"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "title", "test_custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "type", "custom"),
+					resource.TestCheckResourceAttr("vantage_billing_rule.test_custom", "sql_query", "UPDATE aws SET aws.product/ProductFamily = 'Support'\nWHERE aws.lineItem/LineItemType = 'Fee'"),
+				),
+			},
 		},
 	})
 }
@@ -102,6 +144,13 @@ resource "vantage_billing_rule" "test_exclusion" {
   title = %[1]q
 	type = "exclusion"
 	charge_type = %[2]q
+	start_period = ""
+	amount = 0.0
+	percentage = 0.0
+	service = ""
+	category = ""
+	sub_category = ""
+	sql_query = ""
 }
 `, title, chargeType)
 }
@@ -113,9 +162,17 @@ resource "vantage_billing_rule" "test_apply_to_all" {
 	type = "exclusion"
 	charge_type = "RIFee"
 	apply_to_all = %[1]t
+	start_period = ""
+	amount = 0.0
+	percentage = 0.0
+	service = ""
+	category = ""
+	sub_category = ""
+	sql_query = ""
 }
 	`, applyToAll)
 }
+
 func testAccBillingRule_adjustment(title, service, category string, percentage float32) string {
 	return fmt.Sprintf(`
 resource "vantage_billing_rule" "test_adjustment" {
@@ -124,8 +181,30 @@ resource "vantage_billing_rule" "test_adjustment" {
 	service = %[2]q
 	category = %[3]q
 	percentage = %[4]f
+	start_period = ""
+	amount = 0.0
+	charge_type = ""
+	sub_category = ""
+	sql_query = ""
 }
 	`, title, service, category, percentage)
+}
+
+func testAccBillingRule_adjustmentRequiredOnly(title string, percentage float32) string {
+	return fmt.Sprintf(`
+resource "vantage_billing_rule" "test_adjustment_required_only" {
+	title = %[1]q
+	type = "adjustment"
+	service = ""
+	category = ""
+	percentage = %[2]f
+	start_period = ""
+	amount = 0.0
+	charge_type = ""
+	sub_category = ""
+	sql_query = ""
+}
+	`, title, percentage)
 }
 
 func testAccBillingRule_charge(title, service, category, subCategory, startPeriod string, amount float32) string {
@@ -138,6 +217,44 @@ func testAccBillingRule_charge(title, service, category, subCategory, startPerio
 		sub_category = %[4]q
 		start_period = %[5]q
 		amount = %[6]f
+		charge_type = ""
+		percentage = 0.0
+		sql_query = ""
 	}
 	`, title, service, category, subCategory, startPeriod, amount)
+}
+
+func testAccBillingRule_credit(title, service, category, subCategory, startDate string, amount float32) string {
+	return fmt.Sprintf(`
+	resource "vantage_billing_rule" "test_credit" {
+		title = %[1]q
+		type = "credit"
+		service = %[2]q
+		category = %[3]q
+		sub_category = %[4]q
+		start_date = %[5]q
+		start_period = ""
+		amount = %[6]f
+		charge_type = ""
+		percentage = 0.0
+		sql_query = ""
+	}
+	`, title, service, category, subCategory, startDate, amount)
+}
+
+func testAccBillingRule_custom(query string) string {
+	return fmt.Sprintf(`
+resource "vantage_billing_rule" "test_custom" {
+	title = "test_custom"
+	type = "custom"
+	sql_query = %[1]q
+	charge_type = ""
+	start_period = ""
+	amount = 0.0
+	percentage = 0.0
+	service = ""
+	category = ""
+	sub_category = ""
+}
+	`, query)
 }
