@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -54,6 +55,59 @@ resource "vantage_resource_report" "resource_report" {
 	filter = %[2]q
 }
 `, title, filter)
+}
+
+func TestAccResourceReportWithCustomColumns(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// create resource report with custom columns
+				Config: testAccResourceReportWithColumns("test-custom-columns", "resources.provider = 'aws' and resources.type = 'aws_instance'", []string{"provider", "label", "accruedCosts"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "title", "test-custom-columns"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.#", "3"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.0", "provider"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.1", "label"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.2", "accruedCosts"),
+				),
+			},
+			{
+				// update custom columns
+				Config: testAccResourceReportWithColumns("test-custom-columns-updated", "resources.provider = 'aws' and resources.type = 'aws_instance'", []string{"provider", "label", "accruedCosts"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "title", "test-custom-columns-updated"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.#", "3"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.0", "provider"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.1", "label"),
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "columns.2", "accruedCosts"),
+				),
+			},
+			{
+				// remove columns
+				Config: testAccResourceReport("test-no-columns", "resources.provider = 'aws'"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_resource_report.resource_report", "title", "test-no-columns"),
+					resource.TestCheckNoResourceAttr("vantage_resource_report.resource_report", "columns"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccResourceReportWithCustomColumnsMultiResourceTypeError(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// attempt to create resource report with custom columns and multi-resource type filter (should error)
+				Config:      testAccResourceReportWithColumns("test-multi-type-error", "resources.provider = 'aws' and (resources.type = 'aws_ebs_volume' or resources.type = 'aws_instance')", []string{"provider", "label", "region"}),
+				ExpectError: regexp.MustCompile("Custom columns can only be set for reports with a single resource type\\. Found 2 resource types: aws_ebs_volume, aws_instance"),
+			},
+		},
+	})
 }
 
 func testAccResourceReportWithColumns(title, filter string, columns []string) string {
