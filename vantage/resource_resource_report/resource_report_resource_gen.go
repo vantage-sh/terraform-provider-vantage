@@ -12,6 +12,13 @@ import (
 func ResourceReportResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"columns": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Array of column names to display in the table. Column names should match those returned by the /resource_reports/columns endpoint. The order determines the display order. Only available for reports with a single resource type filter.",
+				MarkdownDescription: "Array of column names to display in the table. Column names should match those returned by the /resource_reports/columns endpoint. The order determines the display order. Only available for reports with a single resource type filter.",
+			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The date and time, in UTC, the report was created. ISO 8601 Formatted.",
@@ -54,6 +61,7 @@ func ResourceReportResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type ResourceReportModel struct {
+	Columns        types.List   `tfsdk:"columns"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	CreatedByToken types.String `tfsdk:"created_by_token"`
 	Filter         types.String `tfsdk:"filter"`
