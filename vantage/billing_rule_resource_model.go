@@ -68,6 +68,8 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		}
 
 		m.Percentage = types.Float64Value(rate)
+	} else {
+		m.Percentage = types.Float64Value(0.0)
 	}
 
 	if payload.Amount != "" {
@@ -78,6 +80,8 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 			return d
 		}
 		m.Amount = types.Float64Value(amount)
+	} else {
+		m.Amount = types.Float64Value(0.0)
 	}
 
 	m.ApplyToAll = types.BoolValue(payload.ApplyToAll)
@@ -93,11 +97,17 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 	} else {
 		m.StartDate = types.StringNull()
 	}
+
 	if payload.Category != "" {
 		m.Category = types.StringValue(payload.Category)
+	} else {
+		m.Category = types.StringNull()
 	}
+
 	if payload.ChargeType != "" {
 		m.ChargeType = types.StringValue(payload.ChargeType)
+	} else {
+		m.ChargeType = types.StringNull()
 	}
 
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
@@ -105,19 +115,28 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 
 	if payload.Service != "" {
 		m.Service = types.StringValue(payload.Service)
+	} else {
+		m.Service = types.StringNull()
 	}
 
 	if payload.StartPeriod != "" {
 		m.StartPeriod = types.StringValue(payload.StartPeriod)
+	} else {
+		m.StartPeriod = types.StringNull()
 	}
 
 	if payload.SubCategory != "" {
 		m.SubCategory = types.StringValue(payload.SubCategory)
+	} else {
+		m.SubCategory = types.StringNull()
 	}
 
 	if payload.SQLQuery != "" {
 		m.SqlQuery = types.StringValue(payload.SQLQuery)
+	} else {
+		m.SqlQuery = types.StringNull()
 	}
+
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
 	m.Type = types.StringValue(payload.Type)
