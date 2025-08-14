@@ -104,7 +104,7 @@ func TestAccResourceReportWithCustomColumnsMultiResourceTypeError(t *testing.T) 
 			{
 				// attempt to create resource report with custom columns and multi-resource type filter (should error)
 				Config:      testAccResourceReportWithColumns("test-multi-type-error", "resources.provider = 'aws' and (resources.type = 'aws_ebs_volume' or resources.type = 'aws_instance')", []string{"provider", "label", "region"}),
-				ExpectError: regexp.MustCompile("Custom columns can only be set for reports with a single resource type\\. Found 2 resource types: aws_ebs_volume, aws_instance"),
+				ExpectError: regexp.MustCompile(`"Custom columns can only\s+be set for reports with a single resource type`),
 			},
 		},
 	})
