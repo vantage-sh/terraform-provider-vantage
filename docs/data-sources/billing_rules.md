@@ -33,6 +33,7 @@ Read-Only:
 - `end_date` (String) The end date of the BillingRule.
 - `percentage` (String) The percentage of the cost shown for the BillingRule (Adjustment).
 - `service` (String) The service for the BillingRule (Charge).
+- `sql_query` (String) The SQL query for the BillingRule (Custom).
 - `start_date` (String) The start date of the BillingRule.
 - `start_period` (String) The start period for the BillingRule (Charge).
 - `sub_category` (String) The subcategory for the BillingRule (Charge).

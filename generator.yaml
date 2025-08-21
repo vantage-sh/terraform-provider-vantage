@@ -259,6 +259,46 @@ resources:
     delete:
       path: /virtual_tag_configs/{token}
       method: DELETE
+  invoice:
+    create:
+      path: /invoices
+      method: POST
+    read:
+      path: /invoices/{invoice_token}
+      method: GET
+    update:
+      path: /invoices/{invoice_token}
+      method: PUT
+    delete:
+      path: /invoices/{invoice_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the invoice
+        aliases:
+          invoice_token: token
+  billing_profile:
+    create:
+      path: /billing_profiles
+      method: POST
+    read:
+      path: /billing_profiles/{billing_profile_token}
+      method: GET
+    update:
+      path: /billing_profiles/{billing_profile_token}
+      method: PUT
+    delete:
+      path: /billing_profiles/{billing_profile_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the billing profile
+        aliases:
+          billing_profile_token: token
 data_sources:
   billing_rules:
     read:
@@ -374,3 +414,21 @@ data_sources:
       method: GET
     schema:
       ignores: []
+  invoices:
+    read:
+      path: /invoices
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  billing_profiles:
+    read:
+      path: /billing_profiles
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
