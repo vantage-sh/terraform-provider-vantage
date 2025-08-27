@@ -26,6 +26,7 @@ func (m *networkFlowReportResourceModel) applyPayload(ctx context.Context, paylo
 	m.StartDate = types.StringValue(payload.StartDate)
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 	m.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 	groupings := strings.Split(payload.Groupings, ",")
 

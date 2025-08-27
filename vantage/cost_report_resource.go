@@ -31,6 +31,7 @@ func NewCostReportResource() resource.Resource {
 
 type CostReportResourceModel struct {
 	Token                   types.String `tfsdk:"token"`
+	Id                      types.String `tfsdk:"id"`
 	Title                   types.String `tfsdk:"title"`
 	FolderToken             types.String `tfsdk:"folder_token"`
 	Filter                  types.String `tfsdk:"filter"`
@@ -136,6 +137,13 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Unique cost report identifier (aliases to token)",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 		MarkdownDescription: "Manages a CostReport.",
 	}
@@ -185,6 +193,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.Id = types.StringValue(out.Payload.Token)
 	data.Filter = types.StringValue(out.Payload.Filter)
 	data.Groupings = types.StringValue(out.Payload.Groupings)
 	data.StartDate = types.StringValue(out.Payload.StartDate)
@@ -228,6 +237,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
+	state.Id = types.StringValue(out.Payload.Token)
 	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.Filter = types.StringValue(out.Payload.Filter)
@@ -252,7 +262,10 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r CostReportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
+	// Set BOTH id and token from the provided ID
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), types.StringValue(req.ID))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token"), types.StringValue(req.ID))...)
+
 }
 
 func (r CostReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -319,6 +332,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 	data.SavedFilterTokens = savedFilterTokensValue
 
+	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

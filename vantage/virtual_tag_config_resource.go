@@ -57,6 +57,13 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The id of the VirtualTagConfig.",
+				// PlanModifiers: []planmodifier.String{
+				// 	stringplanmodifier.UseStateForUnknown(),
+				// },
+			},
 			"values": schema.ListNestedAttribute{
 				Optional: true,
 				Computed: true,

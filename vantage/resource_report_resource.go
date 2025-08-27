@@ -82,6 +82,14 @@ func (r *resourceReportResource) Schema(ctx context.Context, req resource.Schema
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The token of the report",
+				MarkdownDescription: "The token of the report",
+				// PlanModifiers: []planmodifier.String{
+				// 	stringplanmodifier.UseStateForUnknown(),
+				// },
+			},
 			"user_token": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The token for the User who created this ResourceReport.",

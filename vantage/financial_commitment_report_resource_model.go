@@ -18,6 +18,7 @@ func (m *financialCommitmentReportModel) applyPayload(ctx context.Context, paylo
 	m.UserToken = types.StringValue(payload.UserToken)
 	m.Filter = types.StringValue(payload.Filter)
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
 	m.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 	m.DateBucket = types.StringValue(payload.DateBucket)

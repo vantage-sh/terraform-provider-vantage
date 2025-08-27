@@ -18,6 +18,7 @@ func (m *costAlertModel) applyPayload(ctx context.Context, payload *modelsv2.Cos
 	var list types.List
 
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
 	m.Interval = types.StringValue(payload.Interval)
 	m.UnitType = types.StringValue(payload.UnitType)
