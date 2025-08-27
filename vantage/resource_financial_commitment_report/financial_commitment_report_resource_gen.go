@@ -26,6 +26,7 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 				MarkdownDescription: "The date bucket of the FinancialCommitmentReport.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
+						"hour",
 						"day",
 						"week",
 						"month",
@@ -51,6 +52,7 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 						"last_36_months",
 						"year_to_date",
 						"last_3_days",
+						"last_14_days",
 					),
 				},
 			},

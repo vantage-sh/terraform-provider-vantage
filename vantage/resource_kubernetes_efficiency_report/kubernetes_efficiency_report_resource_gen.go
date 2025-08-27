@@ -68,6 +68,7 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 						"next_12_months",
 						"year_to_date",
 						"last_3_days",
+						"last_14_days",
 					),
 				},
 			},
@@ -92,8 +93,8 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.",
-				MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.",
+				Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
+				MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
 			},
 			"start_date": schema.StringAttribute{
 				Optional:            true,

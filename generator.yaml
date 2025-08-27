@@ -226,6 +226,26 @@ resources:
             description: The token of the report
         aliases:
           resource_report_token: token
+  team:
+    create:
+      path: /teams
+      method: POST
+    read:
+      path: /teams/{team_token}
+      method: GET
+    update:
+      path: /teams/{team_token}
+      method: PUT
+    delete:
+      path: /teams/{team_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the team
+        aliases:
+          team_token: token
   virtual_tag_config:
     create:
       path: /virtual_tag_configs

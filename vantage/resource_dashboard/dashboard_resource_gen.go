@@ -62,6 +62,7 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 						"next_12_months",
 						"year_to_date",
 						"last_3_days",
+						"last_14_days",
 					),
 				},
 			},
