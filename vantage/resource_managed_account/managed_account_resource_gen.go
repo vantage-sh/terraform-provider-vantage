@@ -138,6 +138,11 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The contact email address for the Managed Account.",
 				MarkdownDescription: "The contact email address for the Managed Account.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the managed account",
+				MarkdownDescription: "The id of the managed account",
+			},
 			"msp_billing_profile_token": schema.StringAttribute{
 				Computed:            true,
 				Description:         "Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)",
@@ -168,6 +173,7 @@ type ManagedAccountModel struct {
 	BillingRuleTokens             types.List                         `tfsdk:"billing_rule_tokens"`
 	BusinessInformationAttributes BusinessInformationAttributesValue `tfsdk:"business_information_attributes"`
 	ContactEmail                  types.String                       `tfsdk:"contact_email"`
+	Id                            types.String                       `tfsdk:"id"`
 	MspBillingProfileToken        types.String                       `tfsdk:"msp_billing_profile_token"`
 	Name                          types.String                       `tfsdk:"name"`
 	ParentAccountToken            types.String                       `tfsdk:"parent_account_token"`

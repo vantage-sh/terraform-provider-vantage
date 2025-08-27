@@ -80,6 +80,11 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 				Description:         "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
 				MarkdownDescription: "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the report",
+				MarkdownDescription: "The id of the report",
+			},
 			"on_demand_costs_scope": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -130,6 +135,7 @@ type FinancialCommitmentReportModel struct {
 	EndDate            types.String `tfsdk:"end_date"`
 	Filter             types.String `tfsdk:"filter"`
 	Groupings          types.List   `tfsdk:"groupings"`
+	Id                 types.String `tfsdk:"id"`
 	OnDemandCostsScope types.String `tfsdk:"on_demand_costs_scope"`
 	StartDate          types.String `tfsdk:"start_date"`
 	Title              types.String `tfsdk:"title"`

@@ -96,6 +96,11 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 				Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
 				MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the report",
+				MarkdownDescription: "The id of the report",
+			},
 			"start_date": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -135,6 +140,7 @@ type KubernetesEfficiencyReportModel struct {
 	EndDate        types.String `tfsdk:"end_date"`
 	Filter         types.String `tfsdk:"filter"`
 	Groupings      types.List   `tfsdk:"groupings"`
+	Id             types.String `tfsdk:"id"`
 	StartDate      types.String `tfsdk:"start_date"`
 	Title          types.String `tfsdk:"title"`
 	Token          types.String `tfsdk:"token"`

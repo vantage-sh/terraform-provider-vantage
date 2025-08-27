@@ -20,6 +20,11 @@ func TeamResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The description of the Team.",
 				MarkdownDescription: "The description of the Team.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the team",
+				MarkdownDescription: "The id of the team",
+			},
 			"name": schema.StringAttribute{
 				Required:            true,
 				Description:         "The name of the Team.",
@@ -70,6 +75,7 @@ func TeamResourceSchema(ctx context.Context) schema.Schema {
 
 type TeamModel struct {
 	Description     types.String `tfsdk:"description"`
+	Id              types.String `tfsdk:"id"`
 	Name            types.String `tfsdk:"name"`
 	Role            types.String `tfsdk:"role"`
 	Token           types.String `tfsdk:"token"`

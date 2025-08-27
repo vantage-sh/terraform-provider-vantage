@@ -47,6 +47,11 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the Creator of the Budget.",
 				MarkdownDescription: "The token of the Creator of the Budget.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the budget",
+				MarkdownDescription: "The id of the budget",
+			},
 			"name": schema.StringAttribute{
 				Required:            true,
 				Description:         "The name of the Budget.",
@@ -138,6 +143,7 @@ type BudgetModel struct {
 	CostReportToken   types.String `tfsdk:"cost_report_token"`
 	CreatedAt         types.String `tfsdk:"created_at"`
 	CreatedByToken    types.String `tfsdk:"created_by_token"`
+	Id                types.String `tfsdk:"id"`
 	Name              types.String `tfsdk:"name"`
 	Performance       types.List   `tfsdk:"performance"`
 	Periods           types.List   `tfsdk:"periods"`

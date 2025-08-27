@@ -72,6 +72,11 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the dashboard",
+				MarkdownDescription: "The id of the dashboard",
+			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -158,6 +163,7 @@ type DashboardModel struct {
 	DateBin           types.String `tfsdk:"date_bin"`
 	DateInterval      types.String `tfsdk:"date_interval"`
 	EndDate           types.String `tfsdk:"end_date"`
+	Id                types.String `tfsdk:"id"`
 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 	StartDate         types.String `tfsdk:"start_date"`
 	Title             types.String `tfsdk:"title"`

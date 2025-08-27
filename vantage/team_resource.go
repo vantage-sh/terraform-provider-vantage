@@ -106,6 +106,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 
 	data.Description = types.StringValue(out.Payload.Description)
@@ -178,6 +179,7 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
+	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
 	state.Description = types.StringValue(out.Payload.Description)
 	// Role is not returned by API, preserve existing state value
@@ -208,7 +210,9 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r TeamResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
+	// Set BOTH id and token from the provided ID
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), types.StringValue(req.ID))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token"), types.StringValue(req.ID))...)
 }
 
 func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -286,7 +290,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 	data.UserEmails = userEmailsValue
-
+	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

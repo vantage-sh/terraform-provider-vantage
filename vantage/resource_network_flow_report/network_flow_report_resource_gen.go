@@ -85,6 +85,11 @@ func NetworkFlowReportResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Grouping values for aggregating data on the NetworkFlowReport. Valid groupings: account_id, az_id, dstaddr, dsthostname, flow_direction, interface_id, instance_id, peer_resource_uuid, peer_account_id, peer_vpc_id, peer_region, peer_az_id, peer_subnet_id, peer_interface_id, peer_instance_id, region, resource_uuid, srcaddr, srchostname, subnet_id, traffic_category, traffic_path, vpc_id.",
 				MarkdownDescription: "Grouping values for aggregating data on the NetworkFlowReport. Valid groupings: account_id, az_id, dstaddr, dsthostname, flow_direction, interface_id, instance_id, peer_resource_uuid, peer_account_id, peer_vpc_id, peer_region, peer_az_id, peer_subnet_id, peer_interface_id, peer_instance_id, region, resource_uuid, srcaddr, srchostname, subnet_id, traffic_category, traffic_path, vpc_id.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the report",
+				MarkdownDescription: "The id of the report",
+			},
 			"start_date": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -120,6 +125,7 @@ type NetworkFlowReportModel struct {
 	FlowDirection  types.String `tfsdk:"flow_direction"`
 	FlowWeight     types.String `tfsdk:"flow_weight"`
 	Groupings      types.List   `tfsdk:"groupings"`
+	Id             types.String `tfsdk:"id"`
 	StartDate      types.String `tfsdk:"start_date"`
 	Title          types.String `tfsdk:"title"`
 	Token          types.String `tfsdk:"token"`
