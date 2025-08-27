@@ -29,6 +29,7 @@ func NewTeamResource() resource.Resource {
 }
 
 type TeamResourceModel struct {
+	ID              types.String `tfsdk:"id"`
 	Name            types.String `tfsdk:"name"`
 	Description     types.String `tfsdk:"description"`
 	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
@@ -44,6 +45,13 @@ func (r *TeamResource) Metadata(_ context.Context, req resource.MetadataRequest,
 func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Terraform/Pulumi resource ID. Equals the team token.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Name of the team.",
 				Required:            true,
@@ -152,6 +160,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.ID = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 	data.Description = types.StringValue(out.Payload.Description)
 	if out.Payload.WorkspaceTokens != nil {
@@ -218,6 +227,7 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
+	state.ID = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
 	state.Description = types.StringValue(out.Payload.Description)
 
@@ -246,7 +256,9 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r TeamResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
+	// Set BOTH id and token from the provided ID
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), types.StringValue(req.ID))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token"), types.StringValue(req.ID))...)
 }
 
 func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
