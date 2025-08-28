@@ -41,6 +41,11 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The end date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.",
 							MarkdownDescription: "The end date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"saved_filter_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
@@ -217,6 +222,24 @@ func (t DashboardsType) ValueFromObject(ctx context.Context, in basetypes.Object
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	savedFilterTokensAttribute, ok := attributes["saved_filter_tokens"]
 
 	if !ok {
@@ -352,6 +375,7 @@ func (t DashboardsType) ValueFromObject(ctx context.Context, in basetypes.Object
 		DateBin:           dateBinVal,
 		DateInterval:      dateIntervalVal,
 		EndDate:           endDateVal,
+		Id:                idVal,
 		SavedFilterTokens: savedFilterTokensVal,
 		StartDate:         startDateVal,
 		Title:             titleVal,
@@ -498,6 +522,24 @@ func NewDashboardsValue(attributeTypes map[string]attr.Type, attributes map[stri
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewDashboardsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	savedFilterTokensAttribute, ok := attributes["saved_filter_tokens"]
 
 	if !ok {
@@ -633,6 +675,7 @@ func NewDashboardsValue(attributeTypes map[string]attr.Type, attributes map[stri
 		DateBin:           dateBinVal,
 		DateInterval:      dateIntervalVal,
 		EndDate:           endDateVal,
+		Id:                idVal,
 		SavedFilterTokens: savedFilterTokensVal,
 		StartDate:         startDateVal,
 		Title:             titleVal,
@@ -716,6 +759,7 @@ type DashboardsValue struct {
 	DateBin           basetypes.StringValue `tfsdk:"date_bin"`
 	DateInterval      basetypes.StringValue `tfsdk:"date_interval"`
 	EndDate           basetypes.StringValue `tfsdk:"end_date"`
+	Id                basetypes.StringValue `tfsdk:"id"`
 	SavedFilterTokens basetypes.ListValue   `tfsdk:"saved_filter_tokens"`
 	StartDate         basetypes.StringValue `tfsdk:"start_date"`
 	Title             basetypes.StringValue `tfsdk:"title"`
@@ -727,7 +771,7 @@ type DashboardsValue struct {
 }
 
 func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 11)
+	attrTypes := make(map[string]tftypes.Type, 12)
 
 	var val tftypes.Value
 	var err error
@@ -736,6 +780,7 @@ func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 	attrTypes["date_bin"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["date_interval"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["saved_filter_tokens"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
@@ -752,7 +797,7 @@ func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 11)
+		vals := make(map[string]tftypes.Value, 12)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -785,6 +830,14 @@ func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 		}
 
 		vals["end_date"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.SavedFilterTokens.ToTerraformValue(ctx)
 
@@ -910,6 +963,7 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"date_bin":      basetypes.StringType{},
 			"date_interval": basetypes.StringType{},
 			"end_date":      basetypes.StringType{},
+			"id":            basetypes.StringType{},
 			"saved_filter_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -930,6 +984,7 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"date_bin":      basetypes.StringType{},
 			"date_interval": basetypes.StringType{},
 			"end_date":      basetypes.StringType{},
+			"id":            basetypes.StringType{},
 			"saved_filter_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -947,6 +1002,7 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"date_bin":            v.DateBin,
 			"date_interval":       v.DateInterval,
 			"end_date":            v.EndDate,
+			"id":                  v.Id,
 			"saved_filter_tokens": savedFilterTokensVal,
 			"start_date":          v.StartDate,
 			"title":               v.Title,
@@ -987,6 +1043,10 @@ func (v DashboardsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.EndDate.Equal(other.EndDate) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -1035,6 +1095,7 @@ func (v DashboardsValue) AttributeTypes(ctx context.Context) map[string]attr.Typ
 		"date_bin":      basetypes.StringType{},
 		"date_interval": basetypes.StringType{},
 		"end_date":      basetypes.StringType{},
+		"id":            basetypes.StringType{},
 		"saved_filter_tokens": basetypes.ListType{
 			ElemType: types.StringType,
 		},

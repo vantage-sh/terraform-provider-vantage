@@ -61,6 +61,11 @@ func KubernetesEfficiencyReportsDataSourceSchema(ctx context.Context) schema.Sch
 							Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
 							MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"start_date": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The start date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.",
@@ -270,6 +275,24 @@ func (t KubernetesEfficiencyReportsType) ValueFromObject(ctx context.Context, in
 			fmt.Sprintf(`groupings expected to be basetypes.StringValue, was: %T`, groupingsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	startDateAttribute, ok := attributes["start_date"]
 
 	if !ok {
@@ -373,6 +396,7 @@ func (t KubernetesEfficiencyReportsType) ValueFromObject(ctx context.Context, in
 		EndDate:        endDateVal,
 		Filter:         filterVal,
 		Groupings:      groupingsVal,
+		Id:             idVal,
 		StartDate:      startDateVal,
 		Title:          titleVal,
 		Token:          tokenVal,
@@ -589,6 +613,24 @@ func NewKubernetesEfficiencyReportsValue(attributeTypes map[string]attr.Type, at
 			fmt.Sprintf(`groupings expected to be basetypes.StringValue, was: %T`, groupingsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewKubernetesEfficiencyReportsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	startDateAttribute, ok := attributes["start_date"]
 
 	if !ok {
@@ -692,6 +734,7 @@ func NewKubernetesEfficiencyReportsValue(attributeTypes map[string]attr.Type, at
 		EndDate:        endDateVal,
 		Filter:         filterVal,
 		Groupings:      groupingsVal,
+		Id:             idVal,
 		StartDate:      startDateVal,
 		Title:          titleVal,
 		Token:          tokenVal,
@@ -777,6 +820,7 @@ type KubernetesEfficiencyReportsValue struct {
 	EndDate        basetypes.StringValue `tfsdk:"end_date"`
 	Filter         basetypes.StringValue `tfsdk:"filter"`
 	Groupings      basetypes.StringValue `tfsdk:"groupings"`
+	Id             basetypes.StringValue `tfsdk:"id"`
 	StartDate      basetypes.StringValue `tfsdk:"start_date"`
 	Title          basetypes.StringValue `tfsdk:"title"`
 	Token          basetypes.StringValue `tfsdk:"token"`
@@ -786,7 +830,7 @@ type KubernetesEfficiencyReportsValue struct {
 }
 
 func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 13)
+	attrTypes := make(map[string]tftypes.Type, 14)
 
 	var val tftypes.Value
 	var err error
@@ -799,6 +843,7 @@ func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) 
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["groupings"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -809,7 +854,7 @@ func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) 
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 13)
+		vals := make(map[string]tftypes.Value, 14)
 
 		val, err = v.AggregatedBy.ToTerraformValue(ctx)
 
@@ -874,6 +919,14 @@ func (v KubernetesEfficiencyReportsValue) ToTerraformValue(ctx context.Context) 
 		}
 
 		vals["groupings"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.StartDate.ToTerraformValue(ctx)
 
@@ -954,6 +1007,7 @@ func (v KubernetesEfficiencyReportsValue) ToObjectValue(ctx context.Context) (ba
 			"end_date":        basetypes.StringType{},
 			"filter":          basetypes.StringType{},
 			"groupings":       basetypes.StringType{},
+			"id":              basetypes.StringType{},
 			"start_date":      basetypes.StringType{},
 			"title":           basetypes.StringType{},
 			"token":           basetypes.StringType{},
@@ -969,6 +1023,7 @@ func (v KubernetesEfficiencyReportsValue) ToObjectValue(ctx context.Context) (ba
 			"end_date":        v.EndDate,
 			"filter":          v.Filter,
 			"groupings":       v.Groupings,
+			"id":              v.Id,
 			"start_date":      v.StartDate,
 			"title":           v.Title,
 			"token":           v.Token,
@@ -1026,6 +1081,10 @@ func (v KubernetesEfficiencyReportsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Id.Equal(other.Id) {
+		return false
+	}
+
 	if !v.StartDate.Equal(other.StartDate) {
 		return false
 	}
@@ -1067,6 +1126,7 @@ func (v KubernetesEfficiencyReportsValue) AttributeTypes(ctx context.Context) ma
 		"end_date":        basetypes.StringType{},
 		"filter":          basetypes.StringType{},
 		"groupings":       basetypes.StringType{},
+		"id":              basetypes.StringType{},
 		"start_date":      basetypes.StringType{},
 		"title":           basetypes.StringType{},
 		"token":           basetypes.StringType{},

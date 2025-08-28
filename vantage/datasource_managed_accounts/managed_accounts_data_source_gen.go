@@ -137,6 +137,11 @@ func ManagedAccountsDataSourceSchema(ctx context.Context) schema.Schema {
 						"contact_email": schema.StringAttribute{
 							Computed: true,
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"msp_billing_profile_token": schema.StringAttribute{
 							Computed:            true,
 							Description:         "Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)",
@@ -285,6 +290,24 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`contact_email expected to be basetypes.StringValue, was: %T`, contactEmailAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	mspBillingProfileTokenAttribute, ok := attributes["msp_billing_profile_token"]
 
 	if !ok {
@@ -367,6 +390,7 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 		BillingRuleTokens:             billingRuleTokensVal,
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		ContactEmail:                  contactEmailVal,
+		Id:                            idVal,
 		MspBillingProfileToken:        mspBillingProfileTokenVal,
 		Name:                          nameVal,
 		ParentAccountToken:            parentAccountTokenVal,
@@ -528,6 +552,24 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`contact_email expected to be basetypes.StringValue, was: %T`, contactEmailAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewManagedAccountsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	mspBillingProfileTokenAttribute, ok := attributes["msp_billing_profile_token"]
 
 	if !ok {
@@ -610,6 +652,7 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 		BillingRuleTokens:             billingRuleTokensVal,
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		ContactEmail:                  contactEmailVal,
+		Id:                            idVal,
 		MspBillingProfileToken:        mspBillingProfileTokenVal,
 		Name:                          nameVal,
 		ParentAccountToken:            parentAccountTokenVal,
@@ -691,6 +734,7 @@ type ManagedAccountsValue struct {
 	BillingRuleTokens             basetypes.ListValue   `tfsdk:"billing_rule_tokens"`
 	BusinessInformationAttributes basetypes.ObjectValue `tfsdk:"business_information_attributes"`
 	ContactEmail                  basetypes.StringValue `tfsdk:"contact_email"`
+	Id                            basetypes.StringValue `tfsdk:"id"`
 	MspBillingProfileToken        basetypes.StringValue `tfsdk:"msp_billing_profile_token"`
 	Name                          basetypes.StringValue `tfsdk:"name"`
 	ParentAccountToken            basetypes.StringValue `tfsdk:"parent_account_token"`
@@ -699,7 +743,7 @@ type ManagedAccountsValue struct {
 }
 
 func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 9)
+	attrTypes := make(map[string]tftypes.Type, 10)
 
 	var val tftypes.Value
 	var err error
@@ -717,6 +761,7 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["contact_email"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["msp_billing_profile_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["parent_account_token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -726,7 +771,7 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 9)
+		vals := make(map[string]tftypes.Value, 10)
 
 		val, err = v.AccessCredentialTokens.ToTerraformValue(ctx)
 
@@ -767,6 +812,14 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["contact_email"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.MspBillingProfileToken.ToTerraformValue(ctx)
 
@@ -890,6 +943,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
 			"contact_email":             basetypes.StringType{},
+			"id":                        basetypes.StringType{},
 			"msp_billing_profile_token": basetypes.StringType{},
 			"name":                      basetypes.StringType{},
 			"parent_account_token":      basetypes.StringType{},
@@ -916,6 +970,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
 			"contact_email":             basetypes.StringType{},
+			"id":                        basetypes.StringType{},
 			"msp_billing_profile_token": basetypes.StringType{},
 			"name":                      basetypes.StringType{},
 			"parent_account_token":      basetypes.StringType{},
@@ -938,6 +993,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
 			"contact_email":             basetypes.StringType{},
+			"id":                        basetypes.StringType{},
 			"msp_billing_profile_token": basetypes.StringType{},
 			"name":                      basetypes.StringType{},
 			"parent_account_token":      basetypes.StringType{},
@@ -949,6 +1005,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"billing_rule_tokens":             billingRuleTokensVal,
 			"business_information_attributes": businessInformationAttributes,
 			"contact_email":                   v.ContactEmail,
+			"id":                              v.Id,
 			"msp_billing_profile_token":       v.MspBillingProfileToken,
 			"name":                            v.Name,
 			"parent_account_token":            v.ParentAccountToken,
@@ -990,6 +1047,10 @@ func (v ManagedAccountsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.ContactEmail.Equal(other.ContactEmail) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -1035,6 +1096,7 @@ func (v ManagedAccountsValue) AttributeTypes(ctx context.Context) map[string]att
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
 		"contact_email":             basetypes.StringType{},
+		"id":                        basetypes.StringType{},
 		"msp_billing_profile_token": basetypes.StringType{},
 		"name":                      basetypes.StringType{},
 		"parent_account_token":      basetypes.StringType{},

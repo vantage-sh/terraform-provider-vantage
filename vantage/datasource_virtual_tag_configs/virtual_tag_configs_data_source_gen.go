@@ -31,6 +31,11 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The token of the Creator of the VirtualTagConfig.",
 							MarkdownDescription: "The token of the Creator of the VirtualTagConfig.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the VirtualTagConfig.",
+							MarkdownDescription: "The id of the VirtualTagConfig.",
+						},
 						"key": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The key of the VirtualTagConfig.",
@@ -183,6 +188,24 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	keyAttribute, ok := attributes["key"]
 
 	if !ok {
@@ -262,6 +285,7 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 	return VirtualTagConfigsValue{
 		BackfillUntil:  backfillUntilVal,
 		CreatedByToken: createdByTokenVal,
+		Id:             idVal,
 		Key:            keyVal,
 		Overridable:    overridableVal,
 		Token:          tokenVal,
@@ -369,6 +393,24 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewVirtualTagConfigsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	keyAttribute, ok := attributes["key"]
 
 	if !ok {
@@ -448,6 +490,7 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 	return VirtualTagConfigsValue{
 		BackfillUntil:  backfillUntilVal,
 		CreatedByToken: createdByTokenVal,
+		Id:             idVal,
 		Key:            keyVal,
 		Overridable:    overridableVal,
 		Token:          tokenVal,
@@ -526,6 +569,7 @@ var _ basetypes.ObjectValuable = VirtualTagConfigsValue{}
 type VirtualTagConfigsValue struct {
 	BackfillUntil  basetypes.StringValue `tfsdk:"backfill_until"`
 	CreatedByToken basetypes.StringValue `tfsdk:"created_by_token"`
+	Id             basetypes.StringValue `tfsdk:"id"`
 	Key            basetypes.StringValue `tfsdk:"key"`
 	Overridable    basetypes.BoolValue   `tfsdk:"overridable"`
 	Token          basetypes.StringValue `tfsdk:"token"`
@@ -534,13 +578,14 @@ type VirtualTagConfigsValue struct {
 }
 
 func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 6)
+	attrTypes := make(map[string]tftypes.Type, 7)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["backfill_until"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["key"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["overridable"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -552,7 +597,7 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 6)
+		vals := make(map[string]tftypes.Value, 7)
 
 		val, err = v.BackfillUntil.ToTerraformValue(ctx)
 
@@ -569,6 +614,14 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 		}
 
 		vals["created_by_token"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.Key.ToTerraformValue(ctx)
 
@@ -664,6 +717,7 @@ func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		map[string]attr.Type{
 			"backfill_until":   basetypes.StringType{},
 			"created_by_token": basetypes.StringType{},
+			"id":               basetypes.StringType{},
 			"key":              basetypes.StringType{},
 			"overridable":      basetypes.BoolType{},
 			"token":            basetypes.StringType{},
@@ -674,6 +728,7 @@ func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		map[string]attr.Value{
 			"backfill_until":   v.BackfillUntil,
 			"created_by_token": v.CreatedByToken,
+			"id":               v.Id,
 			"key":              v.Key,
 			"overridable":      v.Overridable,
 			"token":            v.Token,
@@ -703,6 +758,10 @@ func (v VirtualTagConfigsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.CreatedByToken.Equal(other.CreatedByToken) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -737,6 +796,7 @@ func (v VirtualTagConfigsValue) AttributeTypes(ctx context.Context) map[string]a
 	return map[string]attr.Type{
 		"backfill_until":   basetypes.StringType{},
 		"created_by_token": basetypes.StringType{},
+		"id":               basetypes.StringType{},
 		"key":              basetypes.StringType{},
 		"overridable":      basetypes.BoolType{},
 		"token":            basetypes.StringType{},

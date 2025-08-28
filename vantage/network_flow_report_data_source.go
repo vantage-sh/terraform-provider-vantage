@@ -42,17 +42,17 @@ type NetworkFlowReportModel struct {
 	CreatedAt      types.String `tfsdk:"created_at"`
 	CreatedByToken types.String `tfsdk:"created_by_token"`
 
-	DateInterval  types.String `tfsdk:"date_interval"`
-	Default       types.Bool   `tfsdk:"default"`
-	EndDate       types.String `tfsdk:"end_date"`
-	Filter        types.String `tfsdk:"filter"`
-	FlowDirection types.String `tfsdk:"flow_direction"`
-	FlowWeight    types.String `tfsdk:"flow_weight"`
-	Groupings     types.String `tfsdk:"groupings"`
-	StartDate     types.String `tfsdk:"start_date"`
-	Title         types.String `tfsdk:"title"`
-	Token         types.String `tfsdk:"token"`
-
+	DateInterval   types.String `tfsdk:"date_interval"`
+	Default        types.Bool   `tfsdk:"default"`
+	EndDate        types.String `tfsdk:"end_date"`
+	Filter         types.String `tfsdk:"filter"`
+	FlowDirection  types.String `tfsdk:"flow_direction"`
+	FlowWeight     types.String `tfsdk:"flow_weight"`
+	Groupings      types.String `tfsdk:"groupings"`
+	StartDate      types.String `tfsdk:"start_date"`
+	Title          types.String `tfsdk:"title"`
+	Token          types.String `tfsdk:"token"`
+	Id             types.String `tfsdk:"id"`
 	WorkspaceToken types.String `tfsdk:"workspace_token"`
 }
 
@@ -93,6 +93,7 @@ func (d *networkFlowReportDataSource) Read(ctx context.Context, req datasource.R
 			StartDate:      types.StringValue(nfr.StartDate),
 			Title:          types.StringValue(nfr.Title),
 			Token:          types.StringValue(nfr.Token),
+			Id:             types.StringValue(nfr.Token),
 			WorkspaceToken: types.StringValue(nfr.WorkspaceToken),
 		})
 	}

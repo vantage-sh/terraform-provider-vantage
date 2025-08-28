@@ -32,6 +32,11 @@ func CostAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The email addresses that will receive the alert.",
 							MarkdownDescription: "The email addresses that will receive the alert.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"interval": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.",
@@ -159,6 +164,24 @@ func (t CostAlertsType) ValueFromObject(ctx context.Context, in basetypes.Object
 			fmt.Sprintf(`email_recipients expected to be basetypes.ListValue, was: %T`, emailRecipientsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	intervalAttribute, ok := attributes["interval"]
 
 	if !ok {
@@ -346,6 +369,7 @@ func (t CostAlertsType) ValueFromObject(ctx context.Context, in basetypes.Object
 	return CostAlertsValue{
 		CreatedAt:       createdAtVal,
 		EmailRecipients: emailRecipientsVal,
+		Id:              idVal,
 		Interval:        intervalVal,
 		ReportTokens:    reportTokensVal,
 		SlackChannels:   slackChannelsVal,
@@ -459,6 +483,24 @@ func NewCostAlertsValue(attributeTypes map[string]attr.Type, attributes map[stri
 			fmt.Sprintf(`email_recipients expected to be basetypes.ListValue, was: %T`, emailRecipientsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewCostAlertsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	intervalAttribute, ok := attributes["interval"]
 
 	if !ok {
@@ -646,6 +688,7 @@ func NewCostAlertsValue(attributeTypes map[string]attr.Type, attributes map[stri
 	return CostAlertsValue{
 		CreatedAt:       createdAtVal,
 		EmailRecipients: emailRecipientsVal,
+		Id:              idVal,
 		Interval:        intervalVal,
 		ReportTokens:    reportTokensVal,
 		SlackChannels:   slackChannelsVal,
@@ -730,6 +773,7 @@ var _ basetypes.ObjectValuable = CostAlertsValue{}
 type CostAlertsValue struct {
 	CreatedAt       basetypes.StringValue `tfsdk:"created_at"`
 	EmailRecipients basetypes.ListValue   `tfsdk:"email_recipients"`
+	Id              basetypes.StringValue `tfsdk:"id"`
 	Interval        basetypes.StringValue `tfsdk:"interval"`
 	ReportTokens    basetypes.ListValue   `tfsdk:"report_tokens"`
 	SlackChannels   basetypes.ListValue   `tfsdk:"slack_channels"`
@@ -744,7 +788,7 @@ type CostAlertsValue struct {
 }
 
 func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 12)
+	attrTypes := make(map[string]tftypes.Type, 13)
 
 	var val tftypes.Value
 	var err error
@@ -753,6 +797,7 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 	attrTypes["email_recipients"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["interval"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["report_tokens"] = basetypes.ListType{
 		ElemType: types.StringType,
@@ -774,7 +819,7 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 12)
+		vals := make(map[string]tftypes.Value, 13)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -791,6 +836,14 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 		}
 
 		vals["email_recipients"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.Interval.ToTerraformValue(ctx)
 
@@ -911,6 +964,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"id":       basetypes.StringType{},
 			"interval": basetypes.StringType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -940,6 +994,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"id":       basetypes.StringType{},
 			"interval": basetypes.StringType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -969,6 +1024,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"id":       basetypes.StringType{},
 			"interval": basetypes.StringType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -998,6 +1054,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"id":       basetypes.StringType{},
 			"interval": basetypes.StringType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -1023,6 +1080,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"id":       basetypes.StringType{},
 			"interval": basetypes.StringType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -1043,6 +1101,7 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		map[string]attr.Value{
 			"created_at":       v.CreatedAt,
 			"email_recipients": emailRecipientsVal,
+			"id":               v.Id,
 			"interval":         v.Interval,
 			"report_tokens":    reportTokensVal,
 			"slack_channels":   slackChannelsVal,
@@ -1078,6 +1137,10 @@ func (v CostAlertsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.EmailRecipients.Equal(other.EmailRecipients) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -1138,6 +1201,7 @@ func (v CostAlertsValue) AttributeTypes(ctx context.Context) map[string]attr.Typ
 		"email_recipients": basetypes.ListType{
 			ElemType: types.StringType,
 		},
+		"id":       basetypes.StringType{},
 		"interval": basetypes.StringType{},
 		"report_tokens": basetypes.ListType{
 			ElemType: types.StringType,

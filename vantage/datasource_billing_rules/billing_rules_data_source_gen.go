@@ -56,6 +56,11 @@ func BillingRulesDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The end date of the BillingRule.",
 							MarkdownDescription: "The end date of the BillingRule.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"percentage": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The percentage of the cost shown for the BillingRule (Adjustment).",
@@ -267,6 +272,24 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	percentageAttribute, ok := attributes["percentage"]
 
 	if !ok {
@@ -441,6 +464,7 @@ func (t BillingRulesType) ValueFromObject(ctx context.Context, in basetypes.Obje
 		CreatedAt:        createdAtVal,
 		CreatedByToken:   createdByTokenVal,
 		EndDate:          endDateVal,
+		Id:               idVal,
 		Percentage:       percentageVal,
 		Service:          serviceVal,
 		SqlQuery:         sqlQueryVal,
@@ -643,6 +667,24 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewBillingRulesValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	percentageAttribute, ok := attributes["percentage"]
 
 	if !ok {
@@ -817,6 +859,7 @@ func NewBillingRulesValue(attributeTypes map[string]attr.Type, attributes map[st
 		CreatedAt:        createdAtVal,
 		CreatedByToken:   createdByTokenVal,
 		EndDate:          endDateVal,
+		Id:               idVal,
 		Percentage:       percentageVal,
 		Service:          serviceVal,
 		SqlQuery:         sqlQueryVal,
@@ -905,6 +948,7 @@ type BillingRulesValue struct {
 	CreatedAt        basetypes.StringValue `tfsdk:"created_at"`
 	CreatedByToken   basetypes.StringValue `tfsdk:"created_by_token"`
 	EndDate          basetypes.StringValue `tfsdk:"end_date"`
+	Id               basetypes.StringValue `tfsdk:"id"`
 	Percentage       basetypes.StringValue `tfsdk:"percentage"`
 	Service          basetypes.StringValue `tfsdk:"service"`
 	SqlQuery         basetypes.StringValue `tfsdk:"sql_query"`
@@ -918,7 +962,7 @@ type BillingRulesValue struct {
 }
 
 func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 16)
+	attrTypes := make(map[string]tftypes.Type, 17)
 
 	var val tftypes.Value
 	var err error
@@ -930,6 +974,7 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["percentage"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["service"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["sql_query"] = basetypes.StringType{}.TerraformType(ctx)
@@ -944,7 +989,7 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 16)
+		vals := make(map[string]tftypes.Value, 17)
 
 		val, err = v.Amount.ToTerraformValue(ctx)
 
@@ -1001,6 +1046,14 @@ func (v BillingRulesValue) ToTerraformValue(ctx context.Context) (tftypes.Value,
 		}
 
 		vals["end_date"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.Percentage.ToTerraformValue(ctx)
 
@@ -1112,6 +1165,7 @@ func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectV
 			"created_at":       basetypes.StringType{},
 			"created_by_token": basetypes.StringType{},
 			"end_date":         basetypes.StringType{},
+			"id":               basetypes.StringType{},
 			"percentage":       basetypes.StringType{},
 			"service":          basetypes.StringType{},
 			"sql_query":        basetypes.StringType{},
@@ -1130,6 +1184,7 @@ func (v BillingRulesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectV
 			"created_at":       v.CreatedAt,
 			"created_by_token": v.CreatedByToken,
 			"end_date":         v.EndDate,
+			"id":               v.Id,
 			"percentage":       v.Percentage,
 			"service":          v.Service,
 			"sql_query":        v.SqlQuery,
@@ -1184,6 +1239,10 @@ func (v BillingRulesValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.EndDate.Equal(other.EndDate) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -1243,6 +1302,7 @@ func (v BillingRulesValue) AttributeTypes(ctx context.Context) map[string]attr.T
 		"created_at":       basetypes.StringType{},
 		"created_by_token": basetypes.StringType{},
 		"end_date":         basetypes.StringType{},
+		"id":               basetypes.StringType{},
 		"percentage":       basetypes.StringType{},
 		"service":          basetypes.StringType{},
 		"sql_query":        basetypes.StringType{},

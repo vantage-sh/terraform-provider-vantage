@@ -45,6 +45,7 @@ type kubernetesEfficiencyReportDataModel struct {
 	StartDate      types.String `tfsdk:"start_date"`
 	Title          types.String `tfsdk:"title"`
 	Token          types.String `tfsdk:"token"`
+	Id             types.String `tfsdk:"id"`
 	UserToken      types.String `tfsdk:"user_token"`
 	WorkspaceToken types.String `tfsdk:"workspace_token"`
 }
@@ -89,6 +90,7 @@ func (d *kubernetesEfficiencyReportsDataSource) Read(ctx context.Context, req da
 			StartDate:      types.StringValue(ker.StartDate),
 			Title:          types.StringValue(ker.Title),
 			Token:          types.StringValue(ker.Token),
+			Id:             types.StringValue(ker.Token),
 			UserToken:      types.StringValue(ker.UserToken),
 			WorkspaceToken: types.StringValue(ker.WorkspaceToken),
 		}
