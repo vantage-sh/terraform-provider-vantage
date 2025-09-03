@@ -7,9 +7,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_team"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	teamsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/teams"
 )
@@ -28,72 +28,25 @@ func NewTeamResource() resource.Resource {
 	return &TeamResource{}
 }
 
-type TeamResourceModel struct {
-	Name            types.String `tfsdk:"name"`
-	Description     types.String `tfsdk:"description"`
-	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
-	UserTokens      types.Set    `tfsdk:"user_tokens"`
-	UserEmails      types.Set    `tfsdk:"user_emails"`
-	Token           types.String `tfsdk:"token"`
-}
-
 func (r *TeamResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_team"
 }
 
 func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				MarkdownDescription: "Name of the team.",
-				Required:            true,
-			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "Description of the team.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"workspace_tokens": schema.SetAttribute{
-				MarkdownDescription: "Workspace tokens to add the team to.",
-				ElementType:         types.StringType,
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
-				},
-			},
-			"user_tokens": schema.SetAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "User tokens.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
-				},
-			},
-			"user_emails": schema.SetAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "User emails.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
-				},
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Unique team identifier.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+	s := resource_team.TeamResourceSchema(ctx)
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         "The token of the Team",
+		MarkdownDescription: "The token of the Team",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
-		MarkdownDescription: "Manages a Team.",
 	}
+	resp.Schema = s
 }
 
 func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *TeamResourceModel
+	var data *resource_team.TeamModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -137,6 +90,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		UserTokens:      fromStringsValue(userTokens),
 		UserEmails:      fromStringsValue(userEmails),
 		WorkspaceTokens: fromStringsValue(workspaceTokens),
+		Role:            data.Role.ValueString(),
 	}
 
 	params.WithCreateTeam(rt)
@@ -152,19 +106,26 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
+
 	data.Description = types.StringValue(out.Payload.Description)
+	// Role is not returned by API, set default if unknown
+	if data.Role.IsNull() || data.Role.IsUnknown() {
+		data.Role = types.StringValue("editor")
+	}
 	if out.Payload.WorkspaceTokens != nil {
 		workspaceTokensValue := make([]types.String, 0, len(out.Payload.WorkspaceTokens))
 		for _, token := range out.Payload.WorkspaceTokens {
 			workspaceTokensValue = append(workspaceTokensValue, types.StringValue(token))
 		}
-		set, diag := types.SetValueFrom(ctx, types.StringType, workspaceTokensValue)
+		list, diag := types.ListValueFrom(ctx, types.StringType, workspaceTokensValue)
+		// set, diag := types.SetValueFrom(ctx, types.StringType, workspaceTokensValue)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		data.WorkspaceTokens = set
+		data.WorkspaceTokens = list
 	}
 
 	if out.Payload.UserTokens != nil {
@@ -172,12 +133,12 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		for _, token := range out.Payload.UserTokens {
 			userTokensValue = append(userTokensValue, types.StringValue(token))
 		}
-		set, diag := types.SetValueFrom(ctx, types.StringType, userTokensValue)
+		list, diag := types.ListValueFrom(ctx, types.StringType, userTokensValue)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		data.UserTokens = set
+		data.UserTokens = list
 	}
 
 	if out.Payload.UserEmails != nil {
@@ -185,19 +146,19 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		for _, email := range out.Payload.UserEmails {
 			userEmailsValue = append(userEmailsValue, types.StringValue(email))
 		}
-		set, diag := types.SetValueFrom(ctx, types.StringType, userEmailsValue)
+		list, diag := types.ListValueFrom(ctx, types.StringType, userEmailsValue)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		data.UserEmails = set
+		data.UserEmails = list
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *TeamResourceModel
+	var state *resource_team.TeamModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -218,24 +179,27 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
+	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
 	state.Description = types.StringValue(out.Payload.Description)
+	// Role is not returned by API, preserve existing state value
+	// state.Role remains unchanged
 
-	userTokens, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserTokens)
+	userTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	state.UserTokens = userTokens
 
-	userEmails, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserEmails)
+	userEmails, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserEmails)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	state.UserEmails = userEmails
 
-	workspaceTokensValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
+	workspaceTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -246,11 +210,13 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r TeamResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
+	// Set BOTH id and token from the provided ID
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), types.StringValue(req.ID))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token"), types.StringValue(req.ID))...)
 }
 
 func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *TeamResourceModel
+	var data *resource_team.TeamModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -265,7 +231,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	var userTokens []string
-	userTokensList.ElementsAs(ctx, userTokens, false)
+	userTokensList.ElementsAs(ctx, &userTokens, false)
 
 	userEmailsList, diag := types.ListValueFrom(ctx, types.StringType, data.UserEmails)
 	if diag.HasError() {
@@ -273,15 +239,14 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 	var userEmails []string
-	userEmailsList.ElementsAs(ctx, userEmails, false)
-
+	userEmailsList.ElementsAs(ctx, &userEmails, false)
 	workspaceTokensList, diag := types.ListValueFrom(ctx, types.StringType, data.WorkspaceTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	var workspaceTokens []string
-	workspaceTokensList.ElementsAs(ctx, workspaceTokens, false)
+	workspaceTokensList.ElementsAs(ctx, &workspaceTokens, false)
 
 	model := &modelsv2.UpdateTeam{
 		Name:            data.Name.ValueString(),
@@ -300,32 +265,37 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	data.Name = types.StringValue(out.Payload.Name)
 	data.Description = types.StringValue(out.Payload.Description)
-	workspaceTokensValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
+	// Role is not returned by API, set default if unknown
+	if data.Role.IsNull() || data.Role.IsUnknown() {
+		data.Role = types.StringValue("editor")
+	}
+
+	workspaceTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	data.WorkspaceTokens = workspaceTokensValue
 
-	userTokensValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserTokens)
+	userTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	data.UserTokens = userTokensValue
 
-	userEmailsValue, diag := types.SetValueFrom(ctx, types.StringType, out.Payload.UserEmails)
+	userEmailsValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserEmails)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	data.UserEmails = userEmailsValue
-
+	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r TeamResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *TeamResourceModel
+	var state *resource_team.TeamModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return

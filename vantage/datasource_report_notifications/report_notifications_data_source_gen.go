@@ -36,6 +36,11 @@ func ReportNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The frequency the ReportNotification is sent.",
 							MarkdownDescription: "The frequency the ReportNotification is sent.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"recipient_channels": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
@@ -152,6 +157,24 @@ func (t ReportNotificationsType) ValueFromObject(ctx context.Context, in basetyp
 			fmt.Sprintf(`frequency expected to be basetypes.StringValue, was: %T`, frequencyAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	recipientChannelsAttribute, ok := attributes["recipient_channels"]
 
 	if !ok {
@@ -232,6 +255,7 @@ func (t ReportNotificationsType) ValueFromObject(ctx context.Context, in basetyp
 		Change:            changeVal,
 		CostReportToken:   costReportTokenVal,
 		Frequency:         frequencyVal,
+		Id:                idVal,
 		RecipientChannels: recipientChannelsVal,
 		Title:             titleVal,
 		Token:             tokenVal,
@@ -357,6 +381,24 @@ func NewReportNotificationsValue(attributeTypes map[string]attr.Type, attributes
 			fmt.Sprintf(`frequency expected to be basetypes.StringValue, was: %T`, frequencyAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewReportNotificationsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	recipientChannelsAttribute, ok := attributes["recipient_channels"]
 
 	if !ok {
@@ -437,6 +479,7 @@ func NewReportNotificationsValue(attributeTypes map[string]attr.Type, attributes
 		Change:            changeVal,
 		CostReportToken:   costReportTokenVal,
 		Frequency:         frequencyVal,
+		Id:                idVal,
 		RecipientChannels: recipientChannelsVal,
 		Title:             titleVal,
 		Token:             tokenVal,
@@ -516,6 +559,7 @@ type ReportNotificationsValue struct {
 	Change            basetypes.StringValue `tfsdk:"change"`
 	CostReportToken   basetypes.StringValue `tfsdk:"cost_report_token"`
 	Frequency         basetypes.StringValue `tfsdk:"frequency"`
+	Id                basetypes.StringValue `tfsdk:"id"`
 	RecipientChannels basetypes.ListValue   `tfsdk:"recipient_channels"`
 	Title             basetypes.StringValue `tfsdk:"title"`
 	Token             basetypes.StringValue `tfsdk:"token"`
@@ -524,7 +568,7 @@ type ReportNotificationsValue struct {
 }
 
 func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 7)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
@@ -532,6 +576,7 @@ func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes
 	attrTypes["change"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["cost_report_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["frequency"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["recipient_channels"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
@@ -545,7 +590,7 @@ func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 7)
+		vals := make(map[string]tftypes.Value, 8)
 
 		val, err = v.Change.ToTerraformValue(ctx)
 
@@ -570,6 +615,14 @@ func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes
 		}
 
 		vals["frequency"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.RecipientChannels.ToTerraformValue(ctx)
 
@@ -641,6 +694,7 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"change":            basetypes.StringType{},
 			"cost_report_token": basetypes.StringType{},
 			"frequency":         basetypes.StringType{},
+			"id":                basetypes.StringType{},
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -661,6 +715,7 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"change":            basetypes.StringType{},
 			"cost_report_token": basetypes.StringType{},
 			"frequency":         basetypes.StringType{},
+			"id":                basetypes.StringType{},
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -677,6 +732,7 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"change":            basetypes.StringType{},
 			"cost_report_token": basetypes.StringType{},
 			"frequency":         basetypes.StringType{},
+			"id":                basetypes.StringType{},
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -690,6 +746,7 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"change":             v.Change,
 			"cost_report_token":  v.CostReportToken,
 			"frequency":          v.Frequency,
+			"id":                 v.Id,
 			"recipient_channels": recipientChannelsVal,
 			"title":              v.Title,
 			"token":              v.Token,
@@ -726,6 +783,10 @@ func (v ReportNotificationsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Id.Equal(other.Id) {
+		return false
+	}
+
 	if !v.RecipientChannels.Equal(other.RecipientChannels) {
 		return false
 	}
@@ -758,6 +819,7 @@ func (v ReportNotificationsValue) AttributeTypes(ctx context.Context) map[string
 		"change":            basetypes.StringType{},
 		"cost_report_token": basetypes.StringType{},
 		"frequency":         basetypes.StringType{},
+		"id":                basetypes.StringType{},
 		"recipient_channels": basetypes.ListType{
 			ElemType: types.StringType,
 		},

@@ -16,6 +16,7 @@ import (
 
 type BusinessMetricPayloadApplier interface {
 	SetTitle(title types.String)
+	SetId(id types.String)
 	SetToken(token types.String)
 	SetCreatedByToken(createdByToken types.String)
 	SetCostReportTokensWithMetadata(costReportTokens types.List)
@@ -45,6 +46,10 @@ func (m *businessMetricResourceModel) SetTitle(title types.String) {
 
 func (m *businessMetricResourceModel) SetToken(token types.String) {
 	m.Token = token
+}
+
+func (m *businessMetricResourceModel) SetId(id types.String) {
+	m.Id = id
 }
 
 func (m *businessMetricResourceModel) SetCreatedByToken(createdByToken types.String) {
@@ -77,6 +82,10 @@ func (m *businessMetricDataSourceValue) SetTitle(title types.String) {
 
 func (m *businessMetricDataSourceValue) SetToken(token types.String) {
 	m.Token = token
+}
+
+func (m *businessMetricDataSourceValue) SetId(id types.String) {
+	// m.Id = id
 }
 
 func (m *businessMetricDataSourceValue) SetCreatedByToken(createdByToken types.String) {
@@ -197,6 +206,7 @@ func (m *businessMetricDataSourceValue) SetDatadogMetricFields(datadogMetricFiel
 func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payload *modelsv2.BusinessMetric) diag.Diagnostics {
 	m.SetTitle(types.StringValue(payload.Title))
 	m.SetToken(types.StringValue(payload.Token))
+	m.SetId(types.StringValue(payload.Token))
 	m.SetCreatedByToken(types.StringValue(payload.CreatedByToken))
 	m.SetImportType(types.StringValue(payload.ImportType))
 	m.SetIntegrationToken(types.StringValue(payload.IntegrationToken))

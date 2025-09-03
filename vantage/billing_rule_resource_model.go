@@ -58,6 +58,7 @@ func (m *billingRuleModel) toDatasourceModel() datasourceBillingRuleModel {
 func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.BillingRule) diag.Diagnostics {
 
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
 	if payload.Percentage != "" {
 		rate, err := strconv.ParseFloat(payload.Percentage, 64)

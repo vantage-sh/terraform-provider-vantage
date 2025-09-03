@@ -22,6 +22,7 @@ type virtualTagConfigValueModel struct {
 
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 	m.Key = types.StringValue(payload.Key)
 	m.Overridable = types.BoolValue(payload.Overridable)
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)

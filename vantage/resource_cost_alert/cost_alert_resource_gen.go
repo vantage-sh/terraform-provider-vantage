@@ -24,6 +24,11 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The email recipients for the Cost Alert.",
 				MarkdownDescription: "The email recipients for the Cost Alert.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the cost alert",
+				MarkdownDescription: "The id of the cost alert",
+			},
 			"interval": schema.StringAttribute{
 				Required:            true,
 				Description:         "The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.",
@@ -87,6 +92,7 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 type CostAlertModel struct {
 	CreatedAt       types.String  `tfsdk:"created_at"`
 	EmailRecipients types.List    `tfsdk:"email_recipients"`
+	Id              types.String  `tfsdk:"id"`
 	Interval        types.String  `tfsdk:"interval"`
 	ReportTokens    types.List    `tfsdk:"report_tokens"`
 	SlackChannels   types.List    `tfsdk:"slack_channels"`

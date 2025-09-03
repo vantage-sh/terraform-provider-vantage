@@ -51,6 +51,7 @@ type FinancialCommitmentReportModel struct {
 	StartDate          types.String `tfsdk:"start_date"`
 	Title              types.String `tfsdk:"title"`
 	Token              types.String `tfsdk:"token"`
+	Id                 types.String `tfsdk:"id"`
 	UserToken          types.String `tfsdk:"user_token"`
 	WorkspaceToken     types.String `tfsdk:"workspace_token"`
 }
@@ -91,6 +92,7 @@ func (d *financialCommitmentReportsDataSource) Read(ctx context.Context, req dat
 			StartDate:          types.StringValue(fcr.StartDate),
 			Title:              types.StringValue(fcr.Title),
 			Token:              types.StringValue(fcr.Token),
+			Id:                 types.StringValue(fcr.Token),
 			UserToken:          types.StringValue(fcr.UserToken),
 			WorkspaceToken:     types.StringValue(fcr.WorkspaceToken),
 		}

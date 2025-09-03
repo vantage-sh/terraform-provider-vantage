@@ -37,6 +37,7 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 
 	tfWidgets := make([]basetypes.ObjectValue, 0, len(payload.Widgets))
 	for _, widget := range payload.Widgets {

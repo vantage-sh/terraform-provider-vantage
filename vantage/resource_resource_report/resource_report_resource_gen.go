@@ -35,6 +35,11 @@ func ResourceReportResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The filter query language to apply to the ResourceReport. Additional documentation available at https://docs.vantage.sh/vql.",
 				MarkdownDescription: "The filter query language to apply to the ResourceReport. Additional documentation available at https://docs.vantage.sh/vql.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the report",
+				MarkdownDescription: "The id of the report",
+			},
 			"title": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -65,6 +70,7 @@ type ResourceReportModel struct {
 	CreatedAt      types.String `tfsdk:"created_at"`
 	CreatedByToken types.String `tfsdk:"created_by_token"`
 	Filter         types.String `tfsdk:"filter"`
+	Id             types.String `tfsdk:"id"`
 	Title          types.String `tfsdk:"title"`
 	Token          types.String `tfsdk:"token"`
 	UserToken      types.String `tfsdk:"user_token"`

@@ -126,6 +126,11 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 							},
 							Computed: true,
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the BusinessMetric.",
+							MarkdownDescription: "The id of the BusinessMetric.",
+						},
 						"import_type": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The type of import for the BusinessMetric.",
@@ -260,6 +265,24 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`datadog_metric_fields expected to be basetypes.ObjectValue, was: %T`, datadogMetricFieldsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	importTypeAttribute, ok := attributes["import_type"]
 
 	if !ok {
@@ -341,6 +364,7 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 		CostReportTokensWithMetadata: costReportTokensWithMetadataVal,
 		CreatedByToken:               createdByTokenVal,
 		DatadogMetricFields:          datadogMetricFieldsVal,
+		Id:                           idVal,
 		ImportType:                   importTypeVal,
 		IntegrationToken:             integrationTokenVal,
 		Title:                        titleVal,
@@ -484,6 +508,24 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`datadog_metric_fields expected to be basetypes.ObjectValue, was: %T`, datadogMetricFieldsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	importTypeAttribute, ok := attributes["import_type"]
 
 	if !ok {
@@ -565,6 +607,7 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 		CostReportTokensWithMetadata: costReportTokensWithMetadataVal,
 		CreatedByToken:               createdByTokenVal,
 		DatadogMetricFields:          datadogMetricFieldsVal,
+		Id:                           idVal,
 		ImportType:                   importTypeVal,
 		IntegrationToken:             integrationTokenVal,
 		Title:                        titleVal,
@@ -645,6 +688,7 @@ type BusinessMetricsValue struct {
 	CostReportTokensWithMetadata basetypes.ListValue   `tfsdk:"cost_report_tokens_with_metadata"`
 	CreatedByToken               basetypes.StringValue `tfsdk:"created_by_token"`
 	DatadogMetricFields          basetypes.ObjectValue `tfsdk:"datadog_metric_fields"`
+	Id                           basetypes.StringValue `tfsdk:"id"`
 	ImportType                   basetypes.StringValue `tfsdk:"import_type"`
 	IntegrationToken             basetypes.StringValue `tfsdk:"integration_token"`
 	Title                        basetypes.StringValue `tfsdk:"title"`
@@ -653,7 +697,7 @@ type BusinessMetricsValue struct {
 }
 
 func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 8)
+	attrTypes := make(map[string]tftypes.Type, 9)
 
 	var val tftypes.Value
 	var err error
@@ -668,6 +712,7 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 	attrTypes["datadog_metric_fields"] = basetypes.ObjectType{
 		AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["import_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
@@ -677,7 +722,7 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 8)
+		vals := make(map[string]tftypes.Value, 9)
 
 		val, err = v.CloudwatchFields.ToTerraformValue(ctx)
 
@@ -710,6 +755,14 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["datadog_metric_fields"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.ImportType.ToTerraformValue(ctx)
 
@@ -855,6 +908,7 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"datadog_metric_fields": basetypes.ObjectType{
 				AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
 			},
+			"id":                basetypes.StringType{},
 			"import_type":       basetypes.StringType{},
 			"integration_token": basetypes.StringType{},
 			"title":             basetypes.StringType{},
@@ -865,6 +919,7 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"cost_report_tokens_with_metadata": costReportTokensWithMetadata,
 			"created_by_token":                 v.CreatedByToken,
 			"datadog_metric_fields":            datadogMetricFields,
+			"id":                               v.Id,
 			"import_type":                      v.ImportType,
 			"integration_token":                v.IntegrationToken,
 			"title":                            v.Title,
@@ -902,6 +957,10 @@ func (v BusinessMetricsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.DatadogMetricFields.Equal(other.DatadogMetricFields) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -944,6 +1003,7 @@ func (v BusinessMetricsValue) AttributeTypes(ctx context.Context) map[string]att
 		"datadog_metric_fields": basetypes.ObjectType{
 			AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
 		},
+		"id":                basetypes.StringType{},
 		"import_type":       basetypes.StringType{},
 		"integration_token": basetypes.StringType{},
 		"title":             basetypes.StringType{},

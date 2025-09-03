@@ -29,6 +29,11 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the Creator of the VirtualTagConfig.",
 				MarkdownDescription: "The token of the Creator of the VirtualTagConfig.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the VirtualTagConfig.",
+				MarkdownDescription: "The id of the VirtualTagConfig.",
+			},
 			"key": schema.StringAttribute{
 				Required:            true,
 				Description:         "The key of the VirtualTagConfig.",
@@ -114,6 +119,7 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 type VirtualTagConfigModel struct {
 	BackfillUntil  types.String `tfsdk:"backfill_until"`
 	CreatedByToken types.String `tfsdk:"created_by_token"`
+	Id             types.String `tfsdk:"id"`
 	Key            types.String `tfsdk:"key"`
 	Overridable    types.Bool   `tfsdk:"overridable"`
 	Token          types.String `tfsdk:"token"`

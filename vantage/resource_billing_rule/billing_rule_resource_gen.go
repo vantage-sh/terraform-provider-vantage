@@ -54,6 +54,11 @@ func BillingRuleResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The end date of the BillingRule. ISO 8601 formatted.",
 				MarkdownDescription: "The end date of the BillingRule. ISO 8601 formatted.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the billing rule",
+				MarkdownDescription: "The id of the billing rule",
+			},
 			"percentage": schema.Float64Attribute{
 				Optional:            true,
 				Computed:            true,
@@ -126,6 +131,7 @@ type BillingRuleModel struct {
 	CreatedAt      types.String  `tfsdk:"created_at"`
 	CreatedByToken types.String  `tfsdk:"created_by_token"`
 	EndDate        types.String  `tfsdk:"end_date"`
+	Id             types.String  `tfsdk:"id"`
 	Percentage     types.Float64 `tfsdk:"percentage"`
 	Service        types.String  `tfsdk:"service"`
 	SqlQuery       types.String  `tfsdk:"sql_query"`

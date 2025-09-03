@@ -22,6 +22,11 @@ func AnomalyNotificationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.",
 				MarkdownDescription: "The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the report alert",
+				MarkdownDescription: "The id of the report alert",
+			},
 			"recipient_channels": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -59,6 +64,7 @@ func AnomalyNotificationResourceSchema(ctx context.Context) schema.Schema {
 type AnomalyNotificationModel struct {
 	CostReportToken   types.String `tfsdk:"cost_report_token"`
 	CreatedAt         types.String `tfsdk:"created_at"`
+	Id                types.String `tfsdk:"id"`
 	RecipientChannels types.List   `tfsdk:"recipient_channels"`
 	Threshold         types.Int64  `tfsdk:"threshold"`
 	Token             types.String `tfsdk:"token"`

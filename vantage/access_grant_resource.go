@@ -30,6 +30,7 @@ func NewAccessGrantResource() resource.Resource {
 }
 
 type AccessGrantResourceModel struct {
+	Id            types.String `tfsdk:"id"`
 	Token         types.String `tfsdk:"token"`
 	ResourceToken types.String `tfsdk:"resource_token"`
 	TeamToken     types.String `tfsdk:"team_token"`
@@ -71,6 +72,14 @@ func (r AccessGrantResource) Schema(ctx context.Context, req resource.SchemaRequ
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Required:            false,
+				MarkdownDescription: "Id of the access grant.",
+				// PlanModifiers: []planmodifier.String{
+				// 	stringplanmodifier.UseStateForUnknown(),
+				// },
+			},
 		},
 		MarkdownDescription: "Manages an AccessGrant.",
 	}
@@ -97,6 +106,8 @@ func (r AccessGrantResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
+	data.Id = types.StringValue(out.Payload.Token)
+
 	data.ResourceToken = types.StringValue(out.Payload.ResourceToken)
 	data.TeamToken = types.StringValue(out.Payload.TeamToken)
 	data.Access = types.StringValue(out.Payload.Access)
@@ -126,6 +137,7 @@ func (r AccessGrantResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
+	state.Id = types.StringValue(out.Payload.Token)
 	state.ResourceToken = types.StringValue(out.Payload.ResourceToken)
 	state.TeamToken = types.StringValue(out.Payload.TeamToken)
 	state.Access = types.StringValue(out.Payload.Access)
@@ -162,7 +174,7 @@ func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequ
 	data.ResourceToken = types.StringValue(out.Payload.ResourceToken)
 	data.TeamToken = types.StringValue(out.Payload.TeamToken)
 	data.Token = types.StringValue(out.Payload.Token)
-
+	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

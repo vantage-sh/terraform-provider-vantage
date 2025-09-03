@@ -56,6 +56,11 @@ func FinancialCommitmentReportsDataSourceSchema(ctx context.Context) schema.Sche
 							Description:         "The grouping aggregations applied to the filtered data.",
 							MarkdownDescription: "The grouping aggregations applied to the filtered data.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"on_demand_costs_scope": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The scope for the costs. Possible values: discountable, all.",
@@ -252,6 +257,24 @@ func (t FinancialCommitmentReportsType) ValueFromObject(ctx context.Context, in 
 			fmt.Sprintf(`groupings expected to be basetypes.StringValue, was: %T`, groupingsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	onDemandCostsScopeAttribute, ok := attributes["on_demand_costs_scope"]
 
 	if !ok {
@@ -372,6 +395,7 @@ func (t FinancialCommitmentReportsType) ValueFromObject(ctx context.Context, in 
 		EndDate:            endDateVal,
 		Filter:             filterVal,
 		Groupings:          groupingsVal,
+		Id:                 idVal,
 		OnDemandCostsScope: onDemandCostsScopeVal,
 		StartDate:          startDateVal,
 		Title:              titleVal,
@@ -571,6 +595,24 @@ func NewFinancialCommitmentReportsValue(attributeTypes map[string]attr.Type, att
 			fmt.Sprintf(`groupings expected to be basetypes.StringValue, was: %T`, groupingsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewFinancialCommitmentReportsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	onDemandCostsScopeAttribute, ok := attributes["on_demand_costs_scope"]
 
 	if !ok {
@@ -691,6 +733,7 @@ func NewFinancialCommitmentReportsValue(attributeTypes map[string]attr.Type, att
 		EndDate:            endDateVal,
 		Filter:             filterVal,
 		Groupings:          groupingsVal,
+		Id:                 idVal,
 		OnDemandCostsScope: onDemandCostsScopeVal,
 		StartDate:          startDateVal,
 		Title:              titleVal,
@@ -776,6 +819,7 @@ type FinancialCommitmentReportsValue struct {
 	EndDate            basetypes.StringValue `tfsdk:"end_date"`
 	Filter             basetypes.StringValue `tfsdk:"filter"`
 	Groupings          basetypes.StringValue `tfsdk:"groupings"`
+	Id                 basetypes.StringValue `tfsdk:"id"`
 	OnDemandCostsScope basetypes.StringValue `tfsdk:"on_demand_costs_scope"`
 	StartDate          basetypes.StringValue `tfsdk:"start_date"`
 	Title              basetypes.StringValue `tfsdk:"title"`
@@ -786,7 +830,7 @@ type FinancialCommitmentReportsValue struct {
 }
 
 func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 13)
+	attrTypes := make(map[string]tftypes.Type, 14)
 
 	var val tftypes.Value
 	var err error
@@ -798,6 +842,7 @@ func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["groupings"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["on_demand_costs_scope"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
@@ -809,7 +854,7 @@ func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 13)
+		vals := make(map[string]tftypes.Value, 14)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -866,6 +911,14 @@ func (v FinancialCommitmentReportsValue) ToTerraformValue(ctx context.Context) (
 		}
 
 		vals["groupings"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.OnDemandCostsScope.ToTerraformValue(ctx)
 
@@ -953,6 +1006,7 @@ func (v FinancialCommitmentReportsValue) ToObjectValue(ctx context.Context) (bas
 			"end_date":              basetypes.StringType{},
 			"filter":                basetypes.StringType{},
 			"groupings":             basetypes.StringType{},
+			"id":                    basetypes.StringType{},
 			"on_demand_costs_scope": basetypes.StringType{},
 			"start_date":            basetypes.StringType{},
 			"title":                 basetypes.StringType{},
@@ -968,6 +1022,7 @@ func (v FinancialCommitmentReportsValue) ToObjectValue(ctx context.Context) (bas
 			"end_date":              v.EndDate,
 			"filter":                v.Filter,
 			"groupings":             v.Groupings,
+			"id":                    v.Id,
 			"on_demand_costs_scope": v.OnDemandCostsScope,
 			"start_date":            v.StartDate,
 			"title":                 v.Title,
@@ -1022,6 +1077,10 @@ func (v FinancialCommitmentReportsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Id.Equal(other.Id) {
+		return false
+	}
+
 	if !v.OnDemandCostsScope.Equal(other.OnDemandCostsScope) {
 		return false
 	}
@@ -1066,6 +1125,7 @@ func (v FinancialCommitmentReportsValue) AttributeTypes(ctx context.Context) map
 		"end_date":              basetypes.StringType{},
 		"filter":                basetypes.StringType{},
 		"groupings":             basetypes.StringType{},
+		"id":                    basetypes.StringType{},
 		"on_demand_costs_scope": basetypes.StringType{},
 		"start_date":            basetypes.StringType{},
 		"title":                 basetypes.StringType{},

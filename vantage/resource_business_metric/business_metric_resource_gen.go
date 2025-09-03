@@ -166,6 +166,11 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Datadog metric configuration fields",
 				MarkdownDescription: "Datadog metric configuration fields",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the business metric",
+				MarkdownDescription: "The id of the business metric",
+			},
 			"import_type": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The type of import for the BusinessMetric.",
@@ -220,6 +225,7 @@ type BusinessMetricModel struct {
 	CostReportTokensWithMetadata types.List               `tfsdk:"cost_report_tokens_with_metadata"`
 	CreatedByToken               types.String             `tfsdk:"created_by_token"`
 	DatadogMetricFields          DatadogMetricFieldsValue `tfsdk:"datadog_metric_fields"`
+	Id                           types.String             `tfsdk:"id"`
 	ImportType                   types.String             `tfsdk:"import_type"`
 	IntegrationToken             types.String             `tfsdk:"integration_token"`
 	Title                        types.String             `tfsdk:"title"`

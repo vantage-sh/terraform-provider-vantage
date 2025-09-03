@@ -66,6 +66,11 @@ func NetworkFlowReportsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The grouping aggregations applied to the filtered data.",
 							MarkdownDescription: "The grouping aggregations applied to the filtered data.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"start_date": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The start date for the NetworkFlowReport. Only set for custom date ranges. ISO 8601 Formatted.",
@@ -288,6 +293,24 @@ func (t NetworkFlowReportsType) ValueFromObject(ctx context.Context, in basetype
 			fmt.Sprintf(`groupings expected to be basetypes.StringValue, was: %T`, groupingsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	startDateAttribute, ok := attributes["start_date"]
 
 	if !ok {
@@ -374,6 +397,7 @@ func (t NetworkFlowReportsType) ValueFromObject(ctx context.Context, in basetype
 		FlowDirection:  flowDirectionVal,
 		FlowWeight:     flowWeightVal,
 		Groupings:      groupingsVal,
+		Id:             idVal,
 		StartDate:      startDateVal,
 		Title:          titleVal,
 		Token:          tokenVal,
@@ -607,6 +631,24 @@ func NewNetworkFlowReportsValue(attributeTypes map[string]attr.Type, attributes 
 			fmt.Sprintf(`groupings expected to be basetypes.StringValue, was: %T`, groupingsAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewNetworkFlowReportsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	startDateAttribute, ok := attributes["start_date"]
 
 	if !ok {
@@ -693,6 +735,7 @@ func NewNetworkFlowReportsValue(attributeTypes map[string]attr.Type, attributes 
 		FlowDirection:  flowDirectionVal,
 		FlowWeight:     flowWeightVal,
 		Groupings:      groupingsVal,
+		Id:             idVal,
 		StartDate:      startDateVal,
 		Title:          titleVal,
 		Token:          tokenVal,
@@ -778,6 +821,7 @@ type NetworkFlowReportsValue struct {
 	FlowDirection  basetypes.StringValue `tfsdk:"flow_direction"`
 	FlowWeight     basetypes.StringValue `tfsdk:"flow_weight"`
 	Groupings      basetypes.StringValue `tfsdk:"groupings"`
+	Id             basetypes.StringValue `tfsdk:"id"`
 	StartDate      basetypes.StringValue `tfsdk:"start_date"`
 	Title          basetypes.StringValue `tfsdk:"title"`
 	Token          basetypes.StringValue `tfsdk:"token"`
@@ -786,7 +830,7 @@ type NetworkFlowReportsValue struct {
 }
 
 func (v NetworkFlowReportsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 13)
+	attrTypes := make(map[string]tftypes.Type, 14)
 
 	var val tftypes.Value
 	var err error
@@ -800,6 +844,7 @@ func (v NetworkFlowReportsValue) ToTerraformValue(ctx context.Context) (tftypes.
 	attrTypes["flow_direction"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["flow_weight"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["groupings"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -809,7 +854,7 @@ func (v NetworkFlowReportsValue) ToTerraformValue(ctx context.Context) (tftypes.
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 13)
+		vals := make(map[string]tftypes.Value, 14)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -883,6 +928,14 @@ func (v NetworkFlowReportsValue) ToTerraformValue(ctx context.Context) (tftypes.
 
 		vals["groupings"] = val
 
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
+
 		val, err = v.StartDate.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -955,6 +1008,7 @@ func (v NetworkFlowReportsValue) ToObjectValue(ctx context.Context) (basetypes.O
 			"flow_direction":   basetypes.StringType{},
 			"flow_weight":      basetypes.StringType{},
 			"groupings":        basetypes.StringType{},
+			"id":               basetypes.StringType{},
 			"start_date":       basetypes.StringType{},
 			"title":            basetypes.StringType{},
 			"token":            basetypes.StringType{},
@@ -970,6 +1024,7 @@ func (v NetworkFlowReportsValue) ToObjectValue(ctx context.Context) (basetypes.O
 			"flow_direction":   v.FlowDirection,
 			"flow_weight":      v.FlowWeight,
 			"groupings":        v.Groupings,
+			"id":               v.Id,
 			"start_date":       v.StartDate,
 			"title":            v.Title,
 			"token":            v.Token,
@@ -1030,6 +1085,10 @@ func (v NetworkFlowReportsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Id.Equal(other.Id) {
+		return false
+	}
+
 	if !v.StartDate.Equal(other.StartDate) {
 		return false
 	}
@@ -1068,6 +1127,7 @@ func (v NetworkFlowReportsValue) AttributeTypes(ctx context.Context) map[string]
 		"flow_direction":   basetypes.StringType{},
 		"flow_weight":      basetypes.StringType{},
 		"groupings":        basetypes.StringType{},
+		"id":               basetypes.StringType{},
 		"start_date":       basetypes.StringType{},
 		"title":            basetypes.StringType{},
 		"token":            basetypes.StringType{},

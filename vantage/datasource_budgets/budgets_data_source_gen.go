@@ -48,6 +48,11 @@ func BudgetsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The token of the Creator of the Budget.",
 							MarkdownDescription: "The token of the Creator of the Budget.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"name": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The name of the Budget.",
@@ -256,6 +261,24 @@ func (t BudgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	nameAttribute, ok := attributes["name"]
 
 	if !ok {
@@ -374,6 +397,7 @@ func (t BudgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 		CostReportToken:   costReportTokenVal,
 		CreatedAt:         createdAtVal,
 		CreatedByToken:    createdByTokenVal,
+		Id:                idVal,
 		Name:              nameVal,
 		Performance:       performanceVal,
 		Periods:           periodsVal,
@@ -537,6 +561,24 @@ func NewBudgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewBudgetsValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	nameAttribute, ok := attributes["name"]
 
 	if !ok {
@@ -655,6 +697,7 @@ func NewBudgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 		CostReportToken:   costReportTokenVal,
 		CreatedAt:         createdAtVal,
 		CreatedByToken:    createdByTokenVal,
+		Id:                idVal,
 		Name:              nameVal,
 		Performance:       performanceVal,
 		Periods:           periodsVal,
@@ -738,6 +781,7 @@ type BudgetsValue struct {
 	CostReportToken   basetypes.StringValue `tfsdk:"cost_report_token"`
 	CreatedAt         basetypes.StringValue `tfsdk:"created_at"`
 	CreatedByToken    basetypes.StringValue `tfsdk:"created_by_token"`
+	Id                basetypes.StringValue `tfsdk:"id"`
 	Name              basetypes.StringValue `tfsdk:"name"`
 	Performance       basetypes.ListValue   `tfsdk:"performance"`
 	Periods           basetypes.ListValue   `tfsdk:"periods"`
@@ -748,7 +792,7 @@ type BudgetsValue struct {
 }
 
 func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 11)
+	attrTypes := make(map[string]tftypes.Type, 12)
 
 	var val tftypes.Value
 	var err error
@@ -762,6 +806,7 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 	attrTypes["cost_report_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["performance"] = basetypes.ListType{
 		ElemType: PerformanceValue{}.Type(ctx),
@@ -777,7 +822,7 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 11)
+		vals := make(map[string]tftypes.Value, 12)
 
 		val, err = v.BudgetAlertTokens.ToTerraformValue(ctx)
 
@@ -818,6 +863,14 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		}
 
 		vals["created_by_token"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.Name.ToTerraformValue(ctx)
 
@@ -969,6 +1022,7 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"cost_report_token": basetypes.StringType{},
 			"created_at":        basetypes.StringType{},
 			"created_by_token":  basetypes.StringType{},
+			"id":                basetypes.StringType{},
 			"name":              basetypes.StringType{},
 			"performance": basetypes.ListType{
 				ElemType: PerformanceValue{}.Type(ctx),
@@ -997,6 +1051,7 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"cost_report_token": basetypes.StringType{},
 			"created_at":        basetypes.StringType{},
 			"created_by_token":  basetypes.StringType{},
+			"id":                basetypes.StringType{},
 			"name":              basetypes.StringType{},
 			"performance": basetypes.ListType{
 				ElemType: PerformanceValue{}.Type(ctx),
@@ -1021,6 +1076,7 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"cost_report_token": basetypes.StringType{},
 			"created_at":        basetypes.StringType{},
 			"created_by_token":  basetypes.StringType{},
+			"id":                basetypes.StringType{},
 			"name":              basetypes.StringType{},
 			"performance": basetypes.ListType{
 				ElemType: PerformanceValue{}.Type(ctx),
@@ -1038,6 +1094,7 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"cost_report_token":   v.CostReportToken,
 			"created_at":          v.CreatedAt,
 			"created_by_token":    v.CreatedByToken,
+			"id":                  v.Id,
 			"name":                v.Name,
 			"performance":         performance,
 			"periods":             periods,
@@ -1081,6 +1138,10 @@ func (v BudgetsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.CreatedByToken.Equal(other.CreatedByToken) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -1130,6 +1191,7 @@ func (v BudgetsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		"cost_report_token": basetypes.StringType{},
 		"created_at":        basetypes.StringType{},
 		"created_by_token":  basetypes.StringType{},
+		"id":                basetypes.StringType{},
 		"name":              basetypes.StringType{},
 		"performance": basetypes.ListType{
 			ElemType: PerformanceValue{}.Type(ctx),

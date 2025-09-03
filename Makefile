@@ -6,6 +6,7 @@ generate:
 	cat tmp-swagger.json | curl --header 'Content-Type: application/json' --data @'-' https://converter.swagger.io/api/convert | jq > tmp.json
 	@echo "Generating spec from OAS3 swagger file"
 	tfplugingen-openapi generate --config generator.yaml --output spec.json tmp.json
+	jq -f add-ids.jq spec.json > spec.json.tmp && mv spec.json.tmp spec.json
 	@echo "Generating Terraform code from OpenAPI spec"
 	tfplugingen-framework generate resources --input spec.json --output vantage
 	tfplugingen-framework generate data-sources --input spec.json --output vantage

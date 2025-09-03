@@ -30,6 +30,7 @@ func TestTeam(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_team.team", "name", rUpdatedName),
 					resource.TestCheckResourceAttr("vantage_team.team", "description", ""),
+					resource.TestCheckResourceAttr("vantage_team.team", "workspace_tokens.#", "0"),
 				),
 			},
 			{

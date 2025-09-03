@@ -218,6 +218,7 @@ func (r *anomalyNotificationResource) Delete(ctx context.Context, req resource.D
 
 func readPayloadIntoResourceModel(payload *modelsv2.AnomalyNotification, data *resource_anomaly_notification.AnomalyNotificationModel) {
 	data.Token = types.StringValue(payload.Token)
+	data.Id = types.StringValue(payload.Token)
 	data.CostReportToken = types.StringValue(payload.CostReportToken)
 	data.CreatedAt = types.StringValue(payload.CreatedAt)
 	data.UpdatedAt = types.StringValue(payload.UpdatedAt)
