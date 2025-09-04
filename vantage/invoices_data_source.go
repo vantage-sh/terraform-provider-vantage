@@ -76,6 +76,7 @@ func (d *invoicesDataSource) Read(ctx context.Context, req datasource.ReadReques
 		invoiceValue, diag := datasource_invoices.NewInvoicesValue(
 			datasource_invoices.InvoicesValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
+				"id":                   types.StringPointerValue(&invoice.Token),
 				"token":                 types.StringPointerValue(&invoice.Token),
 				"total":                types.StringPointerValue(&invoice.Total),
 				"status":               types.StringPointerValue(&invoice.Status),

@@ -298,6 +298,7 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 		bpValue, diag := datasource_billing_profiles.NewBillingProfilesValue(
 			datasource_billing_profiles.BillingProfilesValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
+				"id":                              types.StringPointerValue(&bp.Token),
 				"token":                           types.StringPointerValue(&bp.Token),
 				"nickname":                        types.StringValue(bp.Nickname),
 				"created_at":                      types.StringPointerValue(&bp.CreatedAt),

@@ -46,6 +46,11 @@ func InvoicesDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The date and time, in UTC, the invoice was created. ISO 8601 formatted.",
 							MarkdownDescription: "The date and time, in UTC, the invoice was created. ISO 8601 formatted.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"invoice_number": schema.StringAttribute{
 							Computed:            true,
 							Description:         "Sequential invoice number for the MSP account",
@@ -213,6 +218,24 @@ func (t InvoicesType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 			fmt.Sprintf(`created_at expected to be basetypes.StringValue, was: %T`, createdAtAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	invoiceNumberAttribute, ok := attributes["invoice_number"]
 
 	if !ok {
@@ -331,6 +354,7 @@ func (t InvoicesType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 		BillingPeriodEnd:   billingPeriodEndVal,
 		BillingPeriodStart: billingPeriodStartVal,
 		CreatedAt:          createdAtVal,
+		Id:                 idVal,
 		InvoiceNumber:      invoiceNumberVal,
 		MspAccountToken:    mspAccountTokenVal,
 		Status:             statusVal,
@@ -494,6 +518,24 @@ func NewInvoicesValue(attributeTypes map[string]attr.Type, attributes map[string
 			fmt.Sprintf(`created_at expected to be basetypes.StringValue, was: %T`, createdAtAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewInvoicesValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	invoiceNumberAttribute, ok := attributes["invoice_number"]
 
 	if !ok {
@@ -612,6 +654,7 @@ func NewInvoicesValue(attributeTypes map[string]attr.Type, attributes map[string
 		BillingPeriodEnd:   billingPeriodEndVal,
 		BillingPeriodStart: billingPeriodStartVal,
 		CreatedAt:          createdAtVal,
+		Id:                 idVal,
 		InvoiceNumber:      invoiceNumberVal,
 		MspAccountToken:    mspAccountTokenVal,
 		Status:             statusVal,
@@ -695,6 +738,7 @@ type InvoicesValue struct {
 	BillingPeriodEnd   basetypes.StringValue `tfsdk:"billing_period_end"`
 	BillingPeriodStart basetypes.StringValue `tfsdk:"billing_period_start"`
 	CreatedAt          basetypes.StringValue `tfsdk:"created_at"`
+	Id                 basetypes.StringValue `tfsdk:"id"`
 	InvoiceNumber      basetypes.StringValue `tfsdk:"invoice_number"`
 	MspAccountToken    basetypes.StringValue `tfsdk:"msp_account_token"`
 	Status             basetypes.StringValue `tfsdk:"status"`
@@ -705,7 +749,7 @@ type InvoicesValue struct {
 }
 
 func (v InvoicesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 11)
+	attrTypes := make(map[string]tftypes.Type, 12)
 
 	var val tftypes.Value
 	var err error
@@ -715,6 +759,7 @@ func (v InvoicesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 	attrTypes["billing_period_end"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["billing_period_start"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["invoice_number"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["msp_account_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["status"] = basetypes.StringType{}.TerraformType(ctx)
@@ -726,7 +771,7 @@ func (v InvoicesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 11)
+		vals := make(map[string]tftypes.Value, 12)
 
 		val, err = v.AccountName.ToTerraformValue(ctx)
 
@@ -767,6 +812,14 @@ func (v InvoicesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 		}
 
 		vals["created_at"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.InvoiceNumber.ToTerraformValue(ctx)
 
@@ -852,6 +905,7 @@ func (v InvoicesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 			"billing_period_end":   basetypes.StringType{},
 			"billing_period_start": basetypes.StringType{},
 			"created_at":           basetypes.StringType{},
+			"id":                   basetypes.StringType{},
 			"invoice_number":       basetypes.StringType{},
 			"msp_account_token":    basetypes.StringType{},
 			"status":               basetypes.StringType{},
@@ -865,6 +919,7 @@ func (v InvoicesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 			"billing_period_end":   v.BillingPeriodEnd,
 			"billing_period_start": v.BillingPeriodStart,
 			"created_at":           v.CreatedAt,
+			"id":                   v.Id,
 			"invoice_number":       v.InvoiceNumber,
 			"msp_account_token":    v.MspAccountToken,
 			"status":               v.Status,
@@ -911,6 +966,10 @@ func (v InvoicesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Id.Equal(other.Id) {
+		return false
+	}
+
 	if !v.InvoiceNumber.Equal(other.InvoiceNumber) {
 		return false
 	}
@@ -953,6 +1012,7 @@ func (v InvoicesValue) AttributeTypes(ctx context.Context) map[string]attr.Type 
 		"billing_period_end":   basetypes.StringType{},
 		"billing_period_start": basetypes.StringType{},
 		"created_at":           basetypes.StringType{},
+		"id":                   basetypes.StringType{},
 		"invoice_number":       basetypes.StringType{},
 		"msp_account_token":    basetypes.StringType{},
 		"status":               basetypes.StringType{},

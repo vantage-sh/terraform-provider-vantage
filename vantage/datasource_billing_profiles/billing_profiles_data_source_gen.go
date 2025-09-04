@@ -185,6 +185,11 @@ func BillingProfilesDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The date and time, in UTC, the billing profile was created. ISO 8601 formatted.",
 							MarkdownDescription: "The date and time, in UTC, the billing profile was created. ISO 8601 formatted.",
 						},
+						"id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the resource",
+							MarkdownDescription: "The id of the resource",
+						},
 						"managed_accounts_count": schema.StringAttribute{
 							Computed:            true,
 							Description:         "Number of managed accounts using this billing profile",
@@ -317,6 +322,24 @@ func (t BillingProfilesType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`created_at expected to be basetypes.StringValue, was: %T`, createdAtAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return nil, diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	managedAccountsCountAttribute, ok := attributes["managed_accounts_count"]
 
 	if !ok {
@@ -398,6 +421,7 @@ func (t BillingProfilesType) ValueFromObject(ctx context.Context, in basetypes.O
 		BillingInformationAttributes:  billingInformationAttributesVal,
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		CreatedAt:                     createdAtVal,
+		Id:                            idVal,
 		ManagedAccountsCount:          managedAccountsCountVal,
 		Nickname:                      nicknameVal,
 		Token:                         tokenVal,
@@ -541,6 +565,24 @@ func NewBillingProfilesValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`created_at expected to be basetypes.StringValue, was: %T`, createdAtAttribute))
 	}
 
+	idAttribute, ok := attributes["id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`id is missing from object`)
+
+		return NewBillingProfilesValueUnknown(), diags
+	}
+
+	idVal, ok := idAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
+	}
+
 	managedAccountsCountAttribute, ok := attributes["managed_accounts_count"]
 
 	if !ok {
@@ -622,6 +664,7 @@ func NewBillingProfilesValue(attributeTypes map[string]attr.Type, attributes map
 		BillingInformationAttributes:  billingInformationAttributesVal,
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		CreatedAt:                     createdAtVal,
+		Id:                            idVal,
 		ManagedAccountsCount:          managedAccountsCountVal,
 		Nickname:                      nicknameVal,
 		Token:                         tokenVal,
@@ -702,6 +745,7 @@ type BillingProfilesValue struct {
 	BillingInformationAttributes  basetypes.ObjectValue `tfsdk:"billing_information_attributes"`
 	BusinessInformationAttributes basetypes.ObjectValue `tfsdk:"business_information_attributes"`
 	CreatedAt                     basetypes.StringValue `tfsdk:"created_at"`
+	Id                            basetypes.StringValue `tfsdk:"id"`
 	ManagedAccountsCount          basetypes.StringValue `tfsdk:"managed_accounts_count"`
 	Nickname                      basetypes.StringValue `tfsdk:"nickname"`
 	Token                         basetypes.StringValue `tfsdk:"token"`
@@ -710,7 +754,7 @@ type BillingProfilesValue struct {
 }
 
 func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 8)
+	attrTypes := make(map[string]tftypes.Type, 9)
 
 	var val tftypes.Value
 	var err error
@@ -725,6 +769,7 @@ func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["managed_accounts_count"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["nickname"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -734,7 +779,7 @@ func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 8)
+		vals := make(map[string]tftypes.Value, 9)
 
 		val, err = v.BankingInformationAttributes.ToTerraformValue(ctx)
 
@@ -767,6 +812,14 @@ func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["created_at"] = val
+
+		val, err = v.Id.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["id"] = val
 
 		val, err = v.ManagedAccountsCount.ToTerraformValue(ctx)
 
@@ -904,6 +957,7 @@ func (v BillingProfilesValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
 			"created_at":             basetypes.StringType{},
+			"id":                     basetypes.StringType{},
 			"managed_accounts_count": basetypes.StringType{},
 			"nickname":               basetypes.StringType{},
 			"token":                  basetypes.StringType{},
@@ -914,6 +968,7 @@ func (v BillingProfilesValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"billing_information_attributes":  billingInformationAttributes,
 			"business_information_attributes": businessInformationAttributes,
 			"created_at":                      v.CreatedAt,
+			"id":                              v.Id,
 			"managed_accounts_count":          v.ManagedAccountsCount,
 			"nickname":                        v.Nickname,
 			"token":                           v.Token,
@@ -951,6 +1006,10 @@ func (v BillingProfilesValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.CreatedAt.Equal(other.CreatedAt) {
+		return false
+	}
+
+	if !v.Id.Equal(other.Id) {
 		return false
 	}
 
@@ -993,6 +1052,7 @@ func (v BillingProfilesValue) AttributeTypes(ctx context.Context) map[string]att
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
 		"created_at":             basetypes.StringType{},
+		"id":                     basetypes.StringType{},
 		"managed_accounts_count": basetypes.StringType{},
 		"nickname":               basetypes.StringType{},
 		"token":                  basetypes.StringType{},

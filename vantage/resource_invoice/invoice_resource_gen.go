@@ -37,6 +37,11 @@ func InvoiceResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The date and time, in UTC, the invoice was created. ISO 8601 formatted.",
 				MarkdownDescription: "The date and time, in UTC, the invoice was created. ISO 8601 formatted.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the invoice",
+				MarkdownDescription: "The id of the invoice",
+			},
 			"invoice_number": schema.StringAttribute{
 				Computed:            true,
 				Description:         "Sequential invoice number for the MSP account",
@@ -77,6 +82,7 @@ type InvoiceModel struct {
 	BillingPeriodEnd   types.String `tfsdk:"billing_period_end"`
 	BillingPeriodStart types.String `tfsdk:"billing_period_start"`
 	CreatedAt          types.String `tfsdk:"created_at"`
+	Id                 types.String `tfsdk:"id"`
 	InvoiceNumber      types.String `tfsdk:"invoice_number"`
 	MspAccountToken    types.String `tfsdk:"msp_account_token"`
 	Status             types.String `tfsdk:"status"`

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_invoice"
 	invoicesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/invoices"
 )
@@ -74,6 +75,7 @@ func (r InvoiceResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -103,6 +105,7 @@ func (r InvoiceResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	state.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 

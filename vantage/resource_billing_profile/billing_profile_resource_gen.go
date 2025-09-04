@@ -218,6 +218,11 @@ func BillingProfileResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The date and time, in UTC, the billing profile was created. ISO 8601 formatted.",
 				MarkdownDescription: "The date and time, in UTC, the billing profile was created. ISO 8601 formatted.",
 			},
+			"id": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The id of the billing profile",
+				MarkdownDescription: "The id of the billing profile",
+			},
 			"managed_accounts_count": schema.StringAttribute{
 				Computed:            true,
 				Description:         "Number of managed accounts using this billing profile",
@@ -247,6 +252,7 @@ type BillingProfileModel struct {
 	BillingInformationAttributes  BillingInformationAttributesValue  `tfsdk:"billing_information_attributes"`
 	BusinessInformationAttributes BusinessInformationAttributesValue `tfsdk:"business_information_attributes"`
 	CreatedAt                     types.String                       `tfsdk:"created_at"`
+	Id                            types.String                       `tfsdk:"id"`
 	ManagedAccountsCount          types.String                       `tfsdk:"managed_accounts_count"`
 	Nickname                      types.String                       `tfsdk:"nickname"`
 	Token                         types.String                       `tfsdk:"token"`
