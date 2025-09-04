@@ -56,6 +56,7 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
 ### Read-Only
 
 - `created_by_token` (String) The token of the User who created the VirtualTagConfig.
+- `id` (String) The id of the VirtualTagConfig.
 - `token` (String) The token of the VirtualTagConfig.
 
 <a id="nestedatt--values"></a>

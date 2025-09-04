@@ -28,6 +28,7 @@ Read-Only:
 - `date_bin` (String) Determines how to group costs in the Dashboard.
 - `date_interval` (String) Determines the date range for Reports in the Dashboard. Guaranteed to be set to 'custom' if 'start_date' and 'end_date' are set.
 - `end_date` (String) The end date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.
+- `id` (String) The id of the resource
 - `saved_filter_tokens` (List of String) The tokens of the Saved Filters used in the Dashboard.
 - `start_date` (String) The start date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.
 - `title` (String) The title of the Dashboard.

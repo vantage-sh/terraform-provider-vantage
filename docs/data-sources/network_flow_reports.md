@@ -33,6 +33,7 @@ Read-Only:
 - `flow_direction` (String) The flow weight of the NetworkFlowReport. Possible values: costs, bytes.
 - `flow_weight` (String) The flow weight of the NetworkFlowReport. Possible values: costs, bytes.
 - `groupings` (String) The grouping aggregations applied to the filtered data.
+- `id` (String) The id of the resource
 - `start_date` (String) The start date for the NetworkFlowReport. Only set for custom date ranges. ISO 8601 Formatted.
 - `title` (String) The title of the NetworkFlowReport.
 - `token` (String)

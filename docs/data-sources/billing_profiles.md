@@ -28,6 +28,7 @@ Read-Only:
 - `billing_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--billing_profiles--billing_information_attributes))
 - `business_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--billing_profiles--business_information_attributes))
 - `created_at` (String) The date and time, in UTC, the billing profile was created. ISO 8601 formatted.
+- `id` (String) The id of the resource
 - `managed_accounts_count` (String) Number of managed accounts using this billing profile
 - `nickname` (String) Display name for the billing profile
 - `token` (String)

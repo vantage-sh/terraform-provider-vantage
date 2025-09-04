@@ -29,6 +29,7 @@ description: |-
 
 - `billing_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--billing_information_attributes))
 - `business_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--business_information_attributes))
+- `id` (String) The id of the managed account
 - `msp_billing_profile_token` (String) Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)
 - `parent_account_token` (String) The token for the parent Account.
 - `token` (String) The token of the managed account

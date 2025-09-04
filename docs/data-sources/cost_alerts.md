@@ -26,6 +26,7 @@ Read-Only:
 
 - `created_at` (String) The date and time, in UTC, for when the alert was created. ISO 8601 Formatted.
 - `email_recipients` (List of String) The email addresses that will receive the alert.
+- `id` (String) The id of the resource
 - `interval` (String) The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.
 - `report_tokens` (List of String) The tokens of the reports to alert on.
 - `slack_channels` (List of String) The Slack channels that will receive the alert. Make sure your slack integration is connected at https://console.vantage.sh/settings/slack.

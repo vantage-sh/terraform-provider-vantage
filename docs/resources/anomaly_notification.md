@@ -36,6 +36,7 @@ resource "vantage_anomaly_notification" "demo_anomaly_notification" {
 ### Read-Only
 
 - `created_at` (String) The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.
+- `id` (String) The id of the report alert
 - `token` (String) The token of the AnomalyNotification
 - `updated_at` (String) The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.
 

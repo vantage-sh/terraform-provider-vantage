@@ -29,6 +29,7 @@ description: |-
 ### Read-Only
 
 - `created_by_token` (String) The token of the Creator of the BusinessMetric.
+- `id` (String) The id of the business metric
 - `import_type` (String) The type of import for the BusinessMetric.
 - `integration_token` (String) The Integration token used to import the BusinessMetric.
 - `token` (String) The token of the business metric

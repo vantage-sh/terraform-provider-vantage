@@ -13,8 +13,10 @@ description: |-
 ## Example Usage
 
 ```terraform
+data "vantage_invoices" "all_invoices" {}
+
 resource "vantage_invoice" "demo_invoice" {
-  account_token        = "mgd_acct_47c3254c790e9351"
+  account_token        = "acct_f87c7c90365bcdcd"
   billing_period_start = "2024-01-01"
   billing_period_end   = "2024-01-31"
 }
@@ -33,6 +35,7 @@ resource "vantage_invoice" "demo_invoice" {
 
 - `account_name` (String) Name of the managed account this invoice belongs to
 - `created_at` (String) The date and time, in UTC, the invoice was created. ISO 8601 formatted.
+- `id` (String) The id of the invoice
 - `invoice_number` (String) Sequential invoice number for the MSP account
 - `msp_account_token` (String) Token of the MSP account that owns this invoice
 - `status` (String) Current status of the invoice

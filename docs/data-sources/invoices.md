@@ -33,6 +33,7 @@ Read-Only:
 - `billing_period_end` (String) End date of the billing period. ISO 8601 formatted.
 - `billing_period_start` (String) Start date of the billing period. ISO 8601 formatted.
 - `created_at` (String) The date and time, in UTC, the invoice was created. ISO 8601 formatted.
+- `id` (String) The id of the resource
 - `invoice_number` (String) Sequential invoice number for the MSP account
 - `msp_account_token` (String) Token of the MSP account that owns this invoice
 - `status` (String) Current status of the invoice

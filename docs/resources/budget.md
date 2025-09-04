@@ -45,6 +45,7 @@ resource "vantage_budget" "demo_budget" {
 - `budget_alert_tokens` (List of String) The tokens of the BudgetAlerts associated with the Budget.
 - `created_at` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
 - `created_by_token` (String) The token of the Creator of the Budget.
+- `id` (String) The id of the budget
 - `performance` (Attributes List) The historical performance of the Budget. (see [below for nested schema](#nestedatt--performance))
 - `token` (String) The token of the budget
 - `user_token` (String) The token for the User who created this Budget.

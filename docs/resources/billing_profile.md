@@ -13,14 +13,17 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Fetch all billing profiles
+data "vantage_billing_profiles" "all_profiles" {}
+
 # Basic billing profile with minimal configuration
 resource "vantage_billing_profile" "basic_profile" {
-  nickname = "Basic Company Profile"
+  nickname = "Basic Company Profile Test"
 }
 
 # Billing profile with nested billing information attributes
 resource "vantage_billing_profile" "complete_profile_nested" {
-  nickname = "Complete Company Profile"
+  nickname = "Complete Company Profile Testng"
 
   billing_information_attributes = {
     company_name   = "Example Corp"
@@ -31,6 +34,22 @@ resource "vantage_billing_profile" "complete_profile_nested" {
     postal_code    = "10001"
     country_code   = "US"
     billing_email  = ["billing@example.com"]
+  }
+
+  banking_information_attributes = {
+    beneficiary_name = "John Doe"
+    bank_name        = "Example Bank"
+  }
+
+  business_information_attributes = {
+    metadata = {
+      custom_fields = [
+        {
+          name  = "VAT"
+          value = "123456789"
+        }
+      ]
+    }
   }
 }
 ```
@@ -46,10 +65,12 @@ resource "vantage_billing_profile" "complete_profile_nested" {
 
 - `banking_information_attributes` (Attributes) Banking details (MSP accounts only) (see [below for nested schema](#nestedatt--banking_information_attributes))
 - `billing_information_attributes` (Attributes) Billing address and contact information (see [below for nested schema](#nestedatt--billing_information_attributes))
+- `business_information_attributes` (Attributes) Business information and custom fields (see [below for nested schema](#nestedatt--business_information_attributes))
 
 ### Read-Only
 
 - `created_at` (String) The date and time, in UTC, the billing profile was created. ISO 8601 formatted.
+- `id` (String) The id of the billing profile
 - `managed_accounts_count` (String) Number of managed accounts using this billing profile
 - `token` (String) The token of the billing profile
 - `updated_at` (String) The date and time, in UTC, the billing profile was last updated. ISO 8601 formatted.
@@ -91,5 +112,29 @@ Optional:
 - `postal_code` (String) Postal or ZIP code
 - `state` (String) State or province for billing address
 - `token` (String)
+
+
+<a id="nestedatt--business_information_attributes"></a>
+### Nested Schema for `business_information_attributes`
+
+Optional:
+
+- `metadata` (Attributes) Business metadata including custom fields (see [below for nested schema](#nestedatt--business_information_attributes--metadata))
+- `token` (String)
+
+<a id="nestedatt--business_information_attributes--metadata"></a>
+### Nested Schema for `business_information_attributes.metadata`
+
+Optional:
+
+- `custom_fields` (Attributes List) Array of custom field objects (see [below for nested schema](#nestedatt--business_information_attributes--metadata--custom_fields))
+
+<a id="nestedatt--business_information_attributes--metadata--custom_fields"></a>
+### Nested Schema for `business_information_attributes.metadata.custom_fields`
+
+Optional:
+
+- `name` (String) Custom field name
+- `value` (String) Custom field value
 
 

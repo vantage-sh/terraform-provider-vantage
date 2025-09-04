@@ -32,6 +32,7 @@ Read-Only:
 - `end_date` (String) The end date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.
 - `filter` (String) The filter applied to the KubernetesEfficiencyReport. Additional documentation available at https://docs.vantage.sh/vql.
 - `groupings` (String) Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.
+- `id` (String) The id of the resource
 - `start_date` (String) The start date for the KubernetesEfficiencyReport. Only set for custom date ranges. ISO 8601 Formatted.
 - `title` (String) The title of the KubernetesEfficiencyReport.
 - `token` (String)

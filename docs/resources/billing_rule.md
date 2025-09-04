@@ -38,6 +38,7 @@ description: |-
 
 - `created_at` (String) The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.
 - `created_by_token` (String) The token of the Creator of the BillingRule.
+- `id` (String) The id of the billing rule
 - `token` (String) The token of the billing rule
 
 

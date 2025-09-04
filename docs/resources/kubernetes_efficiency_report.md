@@ -34,6 +34,7 @@ description: |-
 
 - `created_at` (String) The date and time, in UTC, the report was created. ISO 8601 Formatted.
 - `default` (Boolean) Indicates whether the KubernetesEfficiencyReport is the default report.
+- `id` (String) The id of the report
 - `token` (String) The token of the report
 - `user_token` (String) The token for the User who created this KubernetesEfficiencyReport.
 

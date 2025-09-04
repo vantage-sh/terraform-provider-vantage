@@ -37,6 +37,7 @@ resource "vantage_resource_report" "demo_resource_report" {
 
 - `created_at` (String) The date and time, in UTC, the report was created. ISO 8601 Formatted.
 - `created_by_token` (String) The token for the User or Team who created this ResourceReport.
+- `id` (String) The token of the report
 - `token` (String) The token of the report
 - `user_token` (String) The token for the User who created this ResourceReport.
 

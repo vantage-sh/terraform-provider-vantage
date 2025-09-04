@@ -33,6 +33,7 @@ resource "vantage_access_grant" "demo_access_grant" {
 
 ### Read-Only
 
+- `id` (String) Id of the access grant.
 - `token` (String) Token of the access grant.
 
 
