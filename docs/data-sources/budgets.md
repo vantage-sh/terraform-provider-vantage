@@ -29,6 +29,7 @@ Read-Only:
 - `cost_report_token` (String) The token of the Report associated with the Budget.
 - `created_at` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
 - `created_by_token` (String) The token of the Creator of the Budget.
+- `id` (String) The id of the resource
 - `name` (String) The name of the Budget.
 - `performance` (Attributes List) The historical performance of the Budget. (see [below for nested schema](#nestedatt--budgets--performance))
 - `periods` (Attributes List) The budget periods associated with the Budget. (see [below for nested schema](#nestedatt--budgets--periods))

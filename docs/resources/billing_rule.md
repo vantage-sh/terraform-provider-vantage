@@ -17,26 +17,28 @@ description: |-
 
 ### Required
 
-- `title` (String) The title of the Billing Rule.
-- `type` (String) The type of the Billing Rule. Note: the values are case insensitive.
+- `title` (String) The title of the BillingRule.
+- `type` (String) The type of the BillingRule. Note: the values are case insensitive.
 
 ### Optional
 
-- `amount` (Number) The credit amount for the Billing Rule. Example value: 300
+- `amount` (Number) The amount for the BillingRule. Required for Charge and Credit rules. Example value: 300
 - `apply_to_all` (Boolean) Determines if the BillingRule applies to all current and future managed accounts.
-- `category` (String) The category of the Billing Rule.
-- `charge_type` (String) The charge type of the Billing Rule.
+- `category` (String) The category of the BillingRule. Required for Charge and Credit rules.
+- `charge_type` (String) The charge type of the BillingRule. Required for Exclusion rules.
 - `end_date` (String) The end date of the BillingRule. ISO 8601 formatted.
-- `percentage` (Number) The percentage of the cost shown. Example value: 75.0
-- `service` (String) The service of the Billing Rule.
+- `percentage` (Number) The percentage of the cost shown. Required for Adjustment rules. Example value: 75.0
+- `service` (String) The service of the BillingRule. Required for Charge and Credit rules.
+- `sql_query` (String) The SQL query for the BillingRule. Required for Custom rules. Example value: UPDATE costs SET costs.amount = costs.amount * 0.95
 - `start_date` (String) The start date of the BillingRule. ISO 8601 formatted.
-- `start_period` (String) The start period of the Billing Rule.
-- `sub_category` (String) The subcategory of the Billing Rule.
+- `start_period` (String) The start period of the BillingRule. DEPRECATED: use start_date instead.
+- `sub_category` (String) The subcategory of the BillingRule. Required for Charge and Credit rules.
 
 ### Read-Only
 
-- `created_at` (String) The date and time, in UTC, the Billing Rule was created. ISO 8601 Formatted.
-- `created_by_token` (String) The token of the User who created the Billing Rule.
+- `created_at` (String) The date and time, in UTC, the BillingRule was created. ISO 8601 Formatted.
+- `created_by_token` (String) The token of the Creator of the BillingRule.
+- `id` (String) The id of the billing rule
 - `token` (String) The token of the billing rule
 
 

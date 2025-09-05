@@ -43,6 +43,7 @@ resource "vantage_dashboard" "demo_dashboard" {
 ### Read-Only
 
 - `created_at` (String) The date and time, in UTC, the Dashboard was created. ISO 8601 Formatted.
+- `id` (String) The id of the dashboard
 - `token` (String) The token of the dashboard
 
 <a id="nestedatt--widgets"></a>

@@ -163,6 +163,8 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewBillingRulesDataSource,
 		NewNetworkFlowReportDataSource,
 		NewCostAlertsDataSource,
+		NewInvoicesDataSource,
+		NewBillingProfilesDataSource,
 	}
 }
 
@@ -189,5 +191,7 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewFinancialCommitmentReportResource,
 		NewNetworkFlowReportResource,
 		NewCostAlertResource,
+		NewInvoiceResource,
+		NewBillingProfileResource,
 	}
 }

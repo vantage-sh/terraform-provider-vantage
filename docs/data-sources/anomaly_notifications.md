@@ -26,6 +26,7 @@ Read-Only:
 
 - `cost_report_token` (String) The token for the CostReport the AnomalyNotification is associated with.
 - `created_at` (String) The date and time, in UTC, the AnomalyNotification was created. ISO 8601 Formatted.
+- `id` (String) The id of the resource
 - `recipient_channels` (List of String) The channels that the notification is sent to.
 - `threshold` (Number) The threshold amount that must be met for the notification to fire.
 - `token` (String)

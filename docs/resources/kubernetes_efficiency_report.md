@@ -27,13 +27,14 @@ description: |-
 - `date_interval` (String) The date interval of the KubernetesEfficiencyReport. Incompatible with 'start_date' and 'end_date' parameters. Defaults to 'this_month' if start_date and end_date are not provided.
 - `end_date` (String) The end date of the KubernetesEfficiencyReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
 - `filter` (String) The filter query language to apply to the KubernetesEfficiencyReport. Additional documentation available at https://docs.vantage.sh/vql.
-- `groupings` (List of String) Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, label, label:<label_name>.
+- `groupings` (List of String) Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.
 - `start_date` (String) The start date of the KubernetesEfficiencyReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
 
 ### Read-Only
 
 - `created_at` (String) The date and time, in UTC, the report was created. ISO 8601 Formatted.
 - `default` (Boolean) Indicates whether the KubernetesEfficiencyReport is the default report.
+- `id` (String) The id of the report
 - `token` (String) The token of the report
 - `user_token` (String) The token for the User who created this KubernetesEfficiencyReport.
 

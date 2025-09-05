@@ -3,12 +3,12 @@
 page_title: "vantage_team Resource - terraform-provider-vantage"
 subcategory: ""
 description: |-
-  Manages a Team.
+  
 ---
 
 # vantage_team (Resource)
 
-Manages a Team.
+
 
 ## Example Usage
 
@@ -26,17 +26,19 @@ resource "vantage_team" "demo_team" {
 
 ### Required
 
-- `name` (String) Name of the team.
+- `name` (String) The name of the Team.
 
 ### Optional
 
-- `description` (String) Description of the team.
-- `user_emails` (Set of String) User emails.
-- `user_tokens` (Set of String) User tokens.
-- `workspace_tokens` (Set of String) Workspace tokens to add the team to.
+- `description` (String) The description of the Team.
+- `role` (String) The role to assign to the provided Users. Defaults to 'editor' which has editor permissions.
+- `user_emails` (List of String) The User emails to associate to the Team.
+- `user_tokens` (List of String) The User tokens to associate to the Team.
+- `workspace_tokens` (List of String) The Workspace tokens to associate to the Team.
 
 ### Read-Only
 
-- `token` (String) Unique team identifier.
+- `id` (String) The id of the team
+- `token` (String) The token of the Team
 
 

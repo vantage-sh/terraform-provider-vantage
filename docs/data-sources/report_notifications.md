@@ -27,6 +27,7 @@ Read-Only:
 - `change` (String) The type of change the ReportNotification is tracking.
 - `cost_report_token` (String) The token for a CostReport the ReportNotification is applied to.
 - `frequency` (String) The frequency the ReportNotification is sent.
+- `id` (String) The id of the resource
 - `recipient_channels` (List of String) The Slack or Microsoft Teams channels that receive the notification.
 - `title` (String) The title of the ReportNotification.
 - `token` (String)

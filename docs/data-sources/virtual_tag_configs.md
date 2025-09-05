@@ -26,6 +26,7 @@ Read-Only:
 
 - `backfill_until` (String) The earliest month VirtualTagConfig should be backfilled to.
 - `created_by_token` (String) The token of the Creator of the VirtualTagConfig.
+- `id` (String) The id of the VirtualTagConfig.
 - `key` (String) The key of the VirtualTagConfig.
 - `overridable` (Boolean) Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.
 - `token` (String) The token of the VirtualTagConfig.

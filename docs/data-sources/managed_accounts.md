@@ -25,10 +25,53 @@ description: |-
 Read-Only:
 
 - `access_credential_tokens` (List of String) The tokens for the Access Credentials assigned to the Managed Account.
+- `billing_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--managed_accounts--billing_information_attributes))
 - `billing_rule_tokens` (List of String) The tokens for the Billing Rules assigned to the Managed Account.
+- `business_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--managed_accounts--business_information_attributes))
 - `contact_email` (String)
+- `id` (String) The id of the resource
+- `msp_billing_profile_token` (String) Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)
 - `name` (String)
 - `parent_account_token` (String) The token for the parent Account.
 - `token` (String)
+
+<a id="nestedatt--managed_accounts--billing_information_attributes"></a>
+### Nested Schema for `managed_accounts.billing_information_attributes`
+
+Read-Only:
+
+- `address_line_1` (String) First line of billing address
+- `address_line_2` (String) Second line of billing address
+- `billing_email` (List of String) Array of billing email addresses
+- `city` (String) City for billing address
+- `company_name` (String) Company name for billing
+- `country_code` (String) ISO country code
+- `postal_code` (String) Postal or ZIP code
+- `state` (String) State or province for billing address
+- `token` (String)
+
+
+<a id="nestedatt--managed_accounts--business_information_attributes"></a>
+### Nested Schema for `managed_accounts.business_information_attributes`
+
+Read-Only:
+
+- `metadata` (Attributes) (see [below for nested schema](#nestedatt--managed_accounts--business_information_attributes--metadata))
+- `token` (String)
+
+<a id="nestedatt--managed_accounts--business_information_attributes--metadata"></a>
+### Nested Schema for `managed_accounts.business_information_attributes.metadata`
+
+Read-Only:
+
+- `custom_fields` (Attributes List) Array of custom field objects (see [below for nested schema](#nestedatt--managed_accounts--business_information_attributes--metadata--custom_fields))
+
+<a id="nestedatt--managed_accounts--business_information_attributes--metadata--custom_fields"></a>
+### Nested Schema for `managed_accounts.business_information_attributes.metadata.custom_fields`
+
+Read-Only:
+
+- `name` (String) Custom field name
+- `value` (String) Custom field value
 
 

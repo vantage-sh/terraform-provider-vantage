@@ -31,6 +31,7 @@ Read-Only:
 - `end_date` (String) The end date for the FinancialCommitmentReport. Only set for custom date ranges. ISO 8601 Formatted.
 - `filter` (String) The filter applied to the FinancialCommitmentReport. Additional documentation available at https://docs.vantage.sh/vql.
 - `groupings` (String) The grouping aggregations applied to the filtered data.
+- `id` (String) The id of the resource
 - `on_demand_costs_scope` (String) The scope for the costs. Possible values: discountable, all.
 - `start_date` (String) The start date for the FinancialCommitmentReport. Only set for custom date ranges. ISO 8601 Formatted.
 - `title` (String) The title of the FinancialCommitmentReport.

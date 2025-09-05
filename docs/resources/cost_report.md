@@ -49,6 +49,7 @@ resource "vantage_cost_report" "demo_report" {
 
 ### Read-Only
 
+- `id` (String) Unique cost report identifier (aliases to token)
 - `token` (String) Unique cost report identifier
 
 
