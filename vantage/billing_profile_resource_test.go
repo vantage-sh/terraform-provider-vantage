@@ -22,6 +22,7 @@ func TestAccBillingProfile_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "nickname", nickname),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "token"),
+					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "id"),
 				),
 			},
 			{
@@ -50,10 +51,11 @@ func TestAccBillingProfile_withNestedAttributes(t *testing.T) {
 					// Basic attributes
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "nickname", nickname),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "token"),
+					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "id"),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "created_at"),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "updated_at"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "managed_accounts_count", "0"),
-					
+
 					// Billing information attributes
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.company_name", companyName),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_1", "123 Main St"),
@@ -62,10 +64,10 @@ func TestAccBillingProfile_withNestedAttributes(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.postal_code", "10001"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.country_code", "US"),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
-					
+
 					// Verify address_line_2 is properly handled as empty/null
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_2", ""),
-					
+
 					// Verify billing_email is empty array
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.billing_email.#", "0"),
 				),
@@ -79,7 +81,7 @@ func TestAccBillingProfile_withNestedAttributes(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.city", "Boston"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.state", "MA"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.postal_code", "02101"),
-					
+
 					// Verify token persists through updates
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
 				),
@@ -106,13 +108,13 @@ func TestAccBillingProfile_withCompleteNestedAttributes(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "nickname", nickname),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.company_name", companyName),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_1", "123 Main St"),
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_2", "Suite 100"), // Previously problematic!
+					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_2", "Suite 100"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.city", "New York"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.state", "NY"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.postal_code", "10001"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.country_code", "US"),
-					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"), // Previously problematic!
-					
+					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
+
 					// Verify billing_email array
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.billing_email.#", "1"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.billing_email.0", email),
@@ -151,7 +153,7 @@ func TestAccBillingProfile_withBankingAttributes(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.bank_name", bankName),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.beneficiary_name", beneficiaryName),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "banking_information_attributes.token"),
-					
+
 					// Verify optional fields are handled properly
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.tax_id", ""),
 				),
@@ -172,7 +174,7 @@ func TestAccBillingProfile_withBankingAttributes(t *testing.T) {
 // Test combined banking and billing attributes
 func TestAccBillingProfile_withBothNestedAttributes(t *testing.T) {
 	nickname := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
-	
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -185,14 +187,13 @@ func TestAccBillingProfile_withBothNestedAttributes(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.bank_name", "Example Bank"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.beneficiary_name", "John Doe"),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "banking_information_attributes.token"),
-					
+
 					// Verify billing attributes
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.company_name", "Example Corp"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_1", "123 Business Ave"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_2", "Suite 100"),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
-					
-					// Verify both tokens exist and are set (they should be different)
+
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "banking_information_attributes.token"),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
 				),
@@ -200,8 +201,6 @@ func TestAccBillingProfile_withBothNestedAttributes(t *testing.T) {
 		},
 	})
 }
-
-
 
 func testAccBillingProfileResource(nickname string) string {
 	return fmt.Sprintf(`
@@ -261,12 +260,12 @@ func testAccBillingProfileWithBothAttributes(nickname string) string {
 	return fmt.Sprintf(`
 resource "vantage_billing_profile" "test" {
 	nickname = %[1]q
-	
+
 	banking_information_attributes = {
 		bank_name        = "Example Bank"
 		beneficiary_name = "John Doe"
 	}
-	
+
 	billing_information_attributes = {
 		company_name   = "Example Corp"
 		address_line_1 = "123 Business Ave"

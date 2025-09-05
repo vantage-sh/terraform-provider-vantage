@@ -22,6 +22,7 @@ func TestAccInvoice_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_invoice.test", "billing_period_start", "2024-01-01"),
 					resource.TestCheckResourceAttr("vantage_invoice.test", "billing_period_end", "2024-01-31"),
 					resource.TestCheckResourceAttrSet("vantage_invoice.test", "token"),
+					resource.TestCheckResourceAttrSet("vantage_invoice.test", "id"),
 					resource.TestCheckResourceAttrSet("vantage_invoice.test", "created_at"),
 					resource.TestCheckResourceAttrSet("vantage_invoice.test", "status"),
 				),

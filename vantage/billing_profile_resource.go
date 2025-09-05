@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_profile"
 	billingprofilesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/billing_profiles"
@@ -85,7 +84,6 @@ func (r BillingProfileResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -115,7 +113,6 @@ func (r BillingProfileResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	state.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -155,7 +152,6 @@ func (r BillingProfileResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

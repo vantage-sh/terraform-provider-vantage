@@ -223,6 +223,7 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 
 	// Handle simple attributes
 	m.CreatedAt = types.StringPointerValue(&payload.CreatedAt)
+	m.Id = types.StringPointerValue(&payload.Token)
 	m.ManagedAccountsCount = types.StringPointerValue(&payload.ManagedAccountsCount)
 	m.Nickname = types.StringValue(payload.Nickname)
 	m.Token = types.StringPointerValue(&payload.Token)

@@ -47,8 +47,10 @@ func (m *invoiceModel) applyPayload(ctx context.Context, payload *modelsv2.Invoi
 	}
 
 	if payload.Token != "" {
+		m.Id = types.StringValue(payload.Token)
 		m.Token = types.StringValue(payload.Token)
 	} else {
+		m.Id = types.StringNull()
 		m.Token = types.StringNull()
 	}
 
