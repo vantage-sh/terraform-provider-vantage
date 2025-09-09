@@ -180,6 +180,10 @@ resources:
       path: /managed_accounts/{managed_account_token}
       method: DELETE
     schema:
+      ignores:
+        - billing_information_attributes
+        - business_information_attributes
+        - msp_billing_profile_token
       attributes:
         overrides:
           token:
