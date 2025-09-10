@@ -49,6 +49,7 @@ func (r *managedAccountResource) Schema(ctx context.Context, req resource.Schema
 			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+	
 	resp.Schema = s
 }
 

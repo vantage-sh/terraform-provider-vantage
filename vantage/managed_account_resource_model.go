@@ -14,7 +14,10 @@ type managedAccountModel resource_managed_account.ManagedAccountModel
 func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv2.ManagedAccount, isDataSource bool) diag.Diagnostics {
 	m.Name = types.StringValue(payload.Name)
 	m.ContactEmail = types.StringValue(payload.ContactEmail)
-	if payload.AccessCredentialTokens != nil {
+	m.Id = types.StringValue(payload.Token) // Set ID to the token for resource identification
+	// Only apply access_credential_tokens from API response for data sources (reads/imports)
+	// For resource operations, keep the planned value to avoid delegation/mixed credential issues. i.e. The endpoint will attempt to return all child access credentials and not just the parent access credentials that are being delegated.
+	if isDataSource && payload.AccessCredentialTokens != nil {
 		accessCredentialTokens, diag := types.ListValueFrom(ctx, types.StringType, payload.AccessCredentialTokens)
 		if diag.HasError() {
 			return diag
@@ -22,7 +25,9 @@ func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv
 		m.AccessCredentialTokens = accessCredentialTokens
 	}
 
-	if payload.BillingRuleTokens != nil {
+	// Only apply billing_rule_tokens from API response for data sources (reads/imports)
+	// For resource operations, keep the planned value to avoid order/consistency issues
+	if isDataSource && payload.BillingRuleTokens != nil {
 		billingRuleTokens, diag := types.ListValueFrom(ctx, types.StringType, payload.BillingRuleTokens)
 		if diag.HasError() {
 			return diag
