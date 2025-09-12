@@ -303,6 +303,26 @@ resources:
             description: The token of the billing profile
         aliases:
           billing_profile_token: token
+  workspace:
+    read:
+      path: /workspaces/{workspace_token}
+      method: GET
+    create:
+      path: /workspaces
+      method: POST
+    update:
+      path: /workspaces/{workspace_token}
+      method: PUT
+    delete:
+      path: /workspaces/{workspace_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the workspace
+        aliases:
+          workspace_token: token
 data_sources:
   billing_rules:
     read:

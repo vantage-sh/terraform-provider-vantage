@@ -193,5 +193,6 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewCostAlertResource,
 		NewInvoiceResource,
 		NewBillingProfileResource,
+		NewWorkspaceResource,
 	}
 }
