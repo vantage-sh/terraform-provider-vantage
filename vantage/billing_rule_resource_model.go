@@ -26,6 +26,7 @@ type datasourceBillingRuleModel struct {
 	SqlQuery       types.String `tfsdk:"sql_query"`
 	Title          types.String `tfsdk:"title"`
 	Token          types.String `tfsdk:"token"`
+	Id             types.String `tfsdk:"id"`
 	Type           types.String `tfsdk:"type"`
 }
 
@@ -140,6 +141,7 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
+	m.Id = types.StringValue(payload.Token)
 	m.Type = types.StringValue(payload.Type)
 
 	return nil
