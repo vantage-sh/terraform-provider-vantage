@@ -104,6 +104,26 @@ resources:
             description: The token of the cost alert
         aliases:
           cost_alert_token: token
+  cost_report:
+    create:
+      path: /cost_reports
+      method: POST
+    read:
+      path: /cost_reports/{cost_report_token}
+      method: GET
+    update:
+      path: /cost_reports/{cost_report_token}
+      method: PUT
+    delete:
+      path: /cost_reports/{cost_report_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the cost report
+        aliases:
+          cost_report_token: token
   dashboard:
     create:
       path: /dashboards
