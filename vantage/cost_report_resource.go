@@ -181,9 +181,16 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		DateInterval:            data.DateInterval.ValueString(),
 		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
 		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueStringPointer(),
-		ChartType:               data.ChartType.ValueStringPointer(),
-		DateBin:                 data.DateBin.ValueStringPointer(),
 	}
+
+	if !data.ChartType.IsUnknown() && !data.ChartType.IsNull() {
+		body.ChartType = data.ChartType.ValueStringPointer()
+	}
+
+	if !data.DateBin.IsUnknown() && !data.DateBin.IsNull() {
+		body.DateBin = data.DateBin.ValueStringPointer()
+	}
+
 	params.WithCreateCostReport(body)
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
 	if err != nil {
@@ -294,8 +301,14 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		Groupings:               data.Groupings.ValueString(),
 		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
 		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueString(),
-		ChartType:               data.ChartType.ValueStringPointer(),
-		DateBin:                 data.DateBin.ValueStringPointer(),
+	}
+
+	if !data.ChartType.IsUnknown() && !data.ChartType.IsNull() {
+		model.ChartType = data.ChartType.ValueStringPointer()
+	}
+
+	if !data.DateBin.IsUnknown() && !data.DateBin.IsNull() {
+		model.DateBin = data.DateBin.ValueStringPointer()
 	}
 
 	if data.DateInterval.ValueString() == "custom" {
