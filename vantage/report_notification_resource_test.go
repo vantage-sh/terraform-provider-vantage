@@ -25,7 +25,7 @@ func TestAccVantageReportNotification_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccVantageReportNotification_CreateTeamTf("team-1") +
-					costReportTF(costReportTitle, costReportFilter) +
+					costReportTF("test", costReportTitle, costReportFilter) +
 					testAccVantageReportNotification_basicTf(id1, title1, change1, frequency1, costReportTitle),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_team.team", "name", "team-1"),
