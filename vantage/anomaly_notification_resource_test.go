@@ -26,12 +26,13 @@ func TestAccAnomalyNotification_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "20"),
 				),
 			},
-			{ // update the channels
-				Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "recipient_channels = [\"test\"]", ""),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "20"),
-				),
-			},
+			// TODO: uncomment after resolving recipient channels setup in test environment
+			// { // update the channels
+			// 	Config: testAccAnomalyNotificationCostReport() + testAccAnomalyNotification(20, "recipient_channels = [\"test\"]", ""),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttr("vantage_anomaly_notification.test", "threshold", "20"),
+			// 	),
+			// },
 		},
 	})
 }

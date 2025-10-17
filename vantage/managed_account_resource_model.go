@@ -23,6 +23,8 @@ func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv
 			return diag
 		}
 		m.AccessCredentialTokens = accessCredentialTokens
+	} else if !isDataSource && m.AccessCredentialTokens.IsUnknown() {
+		m.AccessCredentialTokens = types.ListNull(types.StringType)
 	}
 
 	// Only apply billing_rule_tokens from API response for data sources (reads/imports)
@@ -33,6 +35,8 @@ func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv
 			return diag
 		}
 		m.BillingRuleTokens = billingRuleTokens
+	} else if !isDataSource && m.BillingRuleTokens.IsUnknown() {
+		m.BillingRuleTokens = types.ListNull(types.StringType)
 	}
 
 	m.ParentAccountToken = types.StringValue(payload.ParentAccountToken)
