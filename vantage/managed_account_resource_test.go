@@ -11,7 +11,6 @@ import (
 )
 
 func TestAccManagedAccount_basic(t *testing.T) {
-	t.Skip()
 	domain := os.Getenv("MANAGED_ACCOUNT_DOMAIN")
 	if domain == "" {
 		domain = "vantage.sh"
@@ -28,6 +27,7 @@ func TestAccManagedAccount_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "name", "Test Account"),
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", contactEmail),
+					resource.TestCheckNoResourceAttr("vantage_managed_account.test", "access_credential_tokens"),
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "billing_rule_tokens.#", "1"),
 				),
 			},
@@ -36,6 +36,16 @@ func TestAccManagedAccount_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "name", "Test Account"),
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", contactEmail),
+					resource.TestCheckNoResourceAttr("vantage_managed_account.test", "access_credential_tokens"),
+					resource.TestCheckResourceAttr("vantage_managed_account.test", "billing_rule_tokens.#", "1"),
+				),
+			},
+			{
+				Config: testAccManagedAccountBillingRules() + testAccManagedAccountWithDelegationsResource("br-2", "ac-1", contactEmail),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_managed_account.test", "name", "Test Account"),
+					resource.TestCheckResourceAttr("vantage_managed_account.test", "contact_email", contactEmail),
+					resource.TestCheckResourceAttr("vantage_managed_account.test", "access_credential_tokens.#", "1"),
 					resource.TestCheckResourceAttr("vantage_managed_account.test", "billing_rule_tokens.#", "1"),
 				),
 			},
@@ -71,4 +81,15 @@ resource "vantage_managed_account" "test" {
 	billing_rule_tokens = [vantage_billing_rule.%[2]s.token]
 }
 	`, contactEmail, billingRuleId)
+}
+func testAccManagedAccountWithDelegationsResource(billingRuleId, accessCredentialToken, contactEmail string) string {
+	return fmt.Sprintf(`
+
+resource "vantage_managed_account" "test" {
+	name                   = "Test Account"
+	contact_email           = "%[1]s"
+	access_credential_tokens = ["%[3]s"]
+	billing_rule_tokens = [vantage_billing_rule.%[2]s.token]
+}
+	`, contactEmail, billingRuleId, accessCredentialToken)
 }
