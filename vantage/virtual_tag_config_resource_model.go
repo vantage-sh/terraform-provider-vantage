@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -18,6 +19,7 @@ type virtualTagConfigValueModel struct {
 	CostMetric          resource_virtual_tag_config.CostMetricValue `tfsdk:"cost_metric"`
 	Filter              types.String                                `tfsdk:"filter"`
 	Name                types.String                                `tfsdk:"name"`
+	Percentages         types.List                                  `tfsdk:"percentages"`
 }
 
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
@@ -61,6 +63,32 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 				}
 
 				value.CostMetric = tfCostMetric
+			}
+
+			if v.Percentages != nil {
+				tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages))
+				for _, p := range v.Percentages {
+					pv, diag := resource_virtual_tag_config.NewPercentagesValue(
+						resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
+						map[string]attr.Value{
+							"pct":   types.Float64Value(*p.Pct),
+							"value": types.StringValue(*p.Value),
+						},
+					)
+					if diag.HasError() {
+						return diag
+					}
+					tfPercentages = append(tfPercentages, pv)
+				}
+				tfPercentagesValue, diag := types.ListValueFrom(
+					ctx,
+					resource_virtual_tag_config.PercentagesValue{}.Type(ctx),
+					tfPercentages,
+				)
+				if diag.HasError() {
+					return diag
+				}
+				value.Percentages = tfPercentagesValue
 			}
 
 			tfValue, diag := value.ToObjectValue(ctx)
@@ -124,6 +152,24 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 					}
 				}
 			}
+
+			if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() {
+				tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages.Elements()))
+				diag := v.Percentages.ElementsAs(ctx, &tfPercentages, false)
+				if diag.HasError() {
+					diags.Append(diag...)
+					return nil
+				}
+				percentages := make([]*modelsv2.CreateVirtualTagConfigValuesItems0PercentagesItems0, 0, len(tfPercentages))
+				for _, p := range tfPercentages {
+					pct := float32(p.Pct.ValueFloat64())
+					percentages = append(percentages, &modelsv2.CreateVirtualTagConfigValuesItems0PercentagesItems0{
+						Pct:   &pct,
+						Value: p.Value.ValueStringPointer(),
+					})
+				}
+				value.Percentages = percentages
+			}
 			values = append(values, value)
 		}
 		model.Values = values
@@ -184,6 +230,24 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 						Tag: aggregation.Tag.ValueStringPointer(),
 					}
 				}
+			}
+
+			if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() {
+				tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages.Elements()))
+				diag := v.Percentages.ElementsAs(ctx, &tfPercentages, false)
+				if diag.HasError() {
+					diags.Append(diag...)
+					return nil
+				}
+				percentages := make([]*modelsv2.UpdateVirtualTagConfigValuesItems0PercentagesItems0, 0, len(tfPercentages))
+				for _, p := range tfPercentages {
+					pct := float32(p.Pct.ValueFloat64())
+					percentages = append(percentages, &modelsv2.UpdateVirtualTagConfigValuesItems0PercentagesItems0{
+						Pct:   &pct,
+						Value: p.Value.ValueStringPointer(),
+					})
+				}
+				value.Percentages = percentages
 			}
 			values = append(values, value)
 		}

@@ -121,6 +121,29 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 							// 	}...),
 							// },
 						},
+						"percentages": schema.ListNestedAttribute{
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"pct": schema.Float64Attribute{
+										Required: true,
+									},
+									"value": schema.StringAttribute{
+										Required: true,
+									},
+								},
+								CustomType: resource_virtual_tag_config.PercentagesType{
+									ObjectType: types.ObjectType{
+										AttrTypes: resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
+									},
+								},
+							},
+							Optional:            true,
+							Computed:            true,
+							Description:         "Labeled percentage allocations for matching costs.",
+							MarkdownDescription: "Labeled percentage allocations for matching costs.",
+							// TODO: same vague faff about the 'only one' client-side validations
+							// Validators: []validator.List{
+						},
 						"filter": schema.StringAttribute{
 							Required:            true,
 							MarkdownDescription: "The filter VQL for the Value.",

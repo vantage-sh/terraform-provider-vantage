@@ -72,6 +72,23 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 							}
 							filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
 						}
+					},
+					{
+						filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+						percentages = [
+							{
+								pct = 25
+								value = "Marketing"
+							},
+							{
+								pct = 65
+								value = "Engineering"
+							},
+							{
+								pct = 10
+								value = "Support"
+							},
+						]
 					}
 				]
 				`),
@@ -80,12 +97,19 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "true"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "backfill_until", ctx.backfillUntil),
 					resource.TestCheckResourceAttrSet(ctx.resourceName, "token"),
-					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "2"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "3"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.name", "value-0"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.filter", "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.cost_metric.aggregation.tag", "environment"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.cost_metric.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.filter", "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.#", "3"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.0.pct", "25"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.0.value", "Marketing"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.1.pct", "65"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.1.value", "Engineering"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.2.pct", "10"),
 				),
 			},
 			// Update: not specifying values
@@ -114,18 +138,45 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					{
 						name = "value-1"
 						filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+					},
+					{
+						filter = "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"
+						cost_metric = {
+							aggregation = {
+								tag = "environment"
+							}
+							filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
+						}
+					},
+					{
+						filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+						percentages = [
+							{
+								pct = 30
+								value = "Marketing"
+							},
+							{
+								pct = 55
+								value = "Engineering"
+							},
+							{
+								pct = 15
+								value = "Support"
+							},
+						]
 					}
 				]
 				`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
 					resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "false"),
-					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "2"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "4"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.name", "value-0"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.name", "value-1"),
 				),
 			},
 			// Update: preserving existing values
+			// TODO: I don't know what I thought I was testing here. re-using state via `fromState` feels out of scope of this resource test.
 			{
 				Config: testAccVantageVirtualTagConfig_basicTf(
 					"test",
@@ -137,29 +188,13 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
 					resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "false"),
-					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "2"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "4"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.name", "value-0"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.name", "value-1"),
+					resource.TestCheckResourceAttrSet(ctx.resourceName, "values.2.cost_metric.filter"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.#", "3"),
 				),
 			},
-			// // Update: adding to existing values
-			// {
-			// 	Config: testAccVantageVirtualTagConfig_basicTf(
-			// 		"test",
-			// 		ctx.keyV1,
-			// 		!ctx.overridable,
-			// 		ctx.backfillUntil,
-			// 		fmt.Sprintf(`values = concat(%[1]s, [{ name = "value-2" }])`, fromState(ctx.keyV1, "values")),
-			// 	),
-			// 	Check: resource.ComposeAggregateTestCheckFunc(
-			// 		resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
-			// 		resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "false"),
-			// 		resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "3"),
-			// 		resource.TestCheckResourceAttr(ctx.resourceName, "values.0.name", "value-0"),
-			// 		resource.TestCheckResourceAttr(ctx.resourceName, "values.1.name", "value-1"),
-			// 		resource.TestCheckResourceAttr(ctx.resourceName, "values.2.name", "value-2"),
-			// 	),
-			// },
 			// Update: removing values
 			{
 				Config: testAccVantageVirtualTagConfig_basicTf("test", ctx.keyV1, !ctx.overridable, ctx.backfillUntil, "values = []"),
