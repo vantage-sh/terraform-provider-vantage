@@ -30,6 +30,29 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)
 	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
 
+	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(payload.CollapsedTagKeys))
+	for _, c := range payload.CollapsedTagKeys {
+		tfProviders, diag := types.ListValueFrom(ctx, types.StringType, c.Providers)
+		if diag.HasError() {
+			return diag
+		}
+		collapsedTagKey, diag := resource_virtual_tag_config.NewCollapsedTagKeysValue(resource_virtual_tag_config.CollapsedTagKeysValue{}.AttributeTypes(ctx), map[string]attr.Value{
+			"key":       types.StringValue(c.Key),
+			"providers": tfProviders,
+		})
+		if diag.HasError() {
+			return diag
+		}
+
+		tfCollapsedTagKeys = append(tfCollapsedTagKeys, collapsedTagKey)
+	}
+
+	tfCollapsedTagKeysValue, diag := types.ListValueFrom(ctx, resource_virtual_tag_config.CollapsedTagKeysValue{}.Type(ctx), tfCollapsedTagKeys)
+	if diag.HasError() {
+		return diag
+	}
+	m.CollapsedTagKeys = tfCollapsedTagKeysValue
+
 	if payload.Values != nil {
 		tfValues := make([]basetypes.ObjectValue, 0, len(m.Values.Elements()))
 		for _, v := range payload.Values {
@@ -124,6 +147,29 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 	}
 	model.BackfillUntil = *backfillUntil
 
+	if !m.CollapsedTagKeys.IsNull() && !m.CollapsedTagKeys.IsUnknown() {
+		tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(m.CollapsedTagKeys.Elements()))
+		diag := m.CollapsedTagKeys.ElementsAs(ctx, &tfCollapsedTagKeys, false)
+		if diag.HasError() {
+			diags.Append(diag...)
+			return nil
+		}
+		collapsedTagKeys := make([]*modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0, 0, len(tfCollapsedTagKeys))
+		for _, c := range tfCollapsedTagKeys {
+			providers := make([]string, 0, len(c.Providers.Elements()))
+			diag := c.Providers.ElementsAs(ctx, &providers, false)
+			if diag.HasError() {
+				diags.Append(diag...)
+				return nil
+			}
+			collapsedTagKeys = append(collapsedTagKeys, &modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0{
+				Key:       c.Key.ValueStringPointer(),
+				Providers: providers,
+			})
+		}
+		model.CollapsedTagKeys = collapsedTagKeys
+	}
+
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
 		tfValues := m.valuesFromTf(ctx, diags)
 		if diags.HasError() {
@@ -199,6 +245,29 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 		if diags.HasError() {
 			return nil
 		}
+	}
+
+	if !m.CollapsedTagKeys.IsNull() && !m.CollapsedTagKeys.IsUnknown() {
+		tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(m.CollapsedTagKeys.Elements()))
+		diag := m.CollapsedTagKeys.ElementsAs(ctx, &tfCollapsedTagKeys, false)
+		if diag.HasError() {
+			diags.Append(diag...)
+			return nil
+		}
+		collapsedTagKeys := make([]*modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0, 0, len(tfCollapsedTagKeys))
+		for _, c := range tfCollapsedTagKeys {
+			providers := make([]string, 0, len(c.Providers.Elements()))
+			diag := c.Providers.ElementsAs(ctx, &providers, false)
+			if diag.HasError() {
+				diags.Append(diag...)
+				return nil
+			}
+			collapsedTagKeys = append(collapsedTagKeys, &modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0{
+				Key:       c.Key.ValueStringPointer(),
+				Providers: providers,
+			})
+		}
+		model.CollapsedTagKeys = collapsedTagKeys
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {

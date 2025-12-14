@@ -50,6 +50,33 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				Computed:            true,
 				MarkdownDescription: "The token of the User who created the VirtualTagConfig.",
 			},
+			"collapsed_tag_keys": schema.ListNestedAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Tag keys to collapse values for.",
+				MarkdownDescription: "Tag keys to collapse values for.",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"key": schema.StringAttribute{
+							Required:            true,
+							Description:         "The tag key to collapse values for.",
+							MarkdownDescription: "The tag key to collapse values for.",
+						},
+						"providers": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Optional:            true,
+							Computed:            true,
+							Description:         "The providers this collapsed tag key applies to. Defaults to all providers.",
+							MarkdownDescription: "The providers this collapsed tag key applies to. Defaults to all providers.",
+						},
+					},
+					CustomType: resource_virtual_tag_config.CollapsedTagKeysType{
+						ObjectType: types.ObjectType{
+							AttrTypes: resource_virtual_tag_config.CollapsedTagKeysValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+			},
 			"token": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The token of the VirtualTagConfig.",

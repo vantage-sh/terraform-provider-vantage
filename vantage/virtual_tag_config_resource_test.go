@@ -16,6 +16,7 @@ type testAccVantageVirtualTagConfig_basicContext struct {
 	keyPre        string
 	keyV0         string
 	keyV1         string
+	keyCollapsed  string
 	resourceName  string
 }
 
@@ -31,13 +32,24 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 		keyPre:        keyV0 + "-pre",
 		keyV0:         keyV0,
 		keyV1:         keyV0 + "-updated",
+		keyCollapsed:  keyV0 + "-collapsed",
 		resourceName:  "vantage_virtual_tag_config.test",
 	}
 
-	fromState := func(key, field string) string {
+	collapsedResourceId := "collapsed-tag-keys"
+	_ = collapsedResourceId // suppress unused warning
+
+	resourceName := func(key string) string {
+		return fmt.Sprintf("vantage_virtual_tag_config.%s", key)
+	}
+	_ = resourceName // suppress unused warning
+
+	fromState := func(resourceId, key, field string) string {
 		return fmt.Sprintf(
-			`{ for vtag in data.vantage_virtual_tag_configs.test.virtual_tag_configs : vtag.key => vtag }[%[1]q].%[2]s`,
-			key, field,
+			`{ for vtag in data.vantage_virtual_tag_configs.%[1]s.virtual_tag_configs : vtag.key => vtag }[%[2]q].%[3]s`,
+			resourceId,
+			key,
+			field,
 		)
 	}
 
@@ -113,6 +125,10 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 				),
 			},
 			// Update: not specifying values
+			// TODO(cp): I believe this is not working as intended - I'd expect the provider to support modifying a pre-existing virtual tag config
+			// without specifying values and have the values unchanged (the TF provider submits values as null).
+			//
+			// In the interest of changing as little as possible for now + supporting the test behavior, values are cleared in this scenario.
 			{
 				Config: testAccVantageVirtualTagConfig_basicTf(
 					"test",
@@ -130,43 +146,43 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 			// Update: set multiple values with filters
 			{
 				Config: testAccVantageVirtualTagConfig_basicTf("test", ctx.keyV1, !ctx.overridable, ctx.backfillUntil, `
-				values = [
-					{
-						name = "value-0"
-						filter = "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"
-					},
-					{
-						name = "value-1"
-						filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
-					},
-					{
-						filter = "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"
-						cost_metric = {
-							aggregation = {
-								tag = "environment"
+					values = [
+						{
+							name = "value-0"
+							filter = "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"
+						},
+						{
+							name = "value-1"
+							filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+						},
+						{
+							filter = "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"
+							cost_metric = {
+								aggregation = {
+									tag = "environment"
+								}
+								filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
 							}
-							filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
+						},
+						{
+							filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+							percentages = [
+								{
+									pct = 30
+									value = "Marketing"
+								},
+								{
+									pct = 55
+									value = "Engineering"
+								},
+								{
+									pct = 15
+									value = "Support"
+								},
+							]
 						}
-					},
-					{
-						filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
-						percentages = [
-							{
-								pct = 30
-								value = "Marketing"
-							},
-							{
-								pct = 55
-								value = "Engineering"
-							},
-							{
-								pct = 15
-								value = "Support"
-							},
-						]
-					}
-				]
-				`),
+					]`,
+				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
 					resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "false"),
@@ -183,7 +199,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					ctx.keyV1,
 					!ctx.overridable,
 					ctx.backfillUntil,
-					fmt.Sprintf(`values = %[1]s`, fromState(ctx.keyV1, "values")),
+					fmt.Sprintf(`values = %[1]s`, fromState("test", ctx.keyV1, "values")),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
@@ -204,11 +220,63 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "0"),
 				),
 			},
+			// -- collapsed tag keys --
+			// Create: with collapsed tag keys
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf(
+					collapsedResourceId,
+					ctx.keyCollapsed,
+					ctx.overridable,
+					ctx.backfillUntil,
+					`
+					collapsed_tag_keys = [
+						{
+							key = "environment"
+						},
+						{
+							key = "service"
+						},
+						{
+							key = "project"
+							providers = ["aws", "gcp"]
+						}
+					]`,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.#", "3"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.0.key", "environment"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.1.key", "service"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.2.key", "project"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.2.providers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.2.providers.0", "aws"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.2.providers.1", "gcp"),
+				),
+			},
+			// -- collapsed tag keys --
+			// Update: replacing collapsed tag keys
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf(
+					collapsedResourceId,
+					ctx.keyCollapsed,
+					ctx.overridable,
+					ctx.backfillUntil,
+					`
+					collapsed_tag_keys = [
+						{
+							key = "some-new-key"
+						},
+					]`,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName(collapsedResourceId), "collapsed_tag_keys.0.key", "some-new-key"),
+				),
+			},
 		},
 	})
 }
 
-func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, valuesStr string) string {
+func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, rest string) string {
 	return fmt.Sprintf(
 		`data "vantage_virtual_tag_configs" %[1]q {}
 
@@ -218,6 +286,6 @@ func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable b
 		   backfill_until = %[4]q
 		   %[5]s
 		 }
-		`, id, key, overridable, backfillUntil, valuesStr,
+		`, id, key, overridable, backfillUntil, rest,
 	)
 }

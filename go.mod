@@ -10,10 +10,11 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-framework v1.5.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
-	github.com/vantage-sh/vantage-go v0.0.79-0.20251212211858-a0ca495dd27a
+	github.com/vantage-sh/vantage-go v0.0.79-0.20251214201431-7fed4462e36f
 )
 
-//replace github.com/vantage-sh/vantage-go => ../vantage-go
+// replace github.com/vantage-sh/vantage-go => ../vantage-go
+// replace github.com/vantage-sh/vantage-go/vantagev2/models => ../vantage-go/vantagev2/models
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect

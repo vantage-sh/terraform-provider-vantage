@@ -24,6 +24,33 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The earliest month the VirtualTagConfig should be backfilled to.",
 				MarkdownDescription: "The earliest month the VirtualTagConfig should be backfilled to.",
 			},
+			"collapsed_tag_keys": schema.ListNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"key": schema.StringAttribute{
+							Required:            true,
+							Description:         "The tag key to collapse values for.",
+							MarkdownDescription: "The tag key to collapse values for.",
+						},
+						"providers": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Optional:            true,
+							Computed:            true,
+							Description:         "The providers this collapsed tag key applies to. Defaults to all providers.",
+							MarkdownDescription: "The providers this collapsed tag key applies to. Defaults to all providers.",
+						},
+					},
+					CustomType: CollapsedTagKeysType{
+						ObjectType: types.ObjectType{
+							AttrTypes: CollapsedTagKeysValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+				Optional:            true,
+				Computed:            true,
+				Description:         "Tag keys to collapse values for.",
+				MarkdownDescription: "Tag keys to collapse values for.",
+			},
 			"created_by_token": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The token of the Creator of the VirtualTagConfig.",
@@ -140,13 +167,402 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type VirtualTagConfigModel struct {
-	BackfillUntil  types.String `tfsdk:"backfill_until"`
-	CreatedByToken types.String `tfsdk:"created_by_token"`
-	Id             types.String `tfsdk:"id"`
-	Key            types.String `tfsdk:"key"`
-	Overridable    types.Bool   `tfsdk:"overridable"`
-	Token          types.String `tfsdk:"token"`
-	Values         types.List   `tfsdk:"values"`
+	BackfillUntil    types.String `tfsdk:"backfill_until"`
+	CollapsedTagKeys types.List   `tfsdk:"collapsed_tag_keys"`
+	CreatedByToken   types.String `tfsdk:"created_by_token"`
+	Id               types.String `tfsdk:"id"`
+	Key              types.String `tfsdk:"key"`
+	Overridable      types.Bool   `tfsdk:"overridable"`
+	Token            types.String `tfsdk:"token"`
+	Values           types.List   `tfsdk:"values"`
+}
+
+var _ basetypes.ObjectTypable = CollapsedTagKeysType{}
+
+type CollapsedTagKeysType struct {
+	basetypes.ObjectType
+}
+
+func (t CollapsedTagKeysType) Equal(o attr.Type) bool {
+	other, ok := o.(CollapsedTagKeysType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t CollapsedTagKeysType) String() string {
+	return "CollapsedTagKeysType"
+}
+
+func (t CollapsedTagKeysType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	keyAttribute, ok := attributes["key"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`key is missing from object`)
+
+		return nil, diags
+	}
+
+	keyVal, ok := keyAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`key expected to be basetypes.StringValue, was: %T`, keyAttribute))
+	}
+
+	providersAttribute, ok := attributes["providers"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`providers is missing from object`)
+
+		return nil, diags
+	}
+
+	providersVal, ok := providersAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`providers expected to be basetypes.ListValue, was: %T`, providersAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return CollapsedTagKeysValue{
+		Key:       keyVal,
+		Providers: providersVal,
+		state:     attr.ValueStateKnown,
+	}, diags
+}
+
+func NewCollapsedTagKeysValueNull() CollapsedTagKeysValue {
+	return CollapsedTagKeysValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewCollapsedTagKeysValueUnknown() CollapsedTagKeysValue {
+	return CollapsedTagKeysValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewCollapsedTagKeysValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (CollapsedTagKeysValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing CollapsedTagKeysValue Attribute Value",
+				"While creating a CollapsedTagKeysValue value, a missing attribute value was detected. "+
+					"A CollapsedTagKeysValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("CollapsedTagKeysValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid CollapsedTagKeysValue Attribute Type",
+				"While creating a CollapsedTagKeysValue value, an invalid attribute value was detected. "+
+					"A CollapsedTagKeysValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("CollapsedTagKeysValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("CollapsedTagKeysValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra CollapsedTagKeysValue Attribute Value",
+				"While creating a CollapsedTagKeysValue value, an extra attribute value was detected. "+
+					"A CollapsedTagKeysValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra CollapsedTagKeysValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	keyAttribute, ok := attributes["key"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`key is missing from object`)
+
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	keyVal, ok := keyAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`key expected to be basetypes.StringValue, was: %T`, keyAttribute))
+	}
+
+	providersAttribute, ok := attributes["providers"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`providers is missing from object`)
+
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	providersVal, ok := providersAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`providers expected to be basetypes.ListValue, was: %T`, providersAttribute))
+	}
+
+	if diags.HasError() {
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	return CollapsedTagKeysValue{
+		Key:       keyVal,
+		Providers: providersVal,
+		state:     attr.ValueStateKnown,
+	}, diags
+}
+
+func NewCollapsedTagKeysValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) CollapsedTagKeysValue {
+	object, diags := NewCollapsedTagKeysValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewCollapsedTagKeysValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t CollapsedTagKeysType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewCollapsedTagKeysValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewCollapsedTagKeysValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewCollapsedTagKeysValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewCollapsedTagKeysValueMust(CollapsedTagKeysValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t CollapsedTagKeysType) ValueType(ctx context.Context) attr.Value {
+	return CollapsedTagKeysValue{}
+}
+
+var _ basetypes.ObjectValuable = CollapsedTagKeysValue{}
+
+type CollapsedTagKeysValue struct {
+	Key       basetypes.StringValue `tfsdk:"key"`
+	Providers basetypes.ListValue   `tfsdk:"providers"`
+	state     attr.ValueState
+}
+
+func (v CollapsedTagKeysValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["key"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["providers"] = basetypes.ListType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.Key.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["key"] = val
+
+		val, err = v.Providers.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["providers"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v CollapsedTagKeysValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v CollapsedTagKeysValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v CollapsedTagKeysValue) String() string {
+	return "CollapsedTagKeysValue"
+}
+
+func (v CollapsedTagKeysValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	providersVal, d := types.ListValue(types.StringType, v.Providers.Elements())
+
+	diags.Append(d...)
+
+	if d.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"key": basetypes.StringType{},
+			"providers": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+		}), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		map[string]attr.Type{
+			"key": basetypes.StringType{},
+			"providers": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+		},
+		map[string]attr.Value{
+			"key":       v.Key,
+			"providers": providersVal,
+		})
+
+	return objVal, diags
+}
+
+func (v CollapsedTagKeysValue) Equal(o attr.Value) bool {
+	other, ok := o.(CollapsedTagKeysValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Key.Equal(other.Key) {
+		return false
+	}
+
+	if !v.Providers.Equal(other.Providers) {
+		return false
+	}
+
+	return true
+}
+
+func (v CollapsedTagKeysValue) Type(ctx context.Context) attr.Type {
+	return CollapsedTagKeysType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v CollapsedTagKeysValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"key": basetypes.StringType{},
+		"providers": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+	}
 }
 
 var _ basetypes.ObjectTypable = ValuesType{}
