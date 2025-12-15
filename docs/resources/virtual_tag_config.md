@@ -3,12 +3,12 @@
 page_title: "vantage_virtual_tag_config Resource - terraform-provider-vantage"
 subcategory: ""
 description: |-
-  Manages a Virtual Tag Config.
+  
 ---
 
 # vantage_virtual_tag_config (Resource)
 
-Manages a Virtual Tag Config.
+
 
 ## Example Usage
 
@@ -45,32 +45,46 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
 
 ### Required
 
-- `backfill_until` (String) The earliest month VirtualTagConfig should be backfilled to.
 - `key` (String) The key of the VirtualTagConfig.
 - `overridable` (Boolean) Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.
 
 ### Optional
 
-- `values` (Attributes List) (see [below for nested schema](#nestedatt--values))
+- `backfill_until` (String) The earliest month the VirtualTagConfig should be backfilled to.
+- `collapsed_tag_keys` (Attributes List) Tag keys to collapse values for. (see [below for nested schema](#nestedatt--collapsed_tag_keys))
+- `values` (Attributes List) Values for the VirtualTagConfig, with match precedence determined by order in the list. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
 
-- `created_by_token` (String) The token of the User who created the VirtualTagConfig.
+- `created_by_token` (String) The token of the Creator of the VirtualTagConfig.
 - `id` (String) The id of the VirtualTagConfig.
 - `token` (String) The token of the VirtualTagConfig.
+
+<a id="nestedatt--collapsed_tag_keys"></a>
+### Nested Schema for `collapsed_tag_keys`
+
+Required:
+
+- `key` (String) The tag key to collapse values for.
+
+Optional:
+
+- `providers` (List of String) The providers this collapsed tag key applies to. Defaults to all providers.
+
 
 <a id="nestedatt--values"></a>
 ### Nested Schema for `values`
 
 Required:
 
-- `filter` (String) The filter VQL for the Value.
+- `filter` (String) The filter query language to apply to the value. Additional documentation available at https://docs.vantage.sh/vql.
 
 Optional:
 
-- `business_metric_token` (String) The token of the associated BusinessMetric.
+- `business_metric_token` (String) The token of an associated business metric.
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric))
-- `name` (String) The name of the Value.
+- `name` (String) The name of the value.
+- `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--values--percentages))
 
 <a id="nestedatt--values--cost_metric"></a>
 ### Nested Schema for `values.cost_metric`
@@ -86,5 +100,15 @@ Optional:
 Optional:
 
 - `tag` (String) The tag to aggregate on.
+
+
+
+<a id="nestedatt--values--percentages"></a>
+### Nested Schema for `values.percentages`
+
+Required:
+
+- `pct` (Number)
+- `value` (String) The tag value associated with a percentage of matched costs.
 
 

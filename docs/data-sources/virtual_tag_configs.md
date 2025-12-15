@@ -25,12 +25,22 @@ description: |-
 Read-Only:
 
 - `backfill_until` (String) The earliest month VirtualTagConfig should be backfilled to.
+- `collapsed_tag_keys` (Attributes List) Tag keys to collapse values for. (see [below for nested schema](#nestedatt--virtual_tag_configs--collapsed_tag_keys))
 - `created_by_token` (String) The token of the Creator of the VirtualTagConfig.
 - `id` (String) The id of the VirtualTagConfig.
 - `key` (String) The key of the VirtualTagConfig.
 - `overridable` (Boolean) Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.
 - `token` (String) The token of the VirtualTagConfig.
 - `values` (Attributes List) Values for the VirtualTagConfig, with match precedence determined by their relative order in the list. (see [below for nested schema](#nestedatt--virtual_tag_configs--values))
+
+<a id="nestedatt--virtual_tag_configs--collapsed_tag_keys"></a>
+### Nested Schema for `virtual_tag_configs.collapsed_tag_keys`
+
+Read-Only:
+
+- `key` (String) The tag key to collapse values for.
+- `providers` (List of String) The providers this collapsed tag key applies to. Defaults to all providers.
+
 
 <a id="nestedatt--virtual_tag_configs--values"></a>
 ### Nested Schema for `virtual_tag_configs.values`
@@ -41,6 +51,7 @@ Read-Only:
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--virtual_tag_configs--values--cost_metric))
 - `filter` (String) The filter VQL for the Value.
 - `name` (String) The name of the Value.
+- `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--percentages))
 
 <a id="nestedatt--virtual_tag_configs--values--cost_metric"></a>
 ### Nested Schema for `virtual_tag_configs.values.cost_metric`
@@ -56,5 +67,15 @@ Read-Only:
 Read-Only:
 
 - `tag` (String) The tag to aggregate on.
+
+
+
+<a id="nestedatt--virtual_tag_configs--values--percentages"></a>
+### Nested Schema for `virtual_tag_configs.values.percentages`
+
+Read-Only:
+
+- `pct` (Number) The percentage of matched costs associated with the value.
+- `value` (String) The tag value associated with a percentage of matched costs.
 
 
