@@ -37,12 +37,10 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 	}
 
 	collapsedResourceId := "collapsed-tag-keys"
-	_ = collapsedResourceId // suppress unused warning
 
 	resourceName := func(key string) string {
 		return fmt.Sprintf("vantage_virtual_tag_config.%s", key)
 	}
-	_ = resourceName // suppress unused warning
 
 	fromState := func(resourceId, key, field string) string {
 		return fmt.Sprintf(

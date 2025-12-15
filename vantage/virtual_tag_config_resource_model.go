@@ -22,6 +22,37 @@ type virtualTagConfigValueModel struct {
 	Percentages         types.List                                  `tfsdk:"percentages"`
 }
 
+// Intermediate types for shared conversion logic between Create and Update operations.
+// The API generates separate types for each operation, but the data extraction from
+// Terraform state is identical.
+
+type collapsedTagKeyData struct {
+	Key       *string
+	Providers []string
+}
+
+type percentageData struct {
+	Pct   float32
+	Value *string
+}
+
+type aggregationData struct {
+	Tag *string
+}
+
+type costMetricData struct {
+	Filter      *string
+	Aggregation *aggregationData
+}
+
+type valueData struct {
+	Name                string
+	Filter              *string
+	BusinessMetricToken string
+	CostMetric          *costMetricData
+	Percentages         []percentageData
+}
+
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
@@ -147,27 +178,17 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 	}
 	model.BackfillUntil = *backfillUntil
 
-	if !m.CollapsedTagKeys.IsNull() && !m.CollapsedTagKeys.IsUnknown() {
-		tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(m.CollapsedTagKeys.Elements()))
-		diag := m.CollapsedTagKeys.ElementsAs(ctx, &tfCollapsedTagKeys, false)
-		if diag.HasError() {
-			diags.Append(diag...)
+	if collapsedTagKeys := m.collapsedTagKeysFromTf(ctx, diags); collapsedTagKeys != nil {
+		if diags.HasError() {
 			return nil
 		}
-		collapsedTagKeys := make([]*modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0, 0, len(tfCollapsedTagKeys))
-		for _, c := range tfCollapsedTagKeys {
-			providers := make([]string, 0, len(c.Providers.Elements()))
-			diag := c.Providers.ElementsAs(ctx, &providers, false)
-			if diag.HasError() {
-				diags.Append(diag...)
-				return nil
-			}
-			collapsedTagKeys = append(collapsedTagKeys, &modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0{
-				Key:       c.Key.ValueStringPointer(),
-				Providers: providers,
+		model.CollapsedTagKeys = make([]*modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0, 0, len(collapsedTagKeys))
+		for _, c := range collapsedTagKeys {
+			model.CollapsedTagKeys = append(model.CollapsedTagKeys, &modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0{
+				Key:       c.Key,
+				Providers: c.Providers,
 			})
 		}
-		model.CollapsedTagKeys = collapsedTagKeys
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
@@ -175,50 +196,42 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 		if diags.HasError() {
 			return nil
 		}
-		values := make([]*modelsv2.CreateVirtualTagConfigValuesItems0, 0, len(tfValues))
+		model.Values = make([]*modelsv2.CreateVirtualTagConfigValuesItems0, 0, len(tfValues))
 		for _, v := range tfValues {
+			data := v.toValueData(ctx, diags)
+			if diags.HasError() {
+				return nil
+			}
+
 			value := &modelsv2.CreateVirtualTagConfigValuesItems0{
-				Name:                v.Name.ValueString(),
-				Filter:              v.Filter.ValueStringPointer(),
-				BusinessMetricToken: v.BusinessMetricToken.ValueString(),
+				Name:                data.Name,
+				Filter:              data.Filter,
+				BusinessMetricToken: data.BusinessMetricToken,
 			}
-			if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
+
+			if data.CostMetric != nil {
 				value.CostMetric = &modelsv2.CreateVirtualTagConfigValuesItems0CostMetric{
-					Filter: v.CostMetric.Filter.ValueStringPointer(),
+					Filter: data.CostMetric.Filter,
 				}
-
-				if !v.CostMetric.Aggregation.IsNull() && !v.CostMetric.Aggregation.IsUnknown() {
-					aggregation, diag := resource_virtual_tag_config.NewAggregationValue(v.CostMetric.Aggregation.AttributeTypes(ctx), v.CostMetric.Aggregation.Attributes())
-					if diag.HasError() {
-						diags.Append(diag...)
-						return nil
-					}
+				if data.CostMetric.Aggregation != nil {
 					value.CostMetric.Aggregation = &modelsv2.CreateVirtualTagConfigValuesItems0CostMetricAggregation{
-						Tag: aggregation.Tag.ValueStringPointer(),
+						Tag: data.CostMetric.Aggregation.Tag,
 					}
 				}
 			}
 
-			if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() {
-				tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages.Elements()))
-				diag := v.Percentages.ElementsAs(ctx, &tfPercentages, false)
-				if diag.HasError() {
-					diags.Append(diag...)
-					return nil
-				}
-				percentages := make([]*modelsv2.CreateVirtualTagConfigValuesItems0PercentagesItems0, 0, len(tfPercentages))
-				for _, p := range tfPercentages {
-					pct := float32(p.Pct.ValueFloat64())
-					percentages = append(percentages, &modelsv2.CreateVirtualTagConfigValuesItems0PercentagesItems0{
+			if len(data.Percentages) > 0 {
+				value.Percentages = make([]*modelsv2.CreateVirtualTagConfigValuesItems0PercentagesItems0, 0, len(data.Percentages))
+				for _, p := range data.Percentages {
+					pct := p.Pct
+					value.Percentages = append(value.Percentages, &modelsv2.CreateVirtualTagConfigValuesItems0PercentagesItems0{
 						Pct:   &pct,
-						Value: p.Value.ValueStringPointer(),
+						Value: p.Value,
 					})
 				}
-				value.Percentages = percentages
 			}
-			values = append(values, value)
+			model.Values = append(model.Values, value)
 		}
-		model.Values = values
 	}
 
 	return model
@@ -247,27 +260,17 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 		}
 	}
 
-	if !m.CollapsedTagKeys.IsNull() && !m.CollapsedTagKeys.IsUnknown() {
-		tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(m.CollapsedTagKeys.Elements()))
-		diag := m.CollapsedTagKeys.ElementsAs(ctx, &tfCollapsedTagKeys, false)
-		if diag.HasError() {
-			diags.Append(diag...)
+	if collapsedTagKeys := m.collapsedTagKeysFromTf(ctx, diags); collapsedTagKeys != nil {
+		if diags.HasError() {
 			return nil
 		}
-		collapsedTagKeys := make([]*modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0, 0, len(tfCollapsedTagKeys))
-		for _, c := range tfCollapsedTagKeys {
-			providers := make([]string, 0, len(c.Providers.Elements()))
-			diag := c.Providers.ElementsAs(ctx, &providers, false)
-			if diag.HasError() {
-				diags.Append(diag...)
-				return nil
-			}
-			collapsedTagKeys = append(collapsedTagKeys, &modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0{
-				Key:       c.Key.ValueStringPointer(),
-				Providers: providers,
+		model.CollapsedTagKeys = make([]*modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0, 0, len(collapsedTagKeys))
+		for _, c := range collapsedTagKeys {
+			model.CollapsedTagKeys = append(model.CollapsedTagKeys, &modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0{
+				Key:       c.Key,
+				Providers: c.Providers,
 			})
 		}
-		model.CollapsedTagKeys = collapsedTagKeys
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
@@ -276,51 +279,42 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 			return nil
 		}
 
-		values := make([]*modelsv2.UpdateVirtualTagConfigValuesItems0, 0, len(tfValues))
+		model.Values = make([]*modelsv2.UpdateVirtualTagConfigValuesItems0, 0, len(tfValues))
 		for _, v := range tfValues {
+			data := v.toValueData(ctx, diags)
+			if diags.HasError() {
+				return nil
+			}
+
 			value := &modelsv2.UpdateVirtualTagConfigValuesItems0{
-				Name:                v.Name.ValueString(),
-				Filter:              v.Filter.ValueStringPointer(),
-				BusinessMetricToken: v.BusinessMetricToken.ValueString(),
+				Name:                data.Name,
+				Filter:              data.Filter,
+				BusinessMetricToken: data.BusinessMetricToken,
 			}
 
-			if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
+			if data.CostMetric != nil {
 				value.CostMetric = &modelsv2.UpdateVirtualTagConfigValuesItems0CostMetric{
-					Filter: v.CostMetric.Filter.ValueStringPointer(),
+					Filter: data.CostMetric.Filter,
 				}
-
-				if !v.CostMetric.Aggregation.IsNull() && !v.CostMetric.Aggregation.IsUnknown() {
-					aggregation, diag := resource_virtual_tag_config.NewAggregationValue(v.CostMetric.Aggregation.AttributeTypes(ctx), v.CostMetric.Aggregation.Attributes())
-					if diag.HasError() {
-						diags.Append(diag...)
-						return nil
-					}
+				if data.CostMetric.Aggregation != nil {
 					value.CostMetric.Aggregation = &modelsv2.UpdateVirtualTagConfigValuesItems0CostMetricAggregation{
-						Tag: aggregation.Tag.ValueStringPointer(),
+						Tag: data.CostMetric.Aggregation.Tag,
 					}
 				}
 			}
 
-			if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() {
-				tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages.Elements()))
-				diag := v.Percentages.ElementsAs(ctx, &tfPercentages, false)
-				if diag.HasError() {
-					diags.Append(diag...)
-					return nil
-				}
-				percentages := make([]*modelsv2.UpdateVirtualTagConfigValuesItems0PercentagesItems0, 0, len(tfPercentages))
-				for _, p := range tfPercentages {
-					pct := float32(p.Pct.ValueFloat64())
-					percentages = append(percentages, &modelsv2.UpdateVirtualTagConfigValuesItems0PercentagesItems0{
+			if len(data.Percentages) > 0 {
+				value.Percentages = make([]*modelsv2.UpdateVirtualTagConfigValuesItems0PercentagesItems0, 0, len(data.Percentages))
+				for _, p := range data.Percentages {
+					pct := p.Pct
+					value.Percentages = append(value.Percentages, &modelsv2.UpdateVirtualTagConfigValuesItems0PercentagesItems0{
 						Pct:   &pct,
-						Value: p.Value.ValueStringPointer(),
+						Value: p.Value,
 					})
 				}
-				value.Percentages = percentages
 			}
-			values = append(values, value)
+			model.Values = append(model.Values, value)
 		}
-		model.Values = values
 	}
 
 	return model
@@ -341,4 +335,77 @@ func (m *virtualTagConfigModel) valuesFromTf(ctx context.Context, diags *diag.Di
 		return nil
 	}
 	return values
+}
+
+// collapsedTagKeysFromTf extracts collapsed tag keys from Terraform state into an intermediate format.
+func (m *virtualTagConfigModel) collapsedTagKeysFromTf(ctx context.Context, diags *diag.Diagnostics) []collapsedTagKeyData {
+	if m.CollapsedTagKeys.IsNull() || m.CollapsedTagKeys.IsUnknown() {
+		return nil
+	}
+
+	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(m.CollapsedTagKeys.Elements()))
+	if d := m.CollapsedTagKeys.ElementsAs(ctx, &tfCollapsedTagKeys, false); d.HasError() {
+		diags.Append(d...)
+		return nil
+	}
+
+	result := make([]collapsedTagKeyData, 0, len(tfCollapsedTagKeys))
+	for _, c := range tfCollapsedTagKeys {
+		providers := make([]string, 0, len(c.Providers.Elements()))
+		if d := c.Providers.ElementsAs(ctx, &providers, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		result = append(result, collapsedTagKeyData{
+			Key:       c.Key.ValueStringPointer(),
+			Providers: providers,
+		})
+	}
+	return result
+}
+
+// valueDataFromTf extracts a single value's data from Terraform state into an intermediate format.
+func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *diag.Diagnostics) *valueData {
+	data := &valueData{
+		Name:                v.Name.ValueString(),
+		Filter:              v.Filter.ValueStringPointer(),
+		BusinessMetricToken: v.BusinessMetricToken.ValueString(),
+	}
+
+	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
+		data.CostMetric = &costMetricData{
+			Filter: v.CostMetric.Filter.ValueStringPointer(),
+		}
+
+		if !v.CostMetric.Aggregation.IsNull() && !v.CostMetric.Aggregation.IsUnknown() {
+			aggregation, d := resource_virtual_tag_config.NewAggregationValue(
+				v.CostMetric.Aggregation.AttributeTypes(ctx),
+				v.CostMetric.Aggregation.Attributes(),
+			)
+			if d.HasError() {
+				diags.Append(d...)
+				return nil
+			}
+			data.CostMetric.Aggregation = &aggregationData{
+				Tag: aggregation.Tag.ValueStringPointer(),
+			}
+		}
+	}
+
+	if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() {
+		tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages.Elements()))
+		if d := v.Percentages.ElementsAs(ctx, &tfPercentages, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		data.Percentages = make([]percentageData, 0, len(tfPercentages))
+		for _, p := range tfPercentages {
+			data.Percentages = append(data.Percentages, percentageData{
+				Pct:   float32(p.Pct.ValueFloat64()),
+				Value: p.Value.ValueStringPointer(),
+			})
+		}
+	}
+
+	return data
 }

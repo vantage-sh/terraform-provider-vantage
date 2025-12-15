@@ -32,166 +32,73 @@ func (r *VirtualTagConfigResource) Metadata(_ context.Context, req resource.Meta
 }
 
 func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"key": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The key of the VirtualTagConfig.",
-			},
-			"backfill_until": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The earliest month VirtualTagConfig should be backfilled to.",
-			},
-			"overridable": schema.BoolAttribute{
-				Required:            true,
-				MarkdownDescription: "Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.",
-			},
-			"created_by_token": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The token of the User who created the VirtualTagConfig.",
-			},
-			"collapsed_tag_keys": schema.ListNestedAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Tag keys to collapse values for.",
-				MarkdownDescription: "Tag keys to collapse values for.",
-				NestedObject: schema.NestedAttributeObject{
+	// Because we generate our schema from a Swagger/OpenAPI v2 spec, we're unable to express some of the constraints we want to enforce.
+	// A major one is that name, business_metric_token, cost_metric, and percentages are all mutually exclusive,
+	// and one must be provided.
+	//
+	// Because our swagger spec is translated without that, we run into problems when we have nested attributes marked as Required.
+	//
+	// Here we modify the generated schema to make the nested attributes Optional instead of Required.
+	resp.Schema = resource_virtual_tag_config.VirtualTagConfigResourceSchema(ctx)
+
+	resp.Schema.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         "The token of the VirtualTagConfig.",
+		MarkdownDescription: "The token of the VirtualTagConfig.",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	generatedValues := resp.Schema.Attributes["values"].(schema.ListNestedAttribute)
+	generatedValuesAttrs := generatedValues.NestedObject.Attributes
+
+	resp.Schema.Attributes["values"] = schema.ListNestedAttribute{
+		Optional:            generatedValues.Optional,
+		Computed:            generatedValues.Computed,
+		Description:         generatedValues.Description,
+		MarkdownDescription: generatedValues.MarkdownDescription,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				// Reuse generated attributes unchanged
+				"business_metric_token": generatedValuesAttrs["business_metric_token"],
+				"filter":                generatedValuesAttrs["filter"],
+				"name":                  generatedValuesAttrs["name"],
+				"percentages":           generatedValuesAttrs["percentages"],
+				// Override cost_metric: make aggregation, aggregation.tag, and filter Optional
+				"cost_metric": schema.SingleNestedAttribute{
 					Attributes: map[string]schema.Attribute{
-						"key": schema.StringAttribute{
-							Required:            true,
-							Description:         "The tag key to collapse values for.",
-							MarkdownDescription: "The tag key to collapse values for.",
-						},
-						"providers": schema.ListAttribute{
-							ElementType:         types.StringType,
-							Optional:            true,
-							Computed:            true,
-							Description:         "The providers this collapsed tag key applies to. Defaults to all providers.",
-							MarkdownDescription: "The providers this collapsed tag key applies to. Defaults to all providers.",
-						},
-					},
-					CustomType: resource_virtual_tag_config.CollapsedTagKeysType{
-						ObjectType: types.ObjectType{
-							AttrTypes: resource_virtual_tag_config.CollapsedTagKeysValue{}.AttributeTypes(ctx),
-						},
-					},
-				},
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The token of the VirtualTagConfig.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The id of the VirtualTagConfig.",
-				// PlanModifiers: []planmodifier.String{
-				// 	stringplanmodifier.UseStateForUnknown(),
-				// },
-			},
-			"values": schema.ListNestedAttribute{
-				Optional: true,
-				Computed: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"business_metric_token": schema.StringAttribute{
-							Optional:            true,
-							Computed:            true,
-							Description:         "The token of the associated BusinessMetric.",
-							MarkdownDescription: "The token of the associated BusinessMetric.",
-							// TODO
-							// Validators: []validator.String{
-							// 	// Validate only this attribute, cost_metric, or name is configured.
-							// 	stringvalidator.ExactlyOneOf(path.Expressions{
-							// 		path.MatchRelative().AtParent().AtName("cost_metric"),
-							// 		path.MatchRelative().AtParent().AtName("name"),
-							// 	}...),
-							// },
-						},
-						"cost_metric": schema.SingleNestedAttribute{
+						"aggregation": schema.SingleNestedAttribute{
 							Attributes: map[string]schema.Attribute{
-								"aggregation": schema.SingleNestedAttribute{
-									Attributes: map[string]schema.Attribute{
-										"tag": schema.StringAttribute{
-											Optional:            true,
-											Description:         "The tag to aggregate on.",
-											MarkdownDescription: "The tag to aggregate on.",
-										},
-									},
-									CustomType: resource_virtual_tag_config.AggregationType{
-										ObjectType: types.ObjectType{
-											AttrTypes: resource_virtual_tag_config.AggregationValue{}.AttributeTypes(ctx),
-										},
-									},
-									Optional: true,
-								},
-								"filter": schema.StringAttribute{
-									Optional:            true,
-									Description:         "The filter VQL for the cost metric.",
-									MarkdownDescription: "The filter VQL for the cost metric.",
+								"tag": schema.StringAttribute{
+									Optional:            true, // Generated has Required
+									Description:         "The tag to aggregate on.",
+									MarkdownDescription: "The tag to aggregate on.",
 								},
 							},
-							CustomType: resource_virtual_tag_config.CostMetricType{
+							CustomType: resource_virtual_tag_config.AggregationType{
 								ObjectType: types.ObjectType{
-									AttrTypes: resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx),
+									AttrTypes: resource_virtual_tag_config.AggregationValue{}.AttributeTypes(ctx),
 								},
 							},
-							Optional: true,
-							Computed: true,
-							// Validators: []validator.Object{
-							// 	// Validate only this attribute, business_metric_token, or name is configured.
-							// 	objectvalidator.ExactlyOneOf(path.Expressions{
-							// 		path.MatchRelative().AtParent().AtName("business_metric_token"),
-							// 		path.MatchRelative().AtParent().AtName("name"),
-							// 	}...),
-							// },
-						},
-						"percentages": schema.ListNestedAttribute{
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"pct": schema.Float64Attribute{
-										Required: true,
-									},
-									"value": schema.StringAttribute{
-										Required: true,
-									},
-								},
-								CustomType: resource_virtual_tag_config.PercentagesType{
-									ObjectType: types.ObjectType{
-										AttrTypes: resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
-									},
-								},
-							},
-							Optional:            true,
-							Computed:            true,
-							Description:         "Labeled percentage allocations for matching costs.",
-							MarkdownDescription: "Labeled percentage allocations for matching costs.",
-							// TODO: same vague faff about the 'only one' client-side validations
-							// Validators: []validator.List{
+							Optional: true, // Generated has Required
 						},
 						"filter": schema.StringAttribute{
-							Required:            true,
-							MarkdownDescription: "The filter VQL for the Value.",
-						},
-						"name": schema.StringAttribute{
-							Optional:            true,
-							Computed:            true,
-							MarkdownDescription: "The name of the Value.",
-							// Validators: []validator.String{
-							// 	// Validate only this attribute, business_metric_token, or cost_metric is configured.
-							// 	stringvalidator.ExactlyOneOf(path.Expressions{
-							// 		path.MatchRelative().AtParent().AtName("business_metric_token"),
-							// 		path.MatchRelative().AtParent().AtName("cost_metric"),
-							// 	}...),
-							// },
+							Optional:            true, // Generated has Required
+							Description:         "The filter VQL for the cost metric.",
+							MarkdownDescription: "The filter VQL for the cost metric.",
 						},
 					},
+					CustomType: resource_virtual_tag_config.CostMetricType{
+						ObjectType: types.ObjectType{
+							AttrTypes: resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx),
+						},
+					},
+					Optional: true,
+					Computed: true,
 				},
 			},
 		},
-		MarkdownDescription: "Manages a Virtual Tag Config.",
 	}
 }
 
