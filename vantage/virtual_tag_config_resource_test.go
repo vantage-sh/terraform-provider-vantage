@@ -120,6 +120,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.1.pct", "65"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.1.value", "Engineering"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.2.pct", "10"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.2.value", "Support"),
 				),
 			},
 			// Update: not specifying values
@@ -163,7 +164,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 							}
 						},
 						{
-							filter = "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"
+							filter = "(costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"
 							percentages = [
 								{
 									pct = 30
@@ -185,8 +186,21 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
 					resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "false"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "4"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.name", "value-0"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.filter", "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.name", "value-1"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.filter", "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.cost_metric.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.cost_metric.aggregation.tag", "environment"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.filter", "(costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.#", "3"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.0.pct", "30"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.0.value", "Marketing"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.1.pct", "55"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.1.value", "Engineering"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.2.pct", "15"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.3.percentages.2.value", "Support"),
 				),
 			},
 			// Update: preserving existing values
