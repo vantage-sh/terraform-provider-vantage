@@ -53,6 +53,81 @@ type valueData struct {
 	Percentages         []percentageData
 }
 
+func buildCostMetricFromPayload(ctx context.Context, cm *modelsv2.VirtualTagConfigValueCostMetric) (basetypes.ObjectValue, diag.Diagnostics) {
+	tfAggregation := types.ObjectNull(resource_virtual_tag_config.AggregationValue{}.AttributeTypes(ctx))
+	if cm.Aggregation != nil {
+		aggregation, d := resource_virtual_tag_config.NewAggregationValue(
+			resource_virtual_tag_config.AggregationValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"tag": types.StringValue(cm.Aggregation.Tag),
+			},
+		)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+		tfAggregation, d = aggregation.ToObjectValue(ctx)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+	}
+
+	costMetric, d := resource_virtual_tag_config.NewCostMetricValue(
+		resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"filter":      types.StringValue(cm.Filter),
+			"aggregation": tfAggregation,
+		},
+	)
+	if d.HasError() {
+		return basetypes.ObjectValue{}, d
+	}
+	return costMetric.ToObjectValue(ctx)
+}
+
+func buildPercentagesFromPayload(ctx context.Context, percentages []*modelsv2.VirtualTagConfigValuePercentage) (basetypes.ListValue, diag.Diagnostics) {
+	tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(percentages))
+	for _, p := range percentages {
+		pv, d := resource_virtual_tag_config.NewPercentagesValue(
+			resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"pct":   types.Float64Value(*p.Pct),
+				"value": types.StringValue(*p.Value),
+			},
+		)
+		if d.HasError() {
+			return basetypes.ListValue{}, d
+		}
+		tfPercentages = append(tfPercentages, pv)
+	}
+	return types.ListValueFrom(ctx, resource_virtual_tag_config.PercentagesValue{}.Type(ctx), tfPercentages)
+}
+
+func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValue) (basetypes.ObjectValue, diag.Diagnostics) {
+	value := resource_virtual_tag_config.ValuesValue{
+		Name:                types.StringValue(v.Name),
+		Filter:              types.StringValue(v.Filter),
+		BusinessMetricToken: types.StringValue(v.BusinessMetricToken),
+	}
+
+	if v.CostMetric != nil {
+		costMetric, d := buildCostMetricFromPayload(ctx, v.CostMetric)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+		value.CostMetric = costMetric
+	}
+
+	if v.Percentages != nil {
+		percentages, d := buildPercentagesFromPayload(ctx, v.Percentages)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+		value.Percentages = percentages
+	}
+
+	return value.ToObjectValue(ctx)
+}
+
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
@@ -67,17 +142,18 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 		if diag.HasError() {
 			return diag
 		}
-		collapsedTagKey, diag := resource_virtual_tag_config.NewCollapsedTagKeysValue(resource_virtual_tag_config.CollapsedTagKeysValue{}.AttributeTypes(ctx), map[string]attr.Value{
-			"key":       types.StringValue(c.Key),
-			"providers": tfProviders,
-		})
+		collapsedTagKey, diag := resource_virtual_tag_config.NewCollapsedTagKeysValue(
+			resource_virtual_tag_config.CollapsedTagKeysValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"key":       types.StringValue(c.Key),
+				"providers": tfProviders,
+			},
+		)
 		if diag.HasError() {
 			return diag
 		}
-
 		tfCollapsedTagKeys = append(tfCollapsedTagKeys, collapsedTagKey)
 	}
-
 	tfCollapsedTagKeysValue, diag := types.ListValueFrom(ctx, resource_virtual_tag_config.CollapsedTagKeysValue{}.Type(ctx), tfCollapsedTagKeys)
 	if diag.HasError() {
 		return diag
@@ -85,73 +161,14 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 	m.CollapsedTagKeys = tfCollapsedTagKeysValue
 
 	if payload.Values != nil {
-		tfValues := make([]basetypes.ObjectValue, 0, len(m.Values.Elements()))
+		tfValues := make([]basetypes.ObjectValue, 0, len(payload.Values))
 		for _, v := range payload.Values {
-			value := resource_virtual_tag_config.ValuesValue{
-				Name:                types.StringValue(v.Name),
-				Filter:              types.StringValue(v.Filter),
-				BusinessMetricToken: types.StringValue(v.BusinessMetricToken),
-			}
-
-			if v.CostMetric != nil {
-				costMetric := resource_virtual_tag_config.CostMetricValue{
-					Filter: types.StringValue(v.CostMetric.Filter),
-				}
-
-				if v.CostMetric.Aggregation != nil {
-					aggregation := resource_virtual_tag_config.AggregationValue{
-						Tag: types.StringValue(v.CostMetric.Aggregation.Tag),
-					}
-
-					tfAggregation, diag := aggregation.ToObjectValue(ctx)
-					if diag.HasError() {
-						return diag
-					}
-
-					costMetric.Aggregation = tfAggregation
-				}
-
-				tfCostMetric, diag := costMetric.ToObjectValue(ctx)
-				if diag.HasError() {
-					return diag
-				}
-
-				value.CostMetric = tfCostMetric
-			}
-
-			if v.Percentages != nil {
-				tfPercentages := make([]resource_virtual_tag_config.PercentagesValue, 0, len(v.Percentages))
-				for _, p := range v.Percentages {
-					pv, diag := resource_virtual_tag_config.NewPercentagesValue(
-						resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
-						map[string]attr.Value{
-							"pct":   types.Float64Value(*p.Pct),
-							"value": types.StringValue(*p.Value),
-						},
-					)
-					if diag.HasError() {
-						return diag
-					}
-					tfPercentages = append(tfPercentages, pv)
-				}
-				tfPercentagesValue, diag := types.ListValueFrom(
-					ctx,
-					resource_virtual_tag_config.PercentagesValue{}.Type(ctx),
-					tfPercentages,
-				)
-				if diag.HasError() {
-					return diag
-				}
-				value.Percentages = tfPercentagesValue
-			}
-
-			tfValue, diag := value.ToObjectValue(ctx)
+			tfValue, diag := buildValueFromPayload(ctx, v)
 			if diag.HasError() {
 				return diag
 			}
 			tfValues = append(tfValues, tfValue)
 		}
-
 		values, diag := types.ListValueFrom(
 			ctx,
 			types.ObjectType{AttrTypes: resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx)},
@@ -364,7 +381,7 @@ func (m *virtualTagConfigModel) collapsedTagKeysFromTf(ctx context.Context, diag
 	return result
 }
 
-// valueDataFromTf extracts a single value's data from Terraform state into an intermediate format.
+// toValueData extracts a single value's data from Terraform state into an intermediate format.
 func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *diag.Diagnostics) *valueData {
 	data := &valueData{
 		Name:                v.Name.ValueString(),
@@ -378,16 +395,11 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 		}
 
 		if !v.CostMetric.Aggregation.IsNull() && !v.CostMetric.Aggregation.IsUnknown() {
-			aggregation, d := resource_virtual_tag_config.NewAggregationValue(
-				v.CostMetric.Aggregation.AttributeTypes(ctx),
-				v.CostMetric.Aggregation.Attributes(),
-			)
-			if d.HasError() {
-				diags.Append(d...)
-				return nil
-			}
-			data.CostMetric.Aggregation = &aggregationData{
-				Tag: aggregation.Tag.ValueStringPointer(),
+			// Access the tag attribute directly from the ObjectValue
+			if tagAttr, ok := v.CostMetric.Aggregation.Attributes()["tag"].(basetypes.StringValue); ok {
+				data.CostMetric.Aggregation = &aggregationData{
+					Tag: tagAttr.ValueStringPointer(),
+				}
 			}
 		}
 	}
