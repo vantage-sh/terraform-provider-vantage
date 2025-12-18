@@ -547,6 +547,14 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 				LabelFilter:     labelFilter,
 			})
 			delete(apiTokenMap, tokenKey)
+		} else {
+			// Plan contains a cost_report_token that is missing from the API response.
+			// Emit a warning and preserve the planned token to avoid silent state drift.
+			diags.AddWarning(
+				"Missing cost_report_token in API response",
+				fmt.Sprintf("A cost_report_token present in the plan (%q) was not returned by the API; preserving the planned value.", tokenKey),
+			)
+			orderedTokens = append(orderedTokens, *planToken)
 		}
 	}
 
