@@ -26,6 +26,31 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The earliest month VirtualTagConfig should be backfilled to.",
 							MarkdownDescription: "The earliest month VirtualTagConfig should be backfilled to.",
 						},
+						"collapsed_tag_keys": schema.ListNestedAttribute{
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"key": schema.StringAttribute{
+										Computed:            true,
+										Description:         "The tag key to collapse values for.",
+										MarkdownDescription: "The tag key to collapse values for.",
+									},
+									"providers": schema.ListAttribute{
+										ElementType:         types.StringType,
+										Computed:            true,
+										Description:         "The providers this collapsed tag key applies to. Defaults to all providers.",
+										MarkdownDescription: "The providers this collapsed tag key applies to. Defaults to all providers.",
+									},
+								},
+								CustomType: CollapsedTagKeysType{
+									ObjectType: types.ObjectType{
+										AttrTypes: CollapsedTagKeysValue{}.AttributeTypes(ctx),
+									},
+								},
+							},
+							Computed:            true,
+							Description:         "Tag keys to collapse values for.",
+							MarkdownDescription: "Tag keys to collapse values for.",
+						},
 						"created_by_token": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The token of the Creator of the VirtualTagConfig.",
@@ -99,6 +124,30 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The name of the Value.",
 										MarkdownDescription: "The name of the Value.",
 									},
+									"percentages": schema.ListNestedAttribute{
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"pct": schema.NumberAttribute{
+													Computed:            true,
+													Description:         "The percentage of matched costs associated with the value.",
+													MarkdownDescription: "The percentage of matched costs associated with the value.",
+												},
+												"value": schema.StringAttribute{
+													Computed:            true,
+													Description:         "The tag value associated with a percentage of matched costs.",
+													MarkdownDescription: "The tag value associated with a percentage of matched costs.",
+												},
+											},
+											CustomType: PercentagesType{
+												ObjectType: types.ObjectType{
+													AttrTypes: PercentagesValue{}.AttributeTypes(ctx),
+												},
+											},
+										},
+										Computed:            true,
+										Description:         "Labeled percentage allocations for matching costs.",
+										MarkdownDescription: "Labeled percentage allocations for matching costs.",
+									},
 								},
 								CustomType: ValuesType{
 									ObjectType: types.ObjectType{
@@ -168,6 +217,24 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`backfill_until expected to be basetypes.StringValue, was: %T`, backfillUntilAttribute))
+	}
+
+	collapsedTagKeysAttribute, ok := attributes["collapsed_tag_keys"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`collapsed_tag_keys is missing from object`)
+
+		return nil, diags
+	}
+
+	collapsedTagKeysVal, ok := collapsedTagKeysAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`collapsed_tag_keys expected to be basetypes.ListValue, was: %T`, collapsedTagKeysAttribute))
 	}
 
 	createdByTokenAttribute, ok := attributes["created_by_token"]
@@ -283,14 +350,15 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 	}
 
 	return VirtualTagConfigsValue{
-		BackfillUntil:  backfillUntilVal,
-		CreatedByToken: createdByTokenVal,
-		Id:             idVal,
-		Key:            keyVal,
-		Overridable:    overridableVal,
-		Token:          tokenVal,
-		Values:         valuesVal,
-		state:          attr.ValueStateKnown,
+		BackfillUntil:    backfillUntilVal,
+		CollapsedTagKeys: collapsedTagKeysVal,
+		CreatedByToken:   createdByTokenVal,
+		Id:               idVal,
+		Key:              keyVal,
+		Overridable:      overridableVal,
+		Token:            tokenVal,
+		Values:           valuesVal,
+		state:            attr.ValueStateKnown,
 	}, diags
 }
 
@@ -375,6 +443,24 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 			fmt.Sprintf(`backfill_until expected to be basetypes.StringValue, was: %T`, backfillUntilAttribute))
 	}
 
+	collapsedTagKeysAttribute, ok := attributes["collapsed_tag_keys"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`collapsed_tag_keys is missing from object`)
+
+		return NewVirtualTagConfigsValueUnknown(), diags
+	}
+
+	collapsedTagKeysVal, ok := collapsedTagKeysAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`collapsed_tag_keys expected to be basetypes.ListValue, was: %T`, collapsedTagKeysAttribute))
+	}
+
 	createdByTokenAttribute, ok := attributes["created_by_token"]
 
 	if !ok {
@@ -488,14 +574,15 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 	}
 
 	return VirtualTagConfigsValue{
-		BackfillUntil:  backfillUntilVal,
-		CreatedByToken: createdByTokenVal,
-		Id:             idVal,
-		Key:            keyVal,
-		Overridable:    overridableVal,
-		Token:          tokenVal,
-		Values:         valuesVal,
-		state:          attr.ValueStateKnown,
+		BackfillUntil:    backfillUntilVal,
+		CollapsedTagKeys: collapsedTagKeysVal,
+		CreatedByToken:   createdByTokenVal,
+		Id:               idVal,
+		Key:              keyVal,
+		Overridable:      overridableVal,
+		Token:            tokenVal,
+		Values:           valuesVal,
+		state:            attr.ValueStateKnown,
 	}, diags
 }
 
@@ -567,23 +654,27 @@ func (t VirtualTagConfigsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = VirtualTagConfigsValue{}
 
 type VirtualTagConfigsValue struct {
-	BackfillUntil  basetypes.StringValue `tfsdk:"backfill_until"`
-	CreatedByToken basetypes.StringValue `tfsdk:"created_by_token"`
-	Id             basetypes.StringValue `tfsdk:"id"`
-	Key            basetypes.StringValue `tfsdk:"key"`
-	Overridable    basetypes.BoolValue   `tfsdk:"overridable"`
-	Token          basetypes.StringValue `tfsdk:"token"`
-	Values         basetypes.ListValue   `tfsdk:"values"`
-	state          attr.ValueState
+	BackfillUntil    basetypes.StringValue `tfsdk:"backfill_until"`
+	CollapsedTagKeys basetypes.ListValue   `tfsdk:"collapsed_tag_keys"`
+	CreatedByToken   basetypes.StringValue `tfsdk:"created_by_token"`
+	Id               basetypes.StringValue `tfsdk:"id"`
+	Key              basetypes.StringValue `tfsdk:"key"`
+	Overridable      basetypes.BoolValue   `tfsdk:"overridable"`
+	Token            basetypes.StringValue `tfsdk:"token"`
+	Values           basetypes.ListValue   `tfsdk:"values"`
+	state            attr.ValueState
 }
 
 func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 7)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["backfill_until"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["collapsed_tag_keys"] = basetypes.ListType{
+		ElemType: CollapsedTagKeysValue{}.Type(ctx),
+	}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["key"] = basetypes.StringType{}.TerraformType(ctx)
@@ -597,7 +688,7 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 7)
+		vals := make(map[string]tftypes.Value, 8)
 
 		val, err = v.BackfillUntil.ToTerraformValue(ctx)
 
@@ -606,6 +697,14 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 		}
 
 		vals["backfill_until"] = val
+
+		val, err = v.CollapsedTagKeys.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["collapsed_tag_keys"] = val
 
 		val, err = v.CreatedByToken.ToTerraformValue(ctx)
 
@@ -684,6 +783,35 @@ func (v VirtualTagConfigsValue) String() string {
 func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	collapsedTagKeys := types.ListValueMust(
+		CollapsedTagKeysType{
+			basetypes.ObjectType{
+				AttrTypes: CollapsedTagKeysValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.CollapsedTagKeys.Elements(),
+	)
+
+	if v.CollapsedTagKeys.IsNull() {
+		collapsedTagKeys = types.ListNull(
+			CollapsedTagKeysType{
+				basetypes.ObjectType{
+					AttrTypes: CollapsedTagKeysValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	if v.CollapsedTagKeys.IsUnknown() {
+		collapsedTagKeys = types.ListUnknown(
+			CollapsedTagKeysType{
+				basetypes.ObjectType{
+					AttrTypes: CollapsedTagKeysValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
 	values := types.ListValueMust(
 		ValuesType{
 			basetypes.ObjectType{
@@ -715,7 +843,10 @@ func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
-			"backfill_until":   basetypes.StringType{},
+			"backfill_until": basetypes.StringType{},
+			"collapsed_tag_keys": basetypes.ListType{
+				ElemType: CollapsedTagKeysValue{}.Type(ctx),
+			},
 			"created_by_token": basetypes.StringType{},
 			"id":               basetypes.StringType{},
 			"key":              basetypes.StringType{},
@@ -726,13 +857,14 @@ func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			},
 		},
 		map[string]attr.Value{
-			"backfill_until":   v.BackfillUntil,
-			"created_by_token": v.CreatedByToken,
-			"id":               v.Id,
-			"key":              v.Key,
-			"overridable":      v.Overridable,
-			"token":            v.Token,
-			"values":           values,
+			"backfill_until":     v.BackfillUntil,
+			"collapsed_tag_keys": collapsedTagKeys,
+			"created_by_token":   v.CreatedByToken,
+			"id":                 v.Id,
+			"key":                v.Key,
+			"overridable":        v.Overridable,
+			"token":              v.Token,
+			"values":             values,
 		})
 
 	return objVal, diags
@@ -754,6 +886,10 @@ func (v VirtualTagConfigsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.BackfillUntil.Equal(other.BackfillUntil) {
+		return false
+	}
+
+	if !v.CollapsedTagKeys.Equal(other.CollapsedTagKeys) {
 		return false
 	}
 
@@ -794,7 +930,10 @@ func (v VirtualTagConfigsValue) Type(ctx context.Context) attr.Type {
 
 func (v VirtualTagConfigsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
-		"backfill_until":   basetypes.StringType{},
+		"backfill_until": basetypes.StringType{},
+		"collapsed_tag_keys": basetypes.ListType{
+			ElemType: CollapsedTagKeysValue{}.Type(ctx),
+		},
 		"created_by_token": basetypes.StringType{},
 		"id":               basetypes.StringType{},
 		"key":              basetypes.StringType{},
@@ -802,6 +941,394 @@ func (v VirtualTagConfigsValue) AttributeTypes(ctx context.Context) map[string]a
 		"token":            basetypes.StringType{},
 		"values": basetypes.ListType{
 			ElemType: ValuesValue{}.Type(ctx),
+		},
+	}
+}
+
+var _ basetypes.ObjectTypable = CollapsedTagKeysType{}
+
+type CollapsedTagKeysType struct {
+	basetypes.ObjectType
+}
+
+func (t CollapsedTagKeysType) Equal(o attr.Type) bool {
+	other, ok := o.(CollapsedTagKeysType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t CollapsedTagKeysType) String() string {
+	return "CollapsedTagKeysType"
+}
+
+func (t CollapsedTagKeysType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	keyAttribute, ok := attributes["key"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`key is missing from object`)
+
+		return nil, diags
+	}
+
+	keyVal, ok := keyAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`key expected to be basetypes.StringValue, was: %T`, keyAttribute))
+	}
+
+	providersAttribute, ok := attributes["providers"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`providers is missing from object`)
+
+		return nil, diags
+	}
+
+	providersVal, ok := providersAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`providers expected to be basetypes.ListValue, was: %T`, providersAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return CollapsedTagKeysValue{
+		Key:       keyVal,
+		Providers: providersVal,
+		state:     attr.ValueStateKnown,
+	}, diags
+}
+
+func NewCollapsedTagKeysValueNull() CollapsedTagKeysValue {
+	return CollapsedTagKeysValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewCollapsedTagKeysValueUnknown() CollapsedTagKeysValue {
+	return CollapsedTagKeysValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewCollapsedTagKeysValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (CollapsedTagKeysValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing CollapsedTagKeysValue Attribute Value",
+				"While creating a CollapsedTagKeysValue value, a missing attribute value was detected. "+
+					"A CollapsedTagKeysValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("CollapsedTagKeysValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid CollapsedTagKeysValue Attribute Type",
+				"While creating a CollapsedTagKeysValue value, an invalid attribute value was detected. "+
+					"A CollapsedTagKeysValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("CollapsedTagKeysValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("CollapsedTagKeysValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra CollapsedTagKeysValue Attribute Value",
+				"While creating a CollapsedTagKeysValue value, an extra attribute value was detected. "+
+					"A CollapsedTagKeysValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra CollapsedTagKeysValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	keyAttribute, ok := attributes["key"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`key is missing from object`)
+
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	keyVal, ok := keyAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`key expected to be basetypes.StringValue, was: %T`, keyAttribute))
+	}
+
+	providersAttribute, ok := attributes["providers"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`providers is missing from object`)
+
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	providersVal, ok := providersAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`providers expected to be basetypes.ListValue, was: %T`, providersAttribute))
+	}
+
+	if diags.HasError() {
+		return NewCollapsedTagKeysValueUnknown(), diags
+	}
+
+	return CollapsedTagKeysValue{
+		Key:       keyVal,
+		Providers: providersVal,
+		state:     attr.ValueStateKnown,
+	}, diags
+}
+
+func NewCollapsedTagKeysValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) CollapsedTagKeysValue {
+	object, diags := NewCollapsedTagKeysValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewCollapsedTagKeysValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t CollapsedTagKeysType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewCollapsedTagKeysValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewCollapsedTagKeysValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewCollapsedTagKeysValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewCollapsedTagKeysValueMust(CollapsedTagKeysValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t CollapsedTagKeysType) ValueType(ctx context.Context) attr.Value {
+	return CollapsedTagKeysValue{}
+}
+
+var _ basetypes.ObjectValuable = CollapsedTagKeysValue{}
+
+type CollapsedTagKeysValue struct {
+	Key       basetypes.StringValue `tfsdk:"key"`
+	Providers basetypes.ListValue   `tfsdk:"providers"`
+	state     attr.ValueState
+}
+
+func (v CollapsedTagKeysValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["key"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["providers"] = basetypes.ListType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.Key.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["key"] = val
+
+		val, err = v.Providers.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["providers"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v CollapsedTagKeysValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v CollapsedTagKeysValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v CollapsedTagKeysValue) String() string {
+	return "CollapsedTagKeysValue"
+}
+
+func (v CollapsedTagKeysValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	providersVal, d := types.ListValue(types.StringType, v.Providers.Elements())
+
+	diags.Append(d...)
+
+	if d.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"key": basetypes.StringType{},
+			"providers": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+		}), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		map[string]attr.Type{
+			"key": basetypes.StringType{},
+			"providers": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+		},
+		map[string]attr.Value{
+			"key":       v.Key,
+			"providers": providersVal,
+		})
+
+	return objVal, diags
+}
+
+func (v CollapsedTagKeysValue) Equal(o attr.Value) bool {
+	other, ok := o.(CollapsedTagKeysValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Key.Equal(other.Key) {
+		return false
+	}
+
+	if !v.Providers.Equal(other.Providers) {
+		return false
+	}
+
+	return true
+}
+
+func (v CollapsedTagKeysValue) Type(ctx context.Context) attr.Type {
+	return CollapsedTagKeysType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v CollapsedTagKeysValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"key": basetypes.StringType{},
+		"providers": basetypes.ListType{
+			ElemType: types.StringType,
 		},
 	}
 }
@@ -903,6 +1430,24 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 			fmt.Sprintf(`name expected to be basetypes.StringValue, was: %T`, nameAttribute))
 	}
 
+	percentagesAttribute, ok := attributes["percentages"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`percentages is missing from object`)
+
+		return nil, diags
+	}
+
+	percentagesVal, ok := percentagesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`percentages expected to be basetypes.ListValue, was: %T`, percentagesAttribute))
+	}
+
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -912,6 +1457,7 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 		CostMetric:          costMetricVal,
 		Filter:              filterVal,
 		Name:                nameVal,
+		Percentages:         percentagesVal,
 		state:               attr.ValueStateKnown,
 	}, diags
 }
@@ -1051,6 +1597,24 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 			fmt.Sprintf(`name expected to be basetypes.StringValue, was: %T`, nameAttribute))
 	}
 
+	percentagesAttribute, ok := attributes["percentages"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`percentages is missing from object`)
+
+		return NewValuesValueUnknown(), diags
+	}
+
+	percentagesVal, ok := percentagesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`percentages expected to be basetypes.ListValue, was: %T`, percentagesAttribute))
+	}
+
 	if diags.HasError() {
 		return NewValuesValueUnknown(), diags
 	}
@@ -1060,6 +1624,7 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 		CostMetric:          costMetricVal,
 		Filter:              filterVal,
 		Name:                nameVal,
+		Percentages:         percentagesVal,
 		state:               attr.ValueStateKnown,
 	}, diags
 }
@@ -1136,11 +1701,12 @@ type ValuesValue struct {
 	CostMetric          basetypes.ObjectValue `tfsdk:"cost_metric"`
 	Filter              basetypes.StringValue `tfsdk:"filter"`
 	Name                basetypes.StringValue `tfsdk:"name"`
+	Percentages         basetypes.ListValue   `tfsdk:"percentages"`
 	state               attr.ValueState
 }
 
 func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 4)
+	attrTypes := make(map[string]tftypes.Type, 5)
 
 	var val tftypes.Value
 	var err error
@@ -1151,12 +1717,15 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 	}.TerraformType(ctx)
 	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["percentages"] = basetypes.ListType{
+		ElemType: PercentagesValue{}.Type(ctx),
+	}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 4)
+		vals := make(map[string]tftypes.Value, 5)
 
 		val, err = v.BusinessMetricToken.ToTerraformValue(ctx)
 
@@ -1189,6 +1758,14 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 		}
 
 		vals["name"] = val
+
+		val, err = v.Percentages.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["percentages"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -1240,6 +1817,35 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		)
 	}
 
+	percentages := types.ListValueMust(
+		PercentagesType{
+			basetypes.ObjectType{
+				AttrTypes: PercentagesValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.Percentages.Elements(),
+	)
+
+	if v.Percentages.IsNull() {
+		percentages = types.ListNull(
+			PercentagesType{
+				basetypes.ObjectType{
+					AttrTypes: PercentagesValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	if v.Percentages.IsUnknown() {
+		percentages = types.ListUnknown(
+			PercentagesType{
+				basetypes.ObjectType{
+					AttrTypes: PercentagesValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
 	objVal, diags := types.ObjectValue(
 		map[string]attr.Type{
 			"business_metric_token": basetypes.StringType{},
@@ -1248,12 +1854,16 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 			},
 			"filter": basetypes.StringType{},
 			"name":   basetypes.StringType{},
+			"percentages": basetypes.ListType{
+				ElemType: PercentagesValue{}.Type(ctx),
+			},
 		},
 		map[string]attr.Value{
 			"business_metric_token": v.BusinessMetricToken,
 			"cost_metric":           costMetric,
 			"filter":                v.Filter,
 			"name":                  v.Name,
+			"percentages":           percentages,
 		})
 
 	return objVal, diags
@@ -1290,6 +1900,10 @@ func (v ValuesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Percentages.Equal(other.Percentages) {
+		return false
+	}
+
 	return true
 }
 
@@ -1309,6 +1923,9 @@ func (v ValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		},
 		"filter": basetypes.StringType{},
 		"name":   basetypes.StringType{},
+		"percentages": basetypes.ListType{
+			ElemType: PercentagesValue{}.Type(ctx),
+		},
 	}
 }
 
@@ -2019,5 +2636,374 @@ func (v AggregationValue) Type(ctx context.Context) attr.Type {
 func (v AggregationValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"tag": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = PercentagesType{}
+
+type PercentagesType struct {
+	basetypes.ObjectType
+}
+
+func (t PercentagesType) Equal(o attr.Type) bool {
+	other, ok := o.(PercentagesType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t PercentagesType) String() string {
+	return "PercentagesType"
+}
+
+func (t PercentagesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	pctAttribute, ok := attributes["pct"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`pct is missing from object`)
+
+		return nil, diags
+	}
+
+	pctVal, ok := pctAttribute.(basetypes.NumberValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`pct expected to be basetypes.NumberValue, was: %T`, pctAttribute))
+	}
+
+	valueAttribute, ok := attributes["value"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`value is missing from object`)
+
+		return nil, diags
+	}
+
+	valueVal, ok := valueAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return PercentagesValue{
+		Pct:   pctVal,
+		Value: valueVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewPercentagesValueNull() PercentagesValue {
+	return PercentagesValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewPercentagesValueUnknown() PercentagesValue {
+	return PercentagesValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewPercentagesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (PercentagesValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing PercentagesValue Attribute Value",
+				"While creating a PercentagesValue value, a missing attribute value was detected. "+
+					"A PercentagesValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("PercentagesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid PercentagesValue Attribute Type",
+				"While creating a PercentagesValue value, an invalid attribute value was detected. "+
+					"A PercentagesValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("PercentagesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("PercentagesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra PercentagesValue Attribute Value",
+				"While creating a PercentagesValue value, an extra attribute value was detected. "+
+					"A PercentagesValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra PercentagesValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewPercentagesValueUnknown(), diags
+	}
+
+	pctAttribute, ok := attributes["pct"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`pct is missing from object`)
+
+		return NewPercentagesValueUnknown(), diags
+	}
+
+	pctVal, ok := pctAttribute.(basetypes.NumberValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`pct expected to be basetypes.NumberValue, was: %T`, pctAttribute))
+	}
+
+	valueAttribute, ok := attributes["value"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`value is missing from object`)
+
+		return NewPercentagesValueUnknown(), diags
+	}
+
+	valueVal, ok := valueAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute))
+	}
+
+	if diags.HasError() {
+		return NewPercentagesValueUnknown(), diags
+	}
+
+	return PercentagesValue{
+		Pct:   pctVal,
+		Value: valueVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewPercentagesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) PercentagesValue {
+	object, diags := NewPercentagesValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewPercentagesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t PercentagesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewPercentagesValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewPercentagesValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewPercentagesValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewPercentagesValueMust(PercentagesValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t PercentagesType) ValueType(ctx context.Context) attr.Value {
+	return PercentagesValue{}
+}
+
+var _ basetypes.ObjectValuable = PercentagesValue{}
+
+type PercentagesValue struct {
+	Pct   basetypes.NumberValue `tfsdk:"pct"`
+	Value basetypes.StringValue `tfsdk:"value"`
+	state attr.ValueState
+}
+
+func (v PercentagesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["pct"] = basetypes.NumberType{}.TerraformType(ctx)
+	attrTypes["value"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.Pct.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["pct"] = val
+
+		val, err = v.Value.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["value"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v PercentagesValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v PercentagesValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v PercentagesValue) String() string {
+	return "PercentagesValue"
+}
+
+func (v PercentagesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	objVal, diags := types.ObjectValue(
+		map[string]attr.Type{
+			"pct":   basetypes.NumberType{},
+			"value": basetypes.StringType{},
+		},
+		map[string]attr.Value{
+			"pct":   v.Pct,
+			"value": v.Value,
+		})
+
+	return objVal, diags
+}
+
+func (v PercentagesValue) Equal(o attr.Value) bool {
+	other, ok := o.(PercentagesValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Pct.Equal(other.Pct) {
+		return false
+	}
+
+	if !v.Value.Equal(other.Value) {
+		return false
+	}
+
+	return true
+}
+
+func (v PercentagesValue) Type(ctx context.Context) attr.Type {
+	return PercentagesType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v PercentagesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"pct":   basetypes.NumberType{},
+		"value": basetypes.StringType{},
 	}
 }

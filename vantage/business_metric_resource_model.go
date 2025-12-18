@@ -501,6 +501,83 @@ func (m *businessMetricResourceModel) costReportTokensFromTf(ctx context.Context
 	return costReportTokens
 }
 
+// assignCostReportTokens reorders the cost report tokens to match the original plan order
+// and fills in any computed values from the API response
+func assignCostReportTokens(ctx context.Context, data *businessMetricResourceModel, tfCostReportTokens types.List, diags *diag.Diagnostics) {
+	// Get the original plan order
+	planTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(tfCostReportTokens.Elements()))
+	if d := tfCostReportTokens.ElementsAs(ctx, &planTokens, false); d.HasError() {
+		diags.Append(d...)
+		return
+	}
+
+	// Get the API response values
+	apiTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(data.CostReportTokensWithMetadata.Elements()))
+	if d := data.CostReportTokensWithMetadata.ElementsAs(ctx, &apiTokens, false); d.HasError() {
+		diags.Append(d...)
+		return
+	}
+
+	// Build a map of API tokens by cost_report_token for quick lookup
+	apiTokenMap := make(map[string]*businessMetricResourceModelCostReportToken)
+	for _, t := range apiTokens {
+		apiTokenMap[t.CostReportToken.ValueString()] = t
+	}
+
+	// Reorder to match plan order, using API values for computed fields
+	orderedTokens := make([]businessMetricResourceModelCostReportToken, 0, len(planTokens))
+	for _, planToken := range planTokens {
+		tokenKey := planToken.CostReportToken.ValueString()
+		if apiToken, ok := apiTokenMap[tokenKey]; ok {
+			// Handle label_filter: if API returns null but plan had a value, use plan's value
+			// This ensures empty lists stay as empty lists rather than becoming null
+			labelFilter := apiToken.LabelFilter
+			if labelFilter.IsNull() && !planToken.LabelFilter.IsNull() {
+				labelFilter = planToken.LabelFilter
+			}
+			// If both are null, ensure we use an empty list for consistency
+			if labelFilter.IsNull() {
+				labelFilter, _ = types.ListValueFrom(ctx, types.StringType, []string{})
+			}
+
+			// Use the plan's cost_report_token but take computed values from API
+			orderedTokens = append(orderedTokens, businessMetricResourceModelCostReportToken{
+				CostReportToken: planToken.CostReportToken,
+				UnitScale:       apiToken.UnitScale,
+				LabelFilter:     labelFilter,
+			})
+			delete(apiTokenMap, tokenKey)
+		} else {
+			// Plan contains a cost_report_token that is missing from the API response.
+			// Emit a warning and preserve the planned token to avoid silent state drift.
+			diags.AddWarning(
+				"Missing cost_report_token in API response",
+				fmt.Sprintf("A cost_report_token present in the plan (%q) was not returned by the API; preserving the planned value.", tokenKey),
+			)
+			orderedTokens = append(orderedTokens, *planToken)
+		}
+	}
+
+	// Append any tokens from API that weren't in the plan (shouldn't happen normally)
+	for _, apiToken := range apiTokenMap {
+		orderedTokens = append(orderedTokens, *apiToken)
+	}
+
+	attrTypes := map[string]attr.Type{
+		"cost_report_token": types.StringType,
+		"unit_scale":        types.StringType,
+		"label_filter":      types.ListType{ElemType: types.StringType},
+	}
+
+	newList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, orderedTokens)
+	if d.HasError() {
+		diags.Append(d...)
+		return
+	}
+
+	data.CostReportTokensWithMetadata = newList
+}
+
 func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.DatadogMetricFields, integrationToken string) (resource_business_metric.DatadogMetricFieldsValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if apiFields == nil {
