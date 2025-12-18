@@ -121,40 +121,58 @@ func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 
 	// Helper to create a cost report token with empty label_filter (plan)
 	createTokenWithEmptyFilter := func(token, unitScale string) attr.Value {
-		labelFilter, _ := types.ListValueFrom(ctx, types.StringType, []string{})
-		obj, _ := types.ObjectValue(attrTypes, map[string]attr.Value{
+		labelFilter, diags := types.ListValueFrom(ctx, types.StringType, []string{})
+		if diags.HasError() {
+			t.Fatalf("failed to create labelFilter list value: %v", diags)
+		}
+
+		obj, diags := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
 			"unit_scale":        types.StringValue(unitScale),
 			"label_filter":      labelFilter,
 		})
+		if diags.HasError() {
+			t.Fatalf("failed to create cost report token object (empty label_filter): %v", diags)
+		}
+
 		return obj
 	}
 
 	// Helper to create a cost report token with null label_filter (API response)
 	createTokenWithNullFilter := func(token, unitScale string) attr.Value {
-		obj, _ := types.ObjectValue(attrTypes, map[string]attr.Value{
+		obj, diags := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
 			"unit_scale":        types.StringValue(unitScale),
 			"label_filter":      types.ListNull(types.StringType),
 		})
+		if diags.HasError() {
+			t.Fatalf("failed to create cost report token object (null label_filter): %v", diags)
+		}
+
 		return obj
 	}
 
 	// Plan has empty list for label_filter
-	planList, _ := types.ListValue(
+	planList, diags := types.ListValue(
 		types.ObjectType{AttrTypes: attrTypes},
 		[]attr.Value{
 			createTokenWithEmptyFilter("rprt_token1", "per_unit"),
 		},
 	)
+	if diags.HasError() {
+		t.Fatalf("failed to create planList value: %v", diags)
+	}
 
 	// API returns null for label_filter
-	apiList, _ := types.ListValue(
+	apiList, diags := types.ListValue(
 		types.ObjectType{AttrTypes: attrTypes},
 		[]attr.Value{
 			createTokenWithNullFilter("rprt_token1", "per_unit"),
 		},
 	)
+	if diags.HasError() {
+		t.Fatalf("failed to create apiList value: %v", diags)
+	}
 
 	// Create model with API response (null label_filter)
 	data := &businessMetricResourceModel{
@@ -162,7 +180,6 @@ func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 	}
 
 	// Run the function
-	var diags diag.Diagnostics
 	assignCostReportTokens(ctx, data, planList, &diags)
 
 	if diags.HasError() {
