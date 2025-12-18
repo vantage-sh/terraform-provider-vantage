@@ -27,12 +27,19 @@ func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 
 	// Helper to create a cost report token object
 	createToken := func(token, unitScale string) attr.Value {
-		labelFilter, _ := types.ListValueFrom(ctx, types.StringType, []string{})
-		obj, _ := types.ObjectValue(attrTypes, map[string]attr.Value{
+		labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
+		if err != nil {
+			t.Fatalf("failed to create label_filter list: %v", err)
+		}
+
+		obj, err := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
 			"unit_scale":        types.StringValue(unitScale),
 			"label_filter":      labelFilter,
 		})
+		if err != nil {
+			t.Fatalf("failed to create cost report token object: %v", err)
+		}
 		return obj
 	}
 
