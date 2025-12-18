@@ -520,3 +520,119 @@ resource "vantage_business_metric" %[1]q {
 }
 `, id, title)
 }
+
+func TestAccBusinessMetric_costReportTokensWithReferences(t *testing.T) {
+	// This test verifies the exact pattern shown in the GitHub PR image:
+	// Using Terraform references to other cost reports in cost_report_tokens_with_metadata
+	// with multiple reports and empty label_filter arrays
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create business metric with multiple cost report token references
+				Config: testAccVantageBusinessMetricTf_withMultipleCostReportReferences("test-fills-trades", "Fills (Trades)"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-fills-trades", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "title", "Fills (Trades)"),
+					// Verify we have 4 cost report tokens
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.#", "4"),
+					// Verify the tokens are properly linked to the cost reports
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.0.cost_report_token",
+						"vantage_cost_report.all_resources", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.1.cost_report_token",
+						"vantage_cost_report.domains", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.2.cost_report_token",
+						"vantage_cost_report.main_view", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.3.cost_report_token",
+						"vantage_cost_report.providers", "token",
+					),
+					// Verify all have per_unit scale
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.0.unit_scale", "per_unit"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.1.unit_scale", "per_unit"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.2.unit_scale", "per_unit"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.3.unit_scale", "per_unit"),
+					// Verify label_filter is empty list (not null)
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.1.label_filter.#", "0"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.2.label_filter.#", "0"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.3.label_filter.#", "0"),
+				),
+			},
+			{ // update to verify no drift occurs
+				Config: testAccVantageBusinessMetricTf_withMultipleCostReportReferences("test-fills-trades", "Fills (Trades)"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "title", "Fills (Trades)"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-fills-trades", "cost_report_tokens_with_metadata.#", "4"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_withMultipleCostReportReferences(id string, title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "all_resources" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "All Resources"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "domains" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Domains"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "main_view" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Main View"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "providers" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Providers"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+  
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.all_resources.token
+      unit_scale        = "per_unit"
+      label_filter      = []
+    },
+    {
+      cost_report_token = vantage_cost_report.domains.token
+      unit_scale        = "per_unit"
+      label_filter      = []
+    },
+    {
+      cost_report_token = vantage_cost_report.main_view.token
+      unit_scale        = "per_unit"
+      label_filter      = []
+    },
+    {
+      cost_report_token = vantage_cost_report.providers.token
+      unit_scale        = "per_unit"
+      label_filter      = []
+    }
+  ]
+}
+`, id, title)
+}
