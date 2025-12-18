@@ -65,6 +65,7 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 	}
 
 	oldValues := data.Values
+	oldCostReportTokens := data.CostReportTokensWithMetadata
 	model := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -98,6 +99,12 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 	} else {
 		assignValues(ctx, data, oldValues, &resp.Diagnostics)
 	}
+
+	// Preserve the original order of cost report tokens from the plan
+	if !oldCostReportTokens.IsNull() && !oldCostReportTokens.IsUnknown() {
+		assignCostReportTokens(ctx, data, oldCostReportTokens, &resp.Diagnostics)
+	}
+
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -150,6 +157,9 @@ func (r *businessMetricResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	// Save the original order of cost report tokens from state
+	oldCostReportTokens := data.CostReportTokensWithMetadata
+
 	params := businessmetricsv2.NewGetBusinessMetricParams().WithBusinessMetricToken(data.Token.ValueString())
 	out, err := r.client.V2.BusinessMetrics.GetBusinessMetric(params, r.client.Auth)
 	if err != nil {
@@ -167,6 +177,11 @@ func (r *businessMetricResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	// Preserve the original order of cost report tokens from state
+	if !oldCostReportTokens.IsNull() && !oldCostReportTokens.IsUnknown() {
+		assignCostReportTokens(ctx, data, oldCostReportTokens, &resp.Diagnostics)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -182,6 +197,7 @@ func (r *businessMetricResource) Update(ctx context.Context, req resource.Update
 	}
 
 	oldValues := data.Values
+	oldCostReportTokens := data.CostReportTokensWithMetadata
 
 	model := data.toUpdate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -216,6 +232,11 @@ func (r *businessMetricResource) Update(ctx context.Context, req resource.Update
 		data.Values = types.ListNull(types.ObjectType{AttrTypes: attrTypes})
 	} else {
 		assignValues(ctx, data, oldValues, &resp.Diagnostics)
+	}
+
+	// Preserve the original order of cost report tokens from the plan
+	if !oldCostReportTokens.IsNull() && !oldCostReportTokens.IsUnknown() {
+		assignCostReportTokens(ctx, data, oldCostReportTokens, &resp.Diagnostics)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

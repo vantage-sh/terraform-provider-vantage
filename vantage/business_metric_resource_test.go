@@ -1,14 +1,180 @@
 package vantage
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
+
+// TestAssignCostReportTokens_OrderPreservation tests that assignCostReportTokens
+// correctly reorders API response data to match the original plan order.
+func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
+	ctx := context.Background()
+
+	attrTypes := map[string]attr.Type{
+		"cost_report_token": types.StringType,
+		"unit_scale":        types.StringType,
+		"label_filter":      types.ListType{ElemType: types.StringType},
+	}
+
+	// Helper to create a cost report token object
+	createToken := func(token, unitScale string) attr.Value {
+		labelFilter, _ := types.ListValueFrom(ctx, types.StringType, []string{})
+		obj, _ := types.ObjectValue(attrTypes, map[string]attr.Value{
+			"cost_report_token": types.StringValue(token),
+			"unit_scale":        types.StringValue(unitScale),
+			"label_filter":      labelFilter,
+		})
+		return obj
+	}
+
+	// Plan order: token1, token2, token3
+	planList, _ := types.ListValue(
+		types.ObjectType{AttrTypes: attrTypes},
+		[]attr.Value{
+			createToken("rprt_token1", "per_unit"),
+			createToken("rprt_token2", "per_thousand"),
+			createToken("rprt_token3", "per_million"),
+		},
+	)
+
+	// API returns in different order: token3, token1, token2
+	apiList, _ := types.ListValue(
+		types.ObjectType{AttrTypes: attrTypes},
+		[]attr.Value{
+			createToken("rprt_token3", "per_million"),
+			createToken("rprt_token1", "per_unit"),
+			createToken("rprt_token2", "per_thousand"),
+		},
+	)
+
+	// Create model with API order
+	data := &businessMetricResourceModel{
+		CostReportTokensWithMetadata: apiList,
+	}
+
+	// Run the function
+	var diags diag.Diagnostics
+	assignCostReportTokens(ctx, data, planList, &diags)
+
+	if diags.HasError() {
+		t.Fatalf("assignCostReportTokens returned errors: %v", diags)
+	}
+
+	// Verify the order matches plan order
+	tokens := make([]*businessMetricResourceModelCostReportToken, 0, 3)
+	if d := data.CostReportTokensWithMetadata.ElementsAs(ctx, &tokens, false); d.HasError() {
+		t.Fatalf("Failed to extract tokens: %v", d)
+	}
+
+	expectedOrder := []string{"rprt_token1", "rprt_token2", "rprt_token3"}
+	for i, expected := range expectedOrder {
+		if tokens[i].CostReportToken.ValueString() != expected {
+			t.Errorf("Token at index %d: expected %q, got %q", i, expected, tokens[i].CostReportToken.ValueString())
+		}
+	}
+
+	// Also verify computed values were preserved from API response
+	expectedUnitScales := []string{"per_unit", "per_thousand", "per_million"}
+	for i, expected := range expectedUnitScales {
+		if tokens[i].UnitScale.ValueString() != expected {
+			t.Errorf("UnitScale at index %d: expected %q, got %q", i, expected, tokens[i].UnitScale.ValueString())
+		}
+	}
+
+	// Verify label_filter is an empty list, not null
+	for i, token := range tokens {
+		if token.LabelFilter.IsNull() {
+			t.Errorf("LabelFilter at index %d: expected empty list, got null", i)
+		}
+		if len(token.LabelFilter.Elements()) != 0 {
+			t.Errorf("LabelFilter at index %d: expected 0 elements, got %d", i, len(token.LabelFilter.Elements()))
+		}
+	}
+}
+
+// TestAssignCostReportTokens_NullLabelFilter tests that null label_filter from API
+// is converted to an empty list to match Terraform's expectations.
+func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
+	ctx := context.Background()
+
+	attrTypes := map[string]attr.Type{
+		"cost_report_token": types.StringType,
+		"unit_scale":        types.StringType,
+		"label_filter":      types.ListType{ElemType: types.StringType},
+	}
+
+	// Helper to create a cost report token with empty label_filter (plan)
+	createTokenWithEmptyFilter := func(token, unitScale string) attr.Value {
+		labelFilter, _ := types.ListValueFrom(ctx, types.StringType, []string{})
+		obj, _ := types.ObjectValue(attrTypes, map[string]attr.Value{
+			"cost_report_token": types.StringValue(token),
+			"unit_scale":        types.StringValue(unitScale),
+			"label_filter":      labelFilter,
+		})
+		return obj
+	}
+
+	// Helper to create a cost report token with null label_filter (API response)
+	createTokenWithNullFilter := func(token, unitScale string) attr.Value {
+		obj, _ := types.ObjectValue(attrTypes, map[string]attr.Value{
+			"cost_report_token": types.StringValue(token),
+			"unit_scale":        types.StringValue(unitScale),
+			"label_filter":      types.ListNull(types.StringType),
+		})
+		return obj
+	}
+
+	// Plan has empty list for label_filter
+	planList, _ := types.ListValue(
+		types.ObjectType{AttrTypes: attrTypes},
+		[]attr.Value{
+			createTokenWithEmptyFilter("rprt_token1", "per_unit"),
+		},
+	)
+
+	// API returns null for label_filter
+	apiList, _ := types.ListValue(
+		types.ObjectType{AttrTypes: attrTypes},
+		[]attr.Value{
+			createTokenWithNullFilter("rprt_token1", "per_unit"),
+		},
+	)
+
+	// Create model with API response (null label_filter)
+	data := &businessMetricResourceModel{
+		CostReportTokensWithMetadata: apiList,
+	}
+
+	// Run the function
+	var diags diag.Diagnostics
+	assignCostReportTokens(ctx, data, planList, &diags)
+
+	if diags.HasError() {
+		t.Fatalf("assignCostReportTokens returned errors: %v", diags)
+	}
+
+	// Verify label_filter is an empty list, not null
+	tokens := make([]*businessMetricResourceModelCostReportToken, 0, 1)
+	if d := data.CostReportTokensWithMetadata.ElementsAs(ctx, &tokens, false); d.HasError() {
+		t.Fatalf("Failed to extract tokens: %v", d)
+	}
+
+	if tokens[0].LabelFilter.IsNull() {
+		t.Error("LabelFilter should be an empty list, not null")
+	}
+	if len(tokens[0].LabelFilter.Elements()) != 0 {
+		t.Errorf("LabelFilter should have 0 elements, got %d", len(tokens[0].LabelFilter.Elements()))
+	}
+}
 
 func TestAccBusinessMetric_basic(t *testing.T) {
 	now := time.Now()
@@ -252,6 +418,105 @@ resource "vantage_business_metric" %[1]q {
     query = "avg:system.memory.used{*}.rollup(avg, daily)"
     integration_token = "accss_crdntl_27a4dff7012ecce3"
   }
+}
+`, id, title)
+}
+
+func TestAccBusinessMetric_costReportTokensOrder(t *testing.T) {
+	// This test verifies that cost_report_tokens_with_metadata maintains the order
+	// specified in the Terraform config, even if the API returns them in a different order.
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create business metric with multiple cost report tokens
+				Config: testAccVantageBusinessMetricTf_withCostReportTokens("test-tokens", "test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-tokens", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "title", "test"),
+					// Verify the order matches what we specified in config
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.0.cost_report_token",
+						"vantage_cost_report.report1", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.1.cost_report_token",
+						"vantage_cost_report.report2", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.2.cost_report_token",
+						"vantage_cost_report.report3", "token",
+					),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.0.unit_scale", "per_unit"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.1.unit_scale", "per_thousand"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.2.unit_scale", "per_million"),
+				),
+			},
+			{ // update title but keep same cost report tokens order
+				Config: testAccVantageBusinessMetricTf_withCostReportTokens("test-tokens", "updated-test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "title", "updated-test"),
+					// Verify order is still preserved after update
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.0.cost_report_token",
+						"vantage_cost_report.report1", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.1.cost_report_token",
+						"vantage_cost_report.report2", "token",
+					),
+					resource.TestCheckResourceAttrPair(
+						"vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.2.cost_report_token",
+						"vantage_cost_report.report3", "token",
+					),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_withCostReportTokens(id string, title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "report1" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report 1 for Business Metric Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "report2" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report 2 for Business Metric Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "report3" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report 3 for Business Metric Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+  
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.report1.token
+      unit_scale        = "per_unit"
+    },
+    {
+      cost_report_token = vantage_cost_report.report2.token
+      unit_scale        = "per_thousand"
+    },
+    {
+      cost_report_token = vantage_cost_report.report3.token
+      unit_scale        = "per_million"
+    }
+  ]
 }
 `, id, title)
 }
