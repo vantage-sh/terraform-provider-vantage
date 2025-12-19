@@ -545,6 +545,84 @@ resource "vantage_business_metric" %[1]q {
 `, id, title)
 }
 
+// TestAccBusinessMetric_withValuesAndEmptyLabelFilter tests the exact scenario
+// from customer issue: business metric with CSV values and label_filter = []
+func TestAccBusinessMetric_withValuesAndEmptyLabelFilter(t *testing.T) {
+	now := time.Now()
+	date1 := fmt.Sprintf("%d-01-01", now.Year())
+	date2 := fmt.Sprintf("%d-02-01", now.Year())
+	date3 := fmt.Sprintf("%d-03-01", now.Year())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBusinessMetricTf_withValuesAndEmptyLabelFilter(
+					"test-customer-scenario",
+					"OV - Test",
+					date1, date2, date3,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-customer-scenario", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-customer-scenario", "title", "OV - Test"),
+					// Verify values are set
+					resource.TestCheckResourceAttr("vantage_business_metric.test-customer-scenario", "values.#", "3"),
+					// Verify cost_report_tokens_with_metadata
+					resource.TestCheckResourceAttr("vantage_business_metric.test-customer-scenario", "cost_report_tokens_with_metadata.#", "1"),
+					// Verify label_filter is empty list, not null
+					resource.TestCheckResourceAttr("vantage_business_metric.test-customer-scenario", "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+				),
+			},
+			{ // Update title to verify no drift on label_filter
+				Config: testAccVantageBusinessMetricTf_withValuesAndEmptyLabelFilter(
+					"test-customer-scenario",
+					"OV - Test Updated",
+					date1, date2, date3,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_business_metric.test-customer-scenario", "title", "OV - Test Updated"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-customer-scenario", "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_withValuesAndEmptyLabelFilter(id, title, date1, date2, date3 string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "product_line" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Product Line Report"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+# Simulating CSV data that would come from csvdecode()
+locals {
+  order_volume_data = [
+    { date = %[3]q, amount = "1000.50" },
+    { date = %[4]q, amount = "1500.75" },
+    { date = %[5]q, amount = "2000.25" },
+  ]
+}
+
+resource "vantage_business_metric" %[1]q {
+  title  = %[2]q
+  values = local.order_volume_data
+
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.product_line.token
+      label_filter      = []
+    }
+  ]
+}
+`, id, title, date1, date2, date3)
+}
+
 func TestAccBusinessMetric_costReportTokensWithReferences(t *testing.T) {
 	// This test verifies the exact pattern shown in the GitHub PR image:
 	// Using Terraform references to other cost reports in cost_report_tokens_with_metadata
