@@ -23,10 +23,9 @@ import (
 const userAgent = "tf-provider-vantage"
 
 type Client struct {
-	V1      *vantagev1.Vantage
-	V2      *vantagev2.Vantage
-	Auth    runtime.ClientAuthInfoWriter
-	Timeout time.Duration
+	V1   *vantagev1.Vantage
+	V2   *vantagev2.Vantage
+	Auth runtime.ClientAuthInfoWriter
 }
 
 func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, error) {
@@ -59,10 +58,9 @@ func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, 
 
 	bearerTokenAuth := httptransport.BearerToken(token)
 	return &Client{
-		V1:      v1,
-		V2:      v2,
-		Auth:    bearerTokenAuth,
-		Timeout: timeout,
+		V1:   v1,
+		V2:   v2,
+		Auth: bearerTokenAuth,
 	}, nil
 }
 
