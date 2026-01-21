@@ -88,6 +88,15 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 		)
 	}
 
+	if config.Timeout.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("timeout"),
+			"Unknown Vantage API Timeout",
+			"The provider cannot create the Vantage API client as there is an unknown configuration value for the timeout. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the VANTAGE_TIMEOUT environment variable.",
+		)
+	}
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,6 +151,14 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 				path.Root("timeout"),
 				"Invalid Timeout Value",
 				"The timeout value must be a valid duration string (e.g., \"60s\", \"5m\"). "+err.Error(),
+			)
+			return
+		}
+		if timeout <= 0 {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("timeout"),
+				"Invalid Timeout Value",
+				"The timeout value must be a positive duration (e.g., \"30s\", \"5m\"). A zero or negative timeout is not allowed.",
 			)
 			return
 		}
