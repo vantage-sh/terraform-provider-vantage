@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -115,9 +114,6 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-
 	params := tagsv2.NewCreateVirtualTagConfigParams().
 		WithContext(ctx).
 		WithCreateVirtualTagConfig(model)
@@ -147,9 +143,6 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
 
 	params := tagsv2.NewGetVirtualTagConfigParams().
 		WithContext(ctx).
@@ -190,9 +183,6 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-
 	params := tagsv2.
 		NewUpdateVirtualTagConfigParams().
 		WithContext(ctx).
@@ -220,9 +210,6 @@ func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.Delet
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
 
 	params := tagsv2.NewDeleteVirtualTagConfigParams().
 		WithContext(ctx)
