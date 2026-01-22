@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -28,6 +29,7 @@ type vantageProvider struct{}
 type vantageProviderModel struct {
 	Host     types.String `tfsdk:"host"`
 	APIToken types.String `tfsdk:"api_token"`
+	Timeout  types.String `tfsdk:"timeout"`
 }
 
 // Metadata returns the provider type name.
@@ -45,6 +47,11 @@ func (p *vantageProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 			"api_token": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
+			},
+			"timeout": schema.StringAttribute{
+				Optional:            true,
+				Description:         "The timeout duration for API requests (e.g., \"30s\", \"5m\"). Defaults to \"30s\".",
+				MarkdownDescription: "The timeout duration for API requests (e.g., \"30s\", \"5m\"). Defaults to \"30s\".",
 			},
 		},
 	}
@@ -78,6 +85,15 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 			"Unknown Vantage API Token",
 			"The provider cannot create the Vantage API client as there is an unknown configuration value for the Vantage API token. "+
 				"Either target apply the source of the value first, set the value statically in the configuration, or use the VANTAGE_API_TOKEN environment variable.",
+		)
+	}
+
+	if config.Timeout.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("timeout"),
+			"Unknown Vantage API Timeout",
+			"The provider cannot create the Vantage API client as there is an unknown configuration value for the Vantage API timeout. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the VANTAGE_TIMEOUT environment variable.",
 		)
 	}
 
@@ -121,7 +137,34 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	client, err := NewClient(host, apiToken, debug)
+	// Parse timeout if provided
+	timeout := 30 * time.Second // Default timeout
+	timeoutStr := os.Getenv("VANTAGE_TIMEOUT")
+	if !config.Timeout.IsNull() {
+		timeoutStr = config.Timeout.ValueString()
+	}
+	if timeoutStr != "" {
+		var err error
+		timeout, err = time.ParseDuration(timeoutStr)
+		if err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("timeout"),
+				"Invalid Timeout Value",
+				"The timeout value must be a valid duration string (e.g., \"30s\", \"5m\"). "+err.Error(),
+			)
+			return
+		}
+		if timeout <= 0 {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("timeout"),
+				"Invalid Timeout Value",
+				"The timeout value must be a positive duration (e.g., \"30s\", \"5m\"). Zero or negative values are not allowed.",
+			)
+			return
+		}
+	}
+
+	client, err := NewClient(host, apiToken, debug, timeout)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
@@ -131,6 +174,7 @@ func (p *vantageProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 		return
 	}
+
 	// Make the Vantage client available during DataSource and Resource
 	// type Configure methods.
 	resp.DataSourceData = client

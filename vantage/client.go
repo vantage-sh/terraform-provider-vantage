@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -27,7 +28,7 @@ type Client struct {
 	Auth runtime.ClientAuthInfoWriter
 }
 
-func NewClient(host, token string, debug bool) (*Client, error) {
+func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, error) {
 	parsedURL, err := url.Parse(host)
 	if err != nil {
 		return nil, err
@@ -36,16 +37,22 @@ func NewClient(host, token string, debug bool) (*Client, error) {
 	v1Cfg := vantagev1.DefaultTransportConfig()
 	v1Cfg.WithHost(parsedURL.Host)
 	v1Cfg.WithSchemes([]string{parsedURL.Scheme})
-	transportv1 := httptransport.New(v1Cfg.Host, v1Cfg.BasePath, v1Cfg.Schemes)
-	transportv1.Transport = userAgentTripper(transportv1.Transport, userAgent)
+	httpClientV1 := &http.Client{
+		Timeout:   timeout,
+		Transport: userAgentTripper(http.DefaultTransport, userAgent),
+	}
+	transportv1 := httptransport.NewWithClient(v1Cfg.Host, v1Cfg.BasePath, v1Cfg.Schemes, httpClientV1)
 	transportv1.SetDebug(debug)
 	v1 := vantagev1.New(transportv1, strfmt.Default)
 
 	v2Cfg := vantagev2.DefaultTransportConfig()
 	v2Cfg.WithHost(parsedURL.Host)
 	v2Cfg.WithSchemes([]string{parsedURL.Scheme})
-	transportv2 := httptransport.New(v2Cfg.Host, v2Cfg.BasePath, v2Cfg.Schemes)
-	transportv2.Transport = userAgentTripper(transportv2.Transport, userAgent)
+	httpClientV2 := &http.Client{
+		Timeout:   timeout,
+		Transport: userAgentTripper(http.DefaultTransport, userAgent),
+	}
+	transportv2 := httptransport.NewWithClient(v2Cfg.Host, v2Cfg.BasePath, v2Cfg.Schemes, httpClientV2)
 	transportv2.SetDebug(debug)
 	v2 := vantagev2.New(transportv2, strfmt.Default)
 
