@@ -114,9 +114,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	params := tagsv2.NewCreateVirtualTagConfigParams().
-		WithContext(ctx).
-		WithCreateVirtualTagConfig(model)
+	params := tagsv2.NewCreateVirtualTagConfigParams().WithCreateVirtualTagConfig(model)
 	out, err := r.client.V2.VirtualTags.CreateVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*tagsv2.CreateVirtualTagConfigBadRequest); ok {
@@ -144,9 +142,7 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	params := tagsv2.NewGetVirtualTagConfigParams().
-		WithContext(ctx).
-		WithToken(state.Token.ValueString())
+	params := tagsv2.NewGetVirtualTagConfigParams().WithToken(state.Token.ValueString())
 	out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		if _, ok := err.(*tagsv2.GetVirtualTagConfigNotFound); ok {
@@ -185,7 +181,6 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 
 	params := tagsv2.
 		NewUpdateVirtualTagConfigParams().
-		WithContext(ctx).
 		WithToken(data.Token.ValueString()).
 		WithUpdateVirtualTagConfig(model)
 
@@ -211,8 +206,7 @@ func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	params := tagsv2.NewDeleteVirtualTagConfigParams().
-		WithContext(ctx)
+	params := tagsv2.NewDeleteVirtualTagConfigParams()
 	params.SetToken(state.Token.ValueString())
 	_, err := r.client.V2.VirtualTags.DeleteVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
