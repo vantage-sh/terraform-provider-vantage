@@ -116,12 +116,13 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// if labels are unknown in values, sets them to empty string
-func assignValues(ctx context.Context, data *businessMetricResourceModel, tfValues types.List, diags *diag.Diagnostics) {
+// processValuesList processes a list of values and converts unknown labels to empty strings.
+// Returns the processed list or nil if an error occurred (diagnostics are appended).
+func processValuesList(ctx context.Context, tfValues types.List, diags *diag.Diagnostics) *types.List {
 	values := make([]*businessMetricResourceModelValue, 0, len(tfValues.Elements()))
 	if diag := tfValues.ElementsAs(ctx, &values, false); diag.HasError() {
 		diags.Append(diag...)
-		return
+		return nil
 	}
 
 	newTfValues := []businessMetricResourceModelValue{}
@@ -148,48 +149,24 @@ func assignValues(ctx context.Context, data *businessMetricResourceModel, tfValu
 	newList, diag := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, newTfValues)
 	if diag.HasError() {
 		diags.Append(diag...)
-		return
+		return nil
 	}
 
-	data.Values = newList
+	return &newList
+}
+
+// if labels are unknown in values, sets them to empty string
+func assignValues(ctx context.Context, data *businessMetricResourceModel, tfValues types.List, diags *diag.Diagnostics) {
+	if newList := processValuesList(ctx, tfValues, diags); newList != nil {
+		data.Values = *newList
+	}
 }
 
 // if labels are unknown in forecasted values, sets them to empty string
 func assignForecastedValues(ctx context.Context, data *businessMetricResourceModel, tfValues types.List, diags *diag.Diagnostics) {
-	values := make([]*businessMetricResourceModelValue, 0, len(tfValues.Elements()))
-	if diag := tfValues.ElementsAs(ctx, &values, false); diag.HasError() {
-		diags.Append(diag...)
-		return
+	if newList := processValuesList(ctx, tfValues, diags); newList != nil {
+		data.ForecastedValues = *newList
 	}
-
-	newTfValues := []businessMetricResourceModelValue{}
-	for _, value := range values {
-		var labelValue types.String
-		if value.Label == types.StringUnknown() {
-			labelValue = types.StringValue("")
-		} else {
-			labelValue = value.Label
-		}
-		newTfValues = append(newTfValues, businessMetricResourceModelValue{
-			Amount: value.Amount,
-			Date:   value.Date,
-			Label:  labelValue,
-		})
-	}
-
-	attrTypes := map[string]attr.Type{
-		"amount": types.Float64Type,
-		"date":   types.StringType,
-		"label":  types.StringType,
-	}
-
-	newList, diag := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, newTfValues)
-	if diag.HasError() {
-		diags.Append(diag...)
-		return
-	}
-
-	data.ForecastedValues = newList
 }
 
 func (r *businessMetricResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
