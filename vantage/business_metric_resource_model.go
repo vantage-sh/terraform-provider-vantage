@@ -368,6 +368,35 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 
 	}
 
+	if !m.ForecastedValues.IsNull() && !m.ForecastedValues.IsUnknown() {
+		tfForecastedValues := m.forecastedValuesFromTf(ctx, diags)
+		if diags.HasError() {
+			return nil
+		}
+
+		forecastedValues := make([]*modelsv2.CreateBusinessMetricForecastedValuesItems0, 0, len(tfForecastedValues))
+		for _, v := range tfForecastedValues {
+			amt := v.Amount.ValueFloat64()
+			t, err := time.Parse("2006-01-02", v.Date.ValueString())
+			if err != nil {
+				diags.AddError(fmt.Sprintf("Failed to parse forecasted value date: %s", v.Date.ValueString()), err.Error())
+				return nil
+			}
+			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
+
+			value := modelsv2.CreateBusinessMetricForecastedValuesItems0{
+				Amount: &amt,
+				Date:   &ts,
+				Label:  label,
+			}
+
+			forecastedValues = append(forecastedValues, &value)
+		}
+
+		model.ForecastedValues = forecastedValues
+	}
+
 	return model
 }
 
@@ -480,12 +509,50 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		model.CostReportTokensWithMetadata = costReportTokens
 	}
 
+	if !m.ForecastedValues.IsNull() && !m.ForecastedValues.IsUnknown() {
+		tfForecastedValues := m.forecastedValuesFromTf(ctx, diags)
+		if diags.HasError() {
+			return nil
+		}
+
+		forecastedValues := make([]*modelsv2.UpdateBusinessMetricForecastedValuesItems0, 0, len(tfForecastedValues))
+		for _, v := range tfForecastedValues {
+			amt := v.Amount.ValueFloat64()
+			t, err := time.Parse("2006-01-02", v.Date.ValueString())
+			if err != nil {
+				diags.AddError(fmt.Sprintf("Failed to parse forecasted value date: %s", v.Date.ValueString()), err.Error())
+				return nil
+			}
+			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
+
+			value := modelsv2.UpdateBusinessMetricForecastedValuesItems0{
+				Amount: &amt,
+				Date:   &ts,
+				Label:  label,
+			}
+
+			forecastedValues = append(forecastedValues, &value)
+		}
+
+		model.ForecastedValues = forecastedValues
+	}
+
 	return model
 }
 
 func (m *businessMetricResourceModel) valuesFromTf(ctx context.Context, diags *diag.Diagnostics) []*businessMetricResourceModelValue {
 	values := make([]*businessMetricResourceModelValue, 0, len(m.Values.Elements()))
 	if diag := m.Values.ElementsAs(ctx, &values, false); diag.HasError() {
+		diags.Append(diag...)
+		return nil
+	}
+	return values
+}
+
+func (m *businessMetricResourceModel) forecastedValuesFromTf(ctx context.Context, diags *diag.Diagnostics) []*businessMetricResourceModelValue {
+	values := make([]*businessMetricResourceModelValue, 0, len(m.ForecastedValues.Elements()))
+	if diag := m.ForecastedValues.ElementsAs(ctx, &values, false); diag.HasError() {
 		diags.Append(diag...)
 		return nil
 	}

@@ -65,6 +65,7 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 	}
 
 	oldValues := data.Values
+	oldForecastedValues := data.ForecastedValues
 	oldCostReportTokens := data.CostReportTokensWithMetadata
 	model := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -88,16 +89,22 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	if oldValues.IsUnknown() {
-		attrTypes := map[string]attr.Type{
-			"amount": types.Float64Type,
-			"date":   types.StringType,
-			"label":  types.StringType,
-		}
+	attrTypes := map[string]attr.Type{
+		"amount": types.Float64Type,
+		"date":   types.StringType,
+		"label":  types.StringType,
+	}
 
+	if oldValues.IsUnknown() {
 		data.Values = types.ListNull(types.ObjectType{AttrTypes: attrTypes})
 	} else {
 		assignValues(ctx, data, oldValues, &resp.Diagnostics)
+	}
+
+	if oldForecastedValues.IsUnknown() {
+		data.ForecastedValues = types.ListNull(types.ObjectType{AttrTypes: attrTypes})
+	} else {
+		assignForecastedValues(ctx, data, oldForecastedValues, &resp.Diagnostics)
 	}
 
 	// Preserve the original order of cost report tokens from the plan
@@ -145,6 +152,44 @@ func assignValues(ctx context.Context, data *businessMetricResourceModel, tfValu
 	}
 
 	data.Values = newList
+}
+
+// if labels are unknown in forecasted values, sets them to empty string
+func assignForecastedValues(ctx context.Context, data *businessMetricResourceModel, tfValues types.List, diags *diag.Diagnostics) {
+	values := make([]*businessMetricResourceModelValue, 0, len(tfValues.Elements()))
+	if diag := tfValues.ElementsAs(ctx, &values, false); diag.HasError() {
+		diags.Append(diag...)
+		return
+	}
+
+	newTfValues := []businessMetricResourceModelValue{}
+	for _, value := range values {
+		var labelValue types.String
+		if value.Label == types.StringUnknown() {
+			labelValue = types.StringValue("")
+		} else {
+			labelValue = value.Label
+		}
+		newTfValues = append(newTfValues, businessMetricResourceModelValue{
+			Amount: value.Amount,
+			Date:   value.Date,
+			Label:  labelValue,
+		})
+	}
+
+	attrTypes := map[string]attr.Type{
+		"amount": types.Float64Type,
+		"date":   types.StringType,
+		"label":  types.StringType,
+	}
+
+	newList, diag := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, newTfValues)
+	if diag.HasError() {
+		diags.Append(diag...)
+		return
+	}
+
+	data.ForecastedValues = newList
 }
 
 func (r *businessMetricResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -197,6 +242,7 @@ func (r *businessMetricResource) Update(ctx context.Context, req resource.Update
 	}
 
 	oldValues := data.Values
+	oldForecastedValues := data.ForecastedValues
 	oldCostReportTokens := data.CostReportTokensWithMetadata
 
 	model := data.toUpdate(ctx, &resp.Diagnostics)
@@ -222,16 +268,22 @@ func (r *businessMetricResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	if oldValues.IsUnknown() {
-		attrTypes := map[string]attr.Type{
-			"amount": types.Float64Type,
-			"date":   types.StringType,
-			"label":  types.StringType,
-		}
+	attrTypes := map[string]attr.Type{
+		"amount": types.Float64Type,
+		"date":   types.StringType,
+		"label":  types.StringType,
+	}
 
+	if oldValues.IsUnknown() {
 		data.Values = types.ListNull(types.ObjectType{AttrTypes: attrTypes})
 	} else {
 		assignValues(ctx, data, oldValues, &resp.Diagnostics)
+	}
+
+	if oldForecastedValues.IsUnknown() {
+		data.ForecastedValues = types.ListNull(types.ObjectType{AttrTypes: attrTypes})
+	} else {
+		assignForecastedValues(ctx, data, oldForecastedValues, &resp.Diagnostics)
 	}
 
 	// Preserve the original order of cost report tokens from the plan
