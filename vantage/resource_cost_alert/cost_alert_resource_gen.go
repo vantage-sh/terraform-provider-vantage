@@ -36,8 +36,7 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"report_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
-				Optional:            true,
-				Computed:            true,
+				Required:            true,
 				Description:         "The tokens of the reports to alert on.",
 				MarkdownDescription: "The tokens of the reports to alert on.",
 			},
