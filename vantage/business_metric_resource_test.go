@@ -738,3 +738,172 @@ resource "vantage_business_metric" %[1]q {
 }
 `, id, title)
 }
+
+func TestAccBusinessMetric_forecastedValues(t *testing.T) {
+	now := time.Now()
+	// Use future dates for forecasted values
+	futureDate1 := fmt.Sprintf("%d-%02d-01", now.Year()+1, 1)
+	futureDate2 := fmt.Sprintf("%d-%02d-01", now.Year()+1, 2)
+	futureDate3 := fmt.Sprintf("%d-%02d-01", now.Year()+1, 3)
+
+	tfForecastedValues := func(values []map[string]string) string {
+		if values == nil {
+			return ""
+		}
+		var valuesList []string
+		for _, value := range values {
+			var fields []string
+			for k, v := range value {
+				fields = append(fields, fmt.Sprintf(`%[1]q = %[2]q`, k, v))
+			}
+			valuesList = append(valuesList, fmt.Sprintf(`{ %s }`, strings.Join(fields, ",")))
+		}
+
+		return fmt.Sprintf(`forecasted_values = [%[1]s]`, strings.Join(valuesList, ","))
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create without forecasted values
+				Config: testAccVantageBusinessMetricTf_withForecastedValues("test-no-forecast", "test-no-forecast", ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-no-forecast", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-no-forecast", "title", "test-no-forecast"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-no-forecast", "forecasted_values.#", "0"),
+				),
+			},
+			{ // create with forecasted values
+				Config: testAccVantageBusinessMetricTf_withForecastedValues("test-forecast", "test-forecast", tfForecastedValues([]map[string]string{
+					{"date": futureDate1, "amount": "1000.50"},
+					{"date": futureDate2, "amount": "1500.75", "label": "forecast-label"},
+				})),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-forecast", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "title", "test-forecast"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.0.date", futureDate1),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.0.amount", "1000.5"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.0.label", ""),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.1.date", futureDate2),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.1.amount", "1500.75"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.1.label", "forecast-label"),
+				),
+			},
+			{ // update forecasted values
+				Config: testAccVantageBusinessMetricTf_withForecastedValues("test-forecast", "test-forecast", tfForecastedValues([]map[string]string{
+					{"date": futureDate1, "amount": "1000.50"},
+					{"date": futureDate2, "amount": "1500.75", "label": "forecast-label"},
+					{"date": futureDate3, "amount": "2000.25", "label": "another-label"},
+				})),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-forecast", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "title", "test-forecast"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.#", "3"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.0.date", futureDate1),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.0.amount", "1000.5"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.1.date", futureDate2),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.1.amount", "1500.75"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.2.date", futureDate3),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.2.amount", "2000.25"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.2.label", "another-label"),
+				),
+			},
+			{ // update the title, but keep forecasted values
+				Config: testAccVantageBusinessMetricTf_withForecastedValues("test-forecast", "updated-test-forecast", tfForecastedValues([]map[string]string{
+					{"date": futureDate1, "amount": "1000.50"},
+					{"date": futureDate2, "amount": "1500.75", "label": "forecast-label"},
+					{"date": futureDate3, "amount": "2000.25", "label": "another-label"},
+				})),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-forecast", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "title", "updated-test-forecast"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-forecast", "forecasted_values.#", "3"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_withForecastedValues(id string, title string, forecastedValuesStr string) string {
+	return fmt.Sprintf(
+		`resource "vantage_business_metric" %[1]q {
+		   title = %[2]q
+		   %[3]s
+		 }
+		`, id, title, forecastedValuesStr,
+	)
+}
+
+// TestAccBusinessMetric_withValuesAndForecastedValues tests business metric with both values and forecasted_values
+func TestAccBusinessMetric_withValuesAndForecastedValues(t *testing.T) {
+	now := time.Now()
+	// Historical dates for values
+	date1 := fmt.Sprintf("%d-01-01", now.Year())
+	date2 := fmt.Sprintf("%d-02-01", now.Year())
+	// Future dates for forecasted values
+	futureDate1 := fmt.Sprintf("%d-01-01", now.Year()+1)
+	futureDate2 := fmt.Sprintf("%d-02-01", now.Year()+1)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create with both values and forecasted values
+				Config: testAccVantageBusinessMetricTf_withValuesAndForecastedValues(
+					"test-both",
+					"Test Both Values",
+					date1, date2,
+					futureDate1, futureDate2,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vantage_business_metric.test-both", "token"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "title", "Test Both Values"),
+					// Check values
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "values.#", "2"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "values.0.date", date1),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "values.0.amount", "100.5"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "values.1.date", date2),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "values.1.amount", "200.75"),
+					// Check forecasted values
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "forecasted_values.#", "2"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "forecasted_values.0.date", futureDate1),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "forecasted_values.0.amount", "300.25"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "forecasted_values.1.date", futureDate2),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "forecasted_values.1.amount", "400.5"),
+				),
+			},
+			{ // update title, keep both values and forecasted values
+				Config: testAccVantageBusinessMetricTf_withValuesAndForecastedValues(
+					"test-both",
+					"Updated Test Both Values",
+					date1, date2,
+					futureDate1, futureDate2,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "title", "Updated Test Both Values"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "values.#", "2"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-both", "forecasted_values.#", "2"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_withValuesAndForecastedValues(id, title, date1, date2, futureDate1, futureDate2 string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+
+  values = [
+    { date = %[3]q, amount = "100.50" },
+    { date = %[4]q, amount = "200.75" },
+  ]
+
+  forecasted_values = [
+    { date = %[5]q, amount = "300.25" },
+    { date = %[6]q, amount = "400.50" },
+  ]
+}
+`, id, title, date1, date2, futureDate1, futureDate2)
+}

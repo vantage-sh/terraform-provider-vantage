@@ -103,26 +103,58 @@ func buildPercentagesFromPayload(ctx context.Context, percentages []*modelsv2.Vi
 }
 
 func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValue) (basetypes.ObjectValue, diag.Diagnostics) {
-	value := resource_virtual_tag_config.ValuesValue{
-		Name:                types.StringValue(v.Name),
-		Filter:              types.StringValue(v.Filter),
-		BusinessMetricToken: types.StringValue(v.BusinessMetricToken),
+	// For optional string fields, use null if empty, otherwise use the value
+	var nameValue attr.Value
+	if v.Name == "" {
+		nameValue = types.StringNull()
+	} else {
+		nameValue = types.StringValue(v.Name)
 	}
 
+	var businessMetricTokenValue attr.Value
+	if v.BusinessMetricToken == "" {
+		businessMetricTokenValue = types.StringNull()
+	} else {
+		businessMetricTokenValue = types.StringValue(v.BusinessMetricToken)
+	}
+
+	// Build cost_metric value
+	var costMetricValue attr.Value = types.ObjectNull(resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx))
 	if v.CostMetric != nil {
 		costMetric, d := buildCostMetricFromPayload(ctx, v.CostMetric)
 		if d.HasError() {
 			return basetypes.ObjectValue{}, d
 		}
-		value.CostMetric = costMetric
+		costMetricValue = costMetric
 	}
 
-	if v.Percentages != nil {
+	// Build percentages value
+	var percentagesValue attr.Value = types.ListNull(resource_virtual_tag_config.PercentagesType{
+		basetypes.ObjectType{
+			AttrTypes: resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
+		},
+	})
+	if v.Percentages != nil && len(v.Percentages) > 0 {
 		percentages, d := buildPercentagesFromPayload(ctx, v.Percentages)
 		if d.HasError() {
 			return basetypes.ObjectValue{}, d
 		}
-		value.Percentages = percentages
+		percentagesValue = percentages
+	}
+
+	// Use the constructor to properly set the state field
+	value, diags := resource_virtual_tag_config.NewValuesValue(
+		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"name":                  nameValue,
+			"filter":                types.StringValue(v.Filter),
+			"business_metric_token": businessMetricTokenValue,
+			"cost_metric":           costMetricValue,
+			"percentages":           percentagesValue,
+		},
+	)
+	if diags.HasError() {
+		return basetypes.ObjectValue{}, diags
 	}
 
 	return value.ToObjectValue(ctx)
@@ -368,10 +400,14 @@ func (m *virtualTagConfigModel) collapsedTagKeysFromTf(ctx context.Context, diag
 
 	result := make([]collapsedTagKeyData, 0, len(tfCollapsedTagKeys))
 	for _, c := range tfCollapsedTagKeys {
-		providers := make([]string, 0, len(c.Providers.Elements()))
-		if d := c.Providers.ElementsAs(ctx, &providers, false); d.HasError() {
-			diags.Append(d...)
-			return nil
+		var providers []string
+		// Only extract providers if it's not null or unknown
+		if !c.Providers.IsNull() && !c.Providers.IsUnknown() {
+			providers = make([]string, 0, len(c.Providers.Elements()))
+			if d := c.Providers.ElementsAs(ctx, &providers, false); d.HasError() {
+				diags.Append(d...)
+				return nil
+			}
 		}
 		result = append(result, collapsedTagKeyData{
 			Key:       c.Key.ValueStringPointer(),
