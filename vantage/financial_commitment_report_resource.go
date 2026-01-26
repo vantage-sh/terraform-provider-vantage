@@ -60,6 +60,9 @@ func (r *financialCommitmentReportResource) Create(ctx context.Context, req reso
 		return
 	}
 
+	// Save the planned groupings value to preserve empty lists
+	plannedGroupings := data.Groupings
+
 	model := data.toCreateModel(ctx)
 
 	params := fcrv2.NewCreateFinancialCommitmentReportParams().WithCreateFinancialCommitmentReport(model)
@@ -80,6 +83,13 @@ func (r *financialCommitmentReportResource) Create(ctx context.Context, req reso
 		resp.Diagnostics.Append(diag...)
 		return
 	}
+
+	// If the plan had an explicit empty list for groupings, preserve it
+	// This prevents inconsistent state when the API returns default groupings
+	if !plannedGroupings.IsNull() && !plannedGroupings.IsUnknown() && len(plannedGroupings.Elements()) == 0 {
+		data.Groupings = plannedGroupings
+	}
+
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 
@@ -94,6 +104,9 @@ func (r *financialCommitmentReportResource) Read(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the current state groupings value to preserve empty lists
+	stateGroupings := data.Groupings
 
 	// Read API call logic
 	params := fcrv2.NewGetFinancialCommitmentReportParams().WithFinancialCommitmentReportToken(data.Token.ValueString())
@@ -115,6 +128,12 @@ func (r *financialCommitmentReportResource) Read(ctx context.Context, req resour
 		return
 	}
 
+	// If the previous state had an explicit empty list for groupings, preserve it
+	// The API returns default groupings even when empty was specified
+	if !stateGroupings.IsNull() && !stateGroupings.IsUnknown() && len(stateGroupings.Elements()) == 0 {
+		data.Groupings = stateGroupings
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -125,6 +144,9 @@ func (r *financialCommitmentReportResource) Update(ctx context.Context, req reso
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the planned groupings value to preserve empty lists
+	plannedGroupings := data.Groupings
 
 	model := data.toUpdateModel(ctx)
 
@@ -145,6 +167,12 @@ func (r *financialCommitmentReportResource) Update(ctx context.Context, req reso
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
+	}
+
+	// If the plan had an explicit empty list for groupings, preserve it
+	// This prevents inconsistent state when the API returns default groupings
+	if !plannedGroupings.IsNull() && !plannedGroupings.IsUnknown() && len(plannedGroupings.Elements()) == 0 {
+		data.Groupings = plannedGroupings
 	}
 
 	// Save updated data into Terraform state

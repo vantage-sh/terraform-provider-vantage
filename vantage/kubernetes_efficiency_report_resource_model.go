@@ -28,7 +28,14 @@ func (r *kubernetesEfficiencyReportModel) applyPayload(ctx context.Context, payl
 	r.StartDate = types.StringValue(payload.StartDate)
 	r.EndDate = types.StringValue(payload.EndDate)
 
-	groupings := strings.Split(payload.Groupings, ",")
+	// Handle groupings - strings.Split on empty string returns [""], not []
+	// so we need to handle that case explicitly
+	var groupings []string
+	if payload.Groupings != "" {
+		groupings = strings.Split(payload.Groupings, ",")
+	} else {
+		groupings = []string{}
+	}
 
 	var d diag.Diagnostics
 	r.Groupings, d = types.ListValueFrom(ctx, types.StringType, groupings)

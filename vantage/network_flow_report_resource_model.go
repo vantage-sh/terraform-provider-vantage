@@ -28,7 +28,15 @@ func (m *networkFlowReportResourceModel) applyPayload(ctx context.Context, paylo
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
-	groupings := strings.Split(payload.Groupings, ",")
+
+	// Handle groupings - strings.Split on empty string returns [""], not []
+	// so we need to handle that case explicitly
+	var groupings []string
+	if payload.Groupings != "" {
+		groupings = strings.Split(payload.Groupings, ",")
+	} else {
+		groupings = []string{}
+	}
 
 	var d diag.Diagnostics
 	m.Groupings, d = types.ListValueFrom(ctx, types.StringType, groupings)
