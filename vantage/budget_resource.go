@@ -42,7 +42,7 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	attrs := s.GetAttributes()
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
-		Description: attrs["token"].GetDescription(),
+		Description:         attrs["token"].GetDescription(),
 		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
@@ -103,6 +103,9 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	// Save the current state periods value to preserve empty lists
+	statePeriods := data.Periods
+
 	fBool := false
 
 	params := budgetsv2.NewGetBudgetParams().WithBudgetToken(data.Token.ValueString()).WithIncludePerformance(&fBool)
@@ -120,6 +123,12 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
+	}
+
+	// If the previous state had an explicit empty list for periods, preserve it
+	// The API returns default periods even when empty was specified
+	if !statePeriods.IsNull() && !statePeriods.IsUnknown() && len(statePeriods.Elements()) == 0 {
+		data.Periods = statePeriods
 	}
 
 	// Save updated data into Terraform state
