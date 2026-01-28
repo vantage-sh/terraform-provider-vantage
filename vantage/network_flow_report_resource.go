@@ -62,6 +62,9 @@ func (r *networkFlowReportResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
+	// Save the planned groupings value to preserve empty lists
+	plannedGroupings := data.Groupings
+
 	model := data.toCreateModel(ctx)
 	params := nfrv2.NewCreateNetworkFlowReportParams().WithCreateNetworkFlowReport(model)
 	out, err := r.client.V2.NetworkFlowReports.CreateNetworkFlowReport(params, r.client.Auth)
@@ -81,6 +84,12 @@ func (r *networkFlowReportResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
+	// If the plan had an explicit empty list for groupings, preserve it
+	// This prevents inconsistent state when the API returns default groupings
+	if !plannedGroupings.IsNull() && !plannedGroupings.IsUnknown() && len(plannedGroupings.Elements()) == 0 {
+		data.Groupings = plannedGroupings
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -90,6 +99,9 @@ func (r *networkFlowReportResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the current state groupings value to preserve empty lists
+	stateGroupings := data.Groupings
 
 	params := nfrv2.NewGetNetworkFlowReportParams().WithNetworkFlowReportToken(data.Token.ValueString())
 	out, err := r.client.V2.NetworkFlowReports.GetNetworkFlowReport(params, r.client.Auth)
@@ -108,6 +120,12 @@ func (r *networkFlowReportResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
+	// If the previous state had an explicit empty list for groupings, preserve it
+	// The API returns default groupings even when empty was specified
+	if !stateGroupings.IsNull() && !stateGroupings.IsUnknown() && len(stateGroupings.Elements()) == 0 {
+		data.Groupings = stateGroupings
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -117,6 +135,9 @@ func (r *networkFlowReportResource) Update(ctx context.Context, req resource.Upd
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the planned groupings value to preserve empty lists
+	plannedGroupings := data.Groupings
 
 	model := data.toUpdateModel(ctx)
 	params := nfrv2.NewUpdateNetworkFlowReportParams().WithNetworkFlowReportToken(data.Token.ValueString()).WithUpdateNetworkFlowReport(model)
@@ -135,6 +156,12 @@ func (r *networkFlowReportResource) Update(ctx context.Context, req resource.Upd
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
+	}
+
+	// If the plan had an explicit empty list for groupings, preserve it
+	// This prevents inconsistent state when the API returns default groupings
+	if !plannedGroupings.IsNull() && !plannedGroupings.IsUnknown() && len(plannedGroupings.Elements()) == 0 {
+		data.Groupings = plannedGroupings
 	}
 
 	// Save updated data into Terraform state

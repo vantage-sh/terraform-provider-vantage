@@ -46,7 +46,7 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
+	if !src.Periods.IsNull() && !src.Periods.IsUnknown() && len(src.Periods.Elements()) > 0 {
 		periods := make([]*budgetPeriodResourceModel, 0, len(src.Periods.Elements()))
 		if diag := src.Periods.ElementsAs(ctx, &periods, false); diag.HasError() {
 			diags.Append(diag...)
@@ -99,7 +99,7 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
+	if !src.Periods.IsNull() && !src.Periods.IsUnknown() && len(src.Periods.Elements()) > 0 {
 		periods := make([]*budgetPeriodResourceModel, 0, len(src.Periods.Elements()))
 		if diag := src.Periods.ElementsAs(ctx, &periods, false); diag.HasError() {
 			diags.Append(diag...)

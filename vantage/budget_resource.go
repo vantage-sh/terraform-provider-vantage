@@ -42,7 +42,7 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	attrs := s.GetAttributes()
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
-		Description: attrs["token"].GetDescription(),
+		Description:         attrs["token"].GetDescription(),
 		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
@@ -60,6 +60,9 @@ func (r *budgetResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the planned periods value to preserve empty lists
+	plannedPeriods := data.Periods
 
 	params := budgetsv2.NewCreateBudgetParams().WithCreateBudget(toCreateModel(ctx, &resp.Diagnostics, data))
 	out, err := r.client.V2.Budgets.CreateBudget(params, r.client.Auth)
@@ -80,6 +83,12 @@ func (r *budgetResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	// If the plan had an explicit empty list for periods, preserve it
+	// This prevents inconsistent state when the API returns default periods
+	if !plannedPeriods.IsNull() && !plannedPeriods.IsUnknown() && len(plannedPeriods.Elements()) == 0 {
+		data.Periods = plannedPeriods
+	}
+
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -93,6 +102,9 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the current state periods value to preserve empty lists
+	statePeriods := data.Periods
 
 	fBool := false
 
@@ -113,6 +125,12 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	// If the previous state had an explicit empty list for periods, preserve it
+	// The API returns default periods even when empty was specified
+	if !statePeriods.IsNull() && !statePeriods.IsUnknown() && len(statePeriods.Elements()) == 0 {
+		data.Periods = statePeriods
+	}
+
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -131,6 +149,9 @@ func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	// Save the planned periods value to preserve empty lists
+	plannedPeriods := data.Periods
+
 	params := budgetsv2.NewUpdateBudgetParams().WithUpdateBudget(toUpdateModel(ctx, &resp.Diagnostics, data)).WithBudgetToken(data.Token.ValueString())
 	out, err := r.client.V2.Budgets.UpdateBudget(params, r.client.Auth)
 
@@ -147,6 +168,12 @@ func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
+	}
+
+	// If the plan had an explicit empty list for periods, preserve it
+	// This prevents inconsistent state when the API returns default periods
+	if !plannedPeriods.IsNull() && !plannedPeriods.IsUnknown() && len(plannedPeriods.Elements()) == 0 {
+		data.Periods = plannedPeriods
 	}
 
 	// Save updated data into Terraform state
