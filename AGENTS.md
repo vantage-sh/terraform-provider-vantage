@@ -84,6 +84,25 @@ TF_ACC=1 make test
 
 Tests require a valid `VANTAGE_API_TOKEN` for acceptance tests.
 
+**IMPORTANT: Always run tests after making changes.** Tests catch bugs like schema mismatches between generated code and implementation.
+
+### Code Generation
+
+**Always regenerate after pulling changes or before submitting PRs:**
+
+```bash
+make generate    # Regenerate schemas from swagger
+go generate ./...  # Regenerate documentation
+```
+
+The generation pipeline:
+1. Downloads swagger from `https://api.vantage.sh/v2/swagger.json`
+2. Converts to OpenAPI 3.0
+3. Generates `spec.json` via `tfplugingen-openapi`
+4. Generates Go code in `resource_*/` and `datasource_*/` directories
+
+**Warning:** Generated files (`*_gen.go`) can become stale if not regenerated after swagger updates. This has caused bugs where the generated schema didn't match the API (e.g., a list field generated as a single object). Always regenerate and run tests to catch these issues.
+
 ### Regenerating Documentation
 
 ```bash
@@ -97,6 +116,8 @@ go generate ./...
 - Use `acctest.PreCheck(t)` in `PreCheck` function
 - Use `testAccProtoV6ProviderFactories` for provider factories
 - Test configs are helper functions returning HCL strings
+- **Write tests for list/array fields with multiple items** to catch schema bugs where lists are incorrectly generated as single objects
+- Use `t.Skip()` for tests requiring specific features (e.g., MSP invoicing)
 
 ## Adding New Resources
 

@@ -105,7 +105,7 @@ Read-Only:
 
 Read-Only:
 
-- `adjustment_items` (Attributes) (see [below for nested schema](#nestedatt--billing_profiles--invoice_adjustment_attributes--adjustment_items))
+- `adjustment_items` (Attributes List) Array of adjustment items (taxes, fees, etc.) (see [below for nested schema](#nestedatt--billing_profiles--invoice_adjustment_attributes--adjustment_items))
 - `token` (String)
 
 <a id="nestedatt--billing_profiles--invoice_adjustment_attributes--adjustment_items"></a>

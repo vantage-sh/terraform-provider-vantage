@@ -192,35 +192,39 @@ func BillingProfilesDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"invoice_adjustment_attributes": schema.SingleNestedAttribute{
 							Attributes: map[string]schema.Attribute{
-								"adjustment_items": schema.SingleNestedAttribute{
-									Attributes: map[string]schema.Attribute{
-										"adjustment_type": schema.StringAttribute{
-											Computed:            true,
-											Description:         "Type of adjustment",
-											MarkdownDescription: "Type of adjustment",
+								"adjustment_items": schema.ListNestedAttribute{
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"adjustment_type": schema.StringAttribute{
+												Computed:            true,
+												Description:         "Type of adjustment",
+												MarkdownDescription: "Type of adjustment",
+											},
+											"amount": schema.StringAttribute{
+												Computed:            true,
+												Description:         "Amount or percentage value for the adjustment",
+												MarkdownDescription: "Amount or percentage value for the adjustment",
+											},
+											"calculation_type": schema.StringAttribute{
+												Computed:            true,
+												Description:         "How the adjustment is calculated",
+												MarkdownDescription: "How the adjustment is calculated",
+											},
+											"name": schema.StringAttribute{
+												Computed:            true,
+												Description:         "Name of the adjustment (e.g., 'State Tax', 'Processing Fee')",
+												MarkdownDescription: "Name of the adjustment (e.g., 'State Tax', 'Processing Fee')",
+											},
 										},
-										"amount": schema.StringAttribute{
-											Computed:            true,
-											Description:         "Amount or percentage value for the adjustment",
-											MarkdownDescription: "Amount or percentage value for the adjustment",
-										},
-										"calculation_type": schema.StringAttribute{
-											Computed:            true,
-											Description:         "How the adjustment is calculated",
-											MarkdownDescription: "How the adjustment is calculated",
-										},
-										"name": schema.StringAttribute{
-											Computed:            true,
-											Description:         "Name of the adjustment (e.g., 'State Tax', 'Processing Fee')",
-											MarkdownDescription: "Name of the adjustment (e.g., 'State Tax', 'Processing Fee')",
+										CustomType: AdjustmentItemsType{
+											ObjectType: types.ObjectType{
+												AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+											},
 										},
 									},
-									CustomType: AdjustmentItemsType{
-										ObjectType: types.ObjectType{
-											AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
-										},
-									},
-									Computed: true,
+									Computed:            true,
+									Description:         "Array of adjustment items (taxes, fees, etc.)",
+									MarkdownDescription: "Array of adjustment items (taxes, fees, etc.)",
 								},
 								"token": schema.StringAttribute{
 									Computed: true,
@@ -4232,12 +4236,12 @@ func (t InvoiceAdjustmentAttributesType) ValueFromObject(ctx context.Context, in
 		return nil, diags
 	}
 
-	adjustmentItemsVal, ok := adjustmentItemsAttribute.(basetypes.ObjectValue)
+	adjustmentItemsVal, ok := adjustmentItemsAttribute.(basetypes.ListValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`adjustment_items expected to be basetypes.ObjectValue, was: %T`, adjustmentItemsAttribute))
+			fmt.Sprintf(`adjustment_items expected to be basetypes.ListValue, was: %T`, adjustmentItemsAttribute))
 	}
 
 	tokenAttribute, ok := attributes["token"]
@@ -4342,12 +4346,12 @@ func NewInvoiceAdjustmentAttributesValue(attributeTypes map[string]attr.Type, at
 		return NewInvoiceAdjustmentAttributesValueUnknown(), diags
 	}
 
-	adjustmentItemsVal, ok := adjustmentItemsAttribute.(basetypes.ObjectValue)
+	adjustmentItemsVal, ok := adjustmentItemsAttribute.(basetypes.ListValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`adjustment_items expected to be basetypes.ObjectValue, was: %T`, adjustmentItemsAttribute))
+			fmt.Sprintf(`adjustment_items expected to be basetypes.ListValue, was: %T`, adjustmentItemsAttribute))
 	}
 
 	tokenAttribute, ok := attributes["token"]
@@ -4447,7 +4451,7 @@ func (t InvoiceAdjustmentAttributesType) ValueType(ctx context.Context) attr.Val
 var _ basetypes.ObjectValuable = InvoiceAdjustmentAttributesValue{}
 
 type InvoiceAdjustmentAttributesValue struct {
-	AdjustmentItems basetypes.ObjectValue `tfsdk:"adjustment_items"`
+	AdjustmentItems basetypes.ListValue   `tfsdk:"adjustment_items"`
 	Token           basetypes.StringValue `tfsdk:"token"`
 	state           attr.ValueState
 }
@@ -4458,8 +4462,8 @@ func (v InvoiceAdjustmentAttributesValue) ToTerraformValue(ctx context.Context) 
 	var val tftypes.Value
 	var err error
 
-	attrTypes["adjustment_items"] = basetypes.ObjectType{
-		AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+	attrTypes["adjustment_items"] = basetypes.ListType{
+		ElemType: AdjustmentItemsValue{}.Type(ctx),
 	}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -4514,30 +4518,38 @@ func (v InvoiceAdjustmentAttributesValue) String() string {
 func (v InvoiceAdjustmentAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var adjustmentItems basetypes.ObjectValue
+	adjustmentItems := types.ListValueMust(
+		AdjustmentItemsType{
+			basetypes.ObjectType{
+				AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.AdjustmentItems.Elements(),
+	)
 
 	if v.AdjustmentItems.IsNull() {
-		adjustmentItems = types.ObjectNull(
-			AdjustmentItemsValue{}.AttributeTypes(ctx),
+		adjustmentItems = types.ListNull(
+			AdjustmentItemsType{
+				basetypes.ObjectType{
+					AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+				},
+			},
 		)
 	}
 
 	if v.AdjustmentItems.IsUnknown() {
-		adjustmentItems = types.ObjectUnknown(
-			AdjustmentItemsValue{}.AttributeTypes(ctx),
-		)
-	}
-
-	if !v.AdjustmentItems.IsNull() && !v.AdjustmentItems.IsUnknown() {
-		adjustmentItems = types.ObjectValueMust(
-			AdjustmentItemsValue{}.AttributeTypes(ctx),
-			v.AdjustmentItems.Attributes(),
+		adjustmentItems = types.ListUnknown(
+			AdjustmentItemsType{
+				basetypes.ObjectType{
+					AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+				},
+			},
 		)
 	}
 
 	attributeTypes := map[string]attr.Type{
-		"adjustment_items": basetypes.ObjectType{
-			AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+		"adjustment_items": basetypes.ListType{
+			ElemType: AdjustmentItemsValue{}.Type(ctx),
 		},
 		"token": basetypes.StringType{},
 	}
@@ -4596,8 +4608,8 @@ func (v InvoiceAdjustmentAttributesValue) Type(ctx context.Context) attr.Type {
 
 func (v InvoiceAdjustmentAttributesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
-		"adjustment_items": basetypes.ObjectType{
-			AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+		"adjustment_items": basetypes.ListType{
+			ElemType: AdjustmentItemsValue{}.Type(ctx),
 		},
 		"token": basetypes.StringType{},
 	}

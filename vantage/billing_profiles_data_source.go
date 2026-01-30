@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_billing_profiles"
 	billingprofilesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/billing_profiles"
 )
@@ -294,53 +295,62 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 			})
 		}
 
-		// Handle Invoice Adjustment Attributes
-		// Note: In data source schema, adjustment_items is a SingleNestedAttribute (object), not a list
-		adjustmentItemsAttrTypes := map[string]attr.Type{
-			"adjustment_type":  types.StringType,
-			"amount":           types.StringType,
-			"calculation_type": types.StringType,
-			"name":             types.StringType,
-		}
-		invoiceAdjAttrTypes := map[string]attr.Type{
-			"adjustment_items": types.ObjectType{AttrTypes: adjustmentItemsAttrTypes},
-			"token":            types.StringType,
-		}
-
+		// Handle Invoice Adjustment Attributes using generated types
 		var invoiceAdjAttr attr.Value
 		if bp.InvoiceAdjustmentAttributes != nil {
-			// Use the first adjustment item if available (data source schema only supports single object)
-			var adjustmentItemsAttr attr.Value
+			// Build adjustment items list using the generated AdjustmentItemsValue type
+			adjustmentItemsList := []attr.Value{}
 			if bp.InvoiceAdjustmentAttributes.AdjustmentItems != nil && len(bp.InvoiceAdjustmentAttributes.AdjustmentItems) > 0 {
-				item := bp.InvoiceAdjustmentAttributes.AdjustmentItems[0]
-				itemAttrs := map[string]attr.Value{
-					"adjustment_type":  types.StringValue(item.AdjustmentType),
-					"amount":           types.StringValue(item.Amount),
-					"calculation_type": types.StringValue(item.CalculationType),
-					"name":             types.StringValue(item.Name),
+				for _, item := range bp.InvoiceAdjustmentAttributes.AdjustmentItems {
+					itemVal, diag := datasource_billing_profiles.NewAdjustmentItemsValue(
+						datasource_billing_profiles.AdjustmentItemsValue{}.AttributeTypes(ctx),
+						map[string]attr.Value{
+							"adjustment_type":  types.StringValue(item.AdjustmentType),
+							"amount":           types.StringValue(item.Amount),
+							"calculation_type": types.StringValue(item.CalculationType),
+							"name":             types.StringValue(item.Name),
+						},
+					)
+					if diag.HasError() {
+						resp.Diagnostics.Append(diag...)
+						return
+					}
+					adjustmentItemsList = append(adjustmentItemsList, itemVal)
 				}
-				itemObj, diag := types.ObjectValue(adjustmentItemsAttrTypes, itemAttrs)
-				if diag.HasError() {
-					resp.Diagnostics.Append(diag...)
-					return
-				}
-				adjustmentItemsAttr = itemObj
-			} else {
-				adjustmentItemsAttr = types.ObjectNull(adjustmentItemsAttrTypes)
 			}
 
-			invoiceAdjAttrs := map[string]attr.Value{
-				"adjustment_items": adjustmentItemsAttr,
-				"token":            types.StringValue(bp.InvoiceAdjustmentAttributes.Token),
-			}
-			invoiceAdjObj, diag := types.ObjectValue(invoiceAdjAttrTypes, invoiceAdjAttrs)
+			// Create the list with the proper element type
+			adjustmentItemsListValue, diag := types.ListValue(
+				datasource_billing_profiles.AdjustmentItemsType{
+					ObjectType: basetypes.ObjectType{AttrTypes: datasource_billing_profiles.AdjustmentItemsValue{}.AttributeTypes(ctx)},
+				},
+				adjustmentItemsList,
+			)
 			if diag.HasError() {
 				resp.Diagnostics.Append(diag...)
 				return
 			}
-			invoiceAdjAttr = invoiceAdjObj
+
+			// Create the invoice adjustment attributes using generated constructor
+			invoiceAdjVal, diag := datasource_billing_profiles.NewInvoiceAdjustmentAttributesValue(
+				datasource_billing_profiles.InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+				map[string]attr.Value{
+					"adjustment_items": adjustmentItemsListValue,
+					"token":            types.StringValue(bp.InvoiceAdjustmentAttributes.Token),
+				},
+			)
+			if diag.HasError() {
+				resp.Diagnostics.Append(diag...)
+				return
+			}
+
+			invoiceAdjAttr, diag = invoiceAdjVal.ToObjectValue(ctx)
+			if diag.HasError() {
+				resp.Diagnostics.Append(diag...)
+				return
+			}
 		} else {
-			invoiceAdjAttr = types.ObjectNull(invoiceAdjAttrTypes)
+			invoiceAdjAttr = types.ObjectNull(datasource_billing_profiles.InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx))
 		}
 
 		// Create a billing profile value using the generated type
