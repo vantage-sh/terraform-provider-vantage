@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -41,22 +42,44 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 
 	tfWidgets := make([]basetypes.ObjectValue, 0, len(payload.Widgets))
 	for _, widget := range payload.Widgets {
-		tfWidget := resource_dashboard.WidgetsValue{
-			Title:           types.StringValue(widget.Title),
-			WidgetableToken: types.StringValue(widget.WidgetableToken),
+		// Build settings object
+		var settingsObj basetypes.ObjectValue
+		settingsAttrTypes := map[string]attr.Type{
+			"display_type": types.StringType,
 		}
-
+		
 		if widget.Settings != nil {
-			s := resource_dashboard.SettingsValue{
-				DisplayType: types.StringValue(widget.Settings.DisplayType),
+			settingsAttrs := map[string]attr.Value{
+				"display_type": types.StringValue(widget.Settings.DisplayType),
 			}
-
-			sObj, diag := s.ToObjectValue(ctx)
+			settingsVal, diag := resource_dashboard.NewSettingsValue(settingsAttrTypes, settingsAttrs)
 			if diag.HasError() {
 				return diag
 			}
+			settingsObj, diag = settingsVal.ToObjectValue(ctx)
+			if diag.HasError() {
+				return diag
+			}
+		} else {
+			// Create null settings object when not provided
+			settingsObj = types.ObjectNull(settingsAttrTypes)
+		}
 
-			tfWidget.Settings = sObj
+		// Build widget using proper constructor with attribute types and values
+		widgetAttrTypes := map[string]attr.Type{
+			"settings": types.ObjectType{AttrTypes: settingsAttrTypes},
+			"title":            types.StringType,
+			"widgetable_token": types.StringType,
+		}
+		widgetAttrs := map[string]attr.Value{
+			"settings":         settingsObj,
+			"title":            types.StringValue(widget.Title),
+			"widgetable_token": types.StringValue(widget.WidgetableToken),
+		}
+
+		tfWidget, diag := resource_dashboard.NewWidgetsValue(widgetAttrTypes, widgetAttrs)
+		if diag.HasError() {
+			return diag
 		}
 
 		tfValue, diag := tfWidget.ToObjectValue(ctx)
