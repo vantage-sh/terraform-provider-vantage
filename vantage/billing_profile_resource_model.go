@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_profile"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -220,6 +222,88 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 	}
 	// Note: When API doesn't return business_information_attributes, we preserve
 	// the existing planned values by not modifying m.BusinessInformationAttributes
+
+	// Handle Invoice Adjustment Attributes
+	if payload.InvoiceAdjustmentAttributes != nil {
+		// Build the adjustment items list
+		adjustmentItemsList := []attr.Value{}
+		if payload.InvoiceAdjustmentAttributes.AdjustmentItems != nil {
+			for _, item := range payload.InvoiceAdjustmentAttributes.AdjustmentItems {
+				// Parse amount string to float64
+				var amountVal basetypes.Float64Value
+				if item.Amount != "" {
+					if amount, err := strconv.ParseFloat(item.Amount, 64); err == nil {
+						amountVal = types.Float64Value(amount)
+					} else {
+						amountVal = types.Float64Null()
+					}
+				} else {
+					amountVal = types.Float64Null()
+				}
+
+				itemAttrs := map[string]attr.Value{
+					"adjustment_type":  types.StringValue(item.AdjustmentType),
+					"amount":           amountVal,
+					"calculation_type": types.StringValue(item.CalculationType),
+					"name":             types.StringValue(item.Name),
+				}
+				itemObj, d := types.ObjectValue(
+					map[string]attr.Type{
+						"adjustment_type":  types.StringType,
+						"amount":           types.Float64Type,
+						"calculation_type": types.StringType,
+						"name":             types.StringType,
+					},
+					itemAttrs,
+				)
+				if d.HasError() {
+					diags.Append(d...)
+					return diags
+				}
+				adjustmentItemsList = append(adjustmentItemsList, itemObj)
+			}
+		}
+
+		adjustmentItemsListValue, d := types.ListValue(
+			types.ObjectType{AttrTypes: map[string]attr.Type{
+				"adjustment_type":  types.StringType,
+				"amount":           types.Float64Type,
+				"calculation_type": types.StringType,
+				"name":             types.StringType,
+			}},
+			adjustmentItemsList,
+		)
+		if d.HasError() {
+			diags.Append(d...)
+			return diags
+		}
+
+		invoiceAdjAttrTypes := map[string]attr.Type{
+			"adjustment_items": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+				"adjustment_type":  types.StringType,
+				"amount":           types.Float64Type,
+				"calculation_type": types.StringType,
+				"name":             types.StringType,
+			}}},
+			"token": types.StringType,
+		}
+
+		invoiceAdjAttrs := map[string]attr.Value{
+			"adjustment_items": adjustmentItemsListValue,
+			"token":            types.StringValue(payload.InvoiceAdjustmentAttributes.Token),
+		}
+
+		invoiceAdjInfo, d := resource_billing_profile.NewInvoiceAdjustmentAttributesValue(invoiceAdjAttrTypes, invoiceAdjAttrs)
+		if d.HasError() {
+			diags.Append(d...)
+			return diags
+		}
+
+		m.InvoiceAdjustmentAttributes = invoiceAdjInfo
+	} else {
+		// Set to null if the API doesn't return it
+		m.InvoiceAdjustmentAttributes = resource_billing_profile.NewInvoiceAdjustmentAttributesValueNull()
+	}
 
 	// Handle simple attributes
 	m.CreatedAt = types.StringPointerValue(&payload.CreatedAt)

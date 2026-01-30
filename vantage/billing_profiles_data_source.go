@@ -294,19 +294,69 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 			})
 		}
 
+		// Handle Invoice Adjustment Attributes
+		// Note: In data source schema, adjustment_items is a SingleNestedAttribute (object), not a list
+		adjustmentItemsAttrTypes := map[string]attr.Type{
+			"adjustment_type":  types.StringType,
+			"amount":           types.StringType,
+			"calculation_type": types.StringType,
+			"name":             types.StringType,
+		}
+		invoiceAdjAttrTypes := map[string]attr.Type{
+			"adjustment_items": types.ObjectType{AttrTypes: adjustmentItemsAttrTypes},
+			"token":            types.StringType,
+		}
+
+		var invoiceAdjAttr attr.Value
+		if bp.InvoiceAdjustmentAttributes != nil {
+			// Use the first adjustment item if available (data source schema only supports single object)
+			var adjustmentItemsAttr attr.Value
+			if bp.InvoiceAdjustmentAttributes.AdjustmentItems != nil && len(bp.InvoiceAdjustmentAttributes.AdjustmentItems) > 0 {
+				item := bp.InvoiceAdjustmentAttributes.AdjustmentItems[0]
+				itemAttrs := map[string]attr.Value{
+					"adjustment_type":  types.StringValue(item.AdjustmentType),
+					"amount":           types.StringValue(item.Amount),
+					"calculation_type": types.StringValue(item.CalculationType),
+					"name":             types.StringValue(item.Name),
+				}
+				itemObj, diag := types.ObjectValue(adjustmentItemsAttrTypes, itemAttrs)
+				if diag.HasError() {
+					resp.Diagnostics.Append(diag...)
+					return
+				}
+				adjustmentItemsAttr = itemObj
+			} else {
+				adjustmentItemsAttr = types.ObjectNull(adjustmentItemsAttrTypes)
+			}
+
+			invoiceAdjAttrs := map[string]attr.Value{
+				"adjustment_items": adjustmentItemsAttr,
+				"token":            types.StringValue(bp.InvoiceAdjustmentAttributes.Token),
+			}
+			invoiceAdjObj, diag := types.ObjectValue(invoiceAdjAttrTypes, invoiceAdjAttrs)
+			if diag.HasError() {
+				resp.Diagnostics.Append(diag...)
+				return
+			}
+			invoiceAdjAttr = invoiceAdjObj
+		} else {
+			invoiceAdjAttr = types.ObjectNull(invoiceAdjAttrTypes)
+		}
+
 		// Create a billing profile value using the generated type
 		bpValue, diag := datasource_billing_profiles.NewBillingProfilesValue(
 			datasource_billing_profiles.BillingProfilesValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
-				"id":                              types.StringPointerValue(&bp.Token),
-				"token":                           types.StringPointerValue(&bp.Token),
-				"nickname":                        types.StringValue(bp.Nickname),
-				"created_at":                      types.StringPointerValue(&bp.CreatedAt),
-				"updated_at":                      types.StringPointerValue(&bp.UpdatedAt),
-				"managed_accounts_count":          types.StringPointerValue(&bp.ManagedAccountsCount),
-				"banking_information_attributes":  bankingInfoAttr,
-				"billing_information_attributes":  billingInfoAttr,
-				"business_information_attributes": businessInfoAttr,
+				"id":                               types.StringPointerValue(&bp.Token),
+				"token":                            types.StringPointerValue(&bp.Token),
+				"nickname":                         types.StringValue(bp.Nickname),
+				"created_at":                       types.StringPointerValue(&bp.CreatedAt),
+				"updated_at":                       types.StringPointerValue(&bp.UpdatedAt),
+				"managed_accounts_count":           types.StringPointerValue(&bp.ManagedAccountsCount),
+				"banking_information_attributes":   bankingInfoAttr,
+				"billing_information_attributes":   billingInfoAttr,
+				"business_information_attributes":  businessInfoAttr,
+				"invoice_adjustment_attributes":    invoiceAdjAttr,
 			},
 		)
 		if diag.HasError() {
