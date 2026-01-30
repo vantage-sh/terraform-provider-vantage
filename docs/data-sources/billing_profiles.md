@@ -29,6 +29,7 @@ Read-Only:
 - `business_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--billing_profiles--business_information_attributes))
 - `created_at` (String) The date and time, in UTC, the billing profile was created. ISO 8601 formatted.
 - `id` (String) The id of the resource
+- `invoice_adjustment_attributes` (Attributes) (see [below for nested schema](#nestedatt--billing_profiles--invoice_adjustment_attributes))
 - `managed_accounts_count` (String) Number of managed accounts using this billing profile
 - `nickname` (String) Display name for the billing profile
 - `token` (String)
@@ -95,5 +96,26 @@ Read-Only:
 
 - `name` (String) Custom field name
 - `value` (String) Custom field value
+
+
+
+
+<a id="nestedatt--billing_profiles--invoice_adjustment_attributes"></a>
+### Nested Schema for `billing_profiles.invoice_adjustment_attributes`
+
+Read-Only:
+
+- `adjustment_items` (Attributes List) Array of adjustment items (taxes, fees, etc.) (see [below for nested schema](#nestedatt--billing_profiles--invoice_adjustment_attributes--adjustment_items))
+- `token` (String)
+
+<a id="nestedatt--billing_profiles--invoice_adjustment_attributes--adjustment_items"></a>
+### Nested Schema for `billing_profiles.invoice_adjustment_attributes.adjustment_items`
+
+Read-Only:
+
+- `adjustment_type` (String) Type of adjustment
+- `amount` (String) Amount or percentage value for the adjustment
+- `calculation_type` (String) How the adjustment is calculated
+- `name` (String) Name of the adjustment (e.g., 'State Tax', 'Processing Fee')
 
 

@@ -30,6 +30,7 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 						"day",
 						"week",
 						"month",
+						"quarter",
 					),
 				},
 			},

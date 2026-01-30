@@ -24,6 +24,7 @@ description: |-
 - `cloudwatch_fields` (Attributes) Cloudwatch configuration fields. (see [below for nested schema](#nestedatt--cloudwatch_fields))
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
 - `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
+- `forecasted_values` (Attributes List) The dates, amounts, and (optional) labels for forecasted BusinessMetric values. (see [below for nested schema](#nestedatt--forecasted_values))
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
@@ -77,6 +78,19 @@ Optional:
 
 - `integration_token` (String) Integration token for the account from which you would like to fetch metrics.
 - `query` (String) Datadog metrics query string. e.g. sum:aws.applicationelb.request_count{region:us-east-1}.rollup(avg,daily)
+
+
+<a id="nestedatt--forecasted_values"></a>
+### Nested Schema for `forecasted_values`
+
+Required:
+
+- `amount` (Number)
+- `date` (String)
+
+Optional:
+
+- `label` (String)
 
 
 <a id="nestedatt--values"></a>

@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
@@ -51,12 +53,10 @@ func TestCostAlert(t *testing.T) {
 			{
 				Config: testAccWorkspacesDatasource() + testAccCostReport(),
 			},
-			// Step 6: Delete alert
+			// Step 6: Verify the specific alert is gone
 			{
 				Config: testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertsDataSource(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vantage_cost_alerts.test", "cost_alerts.#", "0"),
-				),
+				Check:  testAccCheckCostAlertDeleted("data.vantage_cost_alerts.test", rUpdatedTitle),
 			},
 			// Step 7: Delete the created test cost report
 			{
@@ -101,4 +101,23 @@ func testAccCostAlertsDataSource() string {
 	return `
 data "vantage_cost_alerts" "test" {}
 `
+}
+
+// testAccCheckCostAlertDeleted verifies that no cost alert with the given title exists
+func testAccCheckCostAlertDeleted(dataSourceName, title string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[dataSourceName]
+		if !ok {
+			return fmt.Errorf("data source not found: %s", dataSourceName)
+		}
+
+		// Check each alert's title to ensure none match
+		for key, value := range rs.Primary.Attributes {
+			matched, _ := regexp.MatchString(`cost_alerts\.\d+\.title`, key)
+			if matched && value == title {
+				return fmt.Errorf("cost alert with title %q still exists", title)
+			}
+		}
+		return nil
+	}
 }

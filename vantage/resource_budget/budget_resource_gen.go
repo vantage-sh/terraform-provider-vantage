@@ -515,12 +515,22 @@ func (v PerformanceValue) String() string {
 func (v PerformanceValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"actual": basetypes.StringType{},
+		"amount": basetypes.StringType{},
+		"date":   basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"actual": basetypes.StringType{},
-			"amount": basetypes.StringType{},
-			"date":   basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"actual": v.Actual,
 			"amount": v.Amount,
@@ -939,12 +949,22 @@ func (v PeriodsValue) String() string {
 func (v PeriodsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"amount":   basetypes.Float64Type{},
+		"end_at":   basetypes.StringType{},
+		"start_at": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"amount":   basetypes.Float64Type{},
-			"end_at":   basetypes.StringType{},
-			"start_at": basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"amount":   v.Amount,
 			"end_at":   v.EndAt,
