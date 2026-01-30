@@ -435,6 +435,42 @@ func (m *billingProfileModel) toCreate(ctx context.Context, diags *diag.Diagnost
 		body.BusinessInformationAttributes = businessInfo
 	}
 
+	// Handle nested invoice adjustment attributes
+	if !m.InvoiceAdjustmentAttributes.IsNull() && !m.InvoiceAdjustmentAttributes.IsUnknown() {
+		invoiceAdjInfo := &modelsv2.CreateBillingProfileInvoiceAdjustmentAttributes{}
+
+		// Handle adjustment items if present
+		if !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsNull() && !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsUnknown() {
+			var tfAdjustmentItems []resource_billing_profile.AdjustmentItemsValue
+			if diag := m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false); !diag.HasError() {
+				adjustmentItems := []*modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+				for _, item := range tfAdjustmentItems {
+					adjustmentItem := &modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+					if !item.AdjustmentType.IsNull() {
+						adjType := item.AdjustmentType.ValueString()
+						adjustmentItem.AdjustmentType = &adjType
+					}
+					if !item.Amount.IsNull() {
+						amount := item.Amount.ValueFloat64()
+						adjustmentItem.Amount = &amount
+					}
+					if !item.CalculationType.IsNull() {
+						calcType := item.CalculationType.ValueString()
+						adjustmentItem.CalculationType = &calcType
+					}
+					if !item.Name.IsNull() {
+						name := item.Name.ValueString()
+						adjustmentItem.Name = &name
+					}
+					adjustmentItems = append(adjustmentItems, adjustmentItem)
+				}
+				invoiceAdjInfo.AdjustmentItems = adjustmentItems
+			}
+		}
+
+		body.InvoiceAdjustmentAttributes = invoiceAdjInfo
+	}
+
 	return body
 }
 
@@ -554,6 +590,42 @@ func (m *billingProfileModel) toUpdate(ctx context.Context, diags *diag.Diagnost
 		}
 		
 		body.BusinessInformationAttributes = businessInfo
+	}
+
+	// Handle nested invoice adjustment attributes
+	if !m.InvoiceAdjustmentAttributes.IsNull() && !m.InvoiceAdjustmentAttributes.IsUnknown() {
+		invoiceAdjInfo := &modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributes{}
+
+		// Handle adjustment items if present
+		if !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsNull() && !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsUnknown() {
+			var tfAdjustmentItems []resource_billing_profile.AdjustmentItemsValue
+			if diag := m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false); !diag.HasError() {
+				adjustmentItems := []*modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+				for _, item := range tfAdjustmentItems {
+					adjustmentItem := &modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+					if !item.AdjustmentType.IsNull() {
+						adjType := item.AdjustmentType.ValueString()
+						adjustmentItem.AdjustmentType = &adjType
+					}
+					if !item.Amount.IsNull() {
+						amount := item.Amount.ValueFloat64()
+						adjustmentItem.Amount = &amount
+					}
+					if !item.CalculationType.IsNull() {
+						calcType := item.CalculationType.ValueString()
+						adjustmentItem.CalculationType = &calcType
+					}
+					if !item.Name.IsNull() {
+						name := item.Name.ValueString()
+						adjustmentItem.Name = &name
+					}
+					adjustmentItems = append(adjustmentItems, adjustmentItem)
+				}
+				invoiceAdjInfo.AdjustmentItems = adjustmentItems
+			}
+		}
+
+		body.InvoiceAdjustmentAttributes = invoiceAdjInfo
 	}
 
 	return body
