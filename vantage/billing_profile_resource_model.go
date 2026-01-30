@@ -287,10 +287,9 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		}
 
 		m.InvoiceAdjustmentAttributes = invoiceAdjInfo
-	} else {
-		// Set to null if the API doesn't return it
-		m.InvoiceAdjustmentAttributes = resource_billing_profile.NewInvoiceAdjustmentAttributesValueNull()
 	}
+	// Note: When API doesn't return invoice_adjustment_attributes, we preserve
+	// the existing planned values by not modifying m.InvoiceAdjustmentAttributes
 
 	// Handle simple attributes
 	m.CreatedAt = types.StringPointerValue(&payload.CreatedAt)
@@ -428,24 +427,26 @@ func (m *billingProfileModel) toCreate(ctx context.Context, diags *diag.Diagnost
 
 		if !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsNull() && !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsUnknown() {
 			var tfAdjustmentItems []resource_billing_profile.AdjustmentItemsValue
-			if diag := m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false); !diag.HasError() {
-				adjustmentItems := []*modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
-				for _, item := range tfAdjustmentItems {
-					adjustmentType := item.AdjustmentType.ValueString()
-					amount := item.Amount.ValueFloat64()
-					calculationType := item.CalculationType.ValueString()
-					name := item.Name.ValueString()
-
-					adjustmentItem := &modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{
-						AdjustmentType:  &adjustmentType,
-						Amount:          &amount,
-						CalculationType: &calculationType,
-						Name:            &name,
-					}
-					adjustmentItems = append(adjustmentItems, adjustmentItem)
-				}
-				invoiceAdjInfo.AdjustmentItems = adjustmentItems
+			if diag := m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false); diag.HasError() {
+				diags.Append(diag...)
+				return nil
 			}
+			adjustmentItems := []*modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+			for _, item := range tfAdjustmentItems {
+				adjustmentType := item.AdjustmentType.ValueString()
+				amount := item.Amount.ValueFloat64()
+				calculationType := item.CalculationType.ValueString()
+				name := item.Name.ValueString()
+
+				adjustmentItem := &modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{
+					AdjustmentType:  &adjustmentType,
+					Amount:          &amount,
+					CalculationType: &calculationType,
+					Name:            &name,
+				}
+				adjustmentItems = append(adjustmentItems, adjustmentItem)
+			}
+			invoiceAdjInfo.AdjustmentItems = adjustmentItems
 		}
 
 		body.InvoiceAdjustmentAttributes = invoiceAdjInfo
@@ -578,24 +579,26 @@ func (m *billingProfileModel) toUpdate(ctx context.Context, diags *diag.Diagnost
 
 		if !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsNull() && !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsUnknown() {
 			var tfAdjustmentItems []resource_billing_profile.AdjustmentItemsValue
-			if diag := m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false); !diag.HasError() {
-				adjustmentItems := []*modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
-				for _, item := range tfAdjustmentItems {
-					adjustmentType := item.AdjustmentType.ValueString()
-					amount := item.Amount.ValueFloat64()
-					calculationType := item.CalculationType.ValueString()
-					name := item.Name.ValueString()
-
-					adjustmentItem := &modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{
-						AdjustmentType:  &adjustmentType,
-						Amount:          &amount,
-						CalculationType: &calculationType,
-						Name:            &name,
-					}
-					adjustmentItems = append(adjustmentItems, adjustmentItem)
-				}
-				invoiceAdjInfo.AdjustmentItems = adjustmentItems
+			if diag := m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false); diag.HasError() {
+				diags.Append(diag...)
+				return nil
 			}
+			adjustmentItems := []*modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+			for _, item := range tfAdjustmentItems {
+				adjustmentType := item.AdjustmentType.ValueString()
+				amount := item.Amount.ValueFloat64()
+				calculationType := item.CalculationType.ValueString()
+				name := item.Name.ValueString()
+
+				adjustmentItem := &modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{
+					AdjustmentType:  &adjustmentType,
+					Amount:          &amount,
+					CalculationType: &calculationType,
+					Name:            &name,
+				}
+				adjustmentItems = append(adjustmentItems, adjustmentItem)
+			}
+			invoiceAdjInfo.AdjustmentItems = adjustmentItems
 		}
 
 		body.InvoiceAdjustmentAttributes = invoiceAdjInfo
