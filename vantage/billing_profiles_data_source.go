@@ -295,42 +295,51 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 
 		// Handle Invoice Adjustment Attributes
-		// Note: In data source schema, adjustment_items is a SingleNestedAttribute (object), not a list
 		adjustmentItemsAttrTypes := map[string]attr.Type{
 			"adjustment_type":  types.StringType,
 			"amount":           types.StringType,
 			"calculation_type": types.StringType,
 			"name":             types.StringType,
 		}
+		adjustmentItemsElemType := datasource_billing_profiles.AdjustmentItemsType{
+			ObjectType: types.ObjectType{
+				AttrTypes: adjustmentItemsAttrTypes,
+			},
+		}
 		invoiceAdjAttrTypes := map[string]attr.Type{
-			"adjustment_items": types.ObjectType{AttrTypes: adjustmentItemsAttrTypes},
+			"adjustment_items": types.ListType{ElemType: adjustmentItemsElemType},
 			"token":            types.StringType,
 		}
 
 		var invoiceAdjAttr attr.Value
 		if bp.InvoiceAdjustmentAttributes != nil {
-			// Use the first adjustment item if available (data source schema only supports single object)
-			var adjustmentItemsAttr attr.Value
-			if bp.InvoiceAdjustmentAttributes.AdjustmentItems != nil && len(bp.InvoiceAdjustmentAttributes.AdjustmentItems) > 0 {
-				item := bp.InvoiceAdjustmentAttributes.AdjustmentItems[0]
-				itemAttrs := map[string]attr.Value{
-					"adjustment_type":  types.StringValue(item.AdjustmentType),
-					"amount":           types.StringValue(item.Amount),
-					"calculation_type": types.StringValue(item.CalculationType),
-					"name":             types.StringValue(item.Name),
+			// Iterate through all adjustment items and build a list
+			var adjustmentItemsList []attr.Value
+			if bp.InvoiceAdjustmentAttributes.AdjustmentItems != nil {
+				for _, item := range bp.InvoiceAdjustmentAttributes.AdjustmentItems {
+					itemAttrs := map[string]attr.Value{
+						"adjustment_type":  types.StringValue(item.AdjustmentType),
+						"amount":           types.StringValue(item.Amount),
+						"calculation_type": types.StringValue(item.CalculationType),
+						"name":             types.StringValue(item.Name),
+					}
+					itemObj, diag := types.ObjectValue(adjustmentItemsAttrTypes, itemAttrs)
+					if diag.HasError() {
+						resp.Diagnostics.Append(diag...)
+						return
+					}
+					adjustmentItemsList = append(adjustmentItemsList, itemObj)
 				}
-				itemObj, diag := types.ObjectValue(adjustmentItemsAttrTypes, itemAttrs)
-				if diag.HasError() {
-					resp.Diagnostics.Append(diag...)
-					return
-				}
-				adjustmentItemsAttr = itemObj
-			} else {
-				adjustmentItemsAttr = types.ObjectNull(adjustmentItemsAttrTypes)
+			}
+
+			adjustmentItemsListValue, diag := types.ListValue(adjustmentItemsElemType, adjustmentItemsList)
+			if diag.HasError() {
+				resp.Diagnostics.Append(diag...)
+				return
 			}
 
 			invoiceAdjAttrs := map[string]attr.Value{
-				"adjustment_items": adjustmentItemsAttr,
+				"adjustment_items": adjustmentItemsListValue,
 				"token":            types.StringValue(bp.InvoiceAdjustmentAttributes.Token),
 			}
 			invoiceAdjObj, diag := types.ObjectValue(invoiceAdjAttrTypes, invoiceAdjAttrs)
