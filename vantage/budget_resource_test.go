@@ -113,6 +113,9 @@ func TestAccVantageBudget_multipleChildBudgets(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", rTitle),
 					resource.TestCheckResourceAttr(resourceName, "child_budget_tokens.#", "3"),
+					resource.TestCheckResourceAttrPair(resourceName, "child_budget_tokens.0", "vantage_budget.child_1", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "child_budget_tokens.1", "vantage_budget.child_2", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "child_budget_tokens.2", "vantage_budget.child_3", "token"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 				),
 			},
@@ -121,6 +124,9 @@ func TestAccVantageBudget_multipleChildBudgets(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", rUpdatedTitle),
 					resource.TestCheckResourceAttr(resourceName, "child_budget_tokens.#", "3"),
+					resource.TestCheckResourceAttrPair(resourceName, "child_budget_tokens.0", "vantage_budget.child_1", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "child_budget_tokens.1", "vantage_budget.child_2", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "child_budget_tokens.2", "vantage_budget.child_3", "token"),
 				),
 			},
 		},
