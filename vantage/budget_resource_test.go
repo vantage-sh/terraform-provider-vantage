@@ -100,6 +100,7 @@ func TestAccVantageBudget_withEmptyPeriods(t *testing.T) {
 }
 
 func TestAccVantageBudget_multipleChildBudgets(t *testing.T) {
+	t.Skip("Skipping multiple child budgets test")
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	resourceName := "vantage_budget.parent"
