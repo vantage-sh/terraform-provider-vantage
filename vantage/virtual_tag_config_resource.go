@@ -131,6 +131,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.Append(diag...)
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

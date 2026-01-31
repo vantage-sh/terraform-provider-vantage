@@ -18,6 +18,7 @@ description: |-
 ### Required
 
 - `interval` (String) The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.
+- `report_tokens` (List of String) The tokens of the reports to alert on.
 - `threshold` (Number) The threshold value for the Cost Alert.
 - `title` (String) The title of the Cost Alert.
 - `unit_type` (String) The unit type used to compare costs. Options are 'currency' or 'percentage'.
@@ -26,7 +27,6 @@ description: |-
 ### Optional
 
 - `email_recipients` (List of String) The email recipients for the Cost Alert.
-- `report_tokens` (List of String) The tokens of the reports to alert on.
 - `slack_channels` (List of String) The Slack channels that will receive the alert.
 - `teams_channels` (List of String) The Microsoft Teams channels that will receive the alert.
 
