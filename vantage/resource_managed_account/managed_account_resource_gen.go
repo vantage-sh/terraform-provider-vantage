@@ -31,6 +31,12 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The contact email address for the Managed Account.",
 				MarkdownDescription: "The contact email address for the Managed Account.",
 			},
+			"email_domain": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Email domain to associate with this Managed Account for SSO.",
+				MarkdownDescription: "Email domain to associate with this Managed Account for SSO.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The id of the managed account",
@@ -59,6 +65,7 @@ type ManagedAccountModel struct {
 	AccessCredentialTokens types.List   `tfsdk:"access_credential_tokens"`
 	BillingRuleTokens      types.List   `tfsdk:"billing_rule_tokens"`
 	ContactEmail           types.String `tfsdk:"contact_email"`
+	EmailDomain            types.String `tfsdk:"email_domain"`
 	Id                     types.String `tfsdk:"id"`
 	Name                   types.String `tfsdk:"name"`
 	ParentAccountToken     types.String `tfsdk:"parent_account_token"`

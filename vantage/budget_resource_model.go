@@ -146,7 +146,7 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 	dst.Id = types.StringValue(src.Token)
 	dst.CreatedAt = types.StringValue(src.CreatedAt)
 	dst.CreatedByToken = types.StringValue(src.CreatedByToken)
-	dst.Name = types.StringValue(src.Name)
+	dst.Name = types.StringPointerValue(src.Name)
 	dst.UserToken = types.StringValue(src.UserToken)
 	dst.WorkspaceToken = types.StringValue(src.WorkspaceToken)
 	dst.CostReportToken = types.StringValue(src.CostReportToken)

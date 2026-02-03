@@ -109,7 +109,13 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 
-	data.Description = types.StringValue(out.Payload.Description)
+	// Handle description: if API returns nil but user specified empty string, preserve empty string
+	if out.Payload.Description != nil {
+		data.Description = types.StringValue(*out.Payload.Description)
+	} else if !data.Description.IsNull() {
+		// User specified a value (possibly empty string), preserve it
+		data.Description = types.StringValue(data.Description.ValueString())
+	}
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
 		data.Role = types.StringValue("editor")
@@ -181,7 +187,12 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
-	state.Description = types.StringValue(out.Payload.Description)
+	// Handle description: if API returns nil but state has a value, preserve it
+	if out.Payload.Description != nil {
+		state.Description = types.StringValue(*out.Payload.Description)
+	} else if !state.Description.IsNull() {
+		state.Description = types.StringValue(state.Description.ValueString())
+	}
 	// Role is not returned by API, preserve existing state value
 	// state.Role remains unchanged
 
@@ -264,7 +275,12 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	data.Name = types.StringValue(out.Payload.Name)
-	data.Description = types.StringValue(out.Payload.Description)
+	// Handle description: if API returns nil but user specified a value, preserve it
+	if out.Payload.Description != nil {
+		data.Description = types.StringValue(*out.Payload.Description)
+	} else if !data.Description.IsNull() {
+		data.Description = types.StringValue(data.Description.ValueString())
+	}
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
 		data.Role = types.StringValue("editor")

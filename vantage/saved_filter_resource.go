@@ -120,7 +120,7 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
-	state.Filter = types.StringValue(out.Payload.Filter)
+	state.Filter = types.StringPointerValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 

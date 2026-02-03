@@ -54,8 +54,8 @@ func (m *invoiceModel) applyPayload(ctx context.Context, payload *modelsv2.Invoi
 		m.Token = types.StringNull()
 	}
 
-	if payload.Total != "" {
-		m.Total = types.StringValue(payload.Total)
+	if payload.Total != nil && *payload.Total != "" {
+		m.Total = types.StringPointerValue(payload.Total)
 	} else {
 		m.Total = types.StringNull()
 	}

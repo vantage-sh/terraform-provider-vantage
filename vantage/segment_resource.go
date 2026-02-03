@@ -137,12 +137,17 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
+	data.ParentSegmentToken = types.StringPointerValue(out.Payload.ParentSegmentToken)
 	data.Title = types.StringValue(out.Payload.Title)
-	data.Filter = types.StringValue(out.Payload.Filter)
+	// Filter has a default of "", so convert nil to empty string
+	if out.Payload.Filter != nil {
+		data.Filter = types.StringValue(*out.Payload.Filter)
+	} else {
+		data.Filter = types.StringValue("")
+	}
 	data.Priority = types.Int64Value(int64(out.Payload.Priority))
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
-	data.ReportToken = types.StringValue(out.Payload.ReportToken)
+	data.ReportToken = types.StringPointerValue(out.Payload.ReportToken)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -172,9 +177,14 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Title = types.StringValue(out.Payload.Title)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	state.ReportToken = types.StringValue(out.Payload.ReportToken)
-	state.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
-	state.Filter = types.StringValue(out.Payload.Filter)
+	state.ReportToken = types.StringPointerValue(out.Payload.ReportToken)
+	state.ParentSegmentToken = types.StringPointerValue(out.Payload.ParentSegmentToken)
+	// Filter has a default of "", so convert nil to empty string
+	if out.Payload.Filter != nil {
+		state.Filter = types.StringValue(*out.Payload.Filter)
+	} else {
+		state.Filter = types.StringValue("")
+	}
 	state.Priority = types.Int64Value(int64(out.Payload.Priority))
 	state.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
@@ -214,14 +224,19 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.ReportToken = types.StringValue(out.Payload.ReportToken)
-	data.ParentSegmentToken = types.StringValue(out.Payload.ParentSegmentToken)
+	data.ReportToken = types.StringPointerValue(out.Payload.ReportToken)
+	data.ParentSegmentToken = types.StringPointerValue(out.Payload.ParentSegmentToken)
 
 	if out.Payload.Description != "" {
 		data.Description = types.StringValue(out.Payload.Description)
 	}
 
-	data.Filter = types.StringValue(out.Payload.Filter)
+	// Filter has a default of "", so convert nil to empty string
+	if out.Payload.Filter != nil {
+		data.Filter = types.StringValue(*out.Payload.Filter)
+	} else {
+		data.Filter = types.StringValue("")
+	}
 	data.Title = types.StringValue(out.Payload.Title)
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 

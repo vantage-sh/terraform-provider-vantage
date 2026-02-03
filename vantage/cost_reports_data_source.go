@@ -130,7 +130,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		costReports = append(costReports, costReportDataSourceModel{
 			Title:                   types.StringValue(r.Title),
 			Token:                   types.StringValue(r.Token),
-			Filter:                  types.StringValue(r.Filter),
+			Filter:                  types.StringPointerValue(r.Filter),
 			FolderToken:             types.StringValue(r.FolderToken),
 			WorkspaceToken:          types.StringValue(r.WorkspaceToken),
 			SavedFilterTokens:       savedFilterTokens,

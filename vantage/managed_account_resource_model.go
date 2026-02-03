@@ -41,6 +41,7 @@ func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv
 
 	m.ParentAccountToken = types.StringValue(payload.ParentAccountToken)
 	m.Token = types.StringValue(payload.Token)
+	m.EmailDomain = types.StringValue(payload.EmailDomain)
 
 	return nil
 }
@@ -49,6 +50,7 @@ func (m *managedAccountModel) toCreateModel(ctx context.Context, diags *diag.Dia
 	dst := &modelsv2.CreateManagedAccount{
 		Name:         m.Name.ValueStringPointer(),
 		ContactEmail: m.ContactEmail.ValueStringPointer(),
+		EmailDomain:  m.EmailDomain.ValueString(),
 	}
 
 	if !m.AccessCredentialTokens.IsNull() && !m.AccessCredentialTokens.IsUnknown() {
@@ -87,6 +89,10 @@ func (m *managedAccountModel) toUpdateModel(ctx context.Context, diags *diag.Dia
 		billingRuleTokens := []string{}
 		m.BillingRuleTokens.ElementsAs(ctx, &billingRuleTokens, false)
 		dst.BillingRuleTokens = billingRuleTokens
+	}
+
+	if !m.EmailDomain.IsNull() && !m.EmailDomain.IsUnknown() {
+		dst.EmailDomain = m.EmailDomain.ValueString()
 	}
 
 	return dst

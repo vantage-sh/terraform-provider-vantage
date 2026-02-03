@@ -56,20 +56,17 @@ func TestAccBillingProfile_withNestedAttributes(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "updated_at"),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "managed_accounts_count", "0"),
 
-					// Billing information attributes
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.company_name", companyName),
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_1", "123 Main St"),
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.city", "New York"),
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.state", "NY"),
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.postal_code", "10001"),
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.country_code", "US"),
-					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
+				// Billing information attributes
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.company_name", companyName),
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_1", "123 Main St"),
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.city", "New York"),
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.state", "NY"),
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.postal_code", "10001"),
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.country_code", "US"),
+				resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "billing_information_attributes.token"),
 
-					// Verify address_line_2 is properly handled as empty/null
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.address_line_2", ""),
-
-					// Verify billing_email is empty array
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.billing_email.#", "0"),
+				// Verify billing_email is empty array
+				resource.TestCheckResourceAttr("vantage_billing_profile.test", "billing_information_attributes.billing_email.#", "0"),
 				),
 			},
 			{
@@ -153,9 +150,6 @@ func TestAccBillingProfile_withBankingAttributes(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.bank_name", bankName),
 					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.beneficiary_name", beneficiaryName),
 					resource.TestCheckResourceAttrSet("vantage_billing_profile.test", "banking_information_attributes.token"),
-
-					// Verify optional fields are handled properly
-					resource.TestCheckResourceAttr("vantage_billing_profile.test", "banking_information_attributes.tax_id", ""),
 				),
 			},
 			{

@@ -26,6 +26,13 @@ func (m *costAlertModel) applyPayload(ctx context.Context, payload *modelsv2.Cos
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.UpdatedAt = types.StringValue(payload.UpdatedAt)
 
+	// Handle MinimumThreshold - it's Optional+Computed, so we need to set it
+	if payload.MinimumThreshold != nil {
+		m.MinimumThreshold = types.Float64Value(*payload.MinimumThreshold)
+	} else if m.MinimumThreshold.IsUnknown() {
+		m.MinimumThreshold = types.Float64Null()
+	}
+
 	list, diag = types.ListValueFrom(ctx, types.StringType, payload.EmailRecipients)
 	if diag.HasError() {
 		return diag

@@ -13,12 +13,12 @@ type resourceReportModel resource_resource_report.ResourceReportModel
 
 func (r *resourceReportModel) applyPayload(ctx context.Context, payload *modelsv2.ResourceReport, isDataSource bool) diag.Diagnostics {
 	r.CreatedAt = types.StringValue(payload.CreatedAt)
-	r.CreatedByToken = types.StringValue(payload.CreatedByToken)
-	r.Filter = types.StringValue(payload.Filter)
+	r.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
+	r.Filter = types.StringPointerValue(payload.Filter)
 	r.Title = types.StringValue(payload.Title)
 	r.Token = types.StringValue(payload.Token)
 	r.Id = types.StringValue(payload.Token)
-	r.UserToken = types.StringValue(payload.UserToken)
+	r.UserToken = types.StringPointerValue(payload.UserToken)
 	r.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 
 	if r.Columns.IsNull() || r.Columns.IsUnknown() {

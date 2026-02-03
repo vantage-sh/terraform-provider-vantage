@@ -109,7 +109,7 @@ func (r AccessGrantResource) Create(ctx context.Context, req resource.CreateRequ
 	data.Id = types.StringValue(out.Payload.Token)
 
 	data.ResourceToken = types.StringValue(out.Payload.ResourceToken)
-	data.TeamToken = types.StringValue(out.Payload.TeamToken)
+	data.TeamToken = types.StringPointerValue(out.Payload.TeamToken)
 	data.Access = types.StringValue(out.Payload.Access)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -139,7 +139,7 @@ func (r AccessGrantResource) Read(ctx context.Context, req resource.ReadRequest,
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.ResourceToken = types.StringValue(out.Payload.ResourceToken)
-	state.TeamToken = types.StringValue(out.Payload.TeamToken)
+	state.TeamToken = types.StringPointerValue(out.Payload.TeamToken)
 	state.Access = types.StringValue(out.Payload.Access)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -172,7 +172,7 @@ func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	data.Access = types.StringValue(out.Payload.Access)
 	data.ResourceToken = types.StringValue(out.Payload.ResourceToken)
-	data.TeamToken = types.StringValue(out.Payload.TeamToken)
+	data.TeamToken = types.StringPointerValue(out.Payload.TeamToken)
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
