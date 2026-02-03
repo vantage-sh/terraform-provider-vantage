@@ -23,10 +23,10 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		var secureDataAttr attr.Value
 		if payload.BankingInformationAttributes.SecureData != nil {
 			secureDataAttrs := map[string]attr.Value{
-				"account_number": types.StringValue(payload.BankingInformationAttributes.SecureData.AccountNumber),
-				"routing_number": types.StringValue(payload.BankingInformationAttributes.SecureData.RoutingNumber),
-				"iban":          types.StringValue(payload.BankingInformationAttributes.SecureData.Iban),
-				"swift_bic":     types.StringValue(payload.BankingInformationAttributes.SecureData.SwiftBic),
+				"account_number": types.StringPointerValue(payload.BankingInformationAttributes.SecureData.AccountNumber),
+				"routing_number": types.StringPointerValue(payload.BankingInformationAttributes.SecureData.RoutingNumber),
+				"iban":          types.StringPointerValue(payload.BankingInformationAttributes.SecureData.Iban),
+				"swift_bic":     types.StringPointerValue(payload.BankingInformationAttributes.SecureData.SwiftBic),
 			}
 			secureDataObj, diag := types.ObjectValue(map[string]attr.Type{
 				"account_number": types.StringType,
@@ -63,9 +63,9 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		}
 		
 		bankingAttrs := map[string]attr.Value{
-			"bank_name":        types.StringValue(payload.BankingInformationAttributes.BankName),
-			"beneficiary_name": types.StringValue(payload.BankingInformationAttributes.BeneficiaryName),
-			"tax_id":           types.StringValue(payload.BankingInformationAttributes.TaxID),
+			"bank_name":        types.StringPointerValue(payload.BankingInformationAttributes.BankName),
+			"beneficiary_name": types.StringPointerValue(payload.BankingInformationAttributes.BeneficiaryName),
+			"tax_id":           types.StringPointerValue(payload.BankingInformationAttributes.TaxID),
 			"token":            types.StringValue(payload.BankingInformationAttributes.Token),
 			"secure_data":      secureDataAttr,
 		}
@@ -110,14 +110,14 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		}
 		
 		attrs := map[string]attr.Value{
-			"address_line_1": types.StringValue(payload.BillingInformationAttributes.AddressLine1),
-			"address_line_2": types.StringValue(payload.BillingInformationAttributes.AddressLine2),
+			"address_line_1": types.StringPointerValue(payload.BillingInformationAttributes.AddressLine1),
+			"address_line_2": types.StringPointerValue(payload.BillingInformationAttributes.AddressLine2),
 			"billing_email":  billingEmailsList,
-			"city":           types.StringValue(payload.BillingInformationAttributes.City),
-			"company_name":   types.StringValue(payload.BillingInformationAttributes.CompanyName),
-			"country_code":   types.StringValue(payload.BillingInformationAttributes.CountryCode),
-			"postal_code":    types.StringValue(payload.BillingInformationAttributes.PostalCode),
-			"state":          types.StringValue(payload.BillingInformationAttributes.State),
+			"city":           types.StringPointerValue(payload.BillingInformationAttributes.City),
+			"company_name":   types.StringPointerValue(payload.BillingInformationAttributes.CompanyName),
+			"country_code":   types.StringPointerValue(payload.BillingInformationAttributes.CountryCode),
+			"postal_code":    types.StringPointerValue(payload.BillingInformationAttributes.PostalCode),
+			"state":          types.StringPointerValue(payload.BillingInformationAttributes.State),
 			"token":          types.StringValue(payload.BillingInformationAttributes.Token),
 		}
 		
@@ -142,7 +142,7 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 				for _, field := range payload.BusinessInformationAttributes.Metadata.CustomFields {
 					fieldAttrs := map[string]attr.Value{
 						"name":  types.StringValue(field.Name),
-						"value": types.StringValue(field.Value),
+						"value": types.StringPointerValue(field.Value),
 					}
 					fieldObj, diag := types.ObjectValue(
 						map[string]attr.Type{
@@ -265,7 +265,7 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		// Use the generated type for the list element type
 		adjustmentItemsListValue, d := types.ListValue(
 			resource_billing_profile.AdjustmentItemsType{
-				basetypes.ObjectType{AttrTypes: resource_billing_profile.AdjustmentItemsValue{}.AttributeTypes(ctx)},
+				ObjectType: basetypes.ObjectType{AttrTypes: resource_billing_profile.AdjustmentItemsValue{}.AttributeTypes(ctx)},
 			},
 			adjustmentItemsList,
 		)

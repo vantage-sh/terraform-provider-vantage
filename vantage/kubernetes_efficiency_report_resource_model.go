@@ -15,7 +15,7 @@ type kubernetesEfficiencyReportModel resource_kubernetes_efficiency_report.Kuber
 
 func (r *kubernetesEfficiencyReportModel) applyPayload(ctx context.Context, payload *modelsv2.KubernetesEfficiencyReport, isDataSource bool) diag.Diagnostics {
 	r.CreatedAt = types.StringValue(payload.CreatedAt)
-	r.Filter = types.StringValue(payload.Filter)
+	r.Filter = types.StringPointerValue(payload.Filter)
 	r.Title = types.StringValue(payload.Title)
 	r.Token = types.StringValue(payload.Token)
 	r.Id = types.StringValue(payload.Token)
@@ -23,16 +23,16 @@ func (r *kubernetesEfficiencyReportModel) applyPayload(ctx context.Context, payl
 	r.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 	r.AggregatedBy = types.StringValue(payload.AggregatedBy)
 	r.DateBucket = types.StringValue(payload.DateBucket)
-	r.DateInterval = types.StringValue(payload.DateInterval)
+	r.DateInterval = types.StringPointerValue(payload.DateInterval)
 	r.Default = types.BoolValue(payload.Default)
-	r.StartDate = types.StringValue(payload.StartDate)
-	r.EndDate = types.StringValue(payload.EndDate)
+	r.StartDate = types.StringPointerValue(payload.StartDate)
+	r.EndDate = types.StringPointerValue(payload.EndDate)
 
 	// Handle groupings - strings.Split on empty string returns [""], not []
 	// so we need to handle that case explicitly
 	var groupings []string
-	if payload.Groupings != "" {
-		groupings = strings.Split(payload.Groupings, ",")
+	if payload.Groupings != nil && *payload.Groupings != "" {
+		groupings = strings.Split(*payload.Groupings, ",")
 	} else {
 		groupings = []string{}
 	}

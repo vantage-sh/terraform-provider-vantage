@@ -137,6 +137,11 @@ func ManagedAccountsDataSourceSchema(ctx context.Context) schema.Schema {
 						"contact_email": schema.StringAttribute{
 							Computed: true,
 						},
+						"email_domain": schema.StringAttribute{
+							Computed:            true,
+							Description:         "Email domain associated with this Managed Account for SSO.",
+							MarkdownDescription: "Email domain associated with this Managed Account for SSO.",
+						},
 						"id": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The id of the resource",
@@ -290,6 +295,21 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`contact_email expected to be basetypes.StringValue, was: %T`, contactEmailAttribute))
 	}
 
+	emailDomainAttribute, ok := attributes["email_domain"]
+	var emailDomainVal basetypes.StringValue
+
+	if !ok {
+		emailDomainVal = types.StringNull()
+	} else {
+		emailDomainVal, ok = emailDomainAttribute.(basetypes.StringValue)
+
+		if !ok {
+			diags.AddError(
+				"Attribute Wrong Type",
+				fmt.Sprintf(`email_domain expected to be basetypes.StringValue, was: %T`, emailDomainAttribute))
+		}
+	}
+
 	idAttribute, ok := attributes["id"]
 
 	if !ok {
@@ -390,6 +410,7 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 		BillingRuleTokens:             billingRuleTokensVal,
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		ContactEmail:                  contactEmailVal,
+		EmailDomain:                   emailDomainVal,
 		Id:                            idVal,
 		MspBillingProfileToken:        mspBillingProfileTokenVal,
 		Name:                          nameVal,
@@ -552,6 +573,21 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`contact_email expected to be basetypes.StringValue, was: %T`, contactEmailAttribute))
 	}
 
+	emailDomainAttribute, ok := attributes["email_domain"]
+	var emailDomainVal basetypes.StringValue
+
+	if !ok {
+		emailDomainVal = types.StringNull()
+	} else {
+		emailDomainVal, ok = emailDomainAttribute.(basetypes.StringValue)
+
+		if !ok {
+			diags.AddError(
+				"Attribute Wrong Type",
+				fmt.Sprintf(`email_domain expected to be basetypes.StringValue, was: %T`, emailDomainAttribute))
+		}
+	}
+
 	idAttribute, ok := attributes["id"]
 
 	if !ok {
@@ -652,6 +688,7 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 		BillingRuleTokens:             billingRuleTokensVal,
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		ContactEmail:                  contactEmailVal,
+		EmailDomain:                   emailDomainVal,
 		Id:                            idVal,
 		MspBillingProfileToken:        mspBillingProfileTokenVal,
 		Name:                          nameVal,
@@ -734,6 +771,7 @@ type ManagedAccountsValue struct {
 	BillingRuleTokens             basetypes.ListValue   `tfsdk:"billing_rule_tokens"`
 	BusinessInformationAttributes basetypes.ObjectValue `tfsdk:"business_information_attributes"`
 	ContactEmail                  basetypes.StringValue `tfsdk:"contact_email"`
+	EmailDomain                   basetypes.StringValue `tfsdk:"email_domain"`
 	Id                            basetypes.StringValue `tfsdk:"id"`
 	MspBillingProfileToken        basetypes.StringValue `tfsdk:"msp_billing_profile_token"`
 	Name                          basetypes.StringValue `tfsdk:"name"`
@@ -743,7 +781,7 @@ type ManagedAccountsValue struct {
 }
 
 func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 10)
+	attrTypes := make(map[string]tftypes.Type, 11)
 
 	var val tftypes.Value
 	var err error
@@ -761,6 +799,7 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["contact_email"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["email_domain"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["msp_billing_profile_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
@@ -771,7 +810,7 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 10)
+		vals := make(map[string]tftypes.Value, 11)
 
 		val, err = v.AccessCredentialTokens.ToTerraformValue(ctx)
 
@@ -812,6 +851,14 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["contact_email"] = val
+
+		val, err = v.EmailDomain.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["email_domain"] = val
 
 		val, err = v.Id.ToTerraformValue(ctx)
 
@@ -951,6 +998,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
 			"contact_email":             basetypes.StringType{},
+			"email_domain":              basetypes.StringType{},
 			"id":                        basetypes.StringType{},
 			"msp_billing_profile_token": basetypes.StringType{},
 			"name":                      basetypes.StringType{},
@@ -986,6 +1034,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
 			"contact_email":             basetypes.StringType{},
+			"email_domain":              basetypes.StringType{},
 			"id":                        basetypes.StringType{},
 			"msp_billing_profile_token": basetypes.StringType{},
 			"name":                      basetypes.StringType{},
@@ -1008,6 +1057,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
 		"contact_email":             basetypes.StringType{},
+		"email_domain":              basetypes.StringType{},
 		"id":                        basetypes.StringType{},
 		"msp_billing_profile_token": basetypes.StringType{},
 		"name":                      basetypes.StringType{},
@@ -1031,6 +1081,7 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"billing_rule_tokens":             billingRuleTokensVal,
 			"business_information_attributes": businessInformationAttributes,
 			"contact_email":                   v.ContactEmail,
+			"email_domain":                    v.EmailDomain,
 			"id":                              v.Id,
 			"msp_billing_profile_token":       v.MspBillingProfileToken,
 			"name":                            v.Name,
@@ -1073,6 +1124,10 @@ func (v ManagedAccountsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.ContactEmail.Equal(other.ContactEmail) {
+		return false
+	}
+
+	if !v.EmailDomain.Equal(other.EmailDomain) {
 		return false
 	}
 
@@ -1122,6 +1177,7 @@ func (v ManagedAccountsValue) AttributeTypes(ctx context.Context) map[string]att
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
 		"contact_email":             basetypes.StringType{},
+		"email_domain":              basetypes.StringType{},
 		"id":                        basetypes.StringType{},
 		"msp_billing_profile_token": basetypes.StringType{},
 		"name":                      basetypes.StringType{},

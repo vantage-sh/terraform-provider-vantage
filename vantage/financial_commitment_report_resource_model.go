@@ -16,23 +16,23 @@ type financialCommitmentReportModel resource_financial_commitment_report.Financi
 func (m *financialCommitmentReportModel) applyPayload(ctx context.Context, payload *modelsv2.FinancialCommitmentReport) diag.Diagnostics {
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.UserToken = types.StringValue(payload.UserToken)
-	m.Filter = types.StringValue(payload.Filter)
+	m.Filter = types.StringPointerValue(payload.Filter)
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
 	m.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 	m.DateBucket = types.StringValue(payload.DateBucket)
-	m.DateInterval = types.StringValue(payload.DateInterval)
+	m.DateInterval = types.StringPointerValue(payload.DateInterval)
 	m.Default = types.BoolValue(payload.Default)
 	m.OnDemandCostsScope = types.StringValue(payload.OnDemandCostsScope)
-	m.StartDate = types.StringValue(payload.StartDate)
-	m.EndDate = types.StringValue(payload.EndDate)
+	m.StartDate = types.StringPointerValue(payload.StartDate)
+	m.EndDate = types.StringPointerValue(payload.EndDate)
 
 	// Handle groupings - strings.Split on empty string returns [""], not []
 	// so we need to handle that case explicitly
 	var groupings []string
-	if payload.Groupings != "" {
-		groupings = strings.Split(payload.Groupings, ",")
+	if payload.Groupings != nil && *payload.Groupings != "" {
+		groupings = strings.Split(*payload.Groupings, ",")
 	} else {
 		groupings = []string{}
 	}

@@ -11,6 +11,40 @@ import (
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
+func TestCostAlert_withMinimumThreshold(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create cost alert with minimum_threshold
+			{
+				Config: testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertConfigWithMinimumThreshold(rTitle, 50.0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_alert.test", "title", rTitle),
+					resource.TestCheckResourceAttr("vantage_cost_alert.test", "threshold", "100"),
+					resource.TestCheckResourceAttr("vantage_cost_alert.test", "minimum_threshold", "50"),
+					resource.TestCheckResourceAttrSet("vantage_cost_alert.test", "token"),
+				),
+			},
+			// Step 2: Update minimum_threshold
+			{
+				Config: testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertConfigWithMinimumThreshold(rTitle, 75.0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_alert.test", "minimum_threshold", "75"),
+				),
+			},
+			// Step 3: Confirm no changes after apply
+			{
+				Config:             testAccWorkspacesDatasource() + testAccCostReport() + testAccCostAlertConfigWithMinimumThreshold(rTitle, 75.0),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestCostAlert(t *testing.T) {
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
@@ -95,6 +129,20 @@ resource "vantage_cost_alert" "test" {
   report_tokens   = [vantage_cost_report.test_cost_report.token]
 }
 `, title)
+}
+
+func testAccCostAlertConfigWithMinimumThreshold(title string, minimumThreshold float64) string {
+	return fmt.Sprintf(`
+resource "vantage_cost_alert" "test" {
+  workspace_token   = data.vantage_workspaces.test_workspace.workspaces[0].token
+  title             = %[1]q
+  threshold         = 100
+  interval          = "day"
+  unit_type         = "percentage"
+  minimum_threshold = %[2]f
+  report_tokens     = [vantage_cost_report.test_cost_report.token]
+}
+`, title, minimumThreshold)
 }
 
 func testAccCostAlertsDataSource() string {
