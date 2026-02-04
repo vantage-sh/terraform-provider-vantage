@@ -11,7 +11,7 @@ import (
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
-func TestCostAlert_withMinimumThreshold(t *testing.T) {
+func TestAccVantageCostAlert_withMinimumThreshold(t *testing.T) {
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 
 	resource.Test(t, resource.TestCase{
