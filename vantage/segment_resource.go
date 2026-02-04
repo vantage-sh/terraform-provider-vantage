@@ -139,12 +139,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	data.ParentSegmentToken = types.StringPointerValue(out.Payload.ParentSegmentToken)
 	data.Title = types.StringValue(out.Payload.Title)
-	// Filter has a default of "", so convert nil to empty string
-	if out.Payload.Filter != nil {
-		data.Filter = types.StringValue(*out.Payload.Filter)
-	} else {
-		data.Filter = types.StringValue("")
-	}
+	data.Filter = stringPointerOrEmpty(out.Payload.Filter)
 	data.Priority = types.Int64Value(int64(out.Payload.Priority))
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 	data.ReportToken = types.StringPointerValue(out.Payload.ReportToken)
@@ -179,12 +174,7 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.ReportToken = types.StringPointerValue(out.Payload.ReportToken)
 	state.ParentSegmentToken = types.StringPointerValue(out.Payload.ParentSegmentToken)
-	// Filter has a default of "", so convert nil to empty string
-	if out.Payload.Filter != nil {
-		state.Filter = types.StringValue(*out.Payload.Filter)
-	} else {
-		state.Filter = types.StringValue("")
-	}
+	state.Filter = stringPointerOrEmpty(out.Payload.Filter)
 	state.Priority = types.Int64Value(int64(out.Payload.Priority))
 	state.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
@@ -231,12 +221,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 		data.Description = types.StringValue(out.Payload.Description)
 	}
 
-	// Filter has a default of "", so convert nil to empty string
-	if out.Payload.Filter != nil {
-		data.Filter = types.StringValue(*out.Payload.Filter)
-	} else {
-		data.Filter = types.StringValue("")
-	}
+	data.Filter = stringPointerOrEmpty(out.Payload.Filter)
 	data.Title = types.StringValue(out.Payload.Title)
 	data.TrackUnallocated = types.BoolValue(out.Payload.TrackUnallocated)
 
@@ -265,6 +250,15 @@ func (r *SegmentResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+// stringPointerOrEmpty converts a *string to types.String, treating nil as empty string.
+// Use this for fields with a schema default of "" where nil should become "" instead of null.
+func stringPointerOrEmpty(s *string) types.String {
+	if s != nil {
+		return types.StringValue(*s)
+	}
+	return types.StringValue("")
 }
 
 func (r *SegmentResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {

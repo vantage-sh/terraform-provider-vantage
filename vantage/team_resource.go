@@ -108,15 +108,8 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
+	setDescriptionFromPayload(&data.Description, out.Payload.Description)
 
-	// Handle description: API returns pointer
-	if out.Payload.Description != nil {
-		data.Description = types.StringValue(*out.Payload.Description)
-	} else if data.Description.IsUnknown() {
-		// If was unknown and API returned nil, set to null
-		data.Description = types.StringNull()
-	}
-	// If API returns nil but plan had a known value (including empty string), keep the planned value
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
 		data.Role = types.StringValue("editor")
@@ -188,15 +181,7 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
-	// Handle description: API returns pointer
-	if out.Payload.Description != nil {
-		state.Description = types.StringValue(*out.Payload.Description)
-	} else if state.Description.IsUnknown() {
-		state.Description = types.StringNull()
-	}
-	// If API returns nil but state had a known value, keep it
-	// Role is not returned by API, preserve existing state value
-	// state.Role remains unchanged
+	setDescriptionFromPayload(&state.Description, out.Payload.Description)
 
 	userTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
@@ -277,13 +262,8 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	data.Name = types.StringValue(out.Payload.Name)
-	// Handle description: API returns pointer
-	if out.Payload.Description != nil {
-		data.Description = types.StringValue(*out.Payload.Description)
-	} else if data.Description.IsUnknown() {
-		data.Description = types.StringNull()
-	}
-	// If API returns nil but plan had a known value, keep the planned value
+	setDescriptionFromPayload(&data.Description, out.Payload.Description)
+
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
 		data.Role = types.StringValue("editor")
@@ -335,4 +315,16 @@ func (r *TeamResource) Configure(_ context.Context, req resource.ConfigureReques
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+// setDescriptionFromPayload handles the description field from API responses.
+// If the API returns a non-nil description, it sets the field to that value.
+// If the API returns nil and the field was unknown, it sets the field to null.
+// Otherwise, the existing value is preserved.
+func setDescriptionFromPayload(desc *types.String, apiDescription *string) {
+	if apiDescription != nil {
+		*desc = types.StringValue(*apiDescription)
+	} else if desc.IsUnknown() {
+		*desc = types.StringNull()
+	}
 }
