@@ -109,12 +109,14 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 
-	// Handle description: if API returns nil but user specified empty string, preserve empty string
+	// Handle description: if API returns nil but user specified a known value, preserve it
 	if out.Payload.Description != nil {
 		data.Description = types.StringValue(*out.Payload.Description)
-	} else if !data.Description.IsNull() {
-		// User specified a value (possibly empty string), preserve it
+	} else if !data.Description.IsNull() && !data.Description.IsUnknown() {
+		// User specified a known value (possibly empty string), preserve it
 		data.Description = types.StringValue(data.Description.ValueString())
+	} else {
+		data.Description = types.StringNull()
 	}
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
@@ -187,11 +189,13 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
-	// Handle description: if API returns nil but state has a value, preserve it
+	// Handle description: if API returns nil but state has a known value, preserve it
 	if out.Payload.Description != nil {
 		state.Description = types.StringValue(*out.Payload.Description)
-	} else if !state.Description.IsNull() {
+	} else if !state.Description.IsNull() && !state.Description.IsUnknown() {
 		state.Description = types.StringValue(state.Description.ValueString())
+	} else {
+		state.Description = types.StringNull()
 	}
 	// Role is not returned by API, preserve existing state value
 	// state.Role remains unchanged
@@ -275,11 +279,13 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	data.Name = types.StringValue(out.Payload.Name)
-	// Handle description: if API returns nil but user specified a value, preserve it
+	// Handle description: if API returns nil but user specified a known value, preserve it
 	if out.Payload.Description != nil {
 		data.Description = types.StringValue(*out.Payload.Description)
-	} else if !data.Description.IsNull() {
+	} else if !data.Description.IsNull() && !data.Description.IsUnknown() {
 		data.Description = types.StringValue(data.Description.ValueString())
+	} else {
+		data.Description = types.StringNull()
 	}
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {

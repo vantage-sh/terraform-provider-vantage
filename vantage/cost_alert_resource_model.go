@@ -29,7 +29,7 @@ func (m *costAlertModel) applyPayload(ctx context.Context, payload *modelsv2.Cos
 	// Handle MinimumThreshold - it's Optional+Computed, so we need to set it
 	if payload.MinimumThreshold != nil {
 		m.MinimumThreshold = types.Float64Value(*payload.MinimumThreshold)
-	} else if m.MinimumThreshold.IsUnknown() {
+	} else {
 		m.MinimumThreshold = types.Float64Null()
 	}
 
@@ -67,7 +67,7 @@ func (m *costAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		threshold = &parsedFloat
 	}
 
-	return &modelsv2.CreateCostAlert{
+	result := &modelsv2.CreateCostAlert{
 		WorkspaceToken:  m.WorkspaceToken.ValueStringPointer(),
 		Title:           m.Title.ValueStringPointer(),
 		Interval:        m.Interval.ValueStringPointer(),
@@ -78,10 +78,16 @@ func (m *costAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		TeamsChannels:   terraformListToStrings(ctx, m.TeamsChannels, diags),
 		ReportTokens:    terraformListToStrings(ctx, m.ReportTokens, diags),
 	}
+
+	if !m.MinimumThreshold.IsNull() && !m.MinimumThreshold.IsUnknown() {
+		result.MinimumThreshold = float32(m.MinimumThreshold.ValueFloat64())
+	}
+
+	return result
 }
 
 func (m *costAlertModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) *modelsv2.UpdateCostAlert {
-	return &modelsv2.UpdateCostAlert{
+	result := &modelsv2.UpdateCostAlert{
 		Title:           m.Title.ValueString(),
 		Interval:        m.Interval.ValueString(),
 		Threshold:       float32(m.Threshold.ValueFloat64()),
@@ -91,6 +97,12 @@ func (m *costAlertModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		TeamsChannels:   terraformListToStrings(ctx, m.TeamsChannels, diags),
 		ReportTokens:    terraformListToStrings(ctx, m.ReportTokens, diags),
 	}
+
+	if !m.MinimumThreshold.IsNull() && !m.MinimumThreshold.IsUnknown() {
+		result.MinimumThreshold = float32(m.MinimumThreshold.ValueFloat64())
+	}
+
+	return result
 }
 
 func terraformListToStrings(ctx context.Context, tfList types.List, diags *diag.Diagnostics) []string {

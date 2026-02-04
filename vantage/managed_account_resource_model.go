@@ -50,7 +50,10 @@ func (m *managedAccountModel) toCreateModel(ctx context.Context, diags *diag.Dia
 	dst := &modelsv2.CreateManagedAccount{
 		Name:         m.Name.ValueStringPointer(),
 		ContactEmail: m.ContactEmail.ValueStringPointer(),
-		EmailDomain:  m.EmailDomain.ValueString(),
+	}
+
+	if !m.EmailDomain.IsNull() && !m.EmailDomain.IsUnknown() {
+		dst.EmailDomain = m.EmailDomain.ValueString()
 	}
 
 	if !m.AccessCredentialTokens.IsNull() && !m.AccessCredentialTokens.IsUnknown() {
