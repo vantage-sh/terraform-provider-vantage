@@ -109,17 +109,14 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 
-	// Handle description: preserve user-provided value without converting unknown to empty string
+	// Handle description: API returns pointer
 	if out.Payload.Description != nil {
 		data.Description = types.StringValue(*out.Payload.Description)
 	} else if data.Description.IsUnknown() {
-		data.Description = types.StringUnknown()
-	} else if data.Description.IsNull() {
+		// If was unknown and API returned nil, set to null
 		data.Description = types.StringNull()
-	} else {
-		// User specified a value (possibly empty string), preserve it
-		data.Description = types.StringValue(data.Description.ValueString())
 	}
+	// If API returns nil but plan had a known value (including empty string), keep the planned value
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
 		data.Role = types.StringValue("editor")
@@ -191,16 +188,13 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
-	// Handle description: preserve prior state without converting unknown to empty string
+	// Handle description: API returns pointer
 	if out.Payload.Description != nil {
 		state.Description = types.StringValue(*out.Payload.Description)
 	} else if state.Description.IsUnknown() {
-		state.Description = types.StringUnknown()
-	} else if state.Description.IsNull() {
 		state.Description = types.StringNull()
-	} else {
-		state.Description = types.StringValue(state.Description.ValueString())
 	}
+	// If API returns nil but state had a known value, keep it
 	// Role is not returned by API, preserve existing state value
 	// state.Role remains unchanged
 
@@ -283,16 +277,13 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	data.Name = types.StringValue(out.Payload.Name)
-	// Handle description: preserve user-provided value without converting unknown to empty string
+	// Handle description: API returns pointer
 	if out.Payload.Description != nil {
 		data.Description = types.StringValue(*out.Payload.Description)
 	} else if data.Description.IsUnknown() {
-		data.Description = types.StringUnknown()
-	} else if data.Description.IsNull() {
 		data.Description = types.StringNull()
-	} else {
-		data.Description = types.StringValue(data.Description.ValueString())
 	}
+	// If API returns nil but plan had a known value, keep the planned value
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
 		data.Role = types.StringValue("editor")
