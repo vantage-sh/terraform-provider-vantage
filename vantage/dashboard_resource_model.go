@@ -17,15 +17,15 @@ type dashboardModel resource_dashboard.DashboardModel
 
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
-	m.DateBin = types.StringValue(payload.DateBin)
-	tflog.Debug(ctx, fmt.Sprintf("DateInterval is not null %s", payload.DateInterval))
-	if payload.DateInterval != "" {
-		m.DateInterval = types.StringValue(payload.DateInterval)
+	m.DateBin = types.StringPointerValue(payload.DateBin)
+	tflog.Debug(ctx, fmt.Sprintf("DateInterval is not null %v", payload.DateInterval))
+	if payload.DateInterval != nil && *payload.DateInterval != "" {
+		m.DateInterval = types.StringPointerValue(payload.DateInterval)
 	} else {
 		m.DateInterval = types.StringNull()
 	}
 
-	if payload.DateInterval == "custom" {
+	if payload.DateInterval != nil && *payload.DateInterval == "custom" {
 		m.StartDate = types.StringValue(payload.StartDate)
 		m.EndDate = types.StringValue(payload.EndDate)
 	}

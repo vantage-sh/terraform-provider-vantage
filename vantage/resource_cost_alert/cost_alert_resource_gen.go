@@ -34,6 +34,12 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.",
 				MarkdownDescription: "The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.",
 			},
+			"minimum_threshold": schema.Float64Attribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The minimum dollar amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.",
+				MarkdownDescription: "The minimum dollar amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.",
+			},
 			"report_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Required:            true,
@@ -89,17 +95,18 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type CostAlertModel struct {
-	CreatedAt       types.String  `tfsdk:"created_at"`
-	EmailRecipients types.List    `tfsdk:"email_recipients"`
-	Id              types.String  `tfsdk:"id"`
-	Interval        types.String  `tfsdk:"interval"`
-	ReportTokens    types.List    `tfsdk:"report_tokens"`
-	SlackChannels   types.List    `tfsdk:"slack_channels"`
-	TeamsChannels   types.List    `tfsdk:"teams_channels"`
-	Threshold       types.Float64 `tfsdk:"threshold"`
-	Title           types.String  `tfsdk:"title"`
-	Token           types.String  `tfsdk:"token"`
-	UnitType        types.String  `tfsdk:"unit_type"`
-	UpdatedAt       types.String  `tfsdk:"updated_at"`
-	WorkspaceToken  types.String  `tfsdk:"workspace_token"`
+	CreatedAt        types.String  `tfsdk:"created_at"`
+	EmailRecipients  types.List    `tfsdk:"email_recipients"`
+	Id               types.String  `tfsdk:"id"`
+	Interval         types.String  `tfsdk:"interval"`
+	MinimumThreshold types.Float64 `tfsdk:"minimum_threshold"`
+	ReportTokens     types.List    `tfsdk:"report_tokens"`
+	SlackChannels    types.List    `tfsdk:"slack_channels"`
+	TeamsChannels    types.List    `tfsdk:"teams_channels"`
+	Threshold        types.Float64 `tfsdk:"threshold"`
+	Title            types.String  `tfsdk:"title"`
+	Token            types.String  `tfsdk:"token"`
+	UnitType         types.String  `tfsdk:"unit_type"`
+	UpdatedAt        types.String  `tfsdk:"updated_at"`
+	WorkspaceToken   types.String  `tfsdk:"workspace_token"`
 }

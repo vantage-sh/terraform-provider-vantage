@@ -201,7 +201,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Id = types.StringValue(out.Payload.Token)
-	data.Filter = types.StringValue(out.Payload.Filter)
+	data.Filter = types.StringPointerValue(out.Payload.Filter)
 	data.Groupings = types.StringValue(out.Payload.Groupings)
 	data.StartDate = types.StringValue(out.Payload.StartDate)
 	data.EndDate = types.StringValue(out.Payload.EndDate)
@@ -245,9 +245,8 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
-	state.Filter = types.StringValue(out.Payload.Filter)
+	state.Filter = types.StringPointerValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
-	state.Filter = types.StringValue(out.Payload.Filter)
 	state.Groupings = types.StringValue(out.Payload.Groupings)
 	state.StartDate = types.StringValue(out.Payload.StartDate)
 	state.EndDate = types.StringValue(out.Payload.EndDate)
@@ -328,7 +327,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 
 	data.Title = types.StringValue(out.Payload.Title)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
-	data.Filter = types.StringValue(out.Payload.Filter)
+	data.Filter = types.StringPointerValue(out.Payload.Filter)
 	data.Groupings = types.StringValue(out.Payload.Groupings)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	data.StartDate = types.StringValue(out.Payload.StartDate)

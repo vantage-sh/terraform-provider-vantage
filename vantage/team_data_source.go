@@ -86,7 +86,7 @@ func (d *teamsDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		teams = append(teams, teamDataSourceModel{
 			Token:           types.StringValue(team.Token),
 			Name:            types.StringValue(team.Name),
-			Description:     types.StringValue(team.Description),
+			Description:     types.StringPointerValue(team.Description),
 			WorkspaceTokens: workspaceTokens,
 			UserTokens:      userTokens,
 			UserEmails:      userEmails,

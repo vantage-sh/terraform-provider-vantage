@@ -27,6 +27,7 @@ description: |-
 ### Optional
 
 - `email_recipients` (List of String) The email recipients for the Cost Alert.
+- `minimum_threshold` (Number) The minimum dollar amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.
 - `slack_channels` (List of String) The Slack channels that will receive the alert.
 - `teams_channels` (List of String) The Microsoft Teams channels that will receive the alert.
 

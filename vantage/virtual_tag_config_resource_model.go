@@ -74,7 +74,7 @@ func buildCostMetricFromPayload(ctx context.Context, cm *modelsv2.VirtualTagConf
 	costMetric, d := resource_virtual_tag_config.NewCostMetricValue(
 		resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx),
 		map[string]attr.Value{
-			"filter":      types.StringValue(cm.Filter),
+			"filter":      types.StringPointerValue(cm.Filter),
 			"aggregation": tfAggregation,
 		},
 	)
@@ -90,8 +90,8 @@ func buildPercentagesFromPayload(ctx context.Context, percentages []*modelsv2.Vi
 		pv, d := resource_virtual_tag_config.NewPercentagesValue(
 			resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
-				"pct":   types.Float64Value(*p.Pct),
-				"value": types.StringValue(*p.Value),
+				"pct":   types.Float64Value(p.Pct),
+				"value": types.StringValue(p.Value),
 			},
 		)
 		if d.HasError() {
@@ -130,7 +130,7 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 
 	// Build percentages value
 	var percentagesValue attr.Value = types.ListNull(resource_virtual_tag_config.PercentagesType{
-		basetypes.ObjectType{
+		ObjectType: basetypes.ObjectType{
 			AttrTypes: resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
 		},
 	})
@@ -147,7 +147,7 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
 		map[string]attr.Value{
 			"name":                  nameValue,
-			"filter":                types.StringValue(v.Filter),
+			"filter":                types.StringPointerValue(v.Filter),
 			"business_metric_token": businessMetricTokenValue,
 			"cost_metric":           costMetricValue,
 			"percentages":           percentagesValue,
@@ -166,7 +166,7 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 	m.Key = types.StringValue(payload.Key)
 	m.Overridable = types.BoolValue(payload.Overridable)
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)
-	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
+	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
 
 	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(payload.CollapsedTagKeys))
 	for _, c := range payload.CollapsedTagKeys {

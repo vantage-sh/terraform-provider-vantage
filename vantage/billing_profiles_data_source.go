@@ -80,10 +80,10 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 			var secureDataAttr attr.Value
 			if bp.BankingInformationAttributes.SecureData != nil {
 				secureDataAttrs := map[string]attr.Value{
-					"account_number": types.StringValue(bp.BankingInformationAttributes.SecureData.AccountNumber),
-					"routing_number": types.StringValue(bp.BankingInformationAttributes.SecureData.RoutingNumber),
-					"iban":          types.StringValue(bp.BankingInformationAttributes.SecureData.Iban),
-					"swift_bic":     types.StringValue(bp.BankingInformationAttributes.SecureData.SwiftBic),
+					"account_number": types.StringPointerValue(bp.BankingInformationAttributes.SecureData.AccountNumber),
+					"routing_number": types.StringPointerValue(bp.BankingInformationAttributes.SecureData.RoutingNumber),
+					"iban":          types.StringPointerValue(bp.BankingInformationAttributes.SecureData.Iban),
+					"swift_bic":     types.StringPointerValue(bp.BankingInformationAttributes.SecureData.SwiftBic),
 				}
 				secureDataObj, diag := types.ObjectValue(map[string]attr.Type{
 					"account_number": types.StringType,
@@ -107,9 +107,9 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 			
 			bankingAttrs := map[string]attr.Value{
 				"token":            types.StringValue(bp.BankingInformationAttributes.Token),
-				"bank_name":        types.StringValue(bp.BankingInformationAttributes.BankName),
-				"beneficiary_name": types.StringValue(bp.BankingInformationAttributes.BeneficiaryName),
-				"tax_id":           types.StringValue(bp.BankingInformationAttributes.TaxID),
+				"bank_name":        types.StringPointerValue(bp.BankingInformationAttributes.BankName),
+				"beneficiary_name": types.StringPointerValue(bp.BankingInformationAttributes.BeneficiaryName),
+				"tax_id":           types.StringPointerValue(bp.BankingInformationAttributes.TaxID),
 				"secure_data":      secureDataAttr,
 			}
 			bankingObj, diag := types.ObjectValue(map[string]attr.Type{
@@ -161,13 +161,13 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 			
 			billingAttrs := map[string]attr.Value{
 				"token":          types.StringValue(bp.BillingInformationAttributes.Token),
-				"company_name":   types.StringValue(bp.BillingInformationAttributes.CompanyName),
-				"country_code":   types.StringValue(bp.BillingInformationAttributes.CountryCode),
-				"address_line_1": types.StringValue(bp.BillingInformationAttributes.AddressLine1),
-				"address_line_2": types.StringValue(bp.BillingInformationAttributes.AddressLine2),
-				"city":           types.StringValue(bp.BillingInformationAttributes.City),
-				"state":          types.StringValue(bp.BillingInformationAttributes.State),
-				"postal_code":    types.StringValue(bp.BillingInformationAttributes.PostalCode),
+				"company_name":   types.StringPointerValue(bp.BillingInformationAttributes.CompanyName),
+				"country_code":   types.StringPointerValue(bp.BillingInformationAttributes.CountryCode),
+				"address_line_1": types.StringPointerValue(bp.BillingInformationAttributes.AddressLine1),
+				"address_line_2": types.StringPointerValue(bp.BillingInformationAttributes.AddressLine2),
+				"city":           types.StringPointerValue(bp.BillingInformationAttributes.City),
+				"state":          types.StringPointerValue(bp.BillingInformationAttributes.State),
+				"postal_code":    types.StringPointerValue(bp.BillingInformationAttributes.PostalCode),
 				"billing_email":  billingEmailsList,
 			}
 			billingObj, diag := types.ObjectValue(map[string]attr.Type{
@@ -212,7 +212,7 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 							datasource_billing_profiles.CustomFieldsValue{}.AttributeTypes(ctx),
 							map[string]attr.Value{
 								"name":  types.StringValue(field.Name),
-								"value": types.StringValue(field.Value),
+								"value": types.StringPointerValue(field.Value),
 							},
 						)
 						if diag.HasError() {

@@ -209,7 +209,7 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 	m.SetId(types.StringValue(payload.Token))
 	m.SetCreatedByToken(types.StringValue(payload.CreatedByToken))
 	m.SetImportType(types.StringValue(payload.ImportType))
-	m.SetIntegrationToken(types.StringValue(payload.IntegrationToken))
+	m.SetIntegrationToken(types.StringPointerValue(payload.IntegrationToken))
 
 	tfCloudwatchFields, diag := cloudwatchFieldsFromApiModel(ctx, payload.CloudwatchFields, payload.IntegrationToken)
 	if diag.HasError() {
@@ -645,7 +645,7 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 	data.CostReportTokensWithMetadata = newList
 }
 
-func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.DatadogMetricFields, integrationToken string) (resource_business_metric.DatadogMetricFieldsValue, diag.Diagnostics) {
+func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.DatadogMetricFields, integrationToken *string) (resource_business_metric.DatadogMetricFieldsValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if apiFields == nil {
 		return resource_business_metric.NewDatadogMetricFieldsValueNull(), diags
@@ -658,7 +658,7 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 		},
 		map[string]attr.Value{
 			"query":             types.StringValue(apiFields.Query),
-			"integration_token": types.StringValue(integrationToken),
+			"integration_token": types.StringPointerValue(integrationToken),
 		},
 	)
 	diags.Append(d...)
@@ -666,7 +666,7 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 	return tfValue, diags
 }
 
-func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.CloudwatchFields, integrationToken string) (resource_business_metric.CloudwatchFieldsValue, diag.Diagnostics) {
+func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.CloudwatchFields, integrationToken *string) (resource_business_metric.CloudwatchFieldsValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if apiFields == nil {
 		return resource_business_metric.NewCloudwatchFieldsValueNull(), diags
@@ -720,9 +720,9 @@ func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Cloud
 			"metric_name":       types.StringValue(apiFields.MetricName),
 			"namespace":         types.StringValue(apiFields.Namespace),
 			"region":            types.StringValue(apiFields.Region),
-			"label_dimension":   types.StringValue(apiFields.LabelDimension),
+			"label_dimension":   types.StringPointerValue(apiFields.LabelDimension),
 			"dimensions":        dimensionsListValue,
-			"integration_token": types.StringValue(integrationToken),
+			"integration_token": types.StringPointerValue(integrationToken),
 		},
 	)
 	diags.Append(d...)
