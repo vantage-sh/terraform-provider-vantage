@@ -160,11 +160,11 @@ func buildMetadataValue(ctx context.Context, metadata *modelsv2.BusinessInformat
 	customFieldsElemType := datasource_managed_accounts.CustomFieldsValue{}.Type(ctx)
 	customFieldsListType := types.ListType{ElemType: customFieldsElemType}
 	customFieldsList := types.ListNull(customFieldsElemType)
+	cfAttrTypes := datasource_managed_accounts.CustomFieldsValue{}.AttributeTypes(ctx)
 
 	if metadata.CustomFields != nil && len(metadata.CustomFields) > 0 {
 		customFieldsValues := make([]attr.Value, 0, len(metadata.CustomFields))
 		for _, cf := range metadata.CustomFields {
-			cfAttrTypes := datasource_managed_accounts.CustomFieldsValue{}.AttributeTypes(ctx)
 			cfAttrValues := map[string]attr.Value{
 				"name":  types.StringValue(cf.Name),
 				"value": types.StringPointerValue(cf.Value),
