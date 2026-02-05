@@ -953,29 +953,14 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		)
 	}
 
-	savedFilterTokensVal, d := types.ListValue(types.StringType, v.SavedFilterTokens.Elements())
+	savedFilterTokensVal := types.ListValueMust(types.StringType, v.SavedFilterTokens.Elements())
 
-	diags.Append(d...)
+	if v.SavedFilterTokens.IsNull() {
+		savedFilterTokensVal = types.ListNull(types.StringType)
+	}
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"created_at":    basetypes.StringType{},
-			"date_bin":      basetypes.StringType{},
-			"date_interval": basetypes.StringType{},
-			"end_date":      basetypes.StringType{},
-			"id":            basetypes.StringType{},
-			"saved_filter_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"start_date": basetypes.StringType{},
-			"title":      basetypes.StringType{},
-			"token":      basetypes.StringType{},
-			"updated_at": basetypes.StringType{},
-			"widgets": basetypes.ListType{
-				ElemType: WidgetsValue{}.Type(ctx),
-			},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.SavedFilterTokens.IsUnknown() {
+		savedFilterTokensVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

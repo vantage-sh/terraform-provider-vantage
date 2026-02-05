@@ -685,46 +685,24 @@ func (v AnomalyNotificationsValue) String() string {
 func (v AnomalyNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	recipientChannelsVal, d := types.ListValue(types.StringType, v.RecipientChannels.Elements())
+	recipientChannelsVal := types.ListValueMust(types.StringType, v.RecipientChannels.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"created_at":        basetypes.StringType{},
-			"id":                basetypes.StringType{},
-			"recipient_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":  basetypes.Int64Type{},
-			"token":      basetypes.StringType{},
-			"updated_at": basetypes.StringType{},
-			"user_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-		}), diags
+	if v.RecipientChannels.IsNull() {
+		recipientChannelsVal = types.ListNull(types.StringType)
 	}
 
-	userTokensVal, d := types.ListValue(types.StringType, v.UserTokens.Elements())
+	if v.RecipientChannels.IsUnknown() {
+		recipientChannelsVal = types.ListUnknown(types.StringType)
+	}
 
-	diags.Append(d...)
+	userTokensVal := types.ListValueMust(types.StringType, v.UserTokens.Elements())
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"created_at":        basetypes.StringType{},
-			"id":                basetypes.StringType{},
-			"recipient_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":  basetypes.Int64Type{},
-			"token":      basetypes.StringType{},
-			"updated_at": basetypes.StringType{},
-			"user_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-		}), diags
+	if v.UserTokens.IsNull() {
+		userTokensVal = types.ListNull(types.StringType)
+	}
+
+	if v.UserTokens.IsUnknown() {
+		userTokensVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

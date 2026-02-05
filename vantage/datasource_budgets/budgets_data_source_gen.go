@@ -1007,62 +1007,24 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 		)
 	}
 
-	budgetAlertTokensVal, d := types.ListValue(types.StringType, v.BudgetAlertTokens.Elements())
+	budgetAlertTokensVal := types.ListValueMust(types.StringType, v.BudgetAlertTokens.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"budget_alert_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"child_budget_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"cost_report_token": basetypes.StringType{},
-			"created_at":        basetypes.StringType{},
-			"created_by_token":  basetypes.StringType{},
-			"id":                basetypes.StringType{},
-			"name":              basetypes.StringType{},
-			"performance": basetypes.ListType{
-				ElemType: PerformanceValue{}.Type(ctx),
-			},
-			"periods": basetypes.ListType{
-				ElemType: PeriodsValue{}.Type(ctx),
-			},
-			"token":           basetypes.StringType{},
-			"user_token":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.BudgetAlertTokens.IsNull() {
+		budgetAlertTokensVal = types.ListNull(types.StringType)
 	}
 
-	childBudgetTokensVal, d := types.ListValue(types.StringType, v.ChildBudgetTokens.Elements())
+	if v.BudgetAlertTokens.IsUnknown() {
+		budgetAlertTokensVal = types.ListUnknown(types.StringType)
+	}
 
-	diags.Append(d...)
+	childBudgetTokensVal := types.ListValueMust(types.StringType, v.ChildBudgetTokens.Elements())
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"budget_alert_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"child_budget_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"cost_report_token": basetypes.StringType{},
-			"created_at":        basetypes.StringType{},
-			"created_by_token":  basetypes.StringType{},
-			"id":                basetypes.StringType{},
-			"name":              basetypes.StringType{},
-			"performance": basetypes.ListType{
-				ElemType: PerformanceValue{}.Type(ctx),
-			},
-			"periods": basetypes.ListType{
-				ElemType: PeriodsValue{}.Type(ctx),
-			},
-			"token":           basetypes.StringType{},
-			"user_token":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.ChildBudgetTokens.IsNull() {
+		childBudgetTokensVal = types.ListNull(types.StringType)
+	}
+
+	if v.ChildBudgetTokens.IsUnknown() {
+		childBudgetTokensVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

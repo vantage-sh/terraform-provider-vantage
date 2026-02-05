@@ -1672,18 +1672,14 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	labelFilterVal, d := types.ListValue(types.StringType, v.LabelFilter.Elements())
+	labelFilterVal := types.ListValueMust(types.StringType, v.LabelFilter.Elements())
 
-	diags.Append(d...)
+	if v.LabelFilter.IsNull() {
+		labelFilterVal = types.ListNull(types.StringType)
+	}
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"label_filter": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"unit_scale": basetypes.StringType{},
-		}), diags
+	if v.LabelFilter.IsUnknown() {
+		labelFilterVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

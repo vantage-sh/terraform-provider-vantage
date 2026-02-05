@@ -1009,128 +1009,44 @@ func (v RecommendationViewsValue) String() string {
 func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	accountIdsVal, d := types.ListValue(types.StringType, v.AccountIds.Elements())
+	accountIdsVal := types.ListValueMust(types.StringType, v.AccountIds.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"billing_account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
-			"provider_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"regions": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.AccountIds.IsNull() {
+		accountIdsVal = types.ListNull(types.StringType)
 	}
 
-	billingAccountIdsVal, d := types.ListValue(types.StringType, v.BillingAccountIds.Elements())
-
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"billing_account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
-			"provider_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"regions": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.AccountIds.IsUnknown() {
+		accountIdsVal = types.ListUnknown(types.StringType)
 	}
 
-	providerIdsVal, d := types.ListValue(types.StringType, v.ProviderIds.Elements())
+	billingAccountIdsVal := types.ListValueMust(types.StringType, v.BillingAccountIds.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"billing_account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
-			"provider_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"regions": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.BillingAccountIds.IsNull() {
+		billingAccountIdsVal = types.ListNull(types.StringType)
 	}
 
-	regionsVal, d := types.ListValue(types.StringType, v.Regions.Elements())
+	if v.BillingAccountIds.IsUnknown() {
+		billingAccountIdsVal = types.ListUnknown(types.StringType)
+	}
 
-	diags.Append(d...)
+	providerIdsVal := types.ListValueMust(types.StringType, v.ProviderIds.Elements())
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"billing_account_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
-			"provider_ids": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"regions": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.ProviderIds.IsNull() {
+		providerIdsVal = types.ListNull(types.StringType)
+	}
+
+	if v.ProviderIds.IsUnknown() {
+		providerIdsVal = types.ListUnknown(types.StringType)
+	}
+
+	regionsVal := types.ListValueMust(types.StringType, v.Regions.Elements())
+
+	if v.Regions.IsNull() {
+		regionsVal = types.ListNull(types.StringType)
+	}
+
+	if v.Regions.IsUnknown() {
+		regionsVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

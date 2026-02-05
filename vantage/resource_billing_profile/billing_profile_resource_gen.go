@@ -2023,24 +2023,14 @@ func (v BillingInformationAttributesValue) String() string {
 func (v BillingInformationAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	billingEmailVal, d := types.ListValue(types.StringType, v.BillingEmail.Elements())
+	billingEmailVal := types.ListValueMust(types.StringType, v.BillingEmail.Elements())
 
-	diags.Append(d...)
+	if v.BillingEmail.IsNull() {
+		billingEmailVal = types.ListNull(types.StringType)
+	}
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"address_line_1": basetypes.StringType{},
-			"address_line_2": basetypes.StringType{},
-			"billing_email": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"city":         basetypes.StringType{},
-			"company_name": basetypes.StringType{},
-			"country_code": basetypes.StringType{},
-			"postal_code":  basetypes.StringType{},
-			"state":        basetypes.StringType{},
-			"token":        basetypes.StringType{},
-		}), diags
+	if v.BillingEmail.IsUnknown() {
+		billingEmailVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

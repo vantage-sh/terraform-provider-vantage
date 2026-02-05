@@ -977,60 +977,24 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
-	accessCredentialTokensVal, d := types.ListValue(types.StringType, v.AccessCredentialTokens.Elements())
+	accessCredentialTokensVal := types.ListValueMust(types.StringType, v.AccessCredentialTokens.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"access_credential_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"billing_information_attributes": basetypes.ObjectType{
-				AttrTypes: BillingInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"billing_rule_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"business_information_attributes": basetypes.ObjectType{
-				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"contact_email":             basetypes.StringType{},
-			"email_domain":              basetypes.StringType{},
-			"id":                        basetypes.StringType{},
-			"msp_billing_profile_token": basetypes.StringType{},
-			"name":                      basetypes.StringType{},
-			"parent_account_token":      basetypes.StringType{},
-			"token":                     basetypes.StringType{},
-		}), diags
+	if v.AccessCredentialTokens.IsNull() {
+		accessCredentialTokensVal = types.ListNull(types.StringType)
 	}
 
-	billingRuleTokensVal, d := types.ListValue(types.StringType, v.BillingRuleTokens.Elements())
+	if v.AccessCredentialTokens.IsUnknown() {
+		accessCredentialTokensVal = types.ListUnknown(types.StringType)
+	}
 
-	diags.Append(d...)
+	billingRuleTokensVal := types.ListValueMust(types.StringType, v.BillingRuleTokens.Elements())
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"access_credential_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"billing_information_attributes": basetypes.ObjectType{
-				AttrTypes: BillingInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"billing_rule_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"business_information_attributes": basetypes.ObjectType{
-				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"contact_email":             basetypes.StringType{},
-			"email_domain":              basetypes.StringType{},
-			"id":                        basetypes.StringType{},
-			"msp_billing_profile_token": basetypes.StringType{},
-			"name":                      basetypes.StringType{},
-			"parent_account_token":      basetypes.StringType{},
-			"token":                     basetypes.StringType{},
-		}), diags
+	if v.BillingRuleTokens.IsNull() {
+		billingRuleTokensVal = types.ListNull(types.StringType)
+	}
+
+	if v.BillingRuleTokens.IsUnknown() {
+		billingRuleTokensVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(
@@ -1819,24 +1783,14 @@ func (v BillingInformationAttributesValue) String() string {
 func (v BillingInformationAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	billingEmailVal, d := types.ListValue(types.StringType, v.BillingEmail.Elements())
+	billingEmailVal := types.ListValueMust(types.StringType, v.BillingEmail.Elements())
 
-	diags.Append(d...)
+	if v.BillingEmail.IsNull() {
+		billingEmailVal = types.ListNull(types.StringType)
+	}
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"address_line_1": basetypes.StringType{},
-			"address_line_2": basetypes.StringType{},
-			"billing_email": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"city":         basetypes.StringType{},
-			"company_name": basetypes.StringType{},
-			"country_code": basetypes.StringType{},
-			"postal_code":  basetypes.StringType{},
-			"state":        basetypes.StringType{},
-			"token":        basetypes.StringType{},
-		}), diags
+	if v.BillingEmail.IsUnknown() {
+		billingEmailVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

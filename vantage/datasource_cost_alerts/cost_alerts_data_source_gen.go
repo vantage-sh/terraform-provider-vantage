@@ -1007,128 +1007,44 @@ func (v CostAlertsValue) String() string {
 func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	emailRecipientsVal, d := types.ListValue(types.StringType, v.EmailRecipients.Elements())
+	emailRecipientsVal := types.ListValueMust(types.StringType, v.EmailRecipients.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"created_at": basetypes.StringType{},
-			"email_recipients": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"id":                basetypes.StringType{},
-			"interval":          basetypes.StringType{},
-			"minimum_threshold": basetypes.NumberType{},
-			"report_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"slack_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"teams_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":       basetypes.NumberType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"unit_type":       basetypes.StringType{},
-			"updated_at":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.EmailRecipients.IsNull() {
+		emailRecipientsVal = types.ListNull(types.StringType)
 	}
 
-	reportTokensVal, d := types.ListValue(types.StringType, v.ReportTokens.Elements())
-
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"created_at": basetypes.StringType{},
-			"email_recipients": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"id":                basetypes.StringType{},
-			"interval":          basetypes.StringType{},
-			"minimum_threshold": basetypes.NumberType{},
-			"report_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"slack_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"teams_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":       basetypes.NumberType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"unit_type":       basetypes.StringType{},
-			"updated_at":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.EmailRecipients.IsUnknown() {
+		emailRecipientsVal = types.ListUnknown(types.StringType)
 	}
 
-	slackChannelsVal, d := types.ListValue(types.StringType, v.SlackChannels.Elements())
+	reportTokensVal := types.ListValueMust(types.StringType, v.ReportTokens.Elements())
 
-	diags.Append(d...)
-
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"created_at": basetypes.StringType{},
-			"email_recipients": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"id":                basetypes.StringType{},
-			"interval":          basetypes.StringType{},
-			"minimum_threshold": basetypes.NumberType{},
-			"report_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"slack_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"teams_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":       basetypes.NumberType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"unit_type":       basetypes.StringType{},
-			"updated_at":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.ReportTokens.IsNull() {
+		reportTokensVal = types.ListNull(types.StringType)
 	}
 
-	teamsChannelsVal, d := types.ListValue(types.StringType, v.TeamsChannels.Elements())
+	if v.ReportTokens.IsUnknown() {
+		reportTokensVal = types.ListUnknown(types.StringType)
+	}
 
-	diags.Append(d...)
+	slackChannelsVal := types.ListValueMust(types.StringType, v.SlackChannels.Elements())
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"created_at": basetypes.StringType{},
-			"email_recipients": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"id":                basetypes.StringType{},
-			"interval":          basetypes.StringType{},
-			"minimum_threshold": basetypes.NumberType{},
-			"report_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"slack_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"teams_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":       basetypes.NumberType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"unit_type":       basetypes.StringType{},
-			"updated_at":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		}), diags
+	if v.SlackChannels.IsNull() {
+		slackChannelsVal = types.ListNull(types.StringType)
+	}
+
+	if v.SlackChannels.IsUnknown() {
+		slackChannelsVal = types.ListUnknown(types.StringType)
+	}
+
+	teamsChannelsVal := types.ListValueMust(types.StringType, v.TeamsChannels.Elements())
+
+	if v.TeamsChannels.IsNull() {
+		teamsChannelsVal = types.ListNull(types.StringType)
+	}
+
+	if v.TeamsChannels.IsUnknown() {
+		teamsChannelsVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(

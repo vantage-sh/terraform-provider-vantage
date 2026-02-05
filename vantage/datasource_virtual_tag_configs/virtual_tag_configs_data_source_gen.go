@@ -1262,17 +1262,14 @@ func (v CollapsedTagKeysValue) String() string {
 func (v CollapsedTagKeysValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	providersVal, d := types.ListValue(types.StringType, v.Providers.Elements())
+	providersVal := types.ListValueMust(types.StringType, v.Providers.Elements())
 
-	diags.Append(d...)
+	if v.Providers.IsNull() {
+		providersVal = types.ListNull(types.StringType)
+	}
 
-	if d.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"key": basetypes.StringType{},
-			"providers": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-		}), diags
+	if v.Providers.IsUnknown() {
+		providersVal = types.ListUnknown(types.StringType)
 	}
 
 	objVal, diags := types.ObjectValue(
