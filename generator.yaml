@@ -303,6 +303,26 @@ resources:
             description: The token of the billing profile
         aliases:
           billing_profile_token: token
+  recommendation_view:
+    create:
+      path: /recommendation_views
+      method: POST
+    read:
+      path: /recommendation_views/{recommendation_view_token}
+      method: GET
+    update:
+      path: /recommendation_views/{recommendation_view_token}
+      method: PUT
+    delete:
+      path: /recommendation_views/{recommendation_view_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the recommendation view
+        aliases:
+          recommendation_view_token: token
 data_sources:
   billing_rules:
     read:
@@ -430,6 +450,15 @@ data_sources:
   billing_profiles:
     read:
       path: /billing_profiles
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  recommendation_views:
+    read:
+      path: /recommendation_views
       method: GET
     schema:
       ignores:
