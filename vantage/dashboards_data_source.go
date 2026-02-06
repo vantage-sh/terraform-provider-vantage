@@ -54,6 +54,7 @@ func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
+	state.Dashboards = []dashboardModel{}
 	for _, dashboard := range out.Payload.Dashboards {
 		d := dashboardModel{}
 		if diag := d.applyPayload(ctx, dashboard); diag.HasError() {

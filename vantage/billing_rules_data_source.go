@@ -60,6 +60,7 @@ func (d *billingRulesDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
+	data.BillingRules = []datasourceBillingRuleModel{}
 	for _, billingRule := range apiRes.Payload.BillingRules {
 		var model billingRuleModel
 		diag := model.applyPayload(ctx, billingRule)

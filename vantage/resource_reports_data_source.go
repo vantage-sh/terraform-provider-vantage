@@ -61,6 +61,7 @@ func (r *resourceReportsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
+	state.ResourceReports = []resourceReportDataSourceModel{}
 	for _, report := range out.Payload.ResourceReports {
 		state.ResourceReports = append(state.ResourceReports, resourceReportDataSourceModel{
 			Token:          types.StringValue(report.Token),

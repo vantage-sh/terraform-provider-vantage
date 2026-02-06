@@ -59,6 +59,7 @@ func (d *workspacesDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
+	state.Workspaces = []workspaceDataSourceModel{}
 	for _, workspace := range out.Payload.Workspaces {
 		state.Workspaces = append(state.Workspaces, workspaceDataSourceModel{
 			Token: types.StringValue(workspace.Token),
