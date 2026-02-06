@@ -179,6 +179,47 @@ func TestAccResource_withNewField(t *testing.T) {
 
 ## Common Bugs to Avoid
 
+### Data Sources Need Separate Models from Resources
+
+**Resources** and **data sources** have different schemas, even for the same API entity:
+
+- **Resources** only expose fields you can configure (create/update)
+- **Data sources** expose *all* read-only fields returned by the API
+
+If a data source reuses the resource model, you'll get a "Value Conversion Error" when Terraform tries to map API response fields that don't exist in the struct:
+
+```
+Value Conversion Error: Mismatch between struct and object type: 
+Object defines fields not found in struct: field_a, field_b, field_c
+```
+
+**Solution:** Create a separate model for data sources that matches the generated schema in `datasource_*/`:
+
+```go
+// Resource model - only configurable fields
+type myResourceModel resource_my_resource.MyResourceModel
+
+// Data source model - includes ALL fields from generated schema
+type myDataSourceModel struct {
+    // Include all fields from datasource_my_resource.MyResourceValue
+    ConfigurableField  types.String `tfsdk:"configurable_field"`
+    ReadOnlyFieldA     types.String `tfsdk:"read_only_field_a"`  // Not in resource
+    ReadOnlyFieldB     types.Object `tfsdk:"read_only_field_b"`  // Not in resource
+}
+```
+
+**Important for nested objects:** The generated schema uses custom types (e.g., `CustomFieldsType`, `MetadataType`). When building nested objects, use the generated `New*Value` functions instead of generic `types.ObjectValue`:
+
+```go
+// WRONG - creates generic ObjectType, causes type mismatch
+cfObj, _ := types.ObjectValue(attrTypes, attrValues)
+
+// CORRECT - creates the expected custom type
+cfValue, _ := datasource_my_resource.NewCustomFieldsValue(attrTypes, attrValues)
+```
+
+See `managed_account_resource_model.go` for a complete example of separate resource and data source models.
+
 ### Missing Fields in toCreate/toUpdate
 
 When adding a new field to a resource, you must wire it in **three places**:
