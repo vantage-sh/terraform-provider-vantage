@@ -205,19 +205,22 @@ func (t CostAlertsType) ValueFromObject(ctx context.Context, in basetypes.Object
 			fmt.Sprintf(`interval expected to be basetypes.StringValue, was: %T`, intervalAttribute))
 	}
 
-	var minimumThresholdVal basetypes.NumberValue
 	minimumThresholdAttribute, ok := attributes["minimum_threshold"]
 
 	if !ok {
-		minimumThresholdVal = types.NumberNull()
-	} else {
-		minimumThresholdVal, ok = minimumThresholdAttribute.(basetypes.NumberValue)
+		diags.AddError(
+			"Attribute Missing",
+			`minimum_threshold is missing from object`)
 
-		if !ok {
-			diags.AddError(
-				"Attribute Wrong Type",
-				fmt.Sprintf(`minimum_threshold expected to be basetypes.NumberValue, was: %T`, minimumThresholdAttribute))
-		}
+		return nil, diags
+	}
+
+	minimumThresholdVal, ok := minimumThresholdAttribute.(basetypes.NumberValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`minimum_threshold expected to be basetypes.NumberValue, was: %T`, minimumThresholdAttribute))
 	}
 
 	reportTokensAttribute, ok := attributes["report_tokens"]
@@ -540,19 +543,22 @@ func NewCostAlertsValue(attributeTypes map[string]attr.Type, attributes map[stri
 			fmt.Sprintf(`interval expected to be basetypes.StringValue, was: %T`, intervalAttribute))
 	}
 
-	var minimumThresholdVal basetypes.NumberValue
 	minimumThresholdAttribute, ok := attributes["minimum_threshold"]
 
 	if !ok {
-		minimumThresholdVal = types.NumberNull()
-	} else {
-		minimumThresholdVal, ok = minimumThresholdAttribute.(basetypes.NumberValue)
+		diags.AddError(
+			"Attribute Missing",
+			`minimum_threshold is missing from object`)
 
-		if !ok {
-			diags.AddError(
-				"Attribute Wrong Type",
-				fmt.Sprintf(`minimum_threshold expected to be basetypes.NumberValue, was: %T`, minimumThresholdAttribute))
-		}
+		return NewCostAlertsValueUnknown(), diags
+	}
+
+	minimumThresholdVal, ok := minimumThresholdAttribute.(basetypes.NumberValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`minimum_threshold expected to be basetypes.NumberValue, was: %T`, minimumThresholdAttribute))
 	}
 
 	reportTokensAttribute, ok := attributes["report_tokens"]

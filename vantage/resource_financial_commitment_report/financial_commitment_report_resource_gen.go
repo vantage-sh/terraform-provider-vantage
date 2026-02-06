@@ -78,8 +78,8 @@ func FinancialCommitmentReportResourceSchema(ctx context.Context) schema.Schema 
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
-				MarkdownDescription: "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
+				Description:         "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, commitment_id, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
+				MarkdownDescription: "Grouping values for aggregating costs on the FinancialCommitmentReport. Valid groupings: cost_type, commitment_type, commitment_id, service, resource_account_id, provider_account_id, region, cost_category, cost_sub_category, instance_type, tag, tag:<label_name>.",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,

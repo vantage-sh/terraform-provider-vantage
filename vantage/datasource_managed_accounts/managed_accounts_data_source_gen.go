@@ -296,18 +296,21 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 	}
 
 	emailDomainAttribute, ok := attributes["email_domain"]
-	var emailDomainVal basetypes.StringValue
 
 	if !ok {
-		emailDomainVal = types.StringNull()
-	} else {
-		emailDomainVal, ok = emailDomainAttribute.(basetypes.StringValue)
+		diags.AddError(
+			"Attribute Missing",
+			`email_domain is missing from object`)
 
-		if !ok {
-			diags.AddError(
-				"Attribute Wrong Type",
-				fmt.Sprintf(`email_domain expected to be basetypes.StringValue, was: %T`, emailDomainAttribute))
-		}
+		return nil, diags
+	}
+
+	emailDomainVal, ok := emailDomainAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`email_domain expected to be basetypes.StringValue, was: %T`, emailDomainAttribute))
 	}
 
 	idAttribute, ok := attributes["id"]
@@ -574,18 +577,21 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 	}
 
 	emailDomainAttribute, ok := attributes["email_domain"]
-	var emailDomainVal basetypes.StringValue
 
 	if !ok {
-		emailDomainVal = types.StringNull()
-	} else {
-		emailDomainVal, ok = emailDomainAttribute.(basetypes.StringValue)
+		diags.AddError(
+			"Attribute Missing",
+			`email_domain is missing from object`)
 
-		if !ok {
-			diags.AddError(
-				"Attribute Wrong Type",
-				fmt.Sprintf(`email_domain expected to be basetypes.StringValue, was: %T`, emailDomainAttribute))
-		}
+		return NewManagedAccountsValueUnknown(), diags
+	}
+
+	emailDomainVal, ok := emailDomainAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`email_domain expected to be basetypes.StringValue, was: %T`, emailDomainAttribute))
 	}
 
 	idAttribute, ok := attributes["id"]
