@@ -1063,27 +1063,37 @@ func (v BillingProfilesValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"banking_information_attributes": basetypes.ObjectType{
-				AttrTypes: BankingInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"billing_information_attributes": basetypes.ObjectType{
-				AttrTypes: BillingInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"business_information_attributes": basetypes.ObjectType{
-				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"created_at": basetypes.StringType{},
-			"id":         basetypes.StringType{},
-			"invoice_adjustment_attributes": basetypes.ObjectType{
-				AttrTypes: InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
-			},
-			"managed_accounts_count": basetypes.StringType{},
-			"nickname":               basetypes.StringType{},
-			"token":                  basetypes.StringType{},
-			"updated_at":             basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"banking_information_attributes": basetypes.ObjectType{
+			AttrTypes: BankingInformationAttributesValue{}.AttributeTypes(ctx),
 		},
+		"billing_information_attributes": basetypes.ObjectType{
+			AttrTypes: BillingInformationAttributesValue{}.AttributeTypes(ctx),
+		},
+		"business_information_attributes": basetypes.ObjectType{
+			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
+		},
+		"created_at": basetypes.StringType{},
+		"id":         basetypes.StringType{},
+		"invoice_adjustment_attributes": basetypes.ObjectType{
+			AttrTypes: InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+		},
+		"managed_accounts_count": basetypes.StringType{},
+		"nickname":               basetypes.StringType{},
+		"token":                  basetypes.StringType{},
+		"updated_at":             basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"banking_information_attributes":  bankingInformationAttributes,
 			"billing_information_attributes":  billingInformationAttributes,
@@ -1671,16 +1681,26 @@ func (v BankingInformationAttributesValue) ToObjectValue(ctx context.Context) (b
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"bank_name":        basetypes.StringType{},
-			"beneficiary_name": basetypes.StringType{},
-			"secure_data": basetypes.ObjectType{
-				AttrTypes: SecureDataValue{}.AttributeTypes(ctx),
-			},
-			"tax_id": basetypes.StringType{},
-			"token":  basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"bank_name":        basetypes.StringType{},
+		"beneficiary_name": basetypes.StringType{},
+		"secure_data": basetypes.ObjectType{
+			AttrTypes: SecureDataValue{}.AttributeTypes(ctx),
 		},
+		"tax_id": basetypes.StringType{},
+		"token":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"bank_name":        v.BankName,
 			"beneficiary_name": v.BeneficiaryName,
@@ -2161,13 +2181,23 @@ func (v SecureDataValue) String() string {
 func (v SecureDataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"account_number": basetypes.StringType{},
+		"iban":           basetypes.StringType{},
+		"routing_number": basetypes.StringType{},
+		"swift_bic":      basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"account_number": basetypes.StringType{},
-			"iban":           basetypes.StringType{},
-			"routing_number": basetypes.StringType{},
-			"swift_bic":      basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"account_number": v.AccountNumber,
 			"iban":           v.Iban,
@@ -2882,11 +2912,19 @@ func (v BillingInformationAttributesValue) String() string {
 func (v BillingInformationAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	billingEmailVal, d := types.ListValue(types.StringType, v.BillingEmail.Elements())
+	var billingEmailVal basetypes.ListValue
+	switch {
+	case v.BillingEmail.IsUnknown():
+		billingEmailVal = types.ListUnknown(types.StringType)
+	case v.BillingEmail.IsNull():
+		billingEmailVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		billingEmailVal, d = types.ListValue(types.StringType, v.BillingEmail.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"address_line_1": basetypes.StringType{},
 			"address_line_2": basetypes.StringType{},
@@ -2902,20 +2940,30 @@ func (v BillingInformationAttributesValue) ToObjectValue(ctx context.Context) (b
 		}), diags
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"address_line_1": basetypes.StringType{},
-			"address_line_2": basetypes.StringType{},
-			"billing_email": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"city":         basetypes.StringType{},
-			"company_name": basetypes.StringType{},
-			"country_code": basetypes.StringType{},
-			"postal_code":  basetypes.StringType{},
-			"state":        basetypes.StringType{},
-			"token":        basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"address_line_1": basetypes.StringType{},
+		"address_line_2": basetypes.StringType{},
+		"billing_email": basetypes.ListType{
+			ElemType: types.StringType,
 		},
+		"city":         basetypes.StringType{},
+		"company_name": basetypes.StringType{},
+		"country_code": basetypes.StringType{},
+		"postal_code":  basetypes.StringType{},
+		"state":        basetypes.StringType{},
+		"token":        basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"address_line_1": v.AddressLine1,
 			"address_line_2": v.AddressLine2,
@@ -3347,13 +3395,23 @@ func (v BusinessInformationAttributesValue) ToObjectValue(ctx context.Context) (
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"metadata": basetypes.ObjectType{
-				AttrTypes: MetadataValue{}.AttributeTypes(ctx),
-			},
-			"token": basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"metadata": basetypes.ObjectType{
+			AttrTypes: MetadataValue{}.AttributeTypes(ctx),
 		},
+		"token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"metadata": metadata,
 			"token":    v.Token,
@@ -3703,12 +3761,22 @@ func (v MetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"custom_fields": basetypes.ListType{
-				ElemType: CustomFieldsValue{}.Type(ctx),
-			},
+	attributeTypes := map[string]attr.Type{
+		"custom_fields": basetypes.ListType{
+			ElemType: CustomFieldsValue{}.Type(ctx),
 		},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"custom_fields": customFields,
 		})
@@ -4069,11 +4137,21 @@ func (v CustomFieldsValue) String() string {
 func (v CustomFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"name":  basetypes.StringType{},
+		"value": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"name":  basetypes.StringType{},
-			"value": basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"name":  v.Name,
 			"value": v.Value,
@@ -4469,13 +4547,23 @@ func (v InvoiceAdjustmentAttributesValue) ToObjectValue(ctx context.Context) (ba
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"adjustment_items": basetypes.ListType{
-				ElemType: AdjustmentItemsValue{}.Type(ctx),
-			},
-			"token": basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"adjustment_items": basetypes.ListType{
+			ElemType: AdjustmentItemsValue{}.Type(ctx),
 		},
+		"token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"adjustment_items": adjustmentItems,
 			"token":            v.Token,
@@ -4938,13 +5026,23 @@ func (v AdjustmentItemsValue) String() string {
 func (v AdjustmentItemsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"adjustment_type":  basetypes.StringType{},
+		"amount":           basetypes.StringType{},
+		"calculation_type": basetypes.StringType{},
+		"name":             basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"adjustment_type":  basetypes.StringType{},
-			"amount":           basetypes.StringType{},
-			"calculation_type": basetypes.StringType{},
-			"name":             basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"adjustment_type":  v.AdjustmentType,
 			"amount":           v.Amount,
