@@ -898,31 +898,21 @@ func (v InvoicesValue) String() string {
 func (v InvoicesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"account_name":         basetypes.StringType{},
-		"account_token":        basetypes.StringType{},
-		"billing_period_end":   basetypes.StringType{},
-		"billing_period_start": basetypes.StringType{},
-		"created_at":           basetypes.StringType{},
-		"id":                   basetypes.StringType{},
-		"invoice_number":       basetypes.StringType{},
-		"msp_account_token":    basetypes.StringType{},
-		"status":               basetypes.StringType{},
-		"token":                basetypes.StringType{},
-		"total":                basetypes.StringType{},
-		"updated_at":           basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"account_name":         basetypes.StringType{},
+			"account_token":        basetypes.StringType{},
+			"billing_period_end":   basetypes.StringType{},
+			"billing_period_start": basetypes.StringType{},
+			"created_at":           basetypes.StringType{},
+			"id":                   basetypes.StringType{},
+			"invoice_number":       basetypes.StringType{},
+			"msp_account_token":    basetypes.StringType{},
+			"status":               basetypes.StringType{},
+			"token":                basetypes.StringType{},
+			"total":                basetypes.StringType{},
+			"updated_at":           basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"account_name":         v.AccountName,
 			"account_token":        v.AccountToken,

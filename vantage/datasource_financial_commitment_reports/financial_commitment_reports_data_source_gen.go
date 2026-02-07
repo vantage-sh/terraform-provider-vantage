@@ -997,33 +997,23 @@ func (v FinancialCommitmentReportsValue) String() string {
 func (v FinancialCommitmentReportsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"created_at":            basetypes.StringType{},
-		"date_bucket":           basetypes.StringType{},
-		"date_interval":         basetypes.StringType{},
-		"default":               basetypes.BoolType{},
-		"end_date":              basetypes.StringType{},
-		"filter":                basetypes.StringType{},
-		"groupings":             basetypes.StringType{},
-		"id":                    basetypes.StringType{},
-		"on_demand_costs_scope": basetypes.StringType{},
-		"start_date":            basetypes.StringType{},
-		"title":                 basetypes.StringType{},
-		"token":                 basetypes.StringType{},
-		"user_token":            basetypes.StringType{},
-		"workspace_token":       basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"created_at":            basetypes.StringType{},
+			"date_bucket":           basetypes.StringType{},
+			"date_interval":         basetypes.StringType{},
+			"default":               basetypes.BoolType{},
+			"end_date":              basetypes.StringType{},
+			"filter":                basetypes.StringType{},
+			"groupings":             basetypes.StringType{},
+			"id":                    basetypes.StringType{},
+			"on_demand_costs_scope": basetypes.StringType{},
+			"start_date":            basetypes.StringType{},
+			"title":                 basetypes.StringType{},
+			"token":                 basetypes.StringType{},
+			"user_token":            basetypes.StringType{},
+			"workspace_token":       basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"created_at":            v.CreatedAt,
 			"date_bucket":           v.DateBucket,

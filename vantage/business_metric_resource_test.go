@@ -90,7 +90,7 @@ func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 	}
 
 	// Also verify computed values were preserved from API response
-	expectedUnitScales := []string{"per_unit", "per_thousand", "per_million"}
+	expectedUnitScales := []string{"per_unit", "per_thousand", "per_zillion"}
 	for i, expected := range expectedUnitScales {
 		if tokens[i].UnitScale.ValueString() != expected {
 			t.Errorf("UnitScale at index %d: expected %q, got %q", i, expected, tokens[i].UnitScale.ValueString())
@@ -526,7 +526,7 @@ resource "vantage_cost_report" "report3" {
 
 resource "vantage_business_metric" %[1]q {
   title = %[2]q
-  
+
   cost_report_tokens_with_metadata = [
     {
       cost_report_token = vantage_cost_report.report1.token
@@ -712,7 +712,7 @@ resource "vantage_cost_report" "providers" {
 
 resource "vantage_business_metric" %[1]q {
   title = %[2]q
-  
+
   cost_report_tokens_with_metadata = [
     {
       cost_report_token = vantage_cost_report.all_resources.token

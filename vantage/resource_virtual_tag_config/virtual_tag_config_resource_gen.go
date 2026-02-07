@@ -494,19 +494,11 @@ func (v CollapsedTagKeysValue) String() string {
 func (v CollapsedTagKeysValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var providersVal basetypes.ListValue
-	switch {
-	case v.Providers.IsUnknown():
-		providersVal = types.ListUnknown(types.StringType)
-	case v.Providers.IsNull():
-		providersVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		providersVal, d = types.ListValue(types.StringType, v.Providers.Elements())
-		diags.Append(d...)
-	}
+	providersVal, d := types.ListValue(types.StringType, v.Providers.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"key": basetypes.StringType{},
 			"providers": basetypes.ListType{
@@ -515,23 +507,13 @@ func (v CollapsedTagKeysValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		}), diags
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"key": basetypes.StringType{},
-		"providers": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"key": basetypes.StringType{},
+			"providers": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+		},
 		map[string]attr.Value{
 			"key":       v.Key,
 			"providers": providersVal,
@@ -1096,28 +1078,18 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"business_metric_token": basetypes.StringType{},
-		"cost_metric": basetypes.ObjectType{
-			AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
-		},
-		"filter": basetypes.StringType{},
-		"name":   basetypes.StringType{},
-		"percentages": basetypes.ListType{
-			ElemType: PercentagesValue{}.Type(ctx),
-		},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"business_metric_token": basetypes.StringType{},
+			"cost_metric": basetypes.ObjectType{
+				AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
+			},
+			"filter": basetypes.StringType{},
+			"name":   basetypes.StringType{},
+			"percentages": basetypes.ListType{
+				ElemType: PercentagesValue{}.Type(ctx),
+			},
+		},
 		map[string]attr.Value{
 			"business_metric_token": v.BusinessMetricToken,
 			"cost_metric":           costMetric,
@@ -1527,23 +1499,13 @@ func (v CostMetricValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"aggregation": basetypes.ObjectType{
-			AttrTypes: AggregationValue{}.AttributeTypes(ctx),
-		},
-		"filter": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"aggregation": basetypes.ObjectType{
+				AttrTypes: AggregationValue{}.AttributeTypes(ctx),
+			},
+			"filter": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"aggregation": aggregation,
 			"filter":      v.Filter,
@@ -1862,20 +1824,10 @@ func (v AggregationValue) String() string {
 func (v AggregationValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"tag": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"tag": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"tag": v.Tag,
 		})
@@ -2234,21 +2186,11 @@ func (v PercentagesValue) String() string {
 func (v PercentagesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"pct":   basetypes.Float64Type{},
-		"value": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"pct":   basetypes.Float64Type{},
+			"value": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"pct":   v.Pct,
 			"value": v.Value,

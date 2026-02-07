@@ -896,34 +896,24 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"cloudwatch_fields": basetypes.ObjectType{
-			AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
-		},
-		"cost_report_tokens_with_metadata": basetypes.ListType{
-			ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
-		},
-		"created_by_token": basetypes.StringType{},
-		"datadog_metric_fields": basetypes.ObjectType{
-			AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
-		},
-		"id":                basetypes.StringType{},
-		"import_type":       basetypes.StringType{},
-		"integration_token": basetypes.StringType{},
-		"title":             basetypes.StringType{},
-		"token":             basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"cloudwatch_fields": basetypes.ObjectType{
+				AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
+			},
+			"cost_report_tokens_with_metadata": basetypes.ListType{
+				ElemType: CostReportTokensWithMetadataValue{}.Type(ctx),
+			},
+			"created_by_token": basetypes.StringType{},
+			"datadog_metric_fields": basetypes.ObjectType{
+				AttrTypes: DatadogMetricFieldsValue{}.AttributeTypes(ctx),
+			},
+			"id":                basetypes.StringType{},
+			"import_type":       basetypes.StringType{},
+			"integration_token": basetypes.StringType{},
+			"title":             basetypes.StringType{},
+			"token":             basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"cloudwatch_fields":                cloudwatchFields,
 			"cost_report_tokens_with_metadata": costReportTokensWithMetadata,
@@ -1559,27 +1549,17 @@ func (v CloudwatchFieldsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		)
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"dimensions": basetypes.ListType{
-			ElemType: DimensionsValue{}.Type(ctx),
-		},
-		"label_dimension": basetypes.StringType{},
-		"metric_name":     basetypes.StringType{},
-		"namespace":       basetypes.StringType{},
-		"region":          basetypes.StringType{},
-		"stat":            basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"dimensions": basetypes.ListType{
+				ElemType: DimensionsValue{}.Type(ctx),
+			},
+			"label_dimension": basetypes.StringType{},
+			"metric_name":     basetypes.StringType{},
+			"namespace":       basetypes.StringType{},
+			"region":          basetypes.StringType{},
+			"stat":            basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"dimensions":      dimensions,
 			"label_dimension": v.LabelDimension,
@@ -1970,21 +1950,11 @@ func (v DimensionsValue) String() string {
 func (v DimensionsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"name":  basetypes.StringType{},
-		"value": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"name":  basetypes.StringType{},
+			"value": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"name":  v.Name,
 			"value": v.Value,
@@ -2399,19 +2369,11 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var labelFilterVal basetypes.ListValue
-	switch {
-	case v.LabelFilter.IsUnknown():
-		labelFilterVal = types.ListUnknown(types.StringType)
-	case v.LabelFilter.IsNull():
-		labelFilterVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		labelFilterVal, d = types.ListValue(types.StringType, v.LabelFilter.Elements())
-		diags.Append(d...)
-	}
+	labelFilterVal, d := types.ListValue(types.StringType, v.LabelFilter.Elements())
 
-	if diags.HasError() {
+	diags.Append(d...)
+
+	if d.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"cost_report_token": basetypes.StringType{},
 			"label_filter": basetypes.ListType{
@@ -2421,24 +2383,14 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		}), diags
 	}
 
-	attributeTypes := map[string]attr.Type{
-		"cost_report_token": basetypes.StringType{},
-		"label_filter": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"unit_scale": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"cost_report_token": basetypes.StringType{},
+			"label_filter": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"unit_scale": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"cost_report_token": v.CostReportToken,
 			"label_filter":      labelFilterVal,
@@ -2763,20 +2715,10 @@ func (v DatadogMetricFieldsValue) String() string {
 func (v DatadogMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	attributeTypes := map[string]attr.Type{
-		"query": basetypes.StringType{},
-	}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
 	objVal, diags := types.ObjectValue(
-		attributeTypes,
+		map[string]attr.Type{
+			"query": basetypes.StringType{},
+		},
 		map[string]attr.Value{
 			"query": v.Query,
 		})
