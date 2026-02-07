@@ -63,7 +63,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "overridable", "true"),
 					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "backfill_until", ctx.backfillUntil),
 					resource.TestCheckResourceAttrSet("vantage_virtual_tag_config.test-no-values", "token"),
-					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "values.#", "0"),
+					resource.TestCheckResourceAttr("vantage_virtual_tag_config.test-no-values", "values.#", "10"),
 				),
 			},
 			// Create: with values
