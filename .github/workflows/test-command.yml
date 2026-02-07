@@ -1,0 +1,152 @@
+name: Acceptance Tests (/test)
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  test-command:
+    name: Trigger Tests via /test Command
+    runs-on: ubuntu-latest
+    # Only run on PR comments that start with /test
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/test')
+
+    steps:
+      - name: Check Organization Membership
+        id: check-org
+        env:
+          GH_TOKEN: ${{ secrets.API_REPO_DISPATCH_PAT }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          # Validate username format (GitHub: alphanumeric + hyphens, 1-39 chars)
+          if [[ ! "$COMMENTER" =~ ^[a-zA-Z0-9-]{1,39}$ ]]; then
+            echo "::error::Invalid commenter username format"
+            echo "is_member=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if commenter is an org member
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/orgs/vantage-sh/members/$COMMENTER")
+
+          if [[ "$HTTP_CODE" == "204" ]]; then
+            echo "is_member=true" >> "$GITHUB_OUTPUT"
+            echo "$COMMENTER is an org member"
+          else
+            echo "is_member=false" >> "$GITHUB_OUTPUT"
+            echo "$COMMENTER is not an org member (HTTP $HTTP_CODE)"
+          fi
+
+      - name: React with Eyes (Acknowledged)
+        if: steps.check-org.outputs.is_member == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/issues/comments/$COMMENT_ID/reactions" \
+            -d '{"content": "eyes"}'
+
+      - name: Get PR Details
+        if: steps.check-org.outputs.is_member == 'true'
+        id: pr-details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # Get PR details
+          PR_DATA=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pulls/$ISSUE_NUMBER")
+
+          SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
+
+          # Verify API response returned valid data
+          if [[ -z "$SHA" || "$SHA" == "null" ]]; then
+            echo "::error::Failed to get PR head SHA from API"
+            exit 1
+          fi
+          if [[ -z "$PR_AUTHOR" || "$PR_AUTHOR" == "null" ]]; then
+            echo "::error::Failed to get PR author from API"
+            exit 1
+          fi
+
+          # Validate SHA format (40 hex chars)
+          if [[ ! "$SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "::error::Invalid SHA format: $SHA"
+            exit 1
+          fi
+
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "pr_author=$PR_AUTHOR" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger Vantage-sh Workflow
+        if: steps.check-org.outputs.is_member == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.API_REPO_DISPATCH_PAT }}
+          PR_NUMBER: ${{ steps.pr-details.outputs.pr_number }}
+          SHA: ${{ steps.pr-details.outputs.sha }}
+          PR_AUTHOR: ${{ steps.pr-details.outputs.pr_author }}
+          APPROVED_BY: ${{ github.event.comment.user.login }}
+        run: |
+          # Send repository_dispatch to trigger acceptance tests with approved_by field
+          curl -sfS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/vantage-sh/core/dispatches" \
+            -d "$(jq -n \
+              --argjson pr_number "$PR_NUMBER" \
+              --arg sha "$SHA" \
+              --arg pr_author "$PR_AUTHOR" \
+              --arg approved_by "$APPROVED_BY" \
+              '{
+                event_type: "terraform-provider-test",
+                client_payload: {
+                  pr_number: $pr_number,
+                  sha: $sha,
+                  pr_author: $pr_author,
+                  approved_by: $approved_by
+                }
+              }')"
+
+          echo "Triggered acceptance tests for PR #$PR_NUMBER"
+          echo "Commit: $SHA"
+          echo "PR Author: $PR_AUTHOR"
+          echo "Approved by: $APPROVED_BY"
+
+      - name: React with Rocket (Triggered)
+        if: steps.check-org.outputs.is_member == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/issues/comments/$COMMENT_ID/reactions" \
+            -d '{"content": "rocket"}'
+
+      - name: React with Confused (Not Authorized)
+        if: steps.check-org.outputs.is_member == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/issues/comments/$COMMENT_ID/reactions" \
+            -d '{"content": "confused"}'
