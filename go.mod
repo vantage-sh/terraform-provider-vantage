@@ -1,8 +1,8 @@
 module github.com/vantage-sh/terraform-provider-vantage
 
-go 1.21
+go 1.23
 
-toolchain go1.21.5
+toolchain go1.23.0
 
 require (
 	github.com/go-openapi/runtime v0.26.0
