@@ -36,6 +36,13 @@ resource "vantage_recommendation_view" "filtered" {
   end_date        = "2024-12-31"
 }
 
+# Recommendation view with minimum savings filter
+resource "vantage_recommendation_view" "high_savings" {
+  title           = "High Savings Recommendations"
+  workspace_token = data.vantage_workspaces.main.workspaces[0].token
+  min_savings     = 100.0
+}
+
 # Recommendation view with tag filter
 resource "vantage_recommendation_view" "tagged" {
   title           = "Production Environment Recommendations"
@@ -58,6 +65,7 @@ resource "vantage_recommendation_view" "tagged" {
 - `account_ids` (List of String) Filter by cloud account identifiers.
 - `billing_account_ids` (List of String) Filter by billing account identifiers.
 - `end_date` (String) Filter recommendations created on/before this YYYY-MM-DD date.
+- `min_savings` (Number) Filter recommendations with monthly savings greater than or equal to this amount.
 - `provider_ids` (List of String) Filter by one or more providers (e.g. aws, gcp, azure, kubernetes, datadog).
 - `regions` (List of String) Filter by region slugs (e.g. us-east-1, eastus, asia-east1).
 - `start_date` (String) Filter recommendations created on/after this YYYY-MM-DD date.

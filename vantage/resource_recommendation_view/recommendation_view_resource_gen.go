@@ -42,6 +42,12 @@ func RecommendationViewResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Filter recommendations created on/before this YYYY-MM-DD date.",
 				MarkdownDescription: "Filter recommendations created on/before this YYYY-MM-DD date.",
 			},
+			"min_savings": schema.Float64Attribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Filter recommendations with monthly savings greater than or equal to this amount.",
+				MarkdownDescription: "Filter recommendations with monthly savings greater than or equal to this amount.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The id of the recommendation view",
@@ -99,18 +105,19 @@ func RecommendationViewResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type RecommendationViewModel struct {
-	AccountIds        types.List   `tfsdk:"account_ids"`
-	BillingAccountIds types.List   `tfsdk:"billing_account_ids"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	CreatedBy         types.String `tfsdk:"created_by"`
-	EndDate           types.String `tfsdk:"end_date"`
-	Id                types.String `tfsdk:"id"`
-	ProviderIds       types.List   `tfsdk:"provider_ids"`
-	Regions           types.List   `tfsdk:"regions"`
-	StartDate         types.String `tfsdk:"start_date"`
-	TagKey            types.String `tfsdk:"tag_key"`
-	TagValue          types.String `tfsdk:"tag_value"`
-	Title             types.String `tfsdk:"title"`
-	Token             types.String `tfsdk:"token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	AccountIds        types.List    `tfsdk:"account_ids"`
+	BillingAccountIds types.List    `tfsdk:"billing_account_ids"`
+	CreatedAt         types.String  `tfsdk:"created_at"`
+	CreatedBy         types.String  `tfsdk:"created_by"`
+	EndDate           types.String  `tfsdk:"end_date"`
+	Id                types.String  `tfsdk:"id"`
+	MinSavings        types.Float64 `tfsdk:"min_savings"`
+	ProviderIds       types.List    `tfsdk:"provider_ids"`
+	Regions           types.List    `tfsdk:"regions"`
+	StartDate         types.String  `tfsdk:"start_date"`
+	TagKey            types.String  `tfsdk:"tag_key"`
+	TagValue          types.String  `tfsdk:"tag_value"`
+	Title             types.String  `tfsdk:"title"`
+	Token             types.String  `tfsdk:"token"`
+	WorkspaceToken    types.String  `tfsdk:"workspace_token"`
 }

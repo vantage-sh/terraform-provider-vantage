@@ -25,6 +25,13 @@ func (m *recommendationViewResourceModel) applyPayload(ctx context.Context, payl
 	m.TagKey = types.StringValue(payload.TagKey)
 	m.TagValue = types.StringValue(payload.TagValue)
 
+	// Handle min_savings - convert from API float to Terraform Float64
+	if payload.MinSavings != 0 {
+		m.MinSavings = types.Float64Value(payload.MinSavings)
+	} else {
+		m.MinSavings = types.Float64Null()
+	}
+
 	// Handle list fields - convert from API arrays to Terraform lists
 	providerIds, d := types.ListValueFrom(ctx, types.StringType, payload.ProviderIds)
 	if d.HasError() {
@@ -78,6 +85,10 @@ func (m *recommendationViewResourceModel) toCreateModel(ctx context.Context, dia
 
 	if !m.TagValue.IsNull() && !m.TagValue.IsUnknown() {
 		dst.TagValue = m.TagValue.ValueString()
+	}
+
+	if !m.MinSavings.IsNull() && !m.MinSavings.IsUnknown() {
+		dst.MinSavings = m.MinSavings.ValueFloat64()
 	}
 
 	// Handle list fields - default to empty arrays per AGENTS.md guidelines
@@ -152,6 +163,10 @@ func (m *recommendationViewResourceModel) toUpdateModel(ctx context.Context, dia
 
 	if !m.TagValue.IsNull() && !m.TagValue.IsUnknown() {
 		dst.TagValue = m.TagValue.ValueString()
+	}
+
+	if !m.MinSavings.IsNull() && !m.MinSavings.IsUnknown() {
+		dst.MinSavings = m.MinSavings.ValueFloat64()
 	}
 
 	// Handle list fields - default to empty arrays per AGENTS.md guidelines
