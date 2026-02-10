@@ -24,13 +24,7 @@ func (m *recommendationViewResourceModel) applyPayload(ctx context.Context, payl
 	m.EndDate = types.StringValue(payload.EndDate)
 	m.TagKey = types.StringValue(payload.TagKey)
 	m.TagValue = types.StringValue(payload.TagValue)
-
-	// Handle min_savings - convert from API float to Terraform Float64
-	if payload.MinSavings != 0 {
-		m.MinSavings = types.Float64Value(payload.MinSavings)
-	} else {
-		m.MinSavings = types.Float64Null()
-	}
+	m.MinSavings = types.Float64Value(payload.MinSavings)
 
 	// Handle list fields - convert from API arrays to Terraform lists
 	providerIds, d := types.ListValueFrom(ctx, types.StringType, payload.ProviderIds)
