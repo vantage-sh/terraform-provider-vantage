@@ -28,6 +28,24 @@ type Client struct {
 	Auth runtime.ClientAuthInfoWriter
 }
 
+// timeoutTransport wraps a runtime.ClientTransport and sets the request timeout
+// on every operation so the go-openapi default (30s) is overridden by the provider's configured timeout.
+type timeoutTransport struct {
+	inner   runtime.ClientTransport
+	timeout time.Duration
+}
+
+func (t *timeoutTransport) Submit(operation *runtime.ClientOperation) (interface{}, error) {
+	originalParams := operation.Params
+	operation.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, reg strfmt.Registry) error {
+		if err := originalParams.WriteToRequest(req, reg); err != nil {
+			return err
+		}
+		return req.SetTimeout(t.timeout)
+	})
+	return t.inner.Submit(operation)
+}
+
 func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, error) {
 	parsedURL, err := url.Parse(host)
 	if err != nil {
@@ -43,7 +61,7 @@ func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, 
 	}
 	transportv1 := httptransport.NewWithClient(v1Cfg.Host, v1Cfg.BasePath, v1Cfg.Schemes, httpClientV1)
 	transportv1.SetDebug(debug)
-	v1 := vantagev1.New(transportv1, strfmt.Default)
+	v1 := vantagev1.New(&timeoutTransport{inner: transportv1, timeout: timeout}, strfmt.Default)
 
 	v2Cfg := vantagev2.DefaultTransportConfig()
 	v2Cfg.WithHost(parsedURL.Host)
@@ -54,7 +72,7 @@ func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, 
 	}
 	transportv2 := httptransport.NewWithClient(v2Cfg.Host, v2Cfg.BasePath, v2Cfg.Schemes, httpClientV2)
 	transportv2.SetDebug(debug)
-	v2 := vantagev2.New(transportv2, strfmt.Default)
+	v2 := vantagev2.New(&timeoutTransport{inner: transportv2, timeout: timeout}, strfmt.Default)
 
 	bearerTokenAuth := httptransport.BearerToken(token)
 	return &Client{
