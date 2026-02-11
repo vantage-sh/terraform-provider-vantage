@@ -24,6 +24,7 @@ func (m *recommendationViewResourceModel) applyPayload(ctx context.Context, payl
 	m.EndDate = types.StringValue(payload.EndDate)
 	m.TagKey = types.StringValue(payload.TagKey)
 	m.TagValue = types.StringValue(payload.TagValue)
+	m.MinSavings = types.Float64Value(payload.MinSavings)
 
 	// Handle list fields - convert from API arrays to Terraform lists
 	providerIds, d := types.ListValueFrom(ctx, types.StringType, payload.ProviderIds)
@@ -78,6 +79,10 @@ func (m *recommendationViewResourceModel) toCreateModel(ctx context.Context, dia
 
 	if !m.TagValue.IsNull() && !m.TagValue.IsUnknown() {
 		dst.TagValue = m.TagValue.ValueString()
+	}
+
+	if !m.MinSavings.IsNull() && !m.MinSavings.IsUnknown() {
+		dst.MinSavings = m.MinSavings.ValueFloat64()
 	}
 
 	// Handle list fields - default to empty arrays per AGENTS.md guidelines
@@ -152,6 +157,10 @@ func (m *recommendationViewResourceModel) toUpdateModel(ctx context.Context, dia
 
 	if !m.TagValue.IsNull() && !m.TagValue.IsUnknown() {
 		dst.TagValue = m.TagValue.ValueString()
+	}
+
+	if !m.MinSavings.IsNull() && !m.MinSavings.IsUnknown() {
+		dst.MinSavings = m.MinSavings.ValueFloat64()
 	}
 
 	// Handle list fields - default to empty arrays per AGENTS.md guidelines

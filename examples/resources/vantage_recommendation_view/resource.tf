@@ -28,3 +28,10 @@ resource "vantage_recommendation_view" "tagged" {
   tag_key         = "environment"
   tag_value       = "production"
 }
+
+# Recommendation view with minimum savings filter
+resource "vantage_recommendation_view" "high_savings" {
+  title           = "High Savings Recommendations"
+  workspace_token = data.vantage_workspaces.main.workspaces[0].token
+  min_savings     = 100.0
+}
