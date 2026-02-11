@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -80,11 +79,6 @@ data "vantage_billing_profiles" "test" {
 // Note: This test requires MSP invoicing to be enabled on the account.
 // It will be skipped in environments without MSP access.
 func TestAccBillingProfilesDataSource_multipleAdjustmentItems(t *testing.T) {
-	// Skip if MSP billing is not available (indicated by MANAGED_ACCOUNT_DOMAIN not being set)
-	if os.Getenv("MANAGED_ACCOUNT_DOMAIN") == "" {
-		t.Skip("Skipping test: MSP invoicing required (MANAGED_ACCOUNT_DOMAIN not set)")
-	}
-
 	nickname := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 
 	resource.Test(t, resource.TestCase{

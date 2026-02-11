@@ -314,9 +314,6 @@ func testAccVantageBusinessMetricTf_basic(id string, title string, valuesStr str
 }
 
 func TestAccBusinessMetric_cloudwatch(t *testing.T) {
-	t.Skip("Skipping until we have support for Integrations/AccessCredentials")
-	// NOTE: You will also have to replace the hard coded access credential token in the test data.
-	//
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -334,7 +331,6 @@ func TestAccBusinessMetric_cloudwatch(t *testing.T) {
 				),
 			},
 			{
-				// Test updating CloudWatch fields
 				Config: testAccVantageBusinessMetricTf_cloudwatch_updated("test-cloudwatch", "CloudWatch Test Updated"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vantage_business_metric.test-cloudwatch", "token"),
@@ -349,6 +345,12 @@ func TestAccBusinessMetric_cloudwatch(t *testing.T) {
 
 func testAccVantageBusinessMetricTf_cloudwatch(id string, title string) string {
 	return fmt.Sprintf(`
+data "vantage_integrations" "test" {}
+
+locals {
+  aws_integration_token = [for i in data.vantage_integrations.test.integrations : i.token if i.provider == "aws"][0]
+}
+
 resource "vantage_business_metric" %[1]q {
   title = %[2]q
 
@@ -359,12 +361,12 @@ resource "vantage_business_metric" %[1]q {
         value = "12345"
       }
     ]
-		metric_name = "CPUUtilization"
+    metric_name = "CPUUtilization"
     namespace = "AWS/EC2"
     region = "us-east-1"
     stat = "Average"
     label_dimension = "InstanceId"
-    integration_token = "accss_crdntl_4e4a878a8f885856"
+    integration_token = local.aws_integration_token
   }
 }
 `, id, title)
@@ -372,75 +374,28 @@ resource "vantage_business_metric" %[1]q {
 
 func testAccVantageBusinessMetricTf_cloudwatch_updated(id string, title string) string {
 	return fmt.Sprintf(`
+data "vantage_integrations" "test" {}
+
+locals {
+  aws_integration_token = [for i in data.vantage_integrations.test.integrations : i.token if i.provider == "aws"][0]
+}
+
 resource "vantage_business_metric" %[1]q {
   title = %[2]q
 
   cloudwatch_fields = {
-	  dimensions = [
-	    {
-	      name = "InstanceId"
-	      value = "12345"
-	    }
-	  ]
+    dimensions = [
+      {
+        name = "InstanceId"
+        value = "12345"
+      }
+    ]
     metric_name = "MemoryUtilization"
     namespace = "AWS/ECS"
     region = "us-east-1"
     stat = "Maximum"
     label_dimension = "ClusterName"
-    integration_token = "accss_crdntl_4e4a878a8f885856"
-  }
-}
-`, id, title)
-}
-
-func TestAccBusinessMetric_datadog(t *testing.T) {
-	t.Skip("Skipping until we have support for Integrations/AccessCredentials")
-	// NOTE: You will also have to replace the hard coded access credential token in the test data.
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccVantageBusinessMetricTf_datadog("test-datadog", "Datadog Test"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vantage_business_metric.test-datadog", "token"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "title", "Datadog Test"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.cpu.user{*}.rollup(avg, daily)"),
-				),
-			},
-			{
-				// Test updating Datadog query
-				Config: testAccVantageBusinessMetricTf_datadog_updated("test-datadog", "Datadog Test Updated"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vantage_business_metric.test-datadog", "token"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "title", "Datadog Test Updated"),
-					resource.TestCheckResourceAttr("vantage_business_metric.test-datadog", "datadog_metric_fields.query", "avg:system.memory.used{*}.rollup(avg, daily)"),
-				),
-			},
-		},
-	})
-}
-
-func testAccVantageBusinessMetricTf_datadog(id string, title string) string {
-	return fmt.Sprintf(`
-resource "vantage_business_metric" %[1]q {
-  title = %[2]q
-  datadog_metric_fields = {
-    query = "avg:system.cpu.user{*}.rollup(avg, daily)"
-    integration_token = "accss_crdntl_27a4dff7012ecce3"
-  }
-}
-`, id, title)
-}
-
-func testAccVantageBusinessMetricTf_datadog_updated(id string, title string) string {
-	return fmt.Sprintf(`
-resource "vantage_business_metric" %[1]q {
-  title = %[2]q
-  datadog_metric_fields = {
-    query = "avg:system.memory.used{*}.rollup(avg, daily)"
-    integration_token = "accss_crdntl_27a4dff7012ecce3"
+    integration_token = local.aws_integration_token
   }
 }
 `, id, title)

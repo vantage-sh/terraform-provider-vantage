@@ -65,6 +65,7 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
+	state.Segments = []segmentDataSourceModel{}
 	for _, segment := range out.Payload.Segments {
 
 		state.Segments = append(state.Segments, segmentDataSourceModel{

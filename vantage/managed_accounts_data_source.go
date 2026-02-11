@@ -62,6 +62,7 @@ func (d *managedAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
+	data.ManagedAccounts = []managedAccountDataSourceModel{}
 	for _, m := range apiRes.Payload.ManagedAccounts {
 		var model managedAccountDataSourceModel
 		diag := model.applyPayloadDataSource(ctx, m)
