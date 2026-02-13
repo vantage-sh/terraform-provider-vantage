@@ -107,7 +107,7 @@ func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnos
 	// Handle saved filter tokens - default to empty array per AGENTS.md guidelines
 	if !m.SavedFilterTokens.IsNull() && !m.SavedFilterTokens.IsUnknown() {
 		sft := make([]types.String, 0, len(m.SavedFilterTokens.Elements()))
-		m.SavedFilterTokens.ElementsAs(ctx, &sft, false)
+		diags.Append(m.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
 		create.SavedFilterTokens = fromStringsValue(sft)
 	} else {
 		create.SavedFilterTokens = []string{}
@@ -159,7 +159,7 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 	// Handle saved filter tokens - default to empty array per AGENTS.md guidelines
 	if !m.SavedFilterTokens.IsNull() && !m.SavedFilterTokens.IsUnknown() {
 		sft := make([]types.String, 0, len(m.SavedFilterTokens.Elements()))
-		m.SavedFilterTokens.ElementsAs(ctx, &sft, false)
+		diags.Append(m.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
 		update.SavedFilterTokens = fromStringsValue(sft)
 	} else {
 		update.SavedFilterTokens = []string{}

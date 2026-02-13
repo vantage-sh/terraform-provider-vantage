@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
@@ -95,6 +96,16 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
 		},
+	}
+
+	// Override groupings to add a default empty string to prevent perpetual plan diffs
+	// https://discuss.hashicorp.com/t/framework-migration-test-produces-non-empty-plan/54523/8
+	s.Attributes["groupings"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
+		Description:         attrs["groupings"].GetDescription(),
+		Default:             stringdefault.StaticString(""),
 	}
 
 	s.MarkdownDescription = "Manages a CostReport."
