@@ -37,7 +37,16 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 	s := resource_cost_report.CostReportResourceSchema(ctx)
 	attrs := s.GetAttributes()
 
-	// Override the token attribute to add a PlanModifier
+	// Attribute overrides:
+	// - token, id, workspace_token, previous_period_start_date: the code generator
+	//   does not emit PlanModifiers, so we add UseStateForUnknown to prevent these
+	//   Computed fields from showing "(known after apply)" on every plan.
+	// - end_date, previous_period_end_date: the swagger spec marks these as required
+	//   because of Grape's `given`/`requires` pattern (conditionally required when
+	//   start_date or previous_period_start_date is provided), but grape-swagger
+	//   loses the conditional context and emits them as unconditionally required.
+	//   They are actually optional, so we override them to Optional+Computed.
+
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
 		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
@@ -47,7 +56,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
-	// Override the id attribute to add a PlanModifier
 	s.Attributes["id"] = schema.StringAttribute{
 		Computed:            true,
 		MarkdownDescription: attrs["id"].GetMarkdownDescription(),
@@ -57,7 +65,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
-	// Override previous_period_start_date to add a PlanModifier
 	s.Attributes["previous_period_start_date"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
@@ -68,7 +75,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
-	// Override previous_period_end_date to make it Optional+Computed (generated schema has it as Required)
 	s.Attributes["previous_period_end_date"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
@@ -79,7 +85,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
-	// Override end_date to make it Optional+Computed (generated schema has it as Required)
 	s.Attributes["end_date"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
@@ -87,7 +92,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Description:         attrs["end_date"].GetDescription(),
 	}
 
-	// Override workspace_token to add a PlanModifier
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
