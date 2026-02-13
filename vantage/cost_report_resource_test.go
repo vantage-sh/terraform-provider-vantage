@@ -141,6 +141,53 @@ func costReportWithDateBin(resourceName, resourceTitle, dateBin string) string {
 	}`, resourceName, resourceTitle, dateBin)
 }
 
+func TestAccCostReport_chartSettings(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create with chart_settings
+				Config: costReportWithChartSettings("test-cs", "test-chart-settings", "date", "cost"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "title", "test-chart-settings"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.x_axis_dimension.#", "1"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.x_axis_dimension.0", "date"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.y_axis_dimension", "cost"),
+				),
+			},
+			{ // update chart_settings
+				Config: costReportWithChartSettings("test-cs", "test-chart-settings", "service", "usage"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.x_axis_dimension.#", "1"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.x_axis_dimension.0", "service"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.y_axis_dimension", "usage"),
+				),
+			},
+			{ // confirm no drift
+				Config:             costReportWithChartSettings("test-cs", "test-chart-settings", "service", "usage"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func costReportWithChartSettings(resourceName, resourceTitle, xAxisDimension, yAxisDimension string) string {
+	return fmt.Sprintf(`
+	data "vantage_workspaces" "test" {}
+
+	resource "vantage_cost_report" "%s" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "%s"
+		filter = "costs.provider = 'aws'"
+		date_interval = "last_7_days"
+		chart_settings = {
+			x_axis_dimension = ["%s"]
+			y_axis_dimension = "%s"
+		}
+	}`, resourceName, resourceTitle, xAxisDimension, yAxisDimension)
+}
+
 func costReportWithGrouping() string {
 	return `
   data "vantage_workspaces" "test" {}
