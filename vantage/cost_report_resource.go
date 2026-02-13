@@ -242,6 +242,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 
 	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
 		cs := &modelsv2.CreateCostReportChartSettings{}
+		hasSettings := false
 		attrs := data.ChartSettings.Attributes()
 		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
 			xAxisList := xAxis.(types.List)
@@ -251,11 +252,15 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 				return
 			}
 			cs.XAxisDimension = items
+			hasSettings = true
 		}
 		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
 			cs.YAxisDimension = yAxis.(types.String).ValueString()
+			hasSettings = true
 		}
-		body.ChartSettings = cs
+		if hasSettings {
+			body.ChartSettings = cs
+		}
 	}
 
 	params.WithCreateCostReport(body)
@@ -393,6 +398,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 
 	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
 		cs := &modelsv2.UpdateCostReportChartSettings{}
+		hasSettings := false
 		attrs := data.ChartSettings.Attributes()
 		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
 			xAxisList := xAxis.(types.List)
@@ -402,11 +408,15 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 				return
 			}
 			cs.XAxisDimension = items
+			hasSettings = true
 		}
 		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
 			cs.YAxisDimension = yAxis.(types.String).ValueString()
+			hasSettings = true
 		}
-		model.ChartSettings = cs
+		if hasSettings {
+			model.ChartSettings = cs
+		}
 	}
 
 	if data.DateInterval.ValueString() == "custom" {
