@@ -2,10 +2,14 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
@@ -37,6 +41,7 @@ type costReportDataSourceModel struct {
 	DateInterval            types.String `tfsdk:"date_interval"`
 	ChartType               types.String `tfsdk:"chart_type"`
 	DateBin                 types.String `tfsdk:"date_bin"`
+	ChartSettings           types.Object `tfsdk:"chart_settings"`
 }
 
 type costReportsDataSourceModel struct {
@@ -93,10 +98,22 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						"chart_type": schema.StringAttribute{
 							Computed: true,
 						},
-						"date_bin": schema.StringAttribute{
-							Computed: true,
+					"date_bin": schema.StringAttribute{
+						Computed: true,
+					},
+					"chart_settings": schema.SingleNestedAttribute{
+						Computed: true,
+						Attributes: map[string]schema.Attribute{
+							"x_axis_dimension": schema.ListAttribute{
+								ElementType: types.StringType,
+								Computed:    true,
+							},
+							"y_axis_dimension": schema.StringAttribute{
+								Computed: true,
+							},
 						},
 					},
+				},
 				},
 				Computed: true,
 			},
@@ -127,6 +144,11 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			resp.Diagnostics.Append(diag...)
 			return
 		}
+		chartSettingsObj, csErr := chartSettingsToObject(ctx, r.ChartSettings)
+		if csErr != nil {
+			resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+			return
+		}
 		costReports = append(costReports, costReportDataSourceModel{
 			Title:                   types.StringValue(r.Title),
 			Token:                   types.StringValue(r.Token),
@@ -142,6 +164,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			DateInterval:            types.StringValue(r.DateInterval),
 			ChartType:               types.StringValue(r.ChartType),
 			DateBin:                 types.StringValue(r.DateBin),
+			ChartSettings:           chartSettingsObj,
 		})
 	}
 	state.CostReports = costReports
@@ -158,4 +181,29 @@ func (d *costReportsDataSource) Configure(ctx context.Context, req datasource.Co
 	}
 
 	d.client = req.ProviderData.(*Client)
+}
+
+var chartSettingsAttrTypes = map[string]attr.Type{
+	"x_axis_dimension": types.ListType{ElemType: types.StringType},
+	"y_axis_dimension": types.StringType,
+}
+
+func chartSettingsToObject(ctx context.Context, cs *modelsv2.ChartSettings) (basetypes.ObjectValue, error) {
+	if cs == nil {
+		return types.ObjectNull(chartSettingsAttrTypes), nil
+	}
+
+	xAxisDimension, diags := types.ListValueFrom(ctx, types.StringType, cs.XAxisDimension)
+	if diags.HasError() {
+		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error converting x_axis_dimension")
+	}
+
+	obj, diags := types.ObjectValue(chartSettingsAttrTypes, map[string]attr.Value{
+		"x_axis_dimension": xAxisDimension,
+		"y_axis_dimension": types.StringValue(cs.YAxisDimension),
+	})
+	if diags.HasError() {
+		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error building chart_settings object")
+	}
+	return obj, nil
 }
