@@ -92,6 +92,16 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Description:         attrs["end_date"].GetDescription(),
 	}
 
+	// groupings: Override to add a Default of "" so that removing groupings from
+	// config clears it instead of preserving the prior state value.
+	s.Attributes["groupings"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
+		Description:         attrs["groupings"].GetDescription(),
+		Default:             stringdefault.StaticString(""),
+	}
+
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
