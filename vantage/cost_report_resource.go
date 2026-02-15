@@ -102,6 +102,25 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Default:             stringdefault.StaticString(""),
 	}
 
+	// chart_type, date_bin: Remove the generated defaults to preserve existing
+	// values from the API when not explicitly set in config, preventing unwanted
+	// drift on provider upgrade.
+	s.Attributes["chart_type"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["chart_type"].GetMarkdownDescription(),
+		Description:         attrs["chart_type"].GetDescription(),
+		Validators:          attrs["chart_type"].(schema.StringAttribute).Validators,
+	}
+
+	s.Attributes["date_bin"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["date_bin"].GetMarkdownDescription(),
+		Description:         attrs["date_bin"].GetDescription(),
+		Validators:          attrs["date_bin"].(schema.StringAttribute).Validators,
+	}
+
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
