@@ -818,3 +818,83 @@ resource "vantage_cost_report" "test" {
 }
 `, title, sfTitle1, sfTitle2, sfTitle3)
 }
+
+// TestAccVantageCostReport_savedFilterTokensReorder verifies that the API
+// preserves the new order when saved_filter_tokens are reordered on update.
+// If this test fails, the API is not respecting the updated ordering.
+func TestAccVantageCostReport_savedFilterTokensReorder(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	sfTitle1 := "tf-test-sf-" + sdkacctest.RandStringFromCharSet(6, sdkacctest.CharSetAlphaNum)
+	sfTitle2 := "tf-test-sf-" + sdkacctest.RandStringFromCharSet(6, sdkacctest.CharSetAlphaNum)
+	sfTitle3 := "tf-test-sf-" + sdkacctest.RandStringFromCharSet(6, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_cost_report.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create with order [sf1, sf2, sf3]
+			{
+				Config: testAccCostReportConfig_savedFilterTokensReorder(rTitle, sfTitle1, sfTitle2, sfTitle3, "sf1", "sf2", "sf3"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "saved_filter_tokens.#", "3"),
+					resource.TestCheckResourceAttrPair(resourceName, "saved_filter_tokens.0", "vantage_saved_filter.sf1", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "saved_filter_tokens.1", "vantage_saved_filter.sf2", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "saved_filter_tokens.2", "vantage_saved_filter.sf3", "token"),
+				),
+			},
+			// Step 2: Reorder to [sf3, sf1, sf2]
+			{
+				Config: testAccCostReportConfig_savedFilterTokensReorder(rTitle, sfTitle1, sfTitle2, sfTitle3, "sf3", "sf1", "sf2"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "saved_filter_tokens.#", "3"),
+					resource.TestCheckResourceAttrPair(resourceName, "saved_filter_tokens.0", "vantage_saved_filter.sf3", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "saved_filter_tokens.1", "vantage_saved_filter.sf1", "token"),
+					resource.TestCheckResourceAttrPair(resourceName, "saved_filter_tokens.2", "vantage_saved_filter.sf2", "token"),
+				),
+			},
+			// Step 3: Verify no drift after reorder
+			{
+				Config:             testAccCostReportConfig_savedFilterTokensReorder(rTitle, sfTitle1, sfTitle2, sfTitle3, "sf3", "sf1", "sf2"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccCostReportConfig_savedFilterTokensReorder(title, sfTitle1, sfTitle2, sfTitle3, first, second, third string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_saved_filter" "sf1" {
+  title           = %[2]q
+  filter          = "(costs.provider = 'aws')"
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+}
+
+resource "vantage_saved_filter" "sf2" {
+  title           = %[3]q
+  filter          = "(costs.provider = 'gcp')"
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+}
+
+resource "vantage_saved_filter" "sf3" {
+  title           = %[4]q
+  filter          = "(costs.provider = 'azure')"
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+}
+
+resource "vantage_cost_report" "test" {
+  workspace_token     = data.vantage_workspaces.test.workspaces[0].token
+  title               = %[1]q
+  filter              = "costs.provider = 'aws'"
+  date_interval       = "last_7_days"
+  saved_filter_tokens = [
+    vantage_saved_filter.%[5]s.token,
+    vantage_saved_filter.%[6]s.token,
+    vantage_saved_filter.%[7]s.token,
+  ]
+}
+`, title, sfTitle1, sfTitle2, sfTitle3, first, second, third)
+}
