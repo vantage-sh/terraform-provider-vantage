@@ -98,22 +98,22 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						"chart_type": schema.StringAttribute{
 							Computed: true,
 						},
-					"date_bin": schema.StringAttribute{
-						Computed: true,
-					},
-					"chart_settings": schema.SingleNestedAttribute{
-						Computed: true,
-						Attributes: map[string]schema.Attribute{
-							"x_axis_dimension": schema.ListAttribute{
-								ElementType: types.StringType,
-								Computed:    true,
-							},
-							"y_axis_dimension": schema.StringAttribute{
-								Computed: true,
+						"date_bin": schema.StringAttribute{
+							Computed: true,
+						},
+						"chart_settings": schema.SingleNestedAttribute{
+							Computed: true,
+							Attributes: map[string]schema.Attribute{
+								"x_axis_dimension": schema.ListAttribute{
+									ElementType: types.StringType,
+									Computed:    true,
+								},
+								"y_axis_dimension": schema.StringAttribute{
+									Computed: true,
+								},
 							},
 						},
 					},
-				},
 				},
 				Computed: true,
 			},
