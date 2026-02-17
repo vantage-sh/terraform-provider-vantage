@@ -36,6 +36,7 @@ resource "vantage_cost_report" "demo_report" {
 
 ### Optional
 
+- `chart_settings` (Attributes) Chart settings for the Cost Report. (see [below for nested schema](#nestedatt--chart_settings))
 - `chart_type` (String) Chart type to apply to the Cost Report.
 - `date_bin` (String) Date bin to apply to the Cost Report.
 - `date_interval` (String) Date interval to apply to the Cost Report.
@@ -53,5 +54,13 @@ resource "vantage_cost_report" "demo_report" {
 
 - `id` (String) Unique cost report identifier (aliases to token)
 - `token` (String) Unique cost report identifier
+
+<a id="nestedatt--chart_settings"></a>
+### Nested Schema for `chart_settings`
+
+Optional:
+
+- `x_axis_dimension` (List of String) The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].
+- `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.
 
 
