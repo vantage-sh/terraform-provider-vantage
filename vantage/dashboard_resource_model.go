@@ -16,6 +16,9 @@ import (
 type dashboardModel resource_dashboard.DashboardModel
 
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
+	prevStartDate := m.StartDate
+	prevEndDate := m.EndDate
+
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringPointerValue(payload.DateBin)
 	tflog.Debug(ctx, fmt.Sprintf("DateInterval is not null %v", payload.DateInterval))
@@ -25,16 +28,15 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 		m.DateInterval = types.StringNull()
 	}
 
-	// For explicitly non-custom date intervals, keep start/end aligned with schema defaults ("").
-	// When date_interval is custom OR unset, preserve API-provided explicit dates.
-	if payload.DateInterval != nil && *payload.DateInterval != "" {
-		if *payload.DateInterval == "custom" {
-			m.StartDate = ptrStringOrEmpty(payload.StartDate)
-			m.EndDate = ptrStringOrEmpty(payload.EndDate)
-		} else {
-			m.StartDate = types.StringValue("")
-			m.EndDate = types.StringValue("")
-		}
+	// Preserve explicit start/end dates when they were configured in the incoming plan/state.
+	// Otherwise, for non-custom intervals, keep start/end aligned with schema defaults ("").
+	hasExplicitDatesInInput := !prevStartDate.IsNull() && !prevStartDate.IsUnknown() &&
+		!prevEndDate.IsNull() && !prevEndDate.IsUnknown() &&
+		prevStartDate.ValueString() != "" && prevEndDate.ValueString() != ""
+
+	if payload.DateInterval != nil && *payload.DateInterval != "" && *payload.DateInterval != "custom" && !hasExplicitDatesInInput {
+		m.StartDate = types.StringValue("")
+		m.EndDate = types.StringValue("")
 	} else {
 		m.StartDate = ptrStringOrEmpty(payload.StartDate)
 		m.EndDate = ptrStringOrEmpty(payload.EndDate)
