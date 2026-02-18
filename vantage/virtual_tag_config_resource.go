@@ -62,6 +62,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 			Attributes: map[string]schema.Attribute{
 				// Reuse generated attributes unchanged
 				"business_metric_token": generatedValuesAttrs["business_metric_token"],
+				"date_ranges":           generatedValuesAttrs["date_ranges"],
 				"filter":                generatedValuesAttrs["filter"],
 				"name":                  generatedValuesAttrs["name"],
 				"percentages":           generatedValuesAttrs["percentages"],

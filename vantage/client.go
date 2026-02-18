@@ -115,6 +115,17 @@ func (ug *roundtripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	return ug.inner.RoundTrip(r)
 }
 
+// ptrStringOrEmpty returns a Terraform StringValue from a *string, falling back
+// to an empty string (rather than null) when the pointer is nil. Use this for
+// API fields that are semantically "optional empty string" so that the provider
+// doesn't produce null where Terraform planned for "".
+func ptrStringOrEmpty(s *string) types.String {
+	if s == nil {
+		return types.StringValue("")
+	}
+	return types.StringValue(*s)
+}
+
 func handleError(action string, d *diag.Diagnostics, err error) {
 	d.AddError(
 		fmt.Sprintf("Unable to %s", action),

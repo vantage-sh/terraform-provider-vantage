@@ -14,16 +14,24 @@ type recommendationViewResourceModel resource_recommendation_view.Recommendation
 func (m *recommendationViewResourceModel) applyPayload(ctx context.Context, payload *modelsv2.RecommendationView) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	m.Token = types.StringValue(payload.Token)
-	m.Id = types.StringValue(payload.Token)
-	m.Title = types.StringValue(payload.Title)
-	m.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
-	m.CreatedAt = types.StringValue(payload.CreatedAt)
-	m.CreatedBy = types.StringValue(payload.CreatedBy)
-	m.StartDate = types.StringValue(payload.StartDate)
-	m.EndDate = types.StringValue(payload.EndDate)
-	m.TagKey = types.StringValue(payload.TagKey)
-	m.TagValue = types.StringValue(payload.TagValue)
+	if payload.Token != nil {
+		m.Token = types.StringValue(*payload.Token)
+		m.Id = types.StringValue(*payload.Token)
+	}
+	if payload.Title != nil {
+		m.Title = types.StringValue(*payload.Title)
+	}
+	if payload.WorkspaceToken != nil {
+		m.WorkspaceToken = types.StringValue(*payload.WorkspaceToken)
+	}
+	if payload.CreatedAt != nil {
+		m.CreatedAt = types.StringValue(*payload.CreatedAt)
+	}
+	m.CreatedBy = types.StringPointerValue(payload.CreatedBy)
+	m.StartDate = types.StringPointerValue(payload.StartDate)
+	m.EndDate = types.StringPointerValue(payload.EndDate)
+	m.TagKey = types.StringPointerValue(payload.TagKey)
+	m.TagValue = types.StringPointerValue(payload.TagValue)
 
 	// Handle list fields - convert from API arrays to Terraform lists
 	providerIds, d := types.ListValueFrom(ctx, types.StringType, payload.ProviderIds)

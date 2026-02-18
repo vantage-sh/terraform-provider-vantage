@@ -288,6 +288,182 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 	})
 }
 
+func TestAccVantageVirtualTagConfig_withDateRanges(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create: value with date_ranges
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "q1-only"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									start_date = "2024-01-01"
+									end_date   = "2024-03-31"
+								}
+							]
+						}
+					]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.name", "q1-only"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.0.start_date", "2024-01-01"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.0.end_date", "2024-03-31"),
+				),
+			},
+			// Update: add a second date range
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "q1-and-q3"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									start_date = "2024-01-01"
+									end_date   = "2024-03-31"
+								},
+								{
+									start_date = "2024-07-01"
+									end_date   = "2024-09-30"
+								}
+							]
+						}
+					]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.name", "q1-and-q3"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.0.start_date", "2024-01-01"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.0.end_date", "2024-03-31"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.1.start_date", "2024-07-01"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.1.end_date", "2024-09-30"),
+				),
+			},
+			// No drift
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "q1-and-q3"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									start_date = "2024-01-01"
+									end_date   = "2024-03-31"
+								},
+								{
+									start_date = "2024-07-01"
+									end_date   = "2024-09-30"
+								}
+							]
+						}
+					]`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// Remove date_ranges
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "no-ranges"
+							filter = "(costs.provider = 'aws')"
+						}
+					]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.name", "no-ranges"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "0"),
+				),
+			},
+			// Open-ended range: only start_date set (end_date null / unbounded)
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "open-end"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									start_date = "2024-01-01"
+								}
+							]
+						}
+					]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.0.start_date", "2024-01-01"),
+					// end_date is null/computed — verify it's not set to a real value
+					resource.TestCheckNoResourceAttr(resourceName, "values.0.date_ranges.0.end_date"),
+				),
+			},
+			// No drift with open-ended range
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "open-end"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									start_date = "2024-01-01"
+								}
+							]
+						}
+					]`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// Open-start range: only end_date set (start_date null / unbounded)
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "open-start"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									end_date = "2024-12-31"
+								}
+							]
+						}
+					]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "1"),
+					resource.TestCheckNoResourceAttr(resourceName, "values.0.date_ranges.0.start_date"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.0.end_date", "2024-12-31"),
+				),
+			},
+			// No drift with open-start range
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+					values = [
+						{
+							name   = "open-start"
+							filter = "(costs.provider = 'aws')"
+							date_ranges = [
+								{
+									end_date = "2024-12-31"
+								}
+							]
+						}
+					]`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, rest string) string {
 	return fmt.Sprintf(
 		`data "vantage_virtual_tag_configs" %[1]q {}

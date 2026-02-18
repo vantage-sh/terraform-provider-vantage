@@ -207,8 +207,8 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 	m.SetTitle(types.StringValue(payload.Title))
 	m.SetToken(types.StringValue(payload.Token))
 	m.SetId(types.StringValue(payload.Token))
-	m.SetCreatedByToken(types.StringValue(payload.CreatedByToken))
-	m.SetImportType(types.StringValue(payload.ImportType))
+	m.SetCreatedByToken(types.StringPointerValue(payload.CreatedByToken))
+	m.SetImportType(types.StringPointerValue(payload.ImportType))
 	m.SetIntegrationToken(types.StringPointerValue(payload.IntegrationToken))
 
 	tfCloudwatchFields, diag := cloudwatchFieldsFromApiModel(ctx, payload.CloudwatchFields, payload.IntegrationToken)
@@ -231,7 +231,7 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 				return diag
 			}
 			tfCostReportTokens = append(tfCostReportTokens, businessMetricResourceModelCostReportToken{
-				CostReportToken: types.StringValue(costReportToken.CostReportToken),
+				CostReportToken: types.StringPointerValue(costReportToken.CostReportToken),
 				UnitScale:       types.StringValue(costReportToken.UnitScale),
 				LabelFilter:     labelFilter,
 			})
