@@ -152,7 +152,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			FolderToken:             types.StringPointerValue(r.FolderToken),
 			WorkspaceToken:          types.StringValue(r.WorkspaceToken),
 			SavedFilterTokens:       savedFilterTokens,
-			Groupings:               types.StringPointerValue(r.Groupings),
+			Groupings:               ptrStringOrEmpty(r.Groupings),
 			StartDate:               types.StringPointerValue(r.StartDate),
 			EndDate:                 types.StringPointerValue(r.EndDate),
 			PreviousPeriodStartDate: types.StringPointerValue(r.PreviousPeriodStartDate),
