@@ -25,10 +25,13 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 		m.DateInterval = types.StringNull()
 	}
 
-	// Keep these aligned with schema defaults (empty string) when API pointers are nil.
-	// This avoids null-vs-empty drift while still preserving explicit API-provided dates.
-	m.StartDate = ptrStringOrEmpty(payload.StartDate)
-	m.EndDate = ptrStringOrEmpty(payload.EndDate)
+	if payload.DateInterval != nil && *payload.DateInterval == "custom" {
+		m.StartDate = ptrStringOrEmpty(payload.StartDate)
+		m.EndDate = ptrStringOrEmpty(payload.EndDate)
+	} else {
+		m.StartDate = types.StringValue("")
+		m.EndDate = types.StringValue("")
+	}
 
 	saved_filters, diag := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
 	if diag.HasError() {
