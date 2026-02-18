@@ -91,7 +91,7 @@ func (d *kubernetesEfficiencyReportsDataSource) Read(ctx context.Context, req da
 			Title:          types.StringValue(ker.Title),
 			Token:          types.StringValue(ker.Token),
 			Id:             types.StringValue(ker.Token),
-			UserToken:      types.StringValue(ker.UserToken),
+			UserToken:      types.StringPointerValue(ker.UserToken),
 			WorkspaceToken: types.StringValue(ker.WorkspaceToken),
 		}
 		reports = append(reports, report)

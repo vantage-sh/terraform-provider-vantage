@@ -119,8 +119,8 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Overwrite items with refreshed state
-	if out.Payload.BucketArn != "" {
-		state.BucketARN = types.StringValue(out.Payload.BucketArn)
+	if out.Payload.BucketArn != nil && *out.Payload.BucketArn != "" {
+		state.BucketARN = types.StringPointerValue(out.Payload.BucketArn)
 	}
 	state.CrossAccountARN = types.StringValue(out.Payload.CrossAccountArn)
 
