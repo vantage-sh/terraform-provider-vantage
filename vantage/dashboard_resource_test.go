@@ -194,8 +194,9 @@ func TestAccDashboard_hasDateInterval(t *testing.T) {
 			{
 				Config: testAccDashboard_withDates(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", "custom"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", "2023-01-01"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "end_date", "2023-01-31"),
 				),
 			},
 		}})
@@ -229,14 +230,14 @@ func TestAccDashboard_dateInterval(t *testing.T) {
 			{
 				Config: testAccDashboard_withDates(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "date_interval", "custom"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", "2023-01-01"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "end_date", "2023-01-31"),
 				),
 			},
 			{
 				Config: testAccDashboard_nullDateInterval(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr("vantage_dashboard.test-date-interval", "date_interval"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-date-interval", "start_date", ""),
 				),
 			},
