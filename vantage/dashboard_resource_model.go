@@ -2,13 +2,11 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -21,7 +19,6 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringPointerValue(payload.DateBin)
-	tflog.Debug(ctx, fmt.Sprintf("DateInterval is not null %v", payload.DateInterval))
 	if payload.DateInterval != nil && *payload.DateInterval != "" {
 		m.DateInterval = types.StringPointerValue(payload.DateInterval)
 	} else {
@@ -156,7 +153,6 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 			widgets = append(widgets, widget)
 		}
 	}
-	tflog.Debug(ctx, fmt.Sprintf("DateInterval create %s", m.DateInterval.ValueString()))
 	payload := &modelsv2.CreateDashboard{
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
@@ -166,14 +162,12 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		DateInterval:      m.DateInterval.ValueString(),
 	}
 
-	if (m.DateInterval.ValueString() == "" && !m.StartDate.IsNull() && !m.EndDate.IsNull()) || m.DateInterval.ValueString() == "custom" {
-		// if m.DateInterval.ValueString() == "custom" {
+	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() && m.StartDate.ValueString() != "" &&
+		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
+		payload.DateInterval = "custom"
 	}
-	// else {
-	// 	payload.DateInterval = m.DateInterval.ValueString()
-	// }
 
 	return payload
 }
@@ -240,7 +234,7 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
-		payload.DateInterval = ""
+		payload.DateInterval = "custom"
 	}
 
 	return payload
