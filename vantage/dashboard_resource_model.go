@@ -26,8 +26,12 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 	}
 
 	if payload.DateInterval != nil && *payload.DateInterval == "custom" {
-		m.StartDate = types.StringPointerValue(payload.StartDate)
-		m.EndDate = types.StringPointerValue(payload.EndDate)
+		m.StartDate = ptrStringOrEmpty(payload.StartDate)
+		m.EndDate = ptrStringOrEmpty(payload.EndDate)
+	} else {
+		// Keep these aligned with schema defaults (empty string) when date_interval isn't custom.
+		m.StartDate = types.StringValue("")
+		m.EndDate = types.StringValue("")
 	}
 
 	saved_filters, diag := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
