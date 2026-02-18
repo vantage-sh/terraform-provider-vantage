@@ -240,6 +240,7 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
+		payload.DateInterval = ""
 	}
 
 	return payload
