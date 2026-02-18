@@ -83,6 +83,13 @@ func (r DashboardResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
+	// If config has dates but no date_interval, toCreate/toUpdate will send
+	// "custom" to the API, so the plan must reflect that to avoid drift.
+	if configModel.DateInterval.IsNull() && configHasDates {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("date_interval"), types.StringValue("custom"))...)
+		return
+	}
+
 	// If date_interval is removed from config (null in plan) but exists in state,
 	// mark that an update is required
 	if plan.DateInterval.IsNull() && !state.DateInterval.IsNull() {
