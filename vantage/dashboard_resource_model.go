@@ -16,8 +16,8 @@ import (
 type dashboardModel resource_dashboard.DashboardModel
 
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
-	prevStartDate := m.StartDate
-	prevEndDate := m.EndDate
+	planStartDate := m.StartDate
+	planEndDate := m.EndDate
 
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringPointerValue(payload.DateBin)
@@ -28,18 +28,16 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 		m.DateInterval = types.StringNull()
 	}
 
-	// Preserve explicit start/end dates when they were configured in the incoming plan/state.
-	// Otherwise, for non-custom intervals, keep start/end aligned with schema defaults ("").
-	hasExplicitDatesInInput := !prevStartDate.IsNull() && !prevStartDate.IsUnknown() &&
-		!prevEndDate.IsNull() && !prevEndDate.IsUnknown() &&
-		prevStartDate.ValueString() != "" && prevEndDate.ValueString() != ""
-
-	if payload.DateInterval != nil && *payload.DateInterval != "" && *payload.DateInterval != "custom" && !hasExplicitDatesInInput {
-		m.StartDate = types.StringValue("")
-		m.EndDate = types.StringValue("")
-	} else {
+	if payload.DateInterval != nil && *payload.DateInterval == "custom" {
 		m.StartDate = ptrStringOrEmpty(payload.StartDate)
 		m.EndDate = ptrStringOrEmpty(payload.EndDate)
+	} else if !planStartDate.IsNull() && !planStartDate.IsUnknown() && planStartDate.ValueString() != "" &&
+		!planEndDate.IsNull() && !planEndDate.IsUnknown() && planEndDate.ValueString() != "" {
+		m.StartDate = planStartDate
+		m.EndDate = planEndDate
+	} else {
+		m.StartDate = types.StringValue("")
+		m.EndDate = types.StringValue("")
 	}
 
 	saved_filters, diag := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
@@ -238,9 +236,13 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		DateInterval:      dateInterval,
 	}
 
-	if m.DateInterval.ValueString() == "custom" && !m.StartDate.IsNull() && !m.EndDate.IsNull() {
+	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() && m.StartDate.ValueString() != "" &&
+		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
+		if dateInterval == "" {
+			payload.DateInterval = "custom"
+		}
 	}
 
 	return payload
