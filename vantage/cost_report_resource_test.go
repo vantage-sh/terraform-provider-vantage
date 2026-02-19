@@ -141,6 +141,70 @@ func costReportWithDateBin(resourceName, resourceTitle, dateBin string) string {
 	}`, resourceName, resourceTitle, dateBin)
 }
 
+func TestAccCostReport_settings(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{ // create cost report with settings
+				Config: costReportWithSettings("test-settings", "test-settings", true, true, true, true, false, false, "cost", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "title", "test-settings"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_credits", "true"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_refunds", "true"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_discounts", "true"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_tax", "true"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.amortize", "false"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.unallocated", "false"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.aggregate_by", "cost"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.show_previous_period", "false"),
+				),
+			},
+			{ // update settings
+				Config: costReportWithSettings("test-settings", "test-settings", false, false, false, false, true, true, "usage", true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_credits", "false"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_refunds", "false"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_discounts", "false"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_tax", "false"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.amortize", "true"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.unallocated", "true"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.aggregate_by", "usage"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.show_previous_period", "true"),
+				),
+			},
+			{ // confirm no drift
+				Config:             costReportWithSettings("test-settings", "test-settings", false, false, false, false, true, true, "usage", true),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func costReportWithSettings(resourceName, resourceTitle string, includeCredits, includeRefunds, includeDiscounts, includeTax, amortize, unallocated bool, aggregateBy string, showPreviousPeriod bool) string {
+	return fmt.Sprintf(`
+	data "vantage_workspaces" "test" {}
+
+	resource "vantage_cost_report" "%s" {
+		workspace_token = data.vantage_workspaces.test.workspaces[0].token
+		title = "%s"
+		filter = "costs.provider = 'aws'"
+		date_interval = "last_month"
+
+		settings {
+			include_credits      = %t
+			include_refunds      = %t
+			include_discounts    = %t
+			include_tax          = %t
+			amortize             = %t
+			unallocated          = %t
+			aggregate_by         = "%s"
+			show_previous_period = %t
+		}
+	}`, resourceName, resourceTitle, includeCredits, includeRefunds, includeDiscounts, includeTax, amortize, unallocated, aggregateBy, showPreviousPeriod)
+}
+
 func costReportWithGrouping() string {
 	return `
   data "vantage_workspaces" "test" {}

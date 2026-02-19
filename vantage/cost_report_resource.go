@@ -2,15 +2,25 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
+	goaruntime "github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
@@ -29,6 +39,17 @@ func NewCostReportResource() resource.Resource {
 	return &CostReportResource{}
 }
 
+type CostReportSettingsModel struct {
+	IncludeCredits     types.Bool   `tfsdk:"include_credits"`
+	IncludeRefunds     types.Bool   `tfsdk:"include_refunds"`
+	IncludeDiscounts   types.Bool   `tfsdk:"include_discounts"`
+	IncludeTax         types.Bool   `tfsdk:"include_tax"`
+	Amortize           types.Bool   `tfsdk:"amortize"`
+	Unallocated        types.Bool   `tfsdk:"unallocated"`
+	AggregateBy        types.String `tfsdk:"aggregate_by"`
+	ShowPreviousPeriod types.Bool   `tfsdk:"show_previous_period"`
+}
+
 type CostReportResourceModel struct {
 	Token                   types.String `tfsdk:"token"`
 	Id                      types.String `tfsdk:"id"`
@@ -45,6 +66,21 @@ type CostReportResourceModel struct {
 	DateInterval            types.String `tfsdk:"date_interval"`
 	ChartType               types.String `tfsdk:"chart_type"`
 	DateBin                 types.String `tfsdk:"date_bin"`
+	Settings                types.Object `tfsdk:"settings"`
+}
+
+// costReportSettingsAttrTypes defines the attribute types for the settings object.
+func costReportSettingsAttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"include_credits":      types.BoolType,
+		"include_refunds":      types.BoolType,
+		"include_discounts":    types.BoolType,
+		"include_tax":          types.BoolType,
+		"amortize":             types.BoolType,
+		"unallocated":          types.BoolType,
+		"aggregate_by":         types.StringType,
+		"show_previous_period": types.BoolType,
+	}
 }
 
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -122,6 +158,67 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:            true,
 				Computed:            true,
 			},
+			"settings": schema.SingleNestedAttribute{
+				MarkdownDescription: "Settings for the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"include_credits": schema.BoolAttribute{
+						MarkdownDescription: "Report will include credits.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(true),
+					},
+					"include_refunds": schema.BoolAttribute{
+						MarkdownDescription: "Report will include refunds.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(true),
+					},
+					"include_discounts": schema.BoolAttribute{
+						MarkdownDescription: "Report will include discounts.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(true),
+					},
+					"include_tax": schema.BoolAttribute{
+						MarkdownDescription: "Report will include tax.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(true),
+					},
+					"amortize": schema.BoolAttribute{
+						MarkdownDescription: "Report will amortize.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(false),
+					},
+					"unallocated": schema.BoolAttribute{
+						MarkdownDescription: "Report will show unallocated costs.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(false),
+					},
+					"aggregate_by": schema.StringAttribute{
+						MarkdownDescription: "Report will aggregate by cost or usage.",
+						Optional:            true,
+						Computed:            true,
+						Default:             stringdefault.StaticString("cost"),
+						Validators: []validator.String{
+							stringvalidator.OneOf("cost", "usage"),
+						},
+					},
+					"show_previous_period": schema.BoolAttribute{
+						MarkdownDescription: "Report will show previous period costs or usage comparison.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(false),
+					},
+				},
+			},
 			"workspace_token": schema.StringAttribute{
 				MarkdownDescription: "Workspace token to add the Cost Report to.",
 				Optional:            true,
@@ -194,9 +291,27 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	params.WithCreateCostReport(body)
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
 	if err != nil {
-		//TODO(macb): Surface 400 errors more clearly.
 		handleError("Create Cost Report Resource", &resp.Diagnostics, err)
 		return
+	}
+
+	token := out.Payload.Token
+
+	// The Create API does not apply settings, so we follow up with a raw
+	// update call to ensure settings are persisted.
+	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
+		var settings CostReportSettingsModel
+		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		updated, updateErr := r.updateCostReportSettingsRaw(token, settings)
+		if updateErr != nil {
+			handleError("Create Cost Report Resource (settings update)", &resp.Diagnostics, updateErr)
+			return
+		}
+		out.Payload = updated
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
@@ -218,6 +333,12 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	data.SavedFilterTokens = savedFilterTokensValue
+	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
+	resp.Diagnostics.Append(settingsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Settings = settingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -263,6 +384,12 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 	state.SavedFilterTokens = savedFilterTokensValue
+	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
+	resp.Diagnostics.Append(settingsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.Settings = settingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -325,6 +452,22 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
+	// Settings are updated via a separate raw call to avoid the omitempty
+	// issue in the generated UpdateCostReportSettings struct.
+	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
+		var settings CostReportSettingsModel
+		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		updated, settingsErr := r.updateCostReportSettingsRaw(data.Token.ValueString(), settings)
+		if settingsErr != nil {
+			handleError("Update Cost Report Settings", &resp.Diagnostics, settingsErr)
+			return
+		}
+		out.Payload = updated
+	}
+
 	data.Title = types.StringValue(out.Payload.Title)
 	data.FolderToken = types.StringValue(out.Payload.FolderToken)
 	data.Filter = types.StringPointerValue(out.Payload.Filter)
@@ -343,6 +486,12 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	data.SavedFilterTokens = savedFilterTokensValue
+	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
+	resp.Diagnostics.Append(settingsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Settings = settingsObj
 
 	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -361,6 +510,81 @@ func (r CostReportResource) Delete(ctx context.Context, req resource.DeleteReque
 	if err != nil {
 		handleError("Delete Cost Report Resource", &resp.Diagnostics, err)
 	}
+}
+
+func costReportSettingsObjectFromPayload(ctx context.Context, s *modelsv2.CostReportSettings) (types.Object, diag.Diagnostics) {
+	if s == nil {
+		return types.ObjectNull(costReportSettingsAttrTypes()), nil
+	}
+	m := CostReportSettingsModel{
+		IncludeCredits:     types.BoolPointerValue(s.IncludeCredits),
+		IncludeRefunds:     types.BoolPointerValue(s.IncludeRefunds),
+		IncludeDiscounts:   types.BoolPointerValue(s.IncludeDiscounts),
+		IncludeTax:         types.BoolPointerValue(s.IncludeTax),
+		Amortize:           types.BoolPointerValue(s.Amortize),
+		Unallocated:        types.BoolPointerValue(s.Unallocated),
+		AggregateBy:        types.StringPointerValue(s.AggregateBy),
+		ShowPreviousPeriod: types.BoolPointerValue(s.ShowPreviousPeriod),
+	}
+	return types.ObjectValueFrom(ctx, costReportSettingsAttrTypes(), m)
+}
+
+// updateCostReportSettingsRaw uses the go-openapi transport directly to PUT
+// cost report settings. This bypasses the generated UpdateCostReportSettings
+// struct which uses `bool` + `omitempty`, causing `false` values to be dropped
+// from the JSON payload.
+func (r *CostReportResource) updateCostReportSettingsRaw(token string, settings CostReportSettingsModel) (*modelsv2.CostReport, error) {
+	body := map[string]interface{}{
+		"settings": map[string]interface{}{
+			"include_credits":      settings.IncludeCredits.ValueBool(),
+			"include_refunds":      settings.IncludeRefunds.ValueBool(),
+			"include_discounts":    settings.IncludeDiscounts.ValueBool(),
+			"include_tax":          settings.IncludeTax.ValueBool(),
+			"amortize":             settings.Amortize.ValueBool(),
+			"unallocated":          settings.Unallocated.ValueBool(),
+			"show_previous_period": settings.ShowPreviousPeriod.ValueBool(),
+		},
+	}
+	if !settings.AggregateBy.IsNull() && !settings.AggregateBy.IsUnknown() {
+		body["settings"].(map[string]interface{})["aggregate_by"] = settings.AggregateBy.ValueString()
+	}
+
+	op := &goaruntime.ClientOperation{
+		ID:                 "updateCostReport",
+		Method:             "PUT",
+		PathPattern:        "/cost_reports/{cost_report_token}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"https"},
+		Params: goaruntime.ClientRequestWriterFunc(func(req goaruntime.ClientRequest, reg strfmt.Registry) error {
+			if err := req.SetPathParam("cost_report_token", token); err != nil {
+				return err
+			}
+			return req.SetBodyParam(body)
+		}),
+		Reader: goaruntime.ClientResponseReaderFunc(func(response goaruntime.ClientResponse, consumer goaruntime.Consumer) (interface{}, error) {
+			if response.Code() == 200 {
+				result := &modelsv2.CostReport{}
+				if err := consumer.Consume(response.Body(), result); err != nil {
+					return nil, err
+				}
+				return result, nil
+			}
+			return nil, fmt.Errorf("unexpected status code %d updating cost report settings", response.Code())
+		}),
+		AuthInfo: r.client.Auth,
+	}
+
+	result, err := r.client.V2.Transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, ok := result.(*modelsv2.CostReport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected response type updating cost report settings")
+	}
+	return payload, nil
 }
 
 // Configure adds the provider configured client to the data source.
