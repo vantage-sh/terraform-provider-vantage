@@ -309,9 +309,9 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		updated, updateErr := r.updateCostReportSettingsRaw(token, settings)
 		if updateErr != nil {
 			handleError("Create Cost Report Resource (settings update)", &resp.Diagnostics, updateErr)
-			return
+		} else {
+			out.Payload = updated
 		}
-		out.Payload = updated
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
