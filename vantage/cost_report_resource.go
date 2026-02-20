@@ -112,15 +112,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
-	// Override groupings to default to empty string so clearing it works properly
-	s.Attributes["groupings"] = schema.StringAttribute{
-		Optional:            true,
-		Computed:            true,
-		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
-		Description:         attrs["groupings"].GetDescription(),
-		Default:             stringdefault.StaticString(""),
-	}
-
 	s.MarkdownDescription = "Manages a CostReport."
 	resp.Schema = s
 }
