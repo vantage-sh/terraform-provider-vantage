@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -122,17 +121,11 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Start date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"end_date": schema.StringAttribute{
 				MarkdownDescription: "End date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"previous_period_start_date": schema.StringAttribute{
 				MarkdownDescription: "Start date to apply to the Cost Report.",
@@ -154,25 +147,16 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Date interval to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"chart_type": schema.StringAttribute{
 				MarkdownDescription: "Chart type to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"date_bin": schema.StringAttribute{
 				MarkdownDescription: "Date bin to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -195,43 +179,36 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 						MarkdownDescription: "Report will include credits.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(true),
 					},
 					"include_refunds": schema.BoolAttribute{
 						MarkdownDescription: "Report will include refunds.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(true),
 					},
 					"include_discounts": schema.BoolAttribute{
 						MarkdownDescription: "Report will include discounts.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(true),
 					},
 					"include_tax": schema.BoolAttribute{
 						MarkdownDescription: "Report will include tax.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(true),
 					},
 					"amortize": schema.BoolAttribute{
 						MarkdownDescription: "Report will amortize.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(false),
 					},
 					"unallocated": schema.BoolAttribute{
 						MarkdownDescription: "Report will show unallocated costs.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(false),
 					},
 					"aggregate_by": schema.StringAttribute{
 						MarkdownDescription: "Report will aggregate by cost or usage.",
 						Optional:            true,
 						Computed:            true,
-						Default:             stringdefault.StaticString("cost"),
 						Validators: []validator.String{
 							stringvalidator.OneOf("cost", "usage"),
 						},
@@ -240,7 +217,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 						MarkdownDescription: "Report will show previous period costs or usage comparison.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(false),
 					},
 				},
 			},
