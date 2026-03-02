@@ -192,7 +192,7 @@ func costReportWithSettings(resourceName, resourceTitle string, includeCredits, 
 		filter = "costs.provider = 'aws'"
 		date_interval = "last_month"
 
-		settings {
+		settings = {
 			include_credits      = %t
 			include_refunds      = %t
 			include_discounts    = %t

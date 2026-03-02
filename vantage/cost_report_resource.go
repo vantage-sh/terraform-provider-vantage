@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -98,11 +99,17 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Token of the folder this Cost Report resides in.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"filter": schema.StringAttribute{
 				MarkdownDescription: "Filter query to apply to the Cost Report",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"groupings": schema.StringAttribute{
 				MarkdownDescription: "Grouping aggregations applied to the filtered data.",
@@ -115,11 +122,17 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Start date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"end_date": schema.StringAttribute{
 				MarkdownDescription: "End date to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"previous_period_start_date": schema.StringAttribute{
 				MarkdownDescription: "Start date to apply to the Cost Report.",
@@ -141,22 +154,34 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Date interval to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"chart_type": schema.StringAttribute{
 				MarkdownDescription: "Chart type to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"date_bin": schema.StringAttribute{
 				MarkdownDescription: "Date bin to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "Saved filter tokens to be applied to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"settings": schema.SingleNestedAttribute{
 				MarkdownDescription: "Settings for the Cost Report.",

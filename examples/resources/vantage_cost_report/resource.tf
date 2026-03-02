@@ -7,7 +7,7 @@ resource "vantage_cost_report" "demo_report" {
   chart_type = "line" # Allowed: area, line, pie, bar, multi-bar
   date_bin = "day"    # Allowed: cumulative, day, week, month, quarter
 
-  settings {
+  settings = {
     include_credits      = true
     include_refunds      = true
     include_discounts    = true
