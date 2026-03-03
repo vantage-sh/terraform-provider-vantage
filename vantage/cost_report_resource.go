@@ -409,6 +409,12 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
+	var config CostReportResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	sft := []types.String{}
 	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
 		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
@@ -454,8 +460,10 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	// Settings are updated via a separate raw call to avoid the omitempty
-	// issue in the generated UpdateCostReportSettings struct.
-	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
+	// issue in the generated UpdateCostReportSettings struct. Only call when
+	// settings is explicitly present in the user's configuration to avoid
+	// sending a settings-only PUT that resets other fields.
+	if !config.Settings.IsNull() && !config.Settings.IsUnknown() {
 		var settings CostReportSettingsModel
 		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
 		if resp.Diagnostics.HasError() {
