@@ -14,6 +14,12 @@ import (
 func TeamResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"default_dashboard_token": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The token of a Dashboard to set as the Team default. Send an empty string to clear.",
+				MarkdownDescription: "The token of a Dashboard to set as the Team default. Send an empty string to clear.",
+			},
 			"description": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -74,12 +80,13 @@ func TeamResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type TeamModel struct {
-	Description     types.String `tfsdk:"description"`
-	Id              types.String `tfsdk:"id"`
-	Name            types.String `tfsdk:"name"`
-	Role            types.String `tfsdk:"role"`
-	Token           types.String `tfsdk:"token"`
-	UserEmails      types.List   `tfsdk:"user_emails"`
-	UserTokens      types.List   `tfsdk:"user_tokens"`
-	WorkspaceTokens types.List   `tfsdk:"workspace_tokens"`
+	DefaultDashboardToken types.String `tfsdk:"default_dashboard_token"`
+	Description           types.String `tfsdk:"description"`
+	Id                    types.String `tfsdk:"id"`
+	Name                  types.String `tfsdk:"name"`
+	Role                  types.String `tfsdk:"role"`
+	Token                 types.String `tfsdk:"token"`
+	UserEmails            types.List   `tfsdk:"user_emails"`
+	UserTokens            types.List   `tfsdk:"user_tokens"`
+	WorkspaceTokens       types.List   `tfsdk:"workspace_tokens"`
 }

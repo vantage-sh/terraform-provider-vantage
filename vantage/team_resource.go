@@ -93,6 +93,10 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 		Role:            data.Role.ValueString(),
 	}
 
+	if !data.DefaultDashboardToken.IsNull() && !data.DefaultDashboardToken.IsUnknown() {
+		rt.DefaultDashboardToken = data.DefaultDashboardToken.ValueString()
+	}
+
 	params.WithCreateTeam(rt)
 	out, err := r.client.V2.Teams.CreateTeam(params, r.client.Auth)
 	if err != nil {
@@ -109,6 +113,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 	setDescriptionFromPayload(&data.Description, out.Payload.Description)
+	setStringFromPayload(&data.DefaultDashboardToken, out.Payload.DefaultDashboardToken)
 
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
@@ -182,6 +187,7 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
 	setDescriptionFromPayload(&state.Description, out.Payload.Description)
+	setStringFromPayload(&state.DefaultDashboardToken, out.Payload.DefaultDashboardToken)
 
 	userTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
@@ -254,6 +260,10 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		WorkspaceTokens: workspaceTokens,
 	}
 
+	if !data.DefaultDashboardToken.IsNull() && !data.DefaultDashboardToken.IsUnknown() {
+		model.DefaultDashboardToken = data.DefaultDashboardToken.ValueString()
+	}
+
 	params.WithUpdateTeam(model)
 	out, err := r.client.V2.Teams.UpdateTeam(params, r.client.Auth)
 	if err != nil {
@@ -263,6 +273,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	data.Name = types.StringValue(out.Payload.Name)
 	setDescriptionFromPayload(&data.Description, out.Payload.Description)
+	setStringFromPayload(&data.DefaultDashboardToken, out.Payload.DefaultDashboardToken)
 
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
@@ -326,5 +337,17 @@ func setDescriptionFromPayload(desc *types.String, apiDescription *string) {
 		*desc = types.StringValue(*apiDescription)
 	} else if desc.IsUnknown() {
 		*desc = types.StringNull()
+	}
+}
+
+// setStringFromPayload handles optional string fields from API responses.
+// If the API returns a non-nil value, it sets the field to that value.
+// If the API returns nil and the field was unknown, it sets the field to null.
+// Otherwise, the existing value is preserved.
+func setStringFromPayload(field *types.String, apiValue *string) {
+	if apiValue != nil {
+		*field = types.StringValue(*apiValue)
+	} else if field.IsUnknown() {
+		*field = types.StringNull()
 	}
 }

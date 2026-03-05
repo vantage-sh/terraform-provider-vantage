@@ -109,3 +109,52 @@ resource "vantage_team" "team" {
 }
 	`, title, description)
 }
+
+func TestTeamWithDefaultDashboard(t *testing.T) {
+	rName := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	rUpdatedName := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTeamWithDefaultDashboard(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttrSet("vantage_team.team", "default_dashboard_token"),
+				),
+			},
+			{
+				Config: testAccTeamWithDefaultDashboard(rUpdatedName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rUpdatedName),
+					resource.TestCheckResourceAttrSet("vantage_team.team", "default_dashboard_token"),
+				),
+			},
+			{
+				Config: testAccTeam(rUpdatedName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rUpdatedName),
+				),
+			},
+		},
+	})
+}
+
+func testAccTeamWithDefaultDashboard(title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_dashboard" "test" {
+	title = "test-dashboard-%[1]s"
+	workspace_token = data.vantage_workspaces.test.workspaces[0].token
+}
+
+resource "vantage_team" "team" {
+	name = %[1]q
+	description = "Team with default dashboard"
+	default_dashboard_token = vantage_dashboard.test.token
+}
+	`, title)
+}

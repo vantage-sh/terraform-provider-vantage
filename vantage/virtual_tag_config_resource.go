@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	tagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
 
@@ -186,13 +187,29 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		WithToken(data.Token.ValueString()).
 		WithUpdateVirtualTagConfig(model)
 
-	out, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
+	outOK, outAccepted, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload)
+	var payload *modelsv2.VirtualTagConfig
+	if outOK != nil {
+		payload = outOK.Payload
+	} else if outAccepted != nil {
+		resp.Diagnostics.AddWarning(
+			"Virtual Tag Config update is processing asynchronously",
+			"The virtual tag config update has been accepted and is being processed. The state may not reflect the final values immediately.",
+		)
+		payload = nil
+	}
+
+	if payload == nil {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	diag := data.applyPayload(ctx, payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
