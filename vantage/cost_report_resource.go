@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	goaruntime "github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -353,30 +351,29 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		body.ChartSettings = cs
 	}
 
-	params.WithCreateCostReport(body)
-	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Cost Report Resource", &resp.Diagnostics, err)
-		return
-	}
-
-	token := out.Payload.Token
-
-	// The Create API does not apply settings, so we follow up with a raw
-	// update call to ensure settings are persisted.
 	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
 		var settings CostReportSettingsModel
 		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
-		updated, updateErr := r.updateCostReportSettingsRaw(token, settings)
-		if updateErr != nil {
-			handleError("Create Cost Report Resource (settings update)", &resp.Diagnostics, updateErr)
-			return
+		body.Settings = &modelsv2.CreateCostReportSettings{
+			IncludeCredits:     settings.IncludeCredits.ValueBoolPointer(),
+			IncludeRefunds:     settings.IncludeRefunds.ValueBoolPointer(),
+			IncludeDiscounts:   settings.IncludeDiscounts.ValueBoolPointer(),
+			IncludeTax:         settings.IncludeTax.ValueBoolPointer(),
+			Amortize:           settings.Amortize.ValueBoolPointer(),
+			Unallocated:        settings.Unallocated.ValueBoolPointer(),
+			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
+			AggregateBy:        settings.AggregateBy.ValueStringPointer(),
 		}
-		out.Payload = updated
+	}
+
+	params.WithCreateCostReport(body)
+	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
+	if err != nil {
+		handleError("Create Cost Report Resource", &resp.Diagnostics, err)
+		return
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
@@ -487,12 +484,6 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	var config CostReportResourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	sft := []types.String{}
 	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
 		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
@@ -548,29 +539,29 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		model.DateInterval = data.DateInterval.ValueString()
 	}
 
-	params.WithUpdateCostReport(model)
-	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Cost Report Resource", &resp.Diagnostics, err)
-		return
-	}
-
-	// Settings are updated via a separate raw call to avoid the omitempty
-	// issue in the generated UpdateCostReportSettings struct. Only call when
-	// settings is explicitly present in the user's configuration to avoid
-	// sending a settings-only PUT that resets other fields.
-	if !config.Settings.IsNull() && !config.Settings.IsUnknown() {
+	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
 		var settings CostReportSettingsModel
 		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		updated, settingsErr := r.updateCostReportSettingsRaw(data.Token.ValueString(), settings)
-		if settingsErr != nil {
-			handleError("Update Cost Report Settings", &resp.Diagnostics, settingsErr)
-			return
+		model.Settings = &modelsv2.UpdateCostReportSettings{
+			IncludeCredits:     settings.IncludeCredits.ValueBoolPointer(),
+			IncludeRefunds:     settings.IncludeRefunds.ValueBoolPointer(),
+			IncludeDiscounts:   settings.IncludeDiscounts.ValueBoolPointer(),
+			IncludeTax:         settings.IncludeTax.ValueBoolPointer(),
+			Amortize:           settings.Amortize.ValueBoolPointer(),
+			Unallocated:        settings.Unallocated.ValueBoolPointer(),
+			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
+			AggregateBy:        settings.AggregateBy.ValueString(),
 		}
-		out.Payload = updated
+	}
+
+	params.WithUpdateCostReport(model)
+	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
+	if err != nil {
+		handleError("Update Cost Report Resource", &resp.Diagnostics, err)
+		return
 	}
 
 	data.Title = types.StringValue(out.Payload.Title)
@@ -639,64 +630,6 @@ func costReportSettingsObjectFromPayload(ctx context.Context, s *modelsv2.CostRe
 		ShowPreviousPeriod: types.BoolPointerValue(s.ShowPreviousPeriod),
 	}
 	return types.ObjectValueFrom(ctx, costReportSettingsAttrTypes(), m)
-}
-
-// updateCostReportSettingsRaw uses the go-openapi transport directly to PUT
-// cost report settings. This bypasses the generated UpdateCostReportSettings
-// struct which uses `bool` + `omitempty`, causing `false` values to be dropped
-// from the JSON payload.
-func (r *CostReportResource) updateCostReportSettingsRaw(token string, settings CostReportSettingsModel) (*modelsv2.CostReport, error) {
-	body := map[string]interface{}{
-		"settings": map[string]interface{}{
-			"include_credits":      settings.IncludeCredits.ValueBool(),
-			"include_refunds":      settings.IncludeRefunds.ValueBool(),
-			"include_discounts":    settings.IncludeDiscounts.ValueBool(),
-			"include_tax":          settings.IncludeTax.ValueBool(),
-			"amortize":             settings.Amortize.ValueBool(),
-			"unallocated":          settings.Unallocated.ValueBool(),
-			"show_previous_period": settings.ShowPreviousPeriod.ValueBool(),
-		},
-	}
-	if !settings.AggregateBy.IsNull() && !settings.AggregateBy.IsUnknown() {
-		body["settings"].(map[string]interface{})["aggregate_by"] = settings.AggregateBy.ValueString()
-	}
-
-	op := &goaruntime.ClientOperation{
-		ID:                 "updateCostReport",
-		Method:             "PUT",
-		PathPattern:        "/cost_reports/{cost_report_token}",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
-		Params: goaruntime.ClientRequestWriterFunc(func(req goaruntime.ClientRequest, reg strfmt.Registry) error {
-			if err := req.SetPathParam("cost_report_token", token); err != nil {
-				return err
-			}
-			return req.SetBodyParam(body)
-		}),
-		Reader: goaruntime.ClientResponseReaderFunc(func(response goaruntime.ClientResponse, consumer goaruntime.Consumer) (interface{}, error) {
-			if response.Code() == 200 {
-				result := &modelsv2.CostReport{}
-				if err := consumer.Consume(response.Body(), result); err != nil {
-					return nil, err
-				}
-				return result, nil
-			}
-			return nil, fmt.Errorf("unexpected status code %d updating cost report settings", response.Code())
-		}),
-		AuthInfo: r.client.Auth,
-	}
-
-	result, err := r.client.V2.Transport.Submit(op)
-	if err != nil {
-		return nil, err
-	}
-
-	payload, ok := result.(*modelsv2.CostReport)
-	if !ok {
-		return nil, fmt.Errorf("unexpected response type updating cost report settings")
-	}
-	return payload, nil
 }
 
 // Configure adds the provider configured client to the data source.
