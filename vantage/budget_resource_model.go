@@ -145,11 +145,11 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 	dst.Token = types.StringValue(src.Token)
 	dst.Id = types.StringValue(src.Token)
 	dst.CreatedAt = types.StringValue(src.CreatedAt)
-	dst.CreatedByToken = types.StringValue(src.CreatedByToken)
+	dst.CreatedByToken = types.StringPointerValue(src.CreatedByToken)
 	dst.Name = types.StringPointerValue(src.Name)
-	dst.UserToken = types.StringValue(src.UserToken)
+	dst.UserToken = types.StringPointerValue(src.UserToken)
 	dst.WorkspaceToken = types.StringValue(src.WorkspaceToken)
-	dst.CostReportToken = types.StringValue(src.CostReportToken)
+	dst.CostReportToken = types.StringPointerValue(src.CostReportToken)
 
 	if src.BudgetAlertTokens != nil {
 		budgetAlertTokens, diag := types.ListValueFrom(ctx, types.StringType, src.BudgetAlertTokens)

@@ -67,6 +67,7 @@ type CostReportResourceModel struct {
 	ChartType               types.String `tfsdk:"chart_type"`
 	DateBin                 types.String `tfsdk:"date_bin"`
 	Settings                types.Object `tfsdk:"settings"`
+	ChartSettings           types.Object `tfsdk:"chart_settings"`
 }
 
 // costReportSettingsAttrTypes defines the attribute types for the settings object.
@@ -81,6 +82,33 @@ func costReportSettingsAttrTypes() map[string]attr.Type {
 		"aggregate_by":         types.StringType,
 		"show_previous_period": types.BoolType,
 	}
+}
+
+var chartSettingsAttrTypes = map[string]attr.Type{
+	"x_axis_dimension": types.ListType{ElemType: types.StringType},
+	"y_axis_dimension": types.StringType,
+}
+
+func chartSettingsFromPayload(ctx context.Context, cs *modelsv2.ChartSettings) (basetypes.ObjectValue, error) {
+	if cs == nil {
+		return types.ObjectNull(chartSettingsAttrTypes), nil
+	}
+
+	xAxisDimension, diags := types.ListValueFrom(ctx, types.StringType, cs.XAxisDimension)
+	if diags.HasError() {
+		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error converting x_axis_dimension")
+	}
+
+	attrValues := map[string]attr.Value{
+		"x_axis_dimension": xAxisDimension,
+		"y_axis_dimension": types.StringValue(cs.YAxisDimension),
+	}
+
+	obj, diags := types.ObjectValue(chartSettingsAttrTypes, attrValues)
+	if diags.HasError() {
+		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error building chart_settings object")
+	}
+	return obj, nil
 }
 
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -157,6 +185,24 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Date bin to apply to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+			},
+			"chart_settings": schema.SingleNestedAttribute{
+				MarkdownDescription: "Chart settings for the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"x_axis_dimension": schema.ListAttribute{
+						ElementType:         types.StringType,
+						MarkdownDescription: "The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].",
+						Optional:            true,
+						Computed:            true,
+					},
+					"y_axis_dimension": schema.StringAttribute{
+						MarkdownDescription: "The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.",
+						Optional:            true,
+						Computed:            true,
+					},
+				},
 			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -289,6 +335,24 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		body.DateBin = data.DateBin.ValueStringPointer()
 	}
 
+	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
+		cs := &modelsv2.CreateCostReportChartSettings{}
+		attrs := data.ChartSettings.Attributes()
+		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
+			xAxisList := xAxis.(types.List)
+			items := []string{}
+			resp.Diagnostics.Append(xAxisList.ElementsAs(ctx, &items, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			cs.XAxisDimension = items
+		}
+		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
+			cs.YAxisDimension = yAxis.(types.String).ValueString()
+		}
+		body.ChartSettings = cs
+	}
+
 	params.WithCreateCostReport(body)
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
 	if err != nil {
@@ -318,15 +382,15 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Filter = types.StringPointerValue(out.Payload.Filter)
-	data.Groupings = types.StringValue(out.Payload.Groupings)
-	data.StartDate = types.StringValue(out.Payload.StartDate)
-	data.EndDate = types.StringValue(out.Payload.EndDate)
-	data.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
-	data.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	data.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
+	data.StartDate = types.StringPointerValue(out.Payload.StartDate)
+	data.EndDate = types.StringPointerValue(out.Payload.EndDate)
+	data.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
+	data.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
 	data.DateInterval = types.StringValue(out.Payload.DateInterval)
 	data.ChartType = types.StringValue(out.Payload.ChartType)
 	data.DateBin = types.StringValue(out.Payload.DateBin)
-	data.FolderToken = types.StringValue(out.Payload.FolderToken)
+	data.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -340,6 +404,13 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	data.Settings = settingsObj
+
+	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
+	if csErr != nil {
+		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+		return
+	}
+	data.ChartSettings = chartSettingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -369,16 +440,16 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Filter = types.StringPointerValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
-	state.Groupings = types.StringValue(out.Payload.Groupings)
-	state.StartDate = types.StringValue(out.Payload.StartDate)
-	state.EndDate = types.StringValue(out.Payload.EndDate)
-	state.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
-	state.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	state.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
+	state.StartDate = types.StringPointerValue(out.Payload.StartDate)
+	state.EndDate = types.StringPointerValue(out.Payload.EndDate)
+	state.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
+	state.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
 	state.DateInterval = types.StringValue(out.Payload.DateInterval)
 	state.ChartType = types.StringValue(out.Payload.ChartType)
 	state.DateBin = types.StringValue(out.Payload.DateBin)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	state.FolderToken = types.StringValue(out.Payload.FolderToken)
+	state.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
@@ -391,6 +462,13 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 	state.Settings = settingsObj
+
+	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
+	if csErr != nil {
+		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+		return
+	}
+	state.ChartSettings = chartSettingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -444,6 +522,24 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		model.DateBin = data.DateBin.ValueStringPointer()
 	}
 
+	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
+		cs := &modelsv2.UpdateCostReportChartSettings{}
+		attrs := data.ChartSettings.Attributes()
+		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
+			xAxisList := xAxis.(types.List)
+			items := []string{}
+			resp.Diagnostics.Append(xAxisList.ElementsAs(ctx, &items, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			cs.XAxisDimension = items
+		}
+		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
+			cs.YAxisDimension = yAxis.(types.String).ValueString()
+		}
+		model.ChartSettings = cs
+	}
+
 	if data.DateInterval.ValueString() == "custom" {
 		model.StartDate = data.StartDate.ValueString()
 		model.EndDate = data.EndDate.ValueString()
@@ -478,14 +574,14 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	data.Title = types.StringValue(out.Payload.Title)
-	data.FolderToken = types.StringValue(out.Payload.FolderToken)
+	data.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
 	data.Filter = types.StringPointerValue(out.Payload.Filter)
-	data.Groupings = types.StringValue(out.Payload.Groupings)
+	data.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.StartDate = types.StringValue(out.Payload.StartDate)
-	data.EndDate = types.StringValue(out.Payload.EndDate)
-	data.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
-	data.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	data.StartDate = types.StringPointerValue(out.Payload.StartDate)
+	data.EndDate = types.StringPointerValue(out.Payload.EndDate)
+	data.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
+	data.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
 	data.DateInterval = types.StringValue(out.Payload.DateInterval)
 	data.ChartType = types.StringValue(out.Payload.ChartType)
 	data.DateBin = types.StringValue(out.Payload.DateBin)
@@ -501,6 +597,13 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	data.Settings = settingsObj
+
+	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
+	if csErr != nil {
+		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+		return
+	}
+	data.ChartSettings = chartSettingsObj
 
 	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

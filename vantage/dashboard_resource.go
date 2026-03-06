@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
 )
@@ -67,21 +66,26 @@ func (r DashboardResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if state == nil || plan == nil {
 		return
 	}
-	// Log the values for debugging
-	tflog.Debug(ctx, "ModifyPlan values",
-		map[string]interface{}{
-			"plan_date_interval_is_null":    plan.DateInterval.IsNull(),
-			"plan_date_interval_is_unknown": plan.DateInterval.IsUnknown(),
-			"plan_date_interval_value":      plan.DateInterval.ValueString(),
-			"state_date_interval_is_null":   state.DateInterval.IsNull(),
-			"state_date_interval_value":     state.DateInterval.ValueString(),
-		})
+
+	var configModel dashboardModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	configHasDates := !configModel.StartDate.IsNull() && configModel.StartDate.ValueString() != "" &&
+		!configModel.EndDate.IsNull() && configModel.EndDate.ValueString() != ""
+
+	// If date_interval was preserved as "custom" by the NullableModifier but the
+	// user removed dates from config, clear it so the API can reset the dashboard.
+	if configModel.DateInterval.IsNull() && plan.DateInterval.ValueString() == "custom" && !configHasDates {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("date_interval"), types.StringNull())...)
+		return
+	}
 
 	// If date_interval is removed from config (null in plan) but exists in state,
 	// mark that an update is required
 	if plan.DateInterval.IsNull() && !state.DateInterval.IsNull() {
-
-		// Ensure framework knows we need update for this attribute
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("date_interval"), types.StringNull())...)
 	}
 

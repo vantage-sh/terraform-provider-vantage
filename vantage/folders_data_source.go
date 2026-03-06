@@ -94,7 +94,7 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		folders = append(folders, folderDataSourceModel{
 			Title:             types.StringPointerValue(f.Title),
 			Token:             types.StringValue(f.Token),
-			ParentFolderToken: types.StringValue(f.ParentFolderToken),
+			ParentFolderToken: types.StringPointerValue(f.ParentFolderToken),
 			SavedFilterTokens: savedFilterTokens,
 			WorkspaceToken:    types.StringValue(f.WorkspaceToken),
 		})

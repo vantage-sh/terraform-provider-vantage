@@ -37,6 +37,7 @@ type costReportDataSourceModel struct {
 	DateInterval            types.String `tfsdk:"date_interval"`
 	ChartType               types.String `tfsdk:"chart_type"`
 	DateBin                 types.String `tfsdk:"date_bin"`
+	ChartSettings           types.Object `tfsdk:"chart_settings"`
 }
 
 type costReportsDataSourceModel struct {
@@ -96,6 +97,18 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						"date_bin": schema.StringAttribute{
 							Computed: true,
 						},
+						"chart_settings": schema.SingleNestedAttribute{
+							Computed: true,
+							Attributes: map[string]schema.Attribute{
+								"x_axis_dimension": schema.ListAttribute{
+									ElementType: types.StringType,
+									Computed:    true,
+								},
+								"y_axis_dimension": schema.StringAttribute{
+									Computed: true,
+								},
+							},
+						},
 					},
 				},
 				Computed: true,
@@ -127,21 +140,27 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			resp.Diagnostics.Append(diag...)
 			return
 		}
+		chartSettingsObj, csErr := chartSettingsFromPayload(ctx, r.ChartSettings)
+		if csErr != nil {
+			resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+			return
+		}
 		costReports = append(costReports, costReportDataSourceModel{
 			Title:                   types.StringValue(r.Title),
 			Token:                   types.StringValue(r.Token),
 			Filter:                  types.StringPointerValue(r.Filter),
-			FolderToken:             types.StringValue(r.FolderToken),
+			FolderToken:             types.StringPointerValue(r.FolderToken),
 			WorkspaceToken:          types.StringValue(r.WorkspaceToken),
 			SavedFilterTokens:       savedFilterTokens,
-			Groupings:               types.StringValue(r.Groupings),
-			StartDate:               types.StringValue(r.StartDate),
-			EndDate:                 types.StringValue(r.EndDate),
-			PreviousPeriodStartDate: types.StringValue(r.PreviousPeriodStartDate),
-			PreviousPeriodEndDate:   types.StringValue(r.PreviousPeriodEndDate),
+			Groupings:               ptrStringOrEmpty(r.Groupings),
+			StartDate:               types.StringPointerValue(r.StartDate),
+			EndDate:                 types.StringPointerValue(r.EndDate),
+			PreviousPeriodStartDate: types.StringPointerValue(r.PreviousPeriodStartDate),
+			PreviousPeriodEndDate:   types.StringPointerValue(r.PreviousPeriodEndDate),
 			DateInterval:            types.StringValue(r.DateInterval),
 			ChartType:               types.StringValue(r.ChartType),
 			DateBin:                 types.StringValue(r.DateBin),
+			ChartSettings:           chartSettingsObj,
 		})
 	}
 	state.CostReports = costReports

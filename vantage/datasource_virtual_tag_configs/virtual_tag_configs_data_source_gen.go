@@ -114,6 +114,30 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 										},
 										Computed: true,
 									},
+									"date_ranges": schema.ListNestedAttribute{
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"end_date": schema.StringAttribute{
+													Computed:            true,
+													Description:         "The end date of the range (inclusive), or null for unbounded.",
+													MarkdownDescription: "The end date of the range (inclusive), or null for unbounded.",
+												},
+												"start_date": schema.StringAttribute{
+													Computed:            true,
+													Description:         "The start date of the range (inclusive), or null for unbounded.",
+													MarkdownDescription: "The start date of the range (inclusive), or null for unbounded.",
+												},
+											},
+											CustomType: DateRangesType{
+												ObjectType: types.ObjectType{
+													AttrTypes: DateRangesValue{}.AttributeTypes(ctx),
+												},
+											},
+										},
+										Computed:            true,
+										Description:         "Date ranges restricting when this value applies.",
+										MarkdownDescription: "Date ranges restricting when this value applies.",
+									},
 									"filter": schema.StringAttribute{
 										Computed:            true,
 										Description:         "The filter VQL for the Value.",
@@ -1422,6 +1446,24 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 			fmt.Sprintf(`cost_metric expected to be basetypes.ObjectValue, was: %T`, costMetricAttribute))
 	}
 
+	dateRangesAttribute, ok := attributes["date_ranges"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`date_ranges is missing from object`)
+
+		return nil, diags
+	}
+
+	dateRangesVal, ok := dateRangesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`date_ranges expected to be basetypes.ListValue, was: %T`, dateRangesAttribute))
+	}
+
 	filterAttribute, ok := attributes["filter"]
 
 	if !ok {
@@ -1483,6 +1525,7 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 	return ValuesValue{
 		BusinessMetricToken: businessMetricTokenVal,
 		CostMetric:          costMetricVal,
+		DateRanges:          dateRangesVal,
 		Filter:              filterVal,
 		Name:                nameVal,
 		Percentages:         percentagesVal,
@@ -1589,6 +1632,24 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 			fmt.Sprintf(`cost_metric expected to be basetypes.ObjectValue, was: %T`, costMetricAttribute))
 	}
 
+	dateRangesAttribute, ok := attributes["date_ranges"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`date_ranges is missing from object`)
+
+		return NewValuesValueUnknown(), diags
+	}
+
+	dateRangesVal, ok := dateRangesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`date_ranges expected to be basetypes.ListValue, was: %T`, dateRangesAttribute))
+	}
+
 	filterAttribute, ok := attributes["filter"]
 
 	if !ok {
@@ -1650,6 +1711,7 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 	return ValuesValue{
 		BusinessMetricToken: businessMetricTokenVal,
 		CostMetric:          costMetricVal,
+		DateRanges:          dateRangesVal,
 		Filter:              filterVal,
 		Name:                nameVal,
 		Percentages:         percentagesVal,
@@ -1727,6 +1789,7 @@ var _ basetypes.ObjectValuable = ValuesValue{}
 type ValuesValue struct {
 	BusinessMetricToken basetypes.StringValue `tfsdk:"business_metric_token"`
 	CostMetric          basetypes.ObjectValue `tfsdk:"cost_metric"`
+	DateRanges          basetypes.ListValue   `tfsdk:"date_ranges"`
 	Filter              basetypes.StringValue `tfsdk:"filter"`
 	Name                basetypes.StringValue `tfsdk:"name"`
 	Percentages         basetypes.ListValue   `tfsdk:"percentages"`
@@ -1734,7 +1797,7 @@ type ValuesValue struct {
 }
 
 func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 5)
+	attrTypes := make(map[string]tftypes.Type, 6)
 
 	var val tftypes.Value
 	var err error
@@ -1742,6 +1805,9 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 	attrTypes["business_metric_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["cost_metric"] = basetypes.ObjectType{
 		AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
+	attrTypes["date_ranges"] = basetypes.ListType{
+		ElemType: DateRangesValue{}.Type(ctx),
 	}.TerraformType(ctx)
 	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
@@ -1753,7 +1819,7 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 5)
+		vals := make(map[string]tftypes.Value, 6)
 
 		val, err = v.BusinessMetricToken.ToTerraformValue(ctx)
 
@@ -1770,6 +1836,14 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 		}
 
 		vals["cost_metric"] = val
+
+		val, err = v.DateRanges.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["date_ranges"] = val
 
 		val, err = v.Filter.ToTerraformValue(ctx)
 
@@ -1845,6 +1919,35 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		)
 	}
 
+	dateRanges := types.ListValueMust(
+		DateRangesType{
+			basetypes.ObjectType{
+				AttrTypes: DateRangesValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.DateRanges.Elements(),
+	)
+
+	if v.DateRanges.IsNull() {
+		dateRanges = types.ListNull(
+			DateRangesType{
+				basetypes.ObjectType{
+					AttrTypes: DateRangesValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	if v.DateRanges.IsUnknown() {
+		dateRanges = types.ListUnknown(
+			DateRangesType{
+				basetypes.ObjectType{
+					AttrTypes: DateRangesValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
 	percentages := types.ListValueMust(
 		PercentagesType{
 			basetypes.ObjectType{
@@ -1879,6 +1982,9 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		"cost_metric": basetypes.ObjectType{
 			AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
 		},
+		"date_ranges": basetypes.ListType{
+			ElemType: DateRangesValue{}.Type(ctx),
+		},
 		"filter": basetypes.StringType{},
 		"name":   basetypes.StringType{},
 		"percentages": basetypes.ListType{
@@ -1899,6 +2005,7 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		map[string]attr.Value{
 			"business_metric_token": v.BusinessMetricToken,
 			"cost_metric":           costMetric,
+			"date_ranges":           dateRanges,
 			"filter":                v.Filter,
 			"name":                  v.Name,
 			"percentages":           percentages,
@@ -1930,6 +2037,10 @@ func (v ValuesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.DateRanges.Equal(other.DateRanges) {
+		return false
+	}
+
 	if !v.Filter.Equal(other.Filter) {
 		return false
 	}
@@ -1958,6 +2069,9 @@ func (v ValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		"business_metric_token": basetypes.StringType{},
 		"cost_metric": basetypes.ObjectType{
 			AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
+		},
+		"date_ranges": basetypes.ListType{
+			ElemType: DateRangesValue{}.Type(ctx),
 		},
 		"filter": basetypes.StringType{},
 		"name":   basetypes.StringType{},
@@ -2694,6 +2808,385 @@ func (v AggregationValue) Type(ctx context.Context) attr.Type {
 func (v AggregationValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"tag": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = DateRangesType{}
+
+type DateRangesType struct {
+	basetypes.ObjectType
+}
+
+func (t DateRangesType) Equal(o attr.Type) bool {
+	other, ok := o.(DateRangesType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t DateRangesType) String() string {
+	return "DateRangesType"
+}
+
+func (t DateRangesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	endDateAttribute, ok := attributes["end_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`end_date is missing from object`)
+
+		return nil, diags
+	}
+
+	endDateVal, ok := endDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
+	}
+
+	startDateAttribute, ok := attributes["start_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`start_date is missing from object`)
+
+		return nil, diags
+	}
+
+	startDateVal, ok := startDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`start_date expected to be basetypes.StringValue, was: %T`, startDateAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return DateRangesValue{
+		EndDate:   endDateVal,
+		StartDate: startDateVal,
+		state:     attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDateRangesValueNull() DateRangesValue {
+	return DateRangesValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewDateRangesValueUnknown() DateRangesValue {
+	return DateRangesValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewDateRangesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (DateRangesValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing DateRangesValue Attribute Value",
+				"While creating a DateRangesValue value, a missing attribute value was detected. "+
+					"A DateRangesValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DateRangesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid DateRangesValue Attribute Type",
+				"While creating a DateRangesValue value, an invalid attribute value was detected. "+
+					"A DateRangesValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DateRangesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("DateRangesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra DateRangesValue Attribute Value",
+				"While creating a DateRangesValue value, an extra attribute value was detected. "+
+					"A DateRangesValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra DateRangesValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewDateRangesValueUnknown(), diags
+	}
+
+	endDateAttribute, ok := attributes["end_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`end_date is missing from object`)
+
+		return NewDateRangesValueUnknown(), diags
+	}
+
+	endDateVal, ok := endDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
+	}
+
+	startDateAttribute, ok := attributes["start_date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`start_date is missing from object`)
+
+		return NewDateRangesValueUnknown(), diags
+	}
+
+	startDateVal, ok := startDateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`start_date expected to be basetypes.StringValue, was: %T`, startDateAttribute))
+	}
+
+	if diags.HasError() {
+		return NewDateRangesValueUnknown(), diags
+	}
+
+	return DateRangesValue{
+		EndDate:   endDateVal,
+		StartDate: startDateVal,
+		state:     attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDateRangesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) DateRangesValue {
+	object, diags := NewDateRangesValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewDateRangesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t DateRangesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewDateRangesValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewDateRangesValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewDateRangesValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewDateRangesValueMust(DateRangesValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t DateRangesType) ValueType(ctx context.Context) attr.Value {
+	return DateRangesValue{}
+}
+
+var _ basetypes.ObjectValuable = DateRangesValue{}
+
+type DateRangesValue struct {
+	EndDate   basetypes.StringValue `tfsdk:"end_date"`
+	StartDate basetypes.StringValue `tfsdk:"start_date"`
+	state     attr.ValueState
+}
+
+func (v DateRangesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["start_date"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.EndDate.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["end_date"] = val
+
+		val, err = v.StartDate.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["start_date"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v DateRangesValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v DateRangesValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v DateRangesValue) String() string {
+	return "DateRangesValue"
+}
+
+func (v DateRangesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"end_date":   basetypes.StringType{},
+		"start_date": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"end_date":   v.EndDate,
+			"start_date": v.StartDate,
+		})
+
+	return objVal, diags
+}
+
+func (v DateRangesValue) Equal(o attr.Value) bool {
+	other, ok := o.(DateRangesValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.EndDate.Equal(other.EndDate) {
+		return false
+	}
+
+	if !v.StartDate.Equal(other.StartDate) {
+		return false
+	}
+
+	return true
+}
+
+func (v DateRangesValue) Type(ctx context.Context) attr.Type {
+	return DateRangesType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v DateRangesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"end_date":   basetypes.StringType{},
+		"start_date": basetypes.StringType{},
 	}
 }
 

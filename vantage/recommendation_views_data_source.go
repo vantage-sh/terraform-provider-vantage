@@ -181,19 +181,19 @@ func (d *recommendationViewsDataSource) Read(ctx context.Context, req datasource
 		}
 
 		views = append(views, recommendationViewDataSourceModel{
-			Token:             types.StringValue(rv.Token),
-			Title:             types.StringValue(rv.Title),
-			WorkspaceToken:    types.StringValue(rv.WorkspaceToken),
-			CreatedAt:         types.StringValue(rv.CreatedAt),
-			CreatedBy:         types.StringValue(rv.CreatedBy),
-			StartDate:         types.StringValue(rv.StartDate),
-			EndDate:           types.StringValue(rv.EndDate),
+			Token:             types.StringPointerValue(rv.Token),
+			Title:             types.StringPointerValue(rv.Title),
+			WorkspaceToken:    types.StringPointerValue(rv.WorkspaceToken),
+			CreatedAt:         types.StringPointerValue(rv.CreatedAt),
+			CreatedBy:         types.StringPointerValue(rv.CreatedBy),
+			StartDate:         types.StringPointerValue(rv.StartDate),
+			EndDate:           types.StringPointerValue(rv.EndDate),
 			ProviderIds:       providerIds,
 			BillingAccountIds: billingAccountIds,
 			AccountIds:        accountIds,
 			Regions:           regions,
-			TagKey:            types.StringValue(rv.TagKey),
-			TagValue:          types.StringValue(rv.TagValue),
+			TagKey:            types.StringPointerValue(rv.TagKey),
+			TagValue:          types.StringPointerValue(rv.TagValue),
 		})
 	}
 	data.RecommendationViews = views

@@ -82,7 +82,7 @@ func (d *networkFlowReportDataSource) Read(ctx context.Context, req datasource.R
 	for _, nfr := range out.Payload.NetworkFlowReports {
 		reports = append(reports, NetworkFlowReportModel{
 			CreatedAt:      types.StringValue(nfr.CreatedAt),
-			CreatedByToken: types.StringValue(nfr.CreatedByToken),
+			CreatedByToken: types.StringPointerValue(nfr.CreatedByToken),
 			DateInterval:   types.StringPointerValue(nfr.DateInterval),
 			Default:        types.BoolValue(nfr.Default),
 			EndDate:        types.StringPointerValue(nfr.EndDate),

@@ -93,7 +93,7 @@ func (d *financialCommitmentReportsDataSource) Read(ctx context.Context, req dat
 			Title:              types.StringValue(fcr.Title),
 			Token:              types.StringValue(fcr.Token),
 			Id:                 types.StringValue(fcr.Token),
-			UserToken:          types.StringValue(fcr.UserToken),
+			UserToken:          types.StringPointerValue(fcr.UserToken),
 			WorkspaceToken:     types.StringValue(fcr.WorkspaceToken),
 		}
 		reports = append(reports, report)

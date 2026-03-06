@@ -96,7 +96,7 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Title = types.StringPointerValue(out.Payload.Title)
-	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
+	data.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -124,7 +124,7 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
-	state.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
+	state.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.Title = types.StringPointerValue(out.Payload.Title)
 
@@ -156,7 +156,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	data.ParentFolderToken = types.StringValue(out.Payload.ParentFolderToken)
+	data.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
 	data.Title = types.StringPointerValue(out.Payload.Title)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 

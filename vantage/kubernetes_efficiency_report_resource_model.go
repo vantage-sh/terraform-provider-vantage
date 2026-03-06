@@ -19,7 +19,7 @@ func (r *kubernetesEfficiencyReportModel) applyPayload(ctx context.Context, payl
 	r.Title = types.StringValue(payload.Title)
 	r.Token = types.StringValue(payload.Token)
 	r.Id = types.StringValue(payload.Token)
-	r.UserToken = types.StringValue(payload.UserToken)
+	r.UserToken = types.StringPointerValue(payload.UserToken)
 	r.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 	r.AggregatedBy = types.StringValue(payload.AggregatedBy)
 	r.DateBucket = types.StringValue(payload.DateBucket)

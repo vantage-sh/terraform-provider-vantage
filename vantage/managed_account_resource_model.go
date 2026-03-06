@@ -38,8 +38,8 @@ func (m *managedAccountDataSourceModel) applyPayloadDataSource(ctx context.Conte
 	m.Id = types.StringValue(payload.Token)
 	m.Token = types.StringValue(payload.Token)
 	m.ParentAccountToken = types.StringValue(payload.ParentAccountToken)
-	m.EmailDomain = types.StringValue(payload.EmailDomain)
-	m.MspBillingProfileToken = types.StringValue(payload.MspBillingProfileToken)
+	m.EmailDomain = types.StringPointerValue(payload.EmailDomain)
+	m.MspBillingProfileToken = types.StringPointerValue(payload.MspBillingProfileToken)
 
 	// Handle access_credential_tokens
 	if payload.AccessCredentialTokens != nil {
@@ -213,7 +213,7 @@ func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv
 
 	m.ParentAccountToken = types.StringValue(payload.ParentAccountToken)
 	m.Token = types.StringValue(payload.Token)
-	m.EmailDomain = types.StringValue(payload.EmailDomain)
+	m.EmailDomain = types.StringPointerValue(payload.EmailDomain)
 
 	return nil
 }

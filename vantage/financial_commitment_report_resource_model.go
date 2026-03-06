@@ -15,7 +15,7 @@ type financialCommitmentReportModel resource_financial_commitment_report.Financi
 
 func (m *financialCommitmentReportModel) applyPayload(ctx context.Context, payload *modelsv2.FinancialCommitmentReport) diag.Diagnostics {
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
-	m.UserToken = types.StringValue(payload.UserToken)
+	m.UserToken = types.StringPointerValue(payload.UserToken)
 	m.Filter = types.StringPointerValue(payload.Filter)
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)

@@ -16,7 +16,7 @@ type networkFlowReportResourceModel resource_network_flow_report.NetworkFlowRepo
 func (m *networkFlowReportResourceModel) applyPayload(ctx context.Context, payload *modelsv2.NetworkFlowReport) diag.Diagnostics {
 
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
-	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
+	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
 	m.DateInterval = types.StringPointerValue(payload.DateInterval)
 	m.Default = types.BoolValue(payload.Default)
 	m.EndDate = types.StringPointerValue(payload.EndDate)
