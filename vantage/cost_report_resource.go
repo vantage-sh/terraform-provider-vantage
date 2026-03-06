@@ -553,7 +553,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 			Amortize:           settings.Amortize.ValueBoolPointer(),
 			Unallocated:        settings.Unallocated.ValueBoolPointer(),
 			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
-			AggregateBy:        settings.AggregateBy.ValueString(),
+			AggregateBy:        settings.AggregateBy.ValueStringPointer(),
 		}
 	}
 
