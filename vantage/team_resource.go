@@ -34,6 +34,15 @@ func (r *TeamResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	s := resource_team.TeamResourceSchema(ctx)
+	s.Attributes["default_dashboard_token"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		Description:         "The token of the dashboard to use as the default for the Team.",
+		MarkdownDescription: "The token of the dashboard to use as the default for the Team.",
+		PlanModifiers: []planmodifier.String{
+			nullableStringPlanModifier{},
+		},
+	}
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
 		Description:         "The token of the Team",
@@ -85,12 +94,13 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	rt := &modelsv2.CreateTeam{
-		Name:            data.Name.ValueStringPointer(),
-		Description:     data.Description.ValueString(),
-		UserTokens:      fromStringsValue(userTokens),
-		UserEmails:      fromStringsValue(userEmails),
-		WorkspaceTokens: fromStringsValue(workspaceTokens),
-		Role:            data.Role.ValueString(),
+		Name:                  data.Name.ValueStringPointer(),
+		Description:           data.Description.ValueString(),
+		DefaultDashboardToken: nullableStringPointer(data.DefaultDashboardToken),
+		UserTokens:            fromStringsValue(userTokens),
+		UserEmails:            fromStringsValue(userEmails),
+		WorkspaceTokens:       fromStringsValue(workspaceTokens),
+		Role:                  data.Role.ValueString(),
 	}
 
 	params.WithCreateTeam(rt)
@@ -109,6 +119,11 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Name = types.StringValue(out.Payload.Name)
 	setDescriptionFromPayload(&data.Description, out.Payload.Description)
+	if out.Payload.DefaultDashboardToken != nil {
+		data.DefaultDashboardToken = types.StringValue(*out.Payload.DefaultDashboardToken)
+	} else {
+		data.DefaultDashboardToken = types.StringValue("")
+	}
 
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
@@ -182,6 +197,11 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Name = types.StringValue(out.Payload.Name)
 	setDescriptionFromPayload(&state.Description, out.Payload.Description)
+	if out.Payload.DefaultDashboardToken != nil {
+		state.DefaultDashboardToken = types.StringValue(*out.Payload.DefaultDashboardToken)
+	} else {
+		state.DefaultDashboardToken = types.StringValue("")
+	}
 
 	userTokens, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.UserTokens)
 	if diag.HasError() {
@@ -247,11 +267,12 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	workspaceTokensList.ElementsAs(ctx, &workspaceTokens, false)
 
 	model := &modelsv2.UpdateTeam{
-		Name:            data.Name.ValueString(),
-		Description:     data.Description.ValueString(),
-		UserTokens:      userTokens,
-		UserEmails:      userEmails,
-		WorkspaceTokens: workspaceTokens,
+		Name:                  data.Name.ValueString(),
+		Description:           data.Description.ValueString(),
+		DefaultDashboardToken: nullableStringPointer(data.DefaultDashboardToken),
+		UserTokens:            userTokens,
+		UserEmails:            userEmails,
+		WorkspaceTokens:       workspaceTokens,
 	}
 
 	params.WithUpdateTeam(model)
@@ -263,6 +284,11 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	data.Name = types.StringValue(out.Payload.Name)
 	setDescriptionFromPayload(&data.Description, out.Payload.Description)
+	if out.Payload.DefaultDashboardToken != nil {
+		data.DefaultDashboardToken = types.StringValue(*out.Payload.DefaultDashboardToken)
+	} else {
+		data.DefaultDashboardToken = types.StringValue("")
+	}
 
 	// Role is not returned by API, set default if unknown
 	if data.Role.IsNull() || data.Role.IsUnknown() {
@@ -315,6 +341,38 @@ func (r *TeamResource) Configure(_ context.Context, req resource.ConfigureReques
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+// nullableStringPlanModifier handles Optional+Computed string attributes that
+// support clearing via null. When the user removes the attribute from config,
+// Terraform normally preserves the prior state value. This modifier detects that
+// case and plans the value as empty string, which signals the provider to send
+// null to the API to clear the field.
+type nullableStringPlanModifier struct{}
+
+func (m nullableStringPlanModifier) Description(_ context.Context) string {
+	return "Sets the value to empty when removed from configuration, allowing the API to clear the field."
+}
+
+func (m nullableStringPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m nullableStringPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	// If the attribute is not in config (null) and was previously set, plan it as
+	// empty string so the provider sends null to the API to clear the field.
+	if req.ConfigValue.IsNull() && !req.StateValue.IsNull() && req.StateValue.ValueString() != "" {
+		resp.PlanValue = types.StringValue("")
+	}
+}
+
+// nullableStringPointer returns a *string suitable for nullable API fields.
+// Empty string is treated as nil (null), which tells the API to clear the field.
+func nullableStringPointer(s types.String) *string {
+	if s.IsNull() || s.IsUnknown() || s.ValueString() == "" {
+		return nil
+	}
+	return s.ValueStringPointer()
 }
 
 // setDescriptionFromPayload handles the description field from API responses.
