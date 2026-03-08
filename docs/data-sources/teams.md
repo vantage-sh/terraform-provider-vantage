@@ -24,6 +24,7 @@ description: |-
 
 Read-Only:
 
+- `default_dashboard_token` (String)
 - `description` (String)
 - `name` (String)
 - `token` (String)

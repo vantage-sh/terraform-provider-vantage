@@ -186,7 +186,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		WithToken(data.Token.ValueString()).
 		WithUpdateVirtualTagConfig(model)
 
-	out, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
+	out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
 		return
