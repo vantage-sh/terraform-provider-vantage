@@ -79,6 +79,38 @@ func TestAccVantageFolder_withSavedFilterTokens(t *testing.T) {
 	})
 }
 
+func TestAccVantageFolder_preservesSavedFilterTokensWhenOmitted(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_folder.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageFolderConfig_withSavedFilterTokens(rTitle, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rTitle),
+					resource.TestCheckResourceAttr(resourceName, "saved_filter_tokens.#", "2"),
+				),
+			},
+			{
+				Config: testAccVantageFolderConfig_basic(rUpdatedTitle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rUpdatedTitle),
+					resource.TestCheckResourceAttr(resourceName, "saved_filter_tokens.#", "2"),
+				),
+			},
+			{
+				Config:             testAccVantageFolderConfig_basic(rUpdatedTitle),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageFolderConfig_withSavedFilterTokens(folderTitle string, filterCount int) string {
 	config := `
 data "vantage_workspaces" "test" {}
