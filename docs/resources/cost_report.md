@@ -22,6 +22,17 @@ resource "vantage_cost_report" "demo_report" {
   chart_type = "line" # Allowed: area, line, pie, bar, multi-bar
   date_bin = "day"    # Allowed: cumulative, day, week, month, quarter
 
+  settings = {
+    include_credits      = true
+    include_refunds      = true
+    include_discounts    = true
+    include_tax          = true
+    amortize             = false
+    unallocated          = false
+    aggregate_by         = "cost" # Allowed: cost, usage
+    show_previous_period = false
+  }
+
   # optionally, use folder_token instead of workspace_token
   # folder_token = "fldr_47c3254c790e9351"
 }
@@ -47,6 +58,7 @@ resource "vantage_cost_report" "demo_report" {
 - `previous_period_end_date` (String) End date to apply to the Cost Report.
 - `previous_period_start_date` (String) Start date to apply to the Cost Report.
 - `saved_filter_tokens` (List of String) Saved filter tokens to be applied to the Cost Report.
+- `settings` (Attributes) Settings for the Cost Report. (see [below for nested schema](#nestedatt--settings))
 - `start_date` (String) Start date to apply to the Cost Report.
 - `workspace_token` (String) Workspace token to add the Cost Report to.
 
@@ -62,5 +74,19 @@ Optional:
 
 - `x_axis_dimension` (List of String) The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].
 - `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.
+
+<a id="nestedatt--settings"></a>
+### Nested Schema for `settings`
+
+Optional:
+
+- `aggregate_by` (String) Report will aggregate by cost or usage.
+- `amortize` (Boolean) Report will amortize.
+- `include_credits` (Boolean) Report will include credits.
+- `include_discounts` (Boolean) Report will include discounts.
+- `include_refunds` (Boolean) Report will include refunds.
+- `include_tax` (Boolean) Report will include tax.
+- `show_previous_period` (Boolean) Report will show previous period costs or usage comparison.
+- `unallocated` (Boolean) Report will show unallocated costs.
 
 
