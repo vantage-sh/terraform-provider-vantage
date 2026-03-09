@@ -96,14 +96,14 @@ func TestAccVantageFolder_preservesSavedFilterTokensWhenOmitted(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccVantageFolderConfig_basic(rUpdatedTitle),
+				Config: testAccVantageFolderConfig_withoutSavedFilterTokens(rUpdatedTitle),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", rUpdatedTitle),
 					resource.TestCheckResourceAttr(resourceName, "saved_filter_tokens.#", "2"),
 				),
 			},
 			{
-				Config:             testAccVantageFolderConfig_basic(rUpdatedTitle),
+				Config:             testAccVantageFolderConfig_withoutSavedFilterTokens(rUpdatedTitle),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
@@ -147,4 +147,27 @@ resource "vantage_folder" "test" {
 	}
 
 	return config
+}
+
+func testAccVantageFolderConfig_withoutSavedFilterTokens(folderTitle string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_saved_filter" "test1" {
+  title           = "Test Filter 1"
+  filter          = "(costs.provider = 'aws')"
+  workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+}
+
+resource "vantage_saved_filter" "test2" {
+  title           = "Test Filter 2"
+  filter          = "(costs.provider = 'gcp')"
+  workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+}
+
+resource "vantage_folder" "test" {
+  title           = %[1]q
+  workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+}
+`, folderTitle)
 }
