@@ -14,10 +14,11 @@ description: |-
 
 ```terraform
 resource "vantage_team" "demo_team" {
-  name = "Demo Team"
-  description = "Demo Team Description"
-  user_emails = ["support@vantage.sh"]
-  workspace_tokens = ["wrkspc_47c3254c790e9351"]
+  name                    = "Demo Team"
+  description             = "Demo Team Description"
+  default_dashboard_token = "dshbrd_a2846903070824f4"
+  user_emails             = ["support@vantage.sh"]
+  workspace_tokens        = ["wrkspc_47c3254c790e9351"]
 }
 ```
 
@@ -30,6 +31,7 @@ resource "vantage_team" "demo_team" {
 
 ### Optional
 
+- `default_dashboard_token` (String) The token of the dashboard to use as the default for the Team. Remove from configuration to clear.
 - `description` (String) The description of the Team.
 - `role` (String) The role to assign to the provided Users. Defaults to 'editor' which has editor permissions.
 - `user_emails` (List of String) The User emails to associate to the Team.

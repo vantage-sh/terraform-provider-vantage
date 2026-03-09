@@ -98,6 +98,75 @@ resource "vantage_team" "team" {
 	`, title, description)
 }
 
+func TestTeamDefaultDashboardToken(t *testing.T) {
+	rName := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// create team with default_dashboard_token set
+				Config: testAccTeamWithDefaultDashboardToken(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttrPair("vantage_team.team", "default_dashboard_token", "vantage_dashboard.test", "token"),
+				),
+			},
+			{
+				// update default_dashboard_token to a different dashboard
+				Config: testAccTeamWithUpdatedDefaultDashboardToken(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttrPair("vantage_team.team", "default_dashboard_token", "vantage_dashboard.test2", "token"),
+				),
+			},
+			{
+				// clear default_dashboard_token by removing it from config
+				Config: testAccTeamWithWorkspaceTokens(rName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttr("vantage_team.team", "default_dashboard_token", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccTeamWithDefaultDashboardToken(title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+resource "vantage_dashboard" "test" {
+	workspace_token = data.vantage_workspaces.test.workspaces[0].token
+	title = "team-default-dashboard"
+}
+resource "vantage_team" "team" {
+	name = %[1]q
+	description = ""
+	workspace_tokens = [data.vantage_workspaces.test.workspaces[0].token]
+	default_dashboard_token = vantage_dashboard.test.token
+}
+`, title)
+}
+
+func testAccTeamWithUpdatedDefaultDashboardToken(title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+resource "vantage_dashboard" "test2" {
+	workspace_token = data.vantage_workspaces.test.workspaces[0].token
+	title = "team-default-dashboard-2"
+}
+resource "vantage_team" "team" {
+	name = %[1]q
+	description = ""
+	workspace_tokens = [data.vantage_workspaces.test.workspaces[0].token]
+	default_dashboard_token = vantage_dashboard.test2.token
+}
+`, title)
+}
+
+
+
 func testAccTeamWithUserTokens(title, description string) string {
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}

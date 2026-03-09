@@ -19,12 +19,13 @@ func NewTeamsDataSource() datasource.DataSource {
 }
 
 type teamDataSourceModel struct {
-	Token           types.String `tfsdk:"token"`
-	Name            types.String `tfsdk:"name"`
-	Description     types.String `tfsdk:"description"`
-	WorkspaceTokens types.Set    `tfsdk:"workspace_tokens"`
-	UserTokens      types.Set    `tfsdk:"user_tokens"`
-	UserEmails      types.Set    `tfsdk:"user_emails"`
+	Token                 types.String `tfsdk:"token"`
+	Name                  types.String `tfsdk:"name"`
+	Description           types.String `tfsdk:"description"`
+	DefaultDashboardToken types.String `tfsdk:"default_dashboard_token"`
+	WorkspaceTokens       types.Set    `tfsdk:"workspace_tokens"`
+	UserTokens            types.Set    `tfsdk:"user_tokens"`
+	UserEmails            types.Set    `tfsdk:"user_emails"`
 }
 
 type teamsDataSourceModel struct {
@@ -84,12 +85,13 @@ func (d *teamsDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		}
 
 		teams = append(teams, teamDataSourceModel{
-			Token:           types.StringValue(team.Token),
-			Name:            types.StringValue(team.Name),
-			Description:     types.StringPointerValue(team.Description),
-			WorkspaceTokens: workspaceTokens,
-			UserTokens:      userTokens,
-			UserEmails:      userEmails,
+			Token:                 types.StringValue(team.Token),
+			Name:                  types.StringValue(team.Name),
+			Description:           types.StringPointerValue(team.Description),
+			DefaultDashboardToken: types.StringPointerValue(team.DefaultDashboardToken),
+			WorkspaceTokens:       workspaceTokens,
+			UserTokens:            userTokens,
+			UserEmails:            userEmails,
 		})
 	}
 
@@ -115,6 +117,9 @@ func (d *teamsDataSource) Schema(ctx context.Context, req datasource.SchemaReque
 							Computed: true,
 						},
 						"description": schema.StringAttribute{
+							Computed: true,
+						},
+						"default_dashboard_token": schema.StringAttribute{
 							Computed: true,
 						},
 						"workspace_tokens": schema.SetAttribute{
