@@ -19,8 +19,10 @@ type managedAccountsDataSource struct {
 	client *Client
 }
 
-type managedAccountsDataSourceModel struct {
-	ManagedAccounts []managedAccountModel `tfsdk:"managed_accounts"`
+// managedAccountsDataSourceModelWrapper uses the data source-specific model
+// that includes all fields from the generated schema.
+type managedAccountsDataSourceModelWrapper struct {
+	ManagedAccounts []managedAccountDataSourceModel `tfsdk:"managed_accounts"`
 }
 
 func (d *managedAccountsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -29,6 +31,7 @@ func (d *managedAccountsDataSource) Configure(_ context.Context, req datasource.
 	}
 	d.client = req.ProviderData.(*Client)
 }
+
 func (d *managedAccountsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_managed_accounts"
 }
@@ -38,7 +41,7 @@ func (d *managedAccountsDataSource) Schema(ctx context.Context, req datasource.S
 }
 
 func (d *managedAccountsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data managedAccountsDataSourceModel
+	var data managedAccountsDataSourceModelWrapper
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -60,8 +63,8 @@ func (d *managedAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	for _, m := range apiRes.Payload.ManagedAccounts {
-		var model managedAccountModel
-		diag := model.applyPayload(ctx, m, true)
+		var model managedAccountDataSourceModel
+		diag := model.applyPayloadDataSource(ctx, m)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return

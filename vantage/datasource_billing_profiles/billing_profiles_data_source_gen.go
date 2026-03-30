@@ -190,6 +190,53 @@ func BillingProfilesDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The id of the resource",
 							MarkdownDescription: "The id of the resource",
 						},
+						"invoice_adjustment_attributes": schema.SingleNestedAttribute{
+							Attributes: map[string]schema.Attribute{
+								"adjustment_items": schema.ListNestedAttribute{
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"adjustment_type": schema.StringAttribute{
+												Computed:            true,
+												Description:         "Type of adjustment",
+												MarkdownDescription: "Type of adjustment",
+											},
+											"amount": schema.StringAttribute{
+												Computed:            true,
+												Description:         "Amount or percentage value for the adjustment",
+												MarkdownDescription: "Amount or percentage value for the adjustment",
+											},
+											"calculation_type": schema.StringAttribute{
+												Computed:            true,
+												Description:         "How the adjustment is calculated",
+												MarkdownDescription: "How the adjustment is calculated",
+											},
+											"name": schema.StringAttribute{
+												Computed:            true,
+												Description:         "Name of the adjustment (e.g., 'State Tax', 'Processing Fee')",
+												MarkdownDescription: "Name of the adjustment (e.g., 'State Tax', 'Processing Fee')",
+											},
+										},
+										CustomType: AdjustmentItemsType{
+											ObjectType: types.ObjectType{
+												AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+											},
+										},
+									},
+									Computed:            true,
+									Description:         "Array of adjustment items (taxes, fees, etc.)",
+									MarkdownDescription: "Array of adjustment items (taxes, fees, etc.)",
+								},
+								"token": schema.StringAttribute{
+									Computed: true,
+								},
+							},
+							CustomType: InvoiceAdjustmentAttributesType{
+								ObjectType: types.ObjectType{
+									AttrTypes: InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+								},
+							},
+							Computed: true,
+						},
 						"managed_accounts_count": schema.StringAttribute{
 							Computed:            true,
 							Description:         "Number of managed accounts using this billing profile",
@@ -340,6 +387,24 @@ func (t BillingProfilesType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
 	}
 
+	invoiceAdjustmentAttributesAttribute, ok := attributes["invoice_adjustment_attributes"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`invoice_adjustment_attributes is missing from object`)
+
+		return nil, diags
+	}
+
+	invoiceAdjustmentAttributesVal, ok := invoiceAdjustmentAttributesAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`invoice_adjustment_attributes expected to be basetypes.ObjectValue, was: %T`, invoiceAdjustmentAttributesAttribute))
+	}
+
 	managedAccountsCountAttribute, ok := attributes["managed_accounts_count"]
 
 	if !ok {
@@ -422,6 +487,7 @@ func (t BillingProfilesType) ValueFromObject(ctx context.Context, in basetypes.O
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		CreatedAt:                     createdAtVal,
 		Id:                            idVal,
+		InvoiceAdjustmentAttributes:   invoiceAdjustmentAttributesVal,
 		ManagedAccountsCount:          managedAccountsCountVal,
 		Nickname:                      nicknameVal,
 		Token:                         tokenVal,
@@ -583,6 +649,24 @@ func NewBillingProfilesValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
 	}
 
+	invoiceAdjustmentAttributesAttribute, ok := attributes["invoice_adjustment_attributes"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`invoice_adjustment_attributes is missing from object`)
+
+		return NewBillingProfilesValueUnknown(), diags
+	}
+
+	invoiceAdjustmentAttributesVal, ok := invoiceAdjustmentAttributesAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`invoice_adjustment_attributes expected to be basetypes.ObjectValue, was: %T`, invoiceAdjustmentAttributesAttribute))
+	}
+
 	managedAccountsCountAttribute, ok := attributes["managed_accounts_count"]
 
 	if !ok {
@@ -665,6 +749,7 @@ func NewBillingProfilesValue(attributeTypes map[string]attr.Type, attributes map
 		BusinessInformationAttributes: businessInformationAttributesVal,
 		CreatedAt:                     createdAtVal,
 		Id:                            idVal,
+		InvoiceAdjustmentAttributes:   invoiceAdjustmentAttributesVal,
 		ManagedAccountsCount:          managedAccountsCountVal,
 		Nickname:                      nicknameVal,
 		Token:                         tokenVal,
@@ -746,6 +831,7 @@ type BillingProfilesValue struct {
 	BusinessInformationAttributes basetypes.ObjectValue `tfsdk:"business_information_attributes"`
 	CreatedAt                     basetypes.StringValue `tfsdk:"created_at"`
 	Id                            basetypes.StringValue `tfsdk:"id"`
+	InvoiceAdjustmentAttributes   basetypes.ObjectValue `tfsdk:"invoice_adjustment_attributes"`
 	ManagedAccountsCount          basetypes.StringValue `tfsdk:"managed_accounts_count"`
 	Nickname                      basetypes.StringValue `tfsdk:"nickname"`
 	Token                         basetypes.StringValue `tfsdk:"token"`
@@ -754,7 +840,7 @@ type BillingProfilesValue struct {
 }
 
 func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 9)
+	attrTypes := make(map[string]tftypes.Type, 10)
 
 	var val tftypes.Value
 	var err error
@@ -770,6 +856,9 @@ func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 	}.TerraformType(ctx)
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["invoice_adjustment_attributes"] = basetypes.ObjectType{
+		AttrTypes: InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
 	attrTypes["managed_accounts_count"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["nickname"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
@@ -779,7 +868,7 @@ func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 9)
+		vals := make(map[string]tftypes.Value, 10)
 
 		val, err = v.BankingInformationAttributes.ToTerraformValue(ctx)
 
@@ -820,6 +909,14 @@ func (v BillingProfilesValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["id"] = val
+
+		val, err = v.InvoiceAdjustmentAttributes.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["invoice_adjustment_attributes"] = val
 
 		val, err = v.ManagedAccountsCount.ToTerraformValue(ctx)
 
@@ -945,30 +1042,65 @@ func (v BillingProfilesValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"banking_information_attributes": basetypes.ObjectType{
-				AttrTypes: BankingInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"billing_information_attributes": basetypes.ObjectType{
-				AttrTypes: BillingInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"business_information_attributes": basetypes.ObjectType{
-				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
-			},
-			"created_at":             basetypes.StringType{},
-			"id":                     basetypes.StringType{},
-			"managed_accounts_count": basetypes.StringType{},
-			"nickname":               basetypes.StringType{},
-			"token":                  basetypes.StringType{},
-			"updated_at":             basetypes.StringType{},
+	var invoiceAdjustmentAttributes basetypes.ObjectValue
+
+	if v.InvoiceAdjustmentAttributes.IsNull() {
+		invoiceAdjustmentAttributes = types.ObjectNull(
+			InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.InvoiceAdjustmentAttributes.IsUnknown() {
+		invoiceAdjustmentAttributes = types.ObjectUnknown(
+			InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.InvoiceAdjustmentAttributes.IsNull() && !v.InvoiceAdjustmentAttributes.IsUnknown() {
+		invoiceAdjustmentAttributes = types.ObjectValueMust(
+			InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+			v.InvoiceAdjustmentAttributes.Attributes(),
+		)
+	}
+
+	attributeTypes := map[string]attr.Type{
+		"banking_information_attributes": basetypes.ObjectType{
+			AttrTypes: BankingInformationAttributesValue{}.AttributeTypes(ctx),
 		},
+		"billing_information_attributes": basetypes.ObjectType{
+			AttrTypes: BillingInformationAttributesValue{}.AttributeTypes(ctx),
+		},
+		"business_information_attributes": basetypes.ObjectType{
+			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
+		},
+		"created_at": basetypes.StringType{},
+		"id":         basetypes.StringType{},
+		"invoice_adjustment_attributes": basetypes.ObjectType{
+			AttrTypes: InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+		},
+		"managed_accounts_count": basetypes.StringType{},
+		"nickname":               basetypes.StringType{},
+		"token":                  basetypes.StringType{},
+		"updated_at":             basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"banking_information_attributes":  bankingInformationAttributes,
 			"billing_information_attributes":  billingInformationAttributes,
 			"business_information_attributes": businessInformationAttributes,
 			"created_at":                      v.CreatedAt,
 			"id":                              v.Id,
+			"invoice_adjustment_attributes":   invoiceAdjustmentAttributes,
 			"managed_accounts_count":          v.ManagedAccountsCount,
 			"nickname":                        v.Nickname,
 			"token":                           v.Token,
@@ -1013,6 +1145,10 @@ func (v BillingProfilesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.InvoiceAdjustmentAttributes.Equal(other.InvoiceAdjustmentAttributes) {
+		return false
+	}
+
 	if !v.ManagedAccountsCount.Equal(other.ManagedAccountsCount) {
 		return false
 	}
@@ -1051,8 +1187,11 @@ func (v BillingProfilesValue) AttributeTypes(ctx context.Context) map[string]att
 		"business_information_attributes": basetypes.ObjectType{
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
-		"created_at":             basetypes.StringType{},
-		"id":                     basetypes.StringType{},
+		"created_at": basetypes.StringType{},
+		"id":         basetypes.StringType{},
+		"invoice_adjustment_attributes": basetypes.ObjectType{
+			AttrTypes: InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+		},
 		"managed_accounts_count": basetypes.StringType{},
 		"nickname":               basetypes.StringType{},
 		"token":                  basetypes.StringType{},
@@ -1542,16 +1681,26 @@ func (v BankingInformationAttributesValue) ToObjectValue(ctx context.Context) (b
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"bank_name":        basetypes.StringType{},
-			"beneficiary_name": basetypes.StringType{},
-			"secure_data": basetypes.ObjectType{
-				AttrTypes: SecureDataValue{}.AttributeTypes(ctx),
-			},
-			"tax_id": basetypes.StringType{},
-			"token":  basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"bank_name":        basetypes.StringType{},
+		"beneficiary_name": basetypes.StringType{},
+		"secure_data": basetypes.ObjectType{
+			AttrTypes: SecureDataValue{}.AttributeTypes(ctx),
 		},
+		"tax_id": basetypes.StringType{},
+		"token":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"bank_name":        v.BankName,
 			"beneficiary_name": v.BeneficiaryName,
@@ -2032,13 +2181,23 @@ func (v SecureDataValue) String() string {
 func (v SecureDataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"account_number": basetypes.StringType{},
+		"iban":           basetypes.StringType{},
+		"routing_number": basetypes.StringType{},
+		"swift_bic":      basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"account_number": basetypes.StringType{},
-			"iban":           basetypes.StringType{},
-			"routing_number": basetypes.StringType{},
-			"swift_bic":      basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"account_number": v.AccountNumber,
 			"iban":           v.Iban,
@@ -2753,11 +2912,19 @@ func (v BillingInformationAttributesValue) String() string {
 func (v BillingInformationAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	billingEmailVal, d := types.ListValue(types.StringType, v.BillingEmail.Elements())
+	var billingEmailVal basetypes.ListValue
+	switch {
+	case v.BillingEmail.IsUnknown():
+		billingEmailVal = types.ListUnknown(types.StringType)
+	case v.BillingEmail.IsNull():
+		billingEmailVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		billingEmailVal, d = types.ListValue(types.StringType, v.BillingEmail.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"address_line_1": basetypes.StringType{},
 			"address_line_2": basetypes.StringType{},
@@ -2773,20 +2940,30 @@ func (v BillingInformationAttributesValue) ToObjectValue(ctx context.Context) (b
 		}), diags
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"address_line_1": basetypes.StringType{},
-			"address_line_2": basetypes.StringType{},
-			"billing_email": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"city":         basetypes.StringType{},
-			"company_name": basetypes.StringType{},
-			"country_code": basetypes.StringType{},
-			"postal_code":  basetypes.StringType{},
-			"state":        basetypes.StringType{},
-			"token":        basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"address_line_1": basetypes.StringType{},
+		"address_line_2": basetypes.StringType{},
+		"billing_email": basetypes.ListType{
+			ElemType: types.StringType,
 		},
+		"city":         basetypes.StringType{},
+		"company_name": basetypes.StringType{},
+		"country_code": basetypes.StringType{},
+		"postal_code":  basetypes.StringType{},
+		"state":        basetypes.StringType{},
+		"token":        basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"address_line_1": v.AddressLine1,
 			"address_line_2": v.AddressLine2,
@@ -3218,13 +3395,23 @@ func (v BusinessInformationAttributesValue) ToObjectValue(ctx context.Context) (
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"metadata": basetypes.ObjectType{
-				AttrTypes: MetadataValue{}.AttributeTypes(ctx),
-			},
-			"token": basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"metadata": basetypes.ObjectType{
+			AttrTypes: MetadataValue{}.AttributeTypes(ctx),
 		},
+		"token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"metadata": metadata,
 			"token":    v.Token,
@@ -3574,12 +3761,22 @@ func (v MetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"custom_fields": basetypes.ListType{
-				ElemType: CustomFieldsValue{}.Type(ctx),
-			},
+	attributeTypes := map[string]attr.Type{
+		"custom_fields": basetypes.ListType{
+			ElemType: CustomFieldsValue{}.Type(ctx),
 		},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"custom_fields": customFields,
 		})
@@ -3940,11 +4137,21 @@ func (v CustomFieldsValue) String() string {
 func (v CustomFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"name":  basetypes.StringType{},
+		"value": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"name":  basetypes.StringType{},
-			"value": basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"name":  v.Name,
 			"value": v.Value,
@@ -3991,5 +4198,908 @@ func (v CustomFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.T
 	return map[string]attr.Type{
 		"name":  basetypes.StringType{},
 		"value": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = InvoiceAdjustmentAttributesType{}
+
+type InvoiceAdjustmentAttributesType struct {
+	basetypes.ObjectType
+}
+
+func (t InvoiceAdjustmentAttributesType) Equal(o attr.Type) bool {
+	other, ok := o.(InvoiceAdjustmentAttributesType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t InvoiceAdjustmentAttributesType) String() string {
+	return "InvoiceAdjustmentAttributesType"
+}
+
+func (t InvoiceAdjustmentAttributesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	adjustmentItemsAttribute, ok := attributes["adjustment_items"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`adjustment_items is missing from object`)
+
+		return nil, diags
+	}
+
+	adjustmentItemsVal, ok := adjustmentItemsAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`adjustment_items expected to be basetypes.ListValue, was: %T`, adjustmentItemsAttribute))
+	}
+
+	tokenAttribute, ok := attributes["token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`token is missing from object`)
+
+		return nil, diags
+	}
+
+	tokenVal, ok := tokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return InvoiceAdjustmentAttributesValue{
+		AdjustmentItems: adjustmentItemsVal,
+		Token:           tokenVal,
+		state:           attr.ValueStateKnown,
+	}, diags
+}
+
+func NewInvoiceAdjustmentAttributesValueNull() InvoiceAdjustmentAttributesValue {
+	return InvoiceAdjustmentAttributesValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewInvoiceAdjustmentAttributesValueUnknown() InvoiceAdjustmentAttributesValue {
+	return InvoiceAdjustmentAttributesValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewInvoiceAdjustmentAttributesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (InvoiceAdjustmentAttributesValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing InvoiceAdjustmentAttributesValue Attribute Value",
+				"While creating a InvoiceAdjustmentAttributesValue value, a missing attribute value was detected. "+
+					"A InvoiceAdjustmentAttributesValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("InvoiceAdjustmentAttributesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid InvoiceAdjustmentAttributesValue Attribute Type",
+				"While creating a InvoiceAdjustmentAttributesValue value, an invalid attribute value was detected. "+
+					"A InvoiceAdjustmentAttributesValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("InvoiceAdjustmentAttributesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("InvoiceAdjustmentAttributesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra InvoiceAdjustmentAttributesValue Attribute Value",
+				"While creating a InvoiceAdjustmentAttributesValue value, an extra attribute value was detected. "+
+					"A InvoiceAdjustmentAttributesValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra InvoiceAdjustmentAttributesValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewInvoiceAdjustmentAttributesValueUnknown(), diags
+	}
+
+	adjustmentItemsAttribute, ok := attributes["adjustment_items"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`adjustment_items is missing from object`)
+
+		return NewInvoiceAdjustmentAttributesValueUnknown(), diags
+	}
+
+	adjustmentItemsVal, ok := adjustmentItemsAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`adjustment_items expected to be basetypes.ListValue, was: %T`, adjustmentItemsAttribute))
+	}
+
+	tokenAttribute, ok := attributes["token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`token is missing from object`)
+
+		return NewInvoiceAdjustmentAttributesValueUnknown(), diags
+	}
+
+	tokenVal, ok := tokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
+	}
+
+	if diags.HasError() {
+		return NewInvoiceAdjustmentAttributesValueUnknown(), diags
+	}
+
+	return InvoiceAdjustmentAttributesValue{
+		AdjustmentItems: adjustmentItemsVal,
+		Token:           tokenVal,
+		state:           attr.ValueStateKnown,
+	}, diags
+}
+
+func NewInvoiceAdjustmentAttributesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) InvoiceAdjustmentAttributesValue {
+	object, diags := NewInvoiceAdjustmentAttributesValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewInvoiceAdjustmentAttributesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t InvoiceAdjustmentAttributesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewInvoiceAdjustmentAttributesValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewInvoiceAdjustmentAttributesValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewInvoiceAdjustmentAttributesValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewInvoiceAdjustmentAttributesValueMust(InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t InvoiceAdjustmentAttributesType) ValueType(ctx context.Context) attr.Value {
+	return InvoiceAdjustmentAttributesValue{}
+}
+
+var _ basetypes.ObjectValuable = InvoiceAdjustmentAttributesValue{}
+
+type InvoiceAdjustmentAttributesValue struct {
+	AdjustmentItems basetypes.ListValue   `tfsdk:"adjustment_items"`
+	Token           basetypes.StringValue `tfsdk:"token"`
+	state           attr.ValueState
+}
+
+func (v InvoiceAdjustmentAttributesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["adjustment_items"] = basetypes.ListType{
+		ElemType: AdjustmentItemsValue{}.Type(ctx),
+	}.TerraformType(ctx)
+	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.AdjustmentItems.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["adjustment_items"] = val
+
+		val, err = v.Token.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["token"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v InvoiceAdjustmentAttributesValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v InvoiceAdjustmentAttributesValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v InvoiceAdjustmentAttributesValue) String() string {
+	return "InvoiceAdjustmentAttributesValue"
+}
+
+func (v InvoiceAdjustmentAttributesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	adjustmentItems := types.ListValueMust(
+		AdjustmentItemsType{
+			basetypes.ObjectType{
+				AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.AdjustmentItems.Elements(),
+	)
+
+	if v.AdjustmentItems.IsNull() {
+		adjustmentItems = types.ListNull(
+			AdjustmentItemsType{
+				basetypes.ObjectType{
+					AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	if v.AdjustmentItems.IsUnknown() {
+		adjustmentItems = types.ListUnknown(
+			AdjustmentItemsType{
+				basetypes.ObjectType{
+					AttrTypes: AdjustmentItemsValue{}.AttributeTypes(ctx),
+				},
+			},
+		)
+	}
+
+	attributeTypes := map[string]attr.Type{
+		"adjustment_items": basetypes.ListType{
+			ElemType: AdjustmentItemsValue{}.Type(ctx),
+		},
+		"token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"adjustment_items": adjustmentItems,
+			"token":            v.Token,
+		})
+
+	return objVal, diags
+}
+
+func (v InvoiceAdjustmentAttributesValue) Equal(o attr.Value) bool {
+	other, ok := o.(InvoiceAdjustmentAttributesValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.AdjustmentItems.Equal(other.AdjustmentItems) {
+		return false
+	}
+
+	if !v.Token.Equal(other.Token) {
+		return false
+	}
+
+	return true
+}
+
+func (v InvoiceAdjustmentAttributesValue) Type(ctx context.Context) attr.Type {
+	return InvoiceAdjustmentAttributesType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v InvoiceAdjustmentAttributesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"adjustment_items": basetypes.ListType{
+			ElemType: AdjustmentItemsValue{}.Type(ctx),
+		},
+		"token": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = AdjustmentItemsType{}
+
+type AdjustmentItemsType struct {
+	basetypes.ObjectType
+}
+
+func (t AdjustmentItemsType) Equal(o attr.Type) bool {
+	other, ok := o.(AdjustmentItemsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t AdjustmentItemsType) String() string {
+	return "AdjustmentItemsType"
+}
+
+func (t AdjustmentItemsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	adjustmentTypeAttribute, ok := attributes["adjustment_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`adjustment_type is missing from object`)
+
+		return nil, diags
+	}
+
+	adjustmentTypeVal, ok := adjustmentTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`adjustment_type expected to be basetypes.StringValue, was: %T`, adjustmentTypeAttribute))
+	}
+
+	amountAttribute, ok := attributes["amount"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`amount is missing from object`)
+
+		return nil, diags
+	}
+
+	amountVal, ok := amountAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
+	}
+
+	calculationTypeAttribute, ok := attributes["calculation_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`calculation_type is missing from object`)
+
+		return nil, diags
+	}
+
+	calculationTypeVal, ok := calculationTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`calculation_type expected to be basetypes.StringValue, was: %T`, calculationTypeAttribute))
+	}
+
+	nameAttribute, ok := attributes["name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`name is missing from object`)
+
+		return nil, diags
+	}
+
+	nameVal, ok := nameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`name expected to be basetypes.StringValue, was: %T`, nameAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return AdjustmentItemsValue{
+		AdjustmentType:  adjustmentTypeVal,
+		Amount:          amountVal,
+		CalculationType: calculationTypeVal,
+		Name:            nameVal,
+		state:           attr.ValueStateKnown,
+	}, diags
+}
+
+func NewAdjustmentItemsValueNull() AdjustmentItemsValue {
+	return AdjustmentItemsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewAdjustmentItemsValueUnknown() AdjustmentItemsValue {
+	return AdjustmentItemsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewAdjustmentItemsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (AdjustmentItemsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing AdjustmentItemsValue Attribute Value",
+				"While creating a AdjustmentItemsValue value, a missing attribute value was detected. "+
+					"A AdjustmentItemsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("AdjustmentItemsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid AdjustmentItemsValue Attribute Type",
+				"While creating a AdjustmentItemsValue value, an invalid attribute value was detected. "+
+					"A AdjustmentItemsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("AdjustmentItemsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("AdjustmentItemsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra AdjustmentItemsValue Attribute Value",
+				"While creating a AdjustmentItemsValue value, an extra attribute value was detected. "+
+					"A AdjustmentItemsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra AdjustmentItemsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewAdjustmentItemsValueUnknown(), diags
+	}
+
+	adjustmentTypeAttribute, ok := attributes["adjustment_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`adjustment_type is missing from object`)
+
+		return NewAdjustmentItemsValueUnknown(), diags
+	}
+
+	adjustmentTypeVal, ok := adjustmentTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`adjustment_type expected to be basetypes.StringValue, was: %T`, adjustmentTypeAttribute))
+	}
+
+	amountAttribute, ok := attributes["amount"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`amount is missing from object`)
+
+		return NewAdjustmentItemsValueUnknown(), diags
+	}
+
+	amountVal, ok := amountAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`amount expected to be basetypes.StringValue, was: %T`, amountAttribute))
+	}
+
+	calculationTypeAttribute, ok := attributes["calculation_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`calculation_type is missing from object`)
+
+		return NewAdjustmentItemsValueUnknown(), diags
+	}
+
+	calculationTypeVal, ok := calculationTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`calculation_type expected to be basetypes.StringValue, was: %T`, calculationTypeAttribute))
+	}
+
+	nameAttribute, ok := attributes["name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`name is missing from object`)
+
+		return NewAdjustmentItemsValueUnknown(), diags
+	}
+
+	nameVal, ok := nameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`name expected to be basetypes.StringValue, was: %T`, nameAttribute))
+	}
+
+	if diags.HasError() {
+		return NewAdjustmentItemsValueUnknown(), diags
+	}
+
+	return AdjustmentItemsValue{
+		AdjustmentType:  adjustmentTypeVal,
+		Amount:          amountVal,
+		CalculationType: calculationTypeVal,
+		Name:            nameVal,
+		state:           attr.ValueStateKnown,
+	}, diags
+}
+
+func NewAdjustmentItemsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) AdjustmentItemsValue {
+	object, diags := NewAdjustmentItemsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewAdjustmentItemsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t AdjustmentItemsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewAdjustmentItemsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewAdjustmentItemsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewAdjustmentItemsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewAdjustmentItemsValueMust(AdjustmentItemsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t AdjustmentItemsType) ValueType(ctx context.Context) attr.Value {
+	return AdjustmentItemsValue{}
+}
+
+var _ basetypes.ObjectValuable = AdjustmentItemsValue{}
+
+type AdjustmentItemsValue struct {
+	AdjustmentType  basetypes.StringValue `tfsdk:"adjustment_type"`
+	Amount          basetypes.StringValue `tfsdk:"amount"`
+	CalculationType basetypes.StringValue `tfsdk:"calculation_type"`
+	Name            basetypes.StringValue `tfsdk:"name"`
+	state           attr.ValueState
+}
+
+func (v AdjustmentItemsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 4)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["adjustment_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["calculation_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 4)
+
+		val, err = v.AdjustmentType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["adjustment_type"] = val
+
+		val, err = v.Amount.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["amount"] = val
+
+		val, err = v.CalculationType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["calculation_type"] = val
+
+		val, err = v.Name.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["name"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v AdjustmentItemsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v AdjustmentItemsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v AdjustmentItemsValue) String() string {
+	return "AdjustmentItemsValue"
+}
+
+func (v AdjustmentItemsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"adjustment_type":  basetypes.StringType{},
+		"amount":           basetypes.StringType{},
+		"calculation_type": basetypes.StringType{},
+		"name":             basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"adjustment_type":  v.AdjustmentType,
+			"amount":           v.Amount,
+			"calculation_type": v.CalculationType,
+			"name":             v.Name,
+		})
+
+	return objVal, diags
+}
+
+func (v AdjustmentItemsValue) Equal(o attr.Value) bool {
+	other, ok := o.(AdjustmentItemsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.AdjustmentType.Equal(other.AdjustmentType) {
+		return false
+	}
+
+	if !v.Amount.Equal(other.Amount) {
+		return false
+	}
+
+	if !v.CalculationType.Equal(other.CalculationType) {
+		return false
+	}
+
+	if !v.Name.Equal(other.Name) {
+		return false
+	}
+
+	return true
+}
+
+func (v AdjustmentItemsValue) Type(ctx context.Context) attr.Type {
+	return AdjustmentItemsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v AdjustmentItemsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"adjustment_type":  basetypes.StringType{},
+		"amount":           basetypes.StringType{},
+		"calculation_type": basetypes.StringType{},
+		"name":             basetypes.StringType{},
 	}
 }

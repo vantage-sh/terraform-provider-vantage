@@ -70,13 +70,13 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		state.Segments = append(state.Segments, segmentDataSourceModel{
 			Token:              types.StringValue(segment.Token),
 			Title:              types.StringValue(segment.Title),
-			ParentSegmentToken: types.StringValue(segment.ParentSegmentToken),
+			ParentSegmentToken: types.StringPointerValue(segment.ParentSegmentToken),
 			Description:        types.StringValue(segment.Description),
 			TrackUnallocated:   types.BoolValue(segment.TrackUnallocated),
 			Priority:           types.Int64Value(int64(segment.Priority)),
-			Filter:             types.StringValue(segment.Filter),
+			Filter:             types.StringPointerValue(segment.Filter),
 			WorkspaceToken:     types.StringValue(segment.WorkspaceToken),
-			ReportToken:        types.StringValue(segment.ReportToken),
+			ReportToken:        types.StringPointerValue(segment.ReportToken),
 		})
 	}
 

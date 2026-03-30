@@ -42,6 +42,11 @@ func CostAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.",
 							MarkdownDescription: "The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.",
 						},
+						"minimum_threshold": schema.NumberAttribute{
+							Computed:            true,
+							Description:         "The minimum dollar amount threshold for percentage-based alerts. When set, alerts will only trigger if the dollar change meets this minimum, even if the percentage threshold is exceeded.",
+							MarkdownDescription: "The minimum dollar amount threshold for percentage-based alerts. When set, alerts will only trigger if the dollar change meets this minimum, even if the percentage threshold is exceeded.",
+						},
 						"report_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
@@ -200,6 +205,24 @@ func (t CostAlertsType) ValueFromObject(ctx context.Context, in basetypes.Object
 			fmt.Sprintf(`interval expected to be basetypes.StringValue, was: %T`, intervalAttribute))
 	}
 
+	minimumThresholdAttribute, ok := attributes["minimum_threshold"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`minimum_threshold is missing from object`)
+
+		return nil, diags
+	}
+
+	minimumThresholdVal, ok := minimumThresholdAttribute.(basetypes.NumberValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`minimum_threshold expected to be basetypes.NumberValue, was: %T`, minimumThresholdAttribute))
+	}
+
 	reportTokensAttribute, ok := attributes["report_tokens"]
 
 	if !ok {
@@ -367,20 +390,21 @@ func (t CostAlertsType) ValueFromObject(ctx context.Context, in basetypes.Object
 	}
 
 	return CostAlertsValue{
-		CreatedAt:       createdAtVal,
-		EmailRecipients: emailRecipientsVal,
-		Id:              idVal,
-		Interval:        intervalVal,
-		ReportTokens:    reportTokensVal,
-		SlackChannels:   slackChannelsVal,
-		TeamsChannels:   teamsChannelsVal,
-		Threshold:       thresholdVal,
-		Title:           titleVal,
-		Token:           tokenVal,
-		UnitType:        unitTypeVal,
-		UpdatedAt:       updatedAtVal,
-		WorkspaceToken:  workspaceTokenVal,
-		state:           attr.ValueStateKnown,
+		CreatedAt:        createdAtVal,
+		EmailRecipients:  emailRecipientsVal,
+		Id:               idVal,
+		Interval:         intervalVal,
+		MinimumThreshold: minimumThresholdVal,
+		ReportTokens:     reportTokensVal,
+		SlackChannels:    slackChannelsVal,
+		TeamsChannels:    teamsChannelsVal,
+		Threshold:        thresholdVal,
+		Title:            titleVal,
+		Token:            tokenVal,
+		UnitType:         unitTypeVal,
+		UpdatedAt:        updatedAtVal,
+		WorkspaceToken:   workspaceTokenVal,
+		state:            attr.ValueStateKnown,
 	}, diags
 }
 
@@ -519,6 +543,24 @@ func NewCostAlertsValue(attributeTypes map[string]attr.Type, attributes map[stri
 			fmt.Sprintf(`interval expected to be basetypes.StringValue, was: %T`, intervalAttribute))
 	}
 
+	minimumThresholdAttribute, ok := attributes["minimum_threshold"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`minimum_threshold is missing from object`)
+
+		return NewCostAlertsValueUnknown(), diags
+	}
+
+	minimumThresholdVal, ok := minimumThresholdAttribute.(basetypes.NumberValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`minimum_threshold expected to be basetypes.NumberValue, was: %T`, minimumThresholdAttribute))
+	}
+
 	reportTokensAttribute, ok := attributes["report_tokens"]
 
 	if !ok {
@@ -686,20 +728,21 @@ func NewCostAlertsValue(attributeTypes map[string]attr.Type, attributes map[stri
 	}
 
 	return CostAlertsValue{
-		CreatedAt:       createdAtVal,
-		EmailRecipients: emailRecipientsVal,
-		Id:              idVal,
-		Interval:        intervalVal,
-		ReportTokens:    reportTokensVal,
-		SlackChannels:   slackChannelsVal,
-		TeamsChannels:   teamsChannelsVal,
-		Threshold:       thresholdVal,
-		Title:           titleVal,
-		Token:           tokenVal,
-		UnitType:        unitTypeVal,
-		UpdatedAt:       updatedAtVal,
-		WorkspaceToken:  workspaceTokenVal,
-		state:           attr.ValueStateKnown,
+		CreatedAt:        createdAtVal,
+		EmailRecipients:  emailRecipientsVal,
+		Id:               idVal,
+		Interval:         intervalVal,
+		MinimumThreshold: minimumThresholdVal,
+		ReportTokens:     reportTokensVal,
+		SlackChannels:    slackChannelsVal,
+		TeamsChannels:    teamsChannelsVal,
+		Threshold:        thresholdVal,
+		Title:            titleVal,
+		Token:            tokenVal,
+		UnitType:         unitTypeVal,
+		UpdatedAt:        updatedAtVal,
+		WorkspaceToken:   workspaceTokenVal,
+		state:            attr.ValueStateKnown,
 	}, diags
 }
 
@@ -771,24 +814,25 @@ func (t CostAlertsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = CostAlertsValue{}
 
 type CostAlertsValue struct {
-	CreatedAt       basetypes.StringValue `tfsdk:"created_at"`
-	EmailRecipients basetypes.ListValue   `tfsdk:"email_recipients"`
-	Id              basetypes.StringValue `tfsdk:"id"`
-	Interval        basetypes.StringValue `tfsdk:"interval"`
-	ReportTokens    basetypes.ListValue   `tfsdk:"report_tokens"`
-	SlackChannels   basetypes.ListValue   `tfsdk:"slack_channels"`
-	TeamsChannels   basetypes.ListValue   `tfsdk:"teams_channels"`
-	Threshold       basetypes.NumberValue `tfsdk:"threshold"`
-	Title           basetypes.StringValue `tfsdk:"title"`
-	Token           basetypes.StringValue `tfsdk:"token"`
-	UnitType        basetypes.StringValue `tfsdk:"unit_type"`
-	UpdatedAt       basetypes.StringValue `tfsdk:"updated_at"`
-	WorkspaceToken  basetypes.StringValue `tfsdk:"workspace_token"`
-	state           attr.ValueState
+	CreatedAt        basetypes.StringValue `tfsdk:"created_at"`
+	EmailRecipients  basetypes.ListValue   `tfsdk:"email_recipients"`
+	Id               basetypes.StringValue `tfsdk:"id"`
+	Interval         basetypes.StringValue `tfsdk:"interval"`
+	MinimumThreshold basetypes.NumberValue `tfsdk:"minimum_threshold"`
+	ReportTokens     basetypes.ListValue   `tfsdk:"report_tokens"`
+	SlackChannels    basetypes.ListValue   `tfsdk:"slack_channels"`
+	TeamsChannels    basetypes.ListValue   `tfsdk:"teams_channels"`
+	Threshold        basetypes.NumberValue `tfsdk:"threshold"`
+	Title            basetypes.StringValue `tfsdk:"title"`
+	Token            basetypes.StringValue `tfsdk:"token"`
+	UnitType         basetypes.StringValue `tfsdk:"unit_type"`
+	UpdatedAt        basetypes.StringValue `tfsdk:"updated_at"`
+	WorkspaceToken   basetypes.StringValue `tfsdk:"workspace_token"`
+	state            attr.ValueState
 }
 
 func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 13)
+	attrTypes := make(map[string]tftypes.Type, 14)
 
 	var val tftypes.Value
 	var err error
@@ -799,6 +843,7 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 	}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["interval"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["minimum_threshold"] = basetypes.NumberType{}.TerraformType(ctx)
 	attrTypes["report_tokens"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
@@ -819,7 +864,7 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 13)
+		vals := make(map[string]tftypes.Value, 14)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -852,6 +897,14 @@ func (v CostAlertsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 		}
 
 		vals["interval"] = val
+
+		val, err = v.MinimumThreshold.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["minimum_threshold"] = val
 
 		val, err = v.ReportTokens.ToTerraformValue(ctx)
 
@@ -954,18 +1007,27 @@ func (v CostAlertsValue) String() string {
 func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	emailRecipientsVal, d := types.ListValue(types.StringType, v.EmailRecipients.Elements())
+	var emailRecipientsVal basetypes.ListValue
+	switch {
+	case v.EmailRecipients.IsUnknown():
+		emailRecipientsVal = types.ListUnknown(types.StringType)
+	case v.EmailRecipients.IsNull():
+		emailRecipientsVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		emailRecipientsVal, d = types.ListValue(types.StringType, v.EmailRecipients.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"created_at": basetypes.StringType{},
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"id":       basetypes.StringType{},
-			"interval": basetypes.StringType{},
+			"id":                basetypes.StringType{},
+			"interval":          basetypes.StringType{},
+			"minimum_threshold": basetypes.NumberType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -984,18 +1046,27 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		}), diags
 	}
 
-	reportTokensVal, d := types.ListValue(types.StringType, v.ReportTokens.Elements())
+	var reportTokensVal basetypes.ListValue
+	switch {
+	case v.ReportTokens.IsUnknown():
+		reportTokensVal = types.ListUnknown(types.StringType)
+	case v.ReportTokens.IsNull():
+		reportTokensVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		reportTokensVal, d = types.ListValue(types.StringType, v.ReportTokens.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"created_at": basetypes.StringType{},
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"id":       basetypes.StringType{},
-			"interval": basetypes.StringType{},
+			"id":                basetypes.StringType{},
+			"interval":          basetypes.StringType{},
+			"minimum_threshold": basetypes.NumberType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -1014,18 +1085,27 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		}), diags
 	}
 
-	slackChannelsVal, d := types.ListValue(types.StringType, v.SlackChannels.Elements())
+	var slackChannelsVal basetypes.ListValue
+	switch {
+	case v.SlackChannels.IsUnknown():
+		slackChannelsVal = types.ListUnknown(types.StringType)
+	case v.SlackChannels.IsNull():
+		slackChannelsVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		slackChannelsVal, d = types.ListValue(types.StringType, v.SlackChannels.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"created_at": basetypes.StringType{},
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"id":       basetypes.StringType{},
-			"interval": basetypes.StringType{},
+			"id":                basetypes.StringType{},
+			"interval":          basetypes.StringType{},
+			"minimum_threshold": basetypes.NumberType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -1044,18 +1124,27 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		}), diags
 	}
 
-	teamsChannelsVal, d := types.ListValue(types.StringType, v.TeamsChannels.Elements())
+	var teamsChannelsVal basetypes.ListValue
+	switch {
+	case v.TeamsChannels.IsUnknown():
+		teamsChannelsVal = types.ListUnknown(types.StringType)
+	case v.TeamsChannels.IsNull():
+		teamsChannelsVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		teamsChannelsVal, d = types.ListValue(types.StringType, v.TeamsChannels.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"created_at": basetypes.StringType{},
 			"email_recipients": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"id":       basetypes.StringType{},
-			"interval": basetypes.StringType{},
+			"id":                basetypes.StringType{},
+			"interval":          basetypes.StringType{},
+			"minimum_threshold": basetypes.NumberType{},
 			"report_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
@@ -1072,46 +1161,58 @@ func (v CostAlertsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"updated_at":      basetypes.StringType{},
 			"workspace_token": basetypes.StringType{},
 		}), diags
+	}
+
+	attributeTypes := map[string]attr.Type{
+		"created_at": basetypes.StringType{},
+		"email_recipients": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"id":                basetypes.StringType{},
+		"interval":          basetypes.StringType{},
+		"minimum_threshold": basetypes.NumberType{},
+		"report_tokens": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"slack_channels": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"teams_channels": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"threshold":       basetypes.NumberType{},
+		"title":           basetypes.StringType{},
+		"token":           basetypes.StringType{},
+		"unit_type":       basetypes.StringType{},
+		"updated_at":      basetypes.StringType{},
+		"workspace_token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
 	}
 
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"created_at": basetypes.StringType{},
-			"email_recipients": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"id":       basetypes.StringType{},
-			"interval": basetypes.StringType{},
-			"report_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"slack_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"teams_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":       basetypes.NumberType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
-			"unit_type":       basetypes.StringType{},
-			"updated_at":      basetypes.StringType{},
-			"workspace_token": basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
-			"created_at":       v.CreatedAt,
-			"email_recipients": emailRecipientsVal,
-			"id":               v.Id,
-			"interval":         v.Interval,
-			"report_tokens":    reportTokensVal,
-			"slack_channels":   slackChannelsVal,
-			"teams_channels":   teamsChannelsVal,
-			"threshold":        v.Threshold,
-			"title":            v.Title,
-			"token":            v.Token,
-			"unit_type":        v.UnitType,
-			"updated_at":       v.UpdatedAt,
-			"workspace_token":  v.WorkspaceToken,
+			"created_at":        v.CreatedAt,
+			"email_recipients":  emailRecipientsVal,
+			"id":                v.Id,
+			"interval":          v.Interval,
+			"minimum_threshold": v.MinimumThreshold,
+			"report_tokens":     reportTokensVal,
+			"slack_channels":    slackChannelsVal,
+			"teams_channels":    teamsChannelsVal,
+			"threshold":         v.Threshold,
+			"title":             v.Title,
+			"token":             v.Token,
+			"unit_type":         v.UnitType,
+			"updated_at":        v.UpdatedAt,
+			"workspace_token":   v.WorkspaceToken,
 		})
 
 	return objVal, diags
@@ -1145,6 +1246,10 @@ func (v CostAlertsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.Interval.Equal(other.Interval) {
+		return false
+	}
+
+	if !v.MinimumThreshold.Equal(other.MinimumThreshold) {
 		return false
 	}
 
@@ -1201,8 +1306,9 @@ func (v CostAlertsValue) AttributeTypes(ctx context.Context) map[string]attr.Typ
 		"email_recipients": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"id":       basetypes.StringType{},
-		"interval": basetypes.StringType{},
+		"id":                basetypes.StringType{},
+		"interval":          basetypes.StringType{},
+		"minimum_threshold": basetypes.NumberType{},
 		"report_tokens": basetypes.ListType{
 			ElemType: types.StringType,
 		},

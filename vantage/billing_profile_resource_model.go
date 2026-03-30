@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_billing_profile"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -21,10 +23,10 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		var secureDataAttr attr.Value
 		if payload.BankingInformationAttributes.SecureData != nil {
 			secureDataAttrs := map[string]attr.Value{
-				"account_number": types.StringValue(payload.BankingInformationAttributes.SecureData.AccountNumber),
-				"routing_number": types.StringValue(payload.BankingInformationAttributes.SecureData.RoutingNumber),
-				"iban":          types.StringValue(payload.BankingInformationAttributes.SecureData.Iban),
-				"swift_bic":     types.StringValue(payload.BankingInformationAttributes.SecureData.SwiftBic),
+				"account_number": types.StringPointerValue(payload.BankingInformationAttributes.SecureData.AccountNumber),
+				"routing_number": types.StringPointerValue(payload.BankingInformationAttributes.SecureData.RoutingNumber),
+				"iban":          types.StringPointerValue(payload.BankingInformationAttributes.SecureData.Iban),
+				"swift_bic":     types.StringPointerValue(payload.BankingInformationAttributes.SecureData.SwiftBic),
 			}
 			secureDataObj, diag := types.ObjectValue(map[string]attr.Type{
 				"account_number": types.StringType,
@@ -61,9 +63,9 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		}
 		
 		bankingAttrs := map[string]attr.Value{
-			"bank_name":        types.StringValue(payload.BankingInformationAttributes.BankName),
-			"beneficiary_name": types.StringValue(payload.BankingInformationAttributes.BeneficiaryName),
-			"tax_id":           types.StringValue(payload.BankingInformationAttributes.TaxID),
+			"bank_name":        types.StringPointerValue(payload.BankingInformationAttributes.BankName),
+			"beneficiary_name": types.StringPointerValue(payload.BankingInformationAttributes.BeneficiaryName),
+			"tax_id":           types.StringPointerValue(payload.BankingInformationAttributes.TaxID),
 			"token":            types.StringValue(payload.BankingInformationAttributes.Token),
 			"secure_data":      secureDataAttr,
 		}
@@ -108,14 +110,14 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 		}
 		
 		attrs := map[string]attr.Value{
-			"address_line_1": types.StringValue(payload.BillingInformationAttributes.AddressLine1),
-			"address_line_2": types.StringValue(payload.BillingInformationAttributes.AddressLine2),
+			"address_line_1": types.StringPointerValue(payload.BillingInformationAttributes.AddressLine1),
+			"address_line_2": types.StringPointerValue(payload.BillingInformationAttributes.AddressLine2),
 			"billing_email":  billingEmailsList,
-			"city":           types.StringValue(payload.BillingInformationAttributes.City),
-			"company_name":   types.StringValue(payload.BillingInformationAttributes.CompanyName),
-			"country_code":   types.StringValue(payload.BillingInformationAttributes.CountryCode),
-			"postal_code":    types.StringValue(payload.BillingInformationAttributes.PostalCode),
-			"state":          types.StringValue(payload.BillingInformationAttributes.State),
+			"city":           types.StringPointerValue(payload.BillingInformationAttributes.City),
+			"company_name":   types.StringPointerValue(payload.BillingInformationAttributes.CompanyName),
+			"country_code":   types.StringPointerValue(payload.BillingInformationAttributes.CountryCode),
+			"postal_code":    types.StringPointerValue(payload.BillingInformationAttributes.PostalCode),
+			"state":          types.StringPointerValue(payload.BillingInformationAttributes.State),
 			"token":          types.StringValue(payload.BillingInformationAttributes.Token),
 		}
 		
@@ -140,7 +142,7 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 				for _, field := range payload.BusinessInformationAttributes.Metadata.CustomFields {
 					fieldAttrs := map[string]attr.Value{
 						"name":  types.StringValue(field.Name),
-						"value": types.StringValue(field.Value),
+						"value": types.StringPointerValue(field.Value),
 					}
 					fieldObj, diag := types.ObjectValue(
 						map[string]attr.Type{
@@ -220,6 +222,74 @@ func (m *billingProfileModel) applyPayload(ctx context.Context, payload *modelsv
 	}
 	// Note: When API doesn't return business_information_attributes, we preserve
 	// the existing planned values by not modifying m.BusinessInformationAttributes
+
+	// Handle Invoice Adjustment Attributes
+	if payload.InvoiceAdjustmentAttributes != nil {
+		// Build the adjustment items list using the generated types
+		adjustmentItemsList := []attr.Value{}
+		if payload.InvoiceAdjustmentAttributes.AdjustmentItems != nil {
+			for _, item := range payload.InvoiceAdjustmentAttributes.AdjustmentItems {
+				// Parse amount string to float64
+				var amountVal basetypes.Float64Value
+				if item.Amount != "" {
+					if amount, err := strconv.ParseFloat(item.Amount, 64); err == nil {
+						amountVal = types.Float64Value(amount)
+					} else {
+						amountVal = types.Float64Null()
+					}
+				} else {
+					amountVal = types.Float64Null()
+				}
+
+				// Use the generated constructor for proper type matching
+				itemVal, d := resource_billing_profile.NewAdjustmentItemsValue(
+					resource_billing_profile.AdjustmentItemsValue{}.AttributeTypes(ctx),
+					map[string]attr.Value{
+						"adjustment_type":  types.StringValue(item.AdjustmentType),
+						"amount":           amountVal,
+						"calculation_type": types.StringValue(item.CalculationType),
+						"name":             types.StringValue(item.Name),
+					},
+				)
+				if d.HasError() {
+					diags.Append(d...)
+					return diags
+				}
+
+				// Keep as AdjustmentItemsValue (don't convert to ObjectValue)
+				// The custom type is required for proper list element matching
+				adjustmentItemsList = append(adjustmentItemsList, itemVal)
+			}
+		}
+
+		// Use the generated type for the list element type
+		adjustmentItemsListValue, d := types.ListValue(
+			resource_billing_profile.AdjustmentItemsType{
+				ObjectType: basetypes.ObjectType{AttrTypes: resource_billing_profile.AdjustmentItemsValue{}.AttributeTypes(ctx)},
+			},
+			adjustmentItemsList,
+		)
+		if d.HasError() {
+			diags.Append(d...)
+			return diags
+		}
+
+		invoiceAdjInfo, d := resource_billing_profile.NewInvoiceAdjustmentAttributesValue(
+			resource_billing_profile.InvoiceAdjustmentAttributesValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"adjustment_items": adjustmentItemsListValue,
+				"token":            types.StringValue(payload.InvoiceAdjustmentAttributes.Token),
+			},
+		)
+		if d.HasError() {
+			diags.Append(d...)
+			return diags
+		}
+
+		m.InvoiceAdjustmentAttributes = invoiceAdjInfo
+	}
+	// Note: When API doesn't return invoice_adjustment_attributes, we preserve
+	// the existing planned values by not modifying m.InvoiceAdjustmentAttributes
 
 	// Handle simple attributes
 	m.CreatedAt = types.StringPointerValue(&payload.CreatedAt)
@@ -351,6 +421,38 @@ func (m *billingProfileModel) toCreate(ctx context.Context, diags *diag.Diagnost
 		body.BusinessInformationAttributes = businessInfo
 	}
 
+	// Handle nested invoice adjustment attributes
+	if !m.InvoiceAdjustmentAttributes.IsNull() && !m.InvoiceAdjustmentAttributes.IsUnknown() {
+		invoiceAdjInfo := &modelsv2.CreateBillingProfileInvoiceAdjustmentAttributes{}
+
+		if !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsNull() && !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsUnknown() {
+			var tfAdjustmentItems []resource_billing_profile.AdjustmentItemsValue
+			diags.Append(m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false)...)
+			if diags.HasError() {
+				return nil
+			}
+
+			adjustmentItems := []*modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+			for _, item := range tfAdjustmentItems {
+				adjustmentType := item.AdjustmentType.ValueString()
+				amount := item.Amount.ValueFloat64()
+				calculationType := item.CalculationType.ValueString()
+				name := item.Name.ValueString()
+
+				adjustmentItem := &modelsv2.CreateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{
+					AdjustmentType:  &adjustmentType,
+					Amount:          &amount,
+					CalculationType: &calculationType,
+					Name:            &name,
+				}
+				adjustmentItems = append(adjustmentItems, adjustmentItem)
+			}
+			invoiceAdjInfo.AdjustmentItems = adjustmentItems
+		}
+
+		body.InvoiceAdjustmentAttributes = invoiceAdjInfo
+	}
+
 	return body
 }
 
@@ -470,6 +572,38 @@ func (m *billingProfileModel) toUpdate(ctx context.Context, diags *diag.Diagnost
 		}
 		
 		body.BusinessInformationAttributes = businessInfo
+	}
+
+	// Handle nested invoice adjustment attributes
+	if !m.InvoiceAdjustmentAttributes.IsNull() && !m.InvoiceAdjustmentAttributes.IsUnknown() {
+		invoiceAdjInfo := &modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributes{}
+
+		if !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsNull() && !m.InvoiceAdjustmentAttributes.AdjustmentItems.IsUnknown() {
+			var tfAdjustmentItems []resource_billing_profile.AdjustmentItemsValue
+			diags.Append(m.InvoiceAdjustmentAttributes.AdjustmentItems.ElementsAs(ctx, &tfAdjustmentItems, false)...)
+			if diags.HasError() {
+				return nil
+			}
+
+			adjustmentItems := []*modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{}
+			for _, item := range tfAdjustmentItems {
+				adjustmentType := item.AdjustmentType.ValueString()
+				amount := item.Amount.ValueFloat64()
+				calculationType := item.CalculationType.ValueString()
+				name := item.Name.ValueString()
+
+				adjustmentItem := &modelsv2.UpdateBillingProfileInvoiceAdjustmentAttributesAdjustmentItemsItems0{
+					AdjustmentType:  &adjustmentType,
+					Amount:          &amount,
+					CalculationType: &calculationType,
+					Name:            &name,
+				}
+				adjustmentItems = append(adjustmentItems, adjustmentItem)
+			}
+			invoiceAdjInfo.AdjustmentItems = adjustmentItems
+		}
+
+		body.InvoiceAdjustmentAttributes = invoiceAdjInfo
 	}
 
 	return body

@@ -26,6 +26,13 @@ func (m *costAlertModel) applyPayload(ctx context.Context, payload *modelsv2.Cos
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.UpdatedAt = types.StringValue(payload.UpdatedAt)
 
+	// Handle MinimumThreshold - it's Optional+Computed, so we need to set it
+	if payload.MinimumThreshold != nil {
+		m.MinimumThreshold = types.Float64Value(*payload.MinimumThreshold)
+	} else {
+		m.MinimumThreshold = types.Float64Null()
+	}
+
 	list, diag = types.ListValueFrom(ctx, types.StringType, payload.EmailRecipients)
 	if diag.HasError() {
 		return diag
@@ -60,7 +67,7 @@ func (m *costAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		threshold = &parsedFloat
 	}
 
-	return &modelsv2.CreateCostAlert{
+	payload := &modelsv2.CreateCostAlert{
 		WorkspaceToken:  m.WorkspaceToken.ValueStringPointer(),
 		Title:           m.Title.ValueStringPointer(),
 		Interval:        m.Interval.ValueStringPointer(),
@@ -71,10 +78,16 @@ func (m *costAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		TeamsChannels:   terraformListToStrings(ctx, m.TeamsChannels, diags),
 		ReportTokens:    terraformListToStrings(ctx, m.ReportTokens, diags),
 	}
+
+	if !m.MinimumThreshold.IsNull() && !m.MinimumThreshold.IsUnknown() {
+		payload.MinimumThreshold = float32(m.MinimumThreshold.ValueFloat64())
+	}
+
+	return payload
 }
 
 func (m *costAlertModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) *modelsv2.UpdateCostAlert {
-	return &modelsv2.UpdateCostAlert{
+	payload := &modelsv2.UpdateCostAlert{
 		Title:           m.Title.ValueString(),
 		Interval:        m.Interval.ValueString(),
 		Threshold:       float32(m.Threshold.ValueFloat64()),
@@ -84,6 +97,12 @@ func (m *costAlertModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		TeamsChannels:   terraformListToStrings(ctx, m.TeamsChannels, diags),
 		ReportTokens:    terraformListToStrings(ctx, m.ReportTokens, diags),
 	}
+
+	if !m.MinimumThreshold.IsNull() && !m.MinimumThreshold.IsUnknown() {
+		payload.MinimumThreshold = float32(m.MinimumThreshold.ValueFloat64())
+	}
+
+	return payload
 }
 
 func terraformListToStrings(ctx context.Context, tfList types.List, diags *diag.Diagnostics) []string {

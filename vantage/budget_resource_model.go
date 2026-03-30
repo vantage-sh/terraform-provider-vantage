@@ -46,7 +46,7 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
+	if !src.Periods.IsNull() && !src.Periods.IsUnknown() && len(src.Periods.Elements()) > 0 {
 		periods := make([]*budgetPeriodResourceModel, 0, len(src.Periods.Elements()))
 		if diag := src.Periods.ElementsAs(ctx, &periods, false); diag.HasError() {
 			diags.Append(diag...)
@@ -99,7 +99,7 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	if !src.Periods.IsNull() && !src.Periods.IsUnknown() {
+	if !src.Periods.IsNull() && !src.Periods.IsUnknown() && len(src.Periods.Elements()) > 0 {
 		periods := make([]*budgetPeriodResourceModel, 0, len(src.Periods.Elements()))
 		if diag := src.Periods.ElementsAs(ctx, &periods, false); diag.HasError() {
 			diags.Append(diag...)
@@ -145,11 +145,11 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 	dst.Token = types.StringValue(src.Token)
 	dst.Id = types.StringValue(src.Token)
 	dst.CreatedAt = types.StringValue(src.CreatedAt)
-	dst.CreatedByToken = types.StringValue(src.CreatedByToken)
-	dst.Name = types.StringValue(src.Name)
-	dst.UserToken = types.StringValue(src.UserToken)
+	dst.CreatedByToken = types.StringPointerValue(src.CreatedByToken)
+	dst.Name = types.StringPointerValue(src.Name)
+	dst.UserToken = types.StringPointerValue(src.UserToken)
 	dst.WorkspaceToken = types.StringValue(src.WorkspaceToken)
-	dst.CostReportToken = types.StringValue(src.CostReportToken)
+	dst.CostReportToken = types.StringPointerValue(src.CostReportToken)
 
 	if src.BudgetAlertTokens != nil {
 		budgetAlertTokens, diag := types.ListValueFrom(ctx, types.StringType, src.BudgetAlertTokens)

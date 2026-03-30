@@ -68,7 +68,7 @@ func (d *accessGrantsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	for _, ag := range out.Payload.AccessGrants {
 		accessGrants = append(accessGrants, accessGrantDataSourceModel{
 			Token:         types.StringValue(ag.Token),
-			TeamToken:     types.StringValue(ag.TeamToken),
+			TeamToken:     types.StringPointerValue(ag.TeamToken),
 			ResourceToken: types.StringValue(ag.ResourceToken),
 			Access:        types.StringValue(ag.Access),
 		})

@@ -82,3 +82,45 @@ resource "vantage_financial_commitment_report" "financial_commitment_report" {
 	`, title, dateInterval)
 
 }
+
+func TestFinancialCommitmentReport_withEmptyGroupings(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_financial_commitment_report.test_empty_groupings"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccFinancialCommitmentReportConfig_withEmptyGroupings(rTitle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rTitle),
+					resource.TestCheckResourceAttr(resourceName, "groupings.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
+				),
+			},
+			{
+				Config: testAccFinancialCommitmentReportConfig_withEmptyGroupings(rUpdatedTitle),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rUpdatedTitle),
+					resource.TestCheckResourceAttr(resourceName, "groupings.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccFinancialCommitmentReportConfig_withEmptyGroupings(title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_financial_commitment_report" "test_empty_groupings" {
+	workspace_token = data.vantage_workspaces.test.workspaces[0].token
+	title = %[1]q
+	date_interval = "last_7_days"
+	groupings = []
+}
+`, title)
+}

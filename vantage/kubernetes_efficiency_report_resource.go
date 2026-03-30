@@ -62,6 +62,9 @@ func (r *kubernetesEfficiencyReportResource) Create(ctx context.Context, req res
 		return
 	}
 
+	// Save the planned groupings value to preserve empty lists
+	plannedGroupings := data.Groupings
+
 	model := data.toCreateModel(ctx)
 
 	params := k8seffreportsv2.NewCreateKubernetesEfficiencyReportParams().WithCreateKubernetesEfficiencyReport(model)
@@ -81,6 +84,13 @@ func (r *kubernetesEfficiencyReportResource) Create(ctx context.Context, req res
 		resp.Diagnostics.Append(diag...)
 		return
 	}
+
+	// If the plan had an explicit empty list for groupings, preserve it
+	// This prevents inconsistent state when the API returns default groupings
+	if !plannedGroupings.IsNull() && !plannedGroupings.IsUnknown() && len(plannedGroupings.Elements()) == 0 {
+		data.Groupings = plannedGroupings
+	}
+
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -94,6 +104,9 @@ func (r *kubernetesEfficiencyReportResource) Read(ctx context.Context, req resou
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the current state groupings value to preserve empty lists
+	stateGroupings := data.Groupings
 
 	// Read API call logic
 	params := k8seffreportsv2.NewGetKubernetesEfficiencyReportParams().WithKubernetesEfficiencyReportToken(data.Token.ValueString())
@@ -115,6 +128,12 @@ func (r *kubernetesEfficiencyReportResource) Read(ctx context.Context, req resou
 		return
 	}
 
+	// If the previous state had an explicit empty list for groupings, preserve it
+	// The API returns default groupings even when empty was specified
+	if !stateGroupings.IsNull() && !stateGroupings.IsUnknown() && len(stateGroupings.Elements()) == 0 {
+		data.Groupings = stateGroupings
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -125,6 +144,9 @@ func (r *kubernetesEfficiencyReportResource) Update(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save the planned groupings value to preserve empty lists
+	plannedGroupings := data.Groupings
 
 	model := data.toUpdateModel(ctx)
 
@@ -145,6 +167,12 @@ func (r *kubernetesEfficiencyReportResource) Update(ctx context.Context, req res
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
+	}
+
+	// If the plan had an explicit empty list for groupings, preserve it
+	// This prevents inconsistent state when the API returns default groupings
+	if !plannedGroupings.IsNull() && !plannedGroupings.IsUnknown() && len(plannedGroupings.Elements()) == 0 {
+		data.Groupings = plannedGroupings
 	}
 
 	// Save updated data into Terraform state

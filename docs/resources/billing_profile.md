@@ -66,6 +66,7 @@ resource "vantage_billing_profile" "complete_profile_nested" {
 - `banking_information_attributes` (Attributes) Banking details (MSP accounts only) (see [below for nested schema](#nestedatt--banking_information_attributes))
 - `billing_information_attributes` (Attributes) Billing address and contact information (see [below for nested schema](#nestedatt--billing_information_attributes))
 - `business_information_attributes` (Attributes) Business information and custom fields (see [below for nested schema](#nestedatt--business_information_attributes))
+- `invoice_adjustment_attributes` (Attributes) Invoice adjustments (taxes, fees, etc.) (see [below for nested schema](#nestedatt--invoice_adjustment_attributes))
 
 ### Read-Only
 
@@ -136,5 +137,29 @@ Optional:
 
 - `name` (String) Custom field name
 - `value` (String) Custom field value
+
+
+
+
+<a id="nestedatt--invoice_adjustment_attributes"></a>
+### Nested Schema for `invoice_adjustment_attributes`
+
+Optional:
+
+- `adjustment_items` (Attributes List) Array of adjustment items (see [below for nested schema](#nestedatt--invoice_adjustment_attributes--adjustment_items))
+- `token` (String)
+
+<a id="nestedatt--invoice_adjustment_attributes--adjustment_items"></a>
+### Nested Schema for `invoice_adjustment_attributes.adjustment_items`
+
+Required:
+
+- `amount` (Number) Amount or percentage value
+- `calculation_type` (String) How the adjustment is calculated
+- `name` (String) Name of the adjustment
+
+Optional:
+
+- `adjustment_type` (String) Type of adjustment
 
 

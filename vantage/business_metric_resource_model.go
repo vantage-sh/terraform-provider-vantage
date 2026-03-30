@@ -207,9 +207,9 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 	m.SetTitle(types.StringValue(payload.Title))
 	m.SetToken(types.StringValue(payload.Token))
 	m.SetId(types.StringValue(payload.Token))
-	m.SetCreatedByToken(types.StringValue(payload.CreatedByToken))
-	m.SetImportType(types.StringValue(payload.ImportType))
-	m.SetIntegrationToken(types.StringValue(payload.IntegrationToken))
+	m.SetCreatedByToken(types.StringPointerValue(payload.CreatedByToken))
+	m.SetImportType(types.StringPointerValue(payload.ImportType))
+	m.SetIntegrationToken(types.StringPointerValue(payload.IntegrationToken))
 
 	tfCloudwatchFields, diag := cloudwatchFieldsFromApiModel(ctx, payload.CloudwatchFields, payload.IntegrationToken)
 	if diag.HasError() {
@@ -231,7 +231,7 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 				return diag
 			}
 			tfCostReportTokens = append(tfCostReportTokens, businessMetricResourceModelCostReportToken{
-				CostReportToken: types.StringValue(costReportToken.CostReportToken),
+				CostReportToken: types.StringPointerValue(costReportToken.CostReportToken),
 				UnitScale:       types.StringValue(costReportToken.UnitScale),
 				LabelFilter:     labelFilter,
 			})
@@ -368,6 +368,35 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 
 	}
 
+	if !m.ForecastedValues.IsNull() && !m.ForecastedValues.IsUnknown() {
+		tfForecastedValues := m.forecastedValuesFromTf(ctx, diags)
+		if diags.HasError() {
+			return nil
+		}
+
+		forecastedValues := make([]*modelsv2.CreateBusinessMetricForecastedValuesItems0, 0, len(tfForecastedValues))
+		for _, v := range tfForecastedValues {
+			amt := v.Amount.ValueFloat64()
+			t, err := time.Parse("2006-01-02", v.Date.ValueString())
+			if err != nil {
+				diags.AddError(fmt.Sprintf("Failed to parse forecasted value date: %s", v.Date.ValueString()), err.Error())
+				return nil
+			}
+			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
+
+			value := modelsv2.CreateBusinessMetricForecastedValuesItems0{
+				Amount: &amt,
+				Date:   &ts,
+				Label:  label,
+			}
+
+			forecastedValues = append(forecastedValues, &value)
+		}
+
+		model.ForecastedValues = forecastedValues
+	}
+
 	return model
 }
 
@@ -480,12 +509,50 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		model.CostReportTokensWithMetadata = costReportTokens
 	}
 
+	if !m.ForecastedValues.IsNull() && !m.ForecastedValues.IsUnknown() {
+		tfForecastedValues := m.forecastedValuesFromTf(ctx, diags)
+		if diags.HasError() {
+			return nil
+		}
+
+		forecastedValues := make([]*modelsv2.UpdateBusinessMetricForecastedValuesItems0, 0, len(tfForecastedValues))
+		for _, v := range tfForecastedValues {
+			amt := v.Amount.ValueFloat64()
+			t, err := time.Parse("2006-01-02", v.Date.ValueString())
+			if err != nil {
+				diags.AddError(fmt.Sprintf("Failed to parse forecasted value date: %s", v.Date.ValueString()), err.Error())
+				return nil
+			}
+			ts := strfmt.DateTime(t)
+			label := v.Label.ValueStringPointer()
+
+			value := modelsv2.UpdateBusinessMetricForecastedValuesItems0{
+				Amount: &amt,
+				Date:   &ts,
+				Label:  label,
+			}
+
+			forecastedValues = append(forecastedValues, &value)
+		}
+
+		model.ForecastedValues = forecastedValues
+	}
+
 	return model
 }
 
 func (m *businessMetricResourceModel) valuesFromTf(ctx context.Context, diags *diag.Diagnostics) []*businessMetricResourceModelValue {
 	values := make([]*businessMetricResourceModelValue, 0, len(m.Values.Elements()))
 	if diag := m.Values.ElementsAs(ctx, &values, false); diag.HasError() {
+		diags.Append(diag...)
+		return nil
+	}
+	return values
+}
+
+func (m *businessMetricResourceModel) forecastedValuesFromTf(ctx context.Context, diags *diag.Diagnostics) []*businessMetricResourceModelValue {
+	values := make([]*businessMetricResourceModelValue, 0, len(m.ForecastedValues.Elements()))
+	if diag := m.ForecastedValues.ElementsAs(ctx, &values, false); diag.HasError() {
 		diags.Append(diag...)
 		return nil
 	}
@@ -529,14 +596,14 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 	for _, planToken := range planTokens {
 		tokenKey := planToken.CostReportToken.ValueString()
 		if apiToken, ok := apiTokenMap[tokenKey]; ok {
-			// Handle label_filter: if API returns null but plan had a value, use plan's value
+			// Handle label_filter: if API returns null/unknown but plan had a known value, use plan's value
 			// This ensures empty lists stay as empty lists rather than becoming null
 			labelFilter := apiToken.LabelFilter
-			if labelFilter.IsNull() && !planToken.LabelFilter.IsNull() {
+			if (labelFilter.IsNull() || labelFilter.IsUnknown()) && !planToken.LabelFilter.IsNull() && !planToken.LabelFilter.IsUnknown() {
 				labelFilter = planToken.LabelFilter
 			}
-			// If both are null, ensure we use an empty list for consistency
-			if labelFilter.IsNull() {
+			// If still null or unknown, ensure we use an empty list for consistency
+			if labelFilter.IsNull() || labelFilter.IsUnknown() {
 				labelFilter, _ = types.ListValueFrom(ctx, types.StringType, []string{})
 			}
 
@@ -578,7 +645,7 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 	data.CostReportTokensWithMetadata = newList
 }
 
-func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.DatadogMetricFields, integrationToken string) (resource_business_metric.DatadogMetricFieldsValue, diag.Diagnostics) {
+func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.DatadogMetricFields, integrationToken *string) (resource_business_metric.DatadogMetricFieldsValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if apiFields == nil {
 		return resource_business_metric.NewDatadogMetricFieldsValueNull(), diags
@@ -591,7 +658,7 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 		},
 		map[string]attr.Value{
 			"query":             types.StringValue(apiFields.Query),
-			"integration_token": types.StringValue(integrationToken),
+			"integration_token": types.StringPointerValue(integrationToken),
 		},
 	)
 	diags.Append(d...)
@@ -599,7 +666,7 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 	return tfValue, diags
 }
 
-func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.CloudwatchFields, integrationToken string) (resource_business_metric.CloudwatchFieldsValue, diag.Diagnostics) {
+func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.CloudwatchFields, integrationToken *string) (resource_business_metric.CloudwatchFieldsValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if apiFields == nil {
 		return resource_business_metric.NewCloudwatchFieldsValueNull(), diags
@@ -653,9 +720,9 @@ func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Cloud
 			"metric_name":       types.StringValue(apiFields.MetricName),
 			"namespace":         types.StringValue(apiFields.Namespace),
 			"region":            types.StringValue(apiFields.Region),
-			"label_dimension":   types.StringValue(apiFields.LabelDimension),
+			"label_dimension":   types.StringPointerValue(apiFields.LabelDimension),
 			"dimensions":        dimensionsListValue,
-			"integration_token": types.StringValue(integrationToken),
+			"integration_token": types.StringPointerValue(integrationToken),
 		},
 	)
 	diags.Append(d...)

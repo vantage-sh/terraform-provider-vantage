@@ -166,6 +166,31 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Datadog metric configuration fields",
 				MarkdownDescription: "Datadog metric configuration fields",
 			},
+			"forecasted_values": schema.ListNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"amount": schema.Float64Attribute{
+							Required: true,
+						},
+						"date": schema.StringAttribute{
+							Required: true,
+						},
+						"label": schema.StringAttribute{
+							Optional: true,
+							Computed: true,
+						},
+					},
+					CustomType: ForecastedValuesType{
+						ObjectType: types.ObjectType{
+							AttrTypes: ForecastedValuesValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+				Optional:            true,
+				Computed:            true,
+				Description:         "The dates, amounts, and (optional) labels for forecasted BusinessMetric values.",
+				MarkdownDescription: "The dates, amounts, and (optional) labels for forecasted BusinessMetric values.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The id of the business metric",
@@ -225,6 +250,7 @@ type BusinessMetricModel struct {
 	CostReportTokensWithMetadata types.List               `tfsdk:"cost_report_tokens_with_metadata"`
 	CreatedByToken               types.String             `tfsdk:"created_by_token"`
 	DatadogMetricFields          DatadogMetricFieldsValue `tfsdk:"datadog_metric_fields"`
+	ForecastedValues             types.List               `tfsdk:"forecasted_values"`
 	Id                           types.String             `tfsdk:"id"`
 	ImportType                   types.String             `tfsdk:"import_type"`
 	IntegrationToken             types.String             `tfsdk:"integration_token"`
@@ -819,18 +845,28 @@ func (v CloudwatchFieldsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		)
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"dimensions": basetypes.ListType{
-				ElemType: DimensionsValue{}.Type(ctx),
-			},
-			"integration_token": basetypes.StringType{},
-			"label_dimension":   basetypes.StringType{},
-			"metric_name":       basetypes.StringType{},
-			"namespace":         basetypes.StringType{},
-			"region":            basetypes.StringType{},
-			"stat":              basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"dimensions": basetypes.ListType{
+			ElemType: DimensionsValue{}.Type(ctx),
 		},
+		"integration_token": basetypes.StringType{},
+		"label_dimension":   basetypes.StringType{},
+		"metric_name":       basetypes.StringType{},
+		"namespace":         basetypes.StringType{},
+		"region":            basetypes.StringType{},
+		"stat":              basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"dimensions":        dimensions,
 			"integration_token": v.IntegrationToken,
@@ -1227,11 +1263,21 @@ func (v DimensionsValue) String() string {
 func (v DimensionsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"name":  basetypes.StringType{},
+		"value": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"name":  basetypes.StringType{},
-			"value": basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"name":  v.Name,
 			"value": v.Value,
@@ -1646,11 +1692,19 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	labelFilterVal, d := types.ListValue(types.StringType, v.LabelFilter.Elements())
+	var labelFilterVal basetypes.ListValue
+	switch {
+	case v.LabelFilter.IsUnknown():
+		labelFilterVal = types.ListUnknown(types.StringType)
+	case v.LabelFilter.IsNull():
+		labelFilterVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		labelFilterVal, d = types.ListValue(types.StringType, v.LabelFilter.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"cost_report_token": basetypes.StringType{},
 			"label_filter": basetypes.ListType{
@@ -1660,14 +1714,24 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		}), diags
 	}
 
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"label_filter": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"unit_scale": basetypes.StringType{},
+	attributeTypes := map[string]attr.Type{
+		"cost_report_token": basetypes.StringType{},
+		"label_filter": basetypes.ListType{
+			ElemType: types.StringType,
 		},
+		"unit_scale": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"cost_report_token": v.CostReportToken,
 			"label_filter":      labelFilterVal,
@@ -2040,11 +2104,21 @@ func (v DatadogMetricFieldsValue) String() string {
 func (v DatadogMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"query":             basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"integration_token": basetypes.StringType{},
-			"query":             basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"integration_token": v.IntegrationToken,
 			"query":             v.Query,
@@ -2091,6 +2165,440 @@ func (v DatadogMetricFieldsValue) AttributeTypes(ctx context.Context) map[string
 	return map[string]attr.Type{
 		"integration_token": basetypes.StringType{},
 		"query":             basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = ForecastedValuesType{}
+
+type ForecastedValuesType struct {
+	basetypes.ObjectType
+}
+
+func (t ForecastedValuesType) Equal(o attr.Type) bool {
+	other, ok := o.(ForecastedValuesType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t ForecastedValuesType) String() string {
+	return "ForecastedValuesType"
+}
+
+func (t ForecastedValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	amountAttribute, ok := attributes["amount"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`amount is missing from object`)
+
+		return nil, diags
+	}
+
+	amountVal, ok := amountAttribute.(basetypes.Float64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`amount expected to be basetypes.Float64Value, was: %T`, amountAttribute))
+	}
+
+	dateAttribute, ok := attributes["date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`date is missing from object`)
+
+		return nil, diags
+	}
+
+	dateVal, ok := dateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
+	}
+
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return nil, diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return ForecastedValuesValue{
+		Amount: amountVal,
+		Date:   dateVal,
+		Label:  labelVal,
+		state:  attr.ValueStateKnown,
+	}, diags
+}
+
+func NewForecastedValuesValueNull() ForecastedValuesValue {
+	return ForecastedValuesValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewForecastedValuesValueUnknown() ForecastedValuesValue {
+	return ForecastedValuesValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewForecastedValuesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (ForecastedValuesValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing ForecastedValuesValue Attribute Value",
+				"While creating a ForecastedValuesValue value, a missing attribute value was detected. "+
+					"A ForecastedValuesValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("ForecastedValuesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid ForecastedValuesValue Attribute Type",
+				"While creating a ForecastedValuesValue value, an invalid attribute value was detected. "+
+					"A ForecastedValuesValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("ForecastedValuesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("ForecastedValuesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra ForecastedValuesValue Attribute Value",
+				"While creating a ForecastedValuesValue value, an extra attribute value was detected. "+
+					"A ForecastedValuesValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra ForecastedValuesValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewForecastedValuesValueUnknown(), diags
+	}
+
+	amountAttribute, ok := attributes["amount"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`amount is missing from object`)
+
+		return NewForecastedValuesValueUnknown(), diags
+	}
+
+	amountVal, ok := amountAttribute.(basetypes.Float64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`amount expected to be basetypes.Float64Value, was: %T`, amountAttribute))
+	}
+
+	dateAttribute, ok := attributes["date"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`date is missing from object`)
+
+		return NewForecastedValuesValueUnknown(), diags
+	}
+
+	dateVal, ok := dateAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
+	}
+
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return NewForecastedValuesValueUnknown(), diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
+	if diags.HasError() {
+		return NewForecastedValuesValueUnknown(), diags
+	}
+
+	return ForecastedValuesValue{
+		Amount: amountVal,
+		Date:   dateVal,
+		Label:  labelVal,
+		state:  attr.ValueStateKnown,
+	}, diags
+}
+
+func NewForecastedValuesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) ForecastedValuesValue {
+	object, diags := NewForecastedValuesValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewForecastedValuesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t ForecastedValuesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewForecastedValuesValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewForecastedValuesValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewForecastedValuesValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewForecastedValuesValueMust(ForecastedValuesValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t ForecastedValuesType) ValueType(ctx context.Context) attr.Value {
+	return ForecastedValuesValue{}
+}
+
+var _ basetypes.ObjectValuable = ForecastedValuesValue{}
+
+type ForecastedValuesValue struct {
+	Amount basetypes.Float64Value `tfsdk:"amount"`
+	Date   basetypes.StringValue  `tfsdk:"date"`
+	Label  basetypes.StringValue  `tfsdk:"label"`
+	state  attr.ValueState
+}
+
+func (v ForecastedValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 3)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["amount"] = basetypes.Float64Type{}.TerraformType(ctx)
+	attrTypes["date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 3)
+
+		val, err = v.Amount.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["amount"] = val
+
+		val, err = v.Date.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["date"] = val
+
+		val, err = v.Label.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v ForecastedValuesValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v ForecastedValuesValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v ForecastedValuesValue) String() string {
+	return "ForecastedValuesValue"
+}
+
+func (v ForecastedValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"amount": basetypes.Float64Type{},
+		"date":   basetypes.StringType{},
+		"label":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"amount": v.Amount,
+			"date":   v.Date,
+			"label":  v.Label,
+		})
+
+	return objVal, diags
+}
+
+func (v ForecastedValuesValue) Equal(o attr.Value) bool {
+	other, ok := o.(ForecastedValuesValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Amount.Equal(other.Amount) {
+		return false
+	}
+
+	if !v.Date.Equal(other.Date) {
+		return false
+	}
+
+	if !v.Label.Equal(other.Label) {
+		return false
+	}
+
+	return true
+}
+
+func (v ForecastedValuesValue) Type(ctx context.Context) attr.Type {
+	return ForecastedValuesType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v ForecastedValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"amount": basetypes.Float64Type{},
+		"date":   basetypes.StringType{},
+		"label":  basetypes.StringType{},
 	}
 }
 
@@ -2457,12 +2965,22 @@ func (v ValuesValue) String() string {
 func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	attributeTypes := map[string]attr.Type{
+		"amount": basetypes.Float64Type{},
+		"date":   basetypes.StringType{},
+		"label":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
 	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
-			"amount": basetypes.Float64Type{},
-			"date":   basetypes.StringType{},
-			"label":  basetypes.StringType{},
-		},
+		attributeTypes,
 		map[string]attr.Value{
 			"amount": v.Amount,
 			"date":   v.Date,

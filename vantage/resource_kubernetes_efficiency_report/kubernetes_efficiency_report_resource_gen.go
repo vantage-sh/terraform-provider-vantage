@@ -42,6 +42,7 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 						"day",
 						"week",
 						"month",
+						"quarter",
 					),
 				},
 			},

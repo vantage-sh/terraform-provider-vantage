@@ -53,17 +53,39 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 }
 
 func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-    var state AwsProviderResourceModel
-    resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-    if resp.Diagnostics.HasError() { return }
-    params := integrationsv1.NewGetIntegrationsAWSParams()
-    params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
-    out, err := r.client.V1.Integrations.GetIntegrationsAWS(params, r.client.Auth)
-    if err != nil { handleError("Read AWS Integration", &resp.Diagnostics, err); return }
-    state.CrossAccountARN = types.StringValue(out.Payload.CrossAccountArn)
-    state.BucketARN = types.StringValue(out.Payload.BucketArn)
-    state.Id = types.Int64Value(int64(out.Payload.ID))
-    resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	var state AwsProviderResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	params := integrationsv1.NewGetIntegrationsAWSParams()
+	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
+	out, err := r.client.V1.Integrations.GetIntegrationsAWS(params, r.client.Auth)
+	if err != nil {
+		if _, ok := err.(*integrationsv1.GetIntegrationsAWSNotFound); ok {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		handleError("Get AWS Integration", &resp.Diagnostics, err)
+		return
+	}
+
+	// Overwrite items with refreshed state
+	if out.Payload.BucketArn != nil && *out.Payload.BucketArn != "" {
+		state.BucketARN = types.StringPointerValue(out.Payload.BucketArn)
+	} else {
+		state.BucketARN = types.StringNull()
+	}
+	state.CrossAccountARN = types.StringValue(out.Payload.CrossAccountArn)
+
+	// Set refreshed state
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
