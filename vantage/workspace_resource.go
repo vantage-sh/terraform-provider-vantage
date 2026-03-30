@@ -3,15 +3,13 @@ package vantage
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_workspace"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	workspacesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/workspaces"
 )
@@ -30,82 +28,36 @@ func NewWorkspaceResource() resource.Resource {
 	return &WorkspaceResource{}
 }
 
-type WorkspaceResourceModel struct {
-	Name                     types.String `tfsdk:"name"`
-	Token                    types.String `tfsdk:"token"`
-	Id                       types.String `tfsdk:"id"`
-	Currency                 types.String `tfsdk:"currency"`
-	EnableCurrencyConversion types.Bool   `tfsdk:"enable_currency_conversion"`
-	ExchangeRateDate         types.String `tfsdk:"exchange_rate_date"`
-	CreatedAt                types.String `tfsdk:"created_at"`
-}
-
 func (r *WorkspaceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_workspace"
 }
 
-func (r WorkspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a Workspace.",
-		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				MarkdownDescription: "Name of the workspace.",
-				Required:            true,
-			},
-			"token": schema.StringAttribute{
-				MarkdownDescription: "Unique workspace identifier.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Alias of `token`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"currency": schema.StringAttribute{
-				MarkdownDescription: "Currency code for the workspace.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"enable_currency_conversion": schema.BoolAttribute{
-				MarkdownDescription: "Whether currency conversion is enabled for the workspace.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"exchange_rate_date": schema.StringAttribute{
-				MarkdownDescription: "Exchange rate strategy: `daily_rate` or `end_of_billing_period_rate`.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Validators: []validator.String{
-					stringvalidator.OneOf(
-						modelsv2.CreateWorkspaceExchangeRateDateDailyRate,
-						modelsv2.CreateWorkspaceExchangeRateDateEndOfBillingPeriodRate,
-					),
-				},
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "When the workspace was created (UTC, ISO 8601).",
-				Computed:            true,
-			},
+func (r WorkspaceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	s := resource_workspace.WorkspaceResourceSchema(ctx)
+	s.MarkdownDescription = "Manages a Workspace."
+
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         "The token of the workspace",
+		MarkdownDescription: "The token of the workspace",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+	s.Attributes["id"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         "Alias of `token`.",
+		MarkdownDescription: "Alias of `token`.",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	resp.Schema = s
 }
 
 func (r WorkspaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *WorkspaceResourceModel
+	var data *resource_workspace.WorkspaceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -142,7 +94,7 @@ func (r WorkspaceResource) Create(ctx context.Context, req resource.CreateReques
 }
 
 func (r WorkspaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *WorkspaceResourceModel
+	var state *resource_workspace.WorkspaceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -165,7 +117,7 @@ func (r WorkspaceResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r WorkspaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *WorkspaceResourceModel
+	var data *resource_workspace.WorkspaceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,7 +156,7 @@ func (r WorkspaceResource) Update(ctx context.Context, req resource.UpdateReques
 }
 
 func (r WorkspaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *WorkspaceResourceModel
+	var state *resource_workspace.WorkspaceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -230,7 +182,7 @@ func (r *WorkspaceResource) Configure(_ context.Context, req resource.ConfigureR
 	r.client = req.ProviderData.(*Client)
 }
 
-func applyWorkspacePayload(w *modelsv2.Workspace, m *WorkspaceResourceModel) {
+func applyWorkspacePayload(w *modelsv2.Workspace, m *resource_workspace.WorkspaceModel) {
 	if w == nil || m == nil {
 		return
 	}
