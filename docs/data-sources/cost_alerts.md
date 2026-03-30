@@ -28,6 +28,7 @@ Read-Only:
 - `email_recipients` (List of String) The email addresses that will receive the alert.
 - `id` (String) The id of the resource
 - `interval` (String) The period of time used to compare costs. Options are 'day', 'week', 'month', 'quarter'.
+- `minimum_threshold` (Number) The minimum dollar amount threshold for percentage-based alerts. When set, alerts will only trigger if the dollar change meets this minimum, even if the percentage threshold is exceeded.
 - `report_tokens` (List of String) The tokens of the reports to alert on.
 - `slack_channels` (List of String) The Slack channels that will receive the alert. Make sure your slack integration is connected at https://console.vantage.sh/settings/slack.
 - `teams_channels` (List of String) The Microsoft Teams channels that will receive the alert. Make sure your teams integration is connected at https://console.vantage.sh/settings/microsoft_teams.

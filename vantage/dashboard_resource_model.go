@@ -2,12 +2,11 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -15,18 +14,27 @@ import (
 type dashboardModel resource_dashboard.DashboardModel
 
 func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Dashboard) diag.Diagnostics {
+	planStartDate := m.StartDate
+	planEndDate := m.EndDate
+
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
-	m.DateBin = types.StringValue(payload.DateBin)
-	tflog.Debug(ctx, fmt.Sprintf("DateInterval is not null %s", payload.DateInterval))
-	if payload.DateInterval != "" {
-		m.DateInterval = types.StringValue(payload.DateInterval)
+	m.DateBin = types.StringPointerValue(payload.DateBin)
+	if payload.DateInterval != nil && *payload.DateInterval != "" {
+		m.DateInterval = types.StringPointerValue(payload.DateInterval)
 	} else {
 		m.DateInterval = types.StringNull()
 	}
 
-	if payload.DateInterval == "custom" {
-		m.StartDate = types.StringValue(payload.StartDate)
-		m.EndDate = types.StringValue(payload.EndDate)
+	if payload.DateInterval != nil && *payload.DateInterval == "custom" {
+		m.StartDate = ptrStringOrEmpty(payload.StartDate)
+		m.EndDate = ptrStringOrEmpty(payload.EndDate)
+	} else if !planStartDate.IsNull() && !planStartDate.IsUnknown() && planStartDate.ValueString() != "" &&
+		!planEndDate.IsNull() && !planEndDate.IsUnknown() && planEndDate.ValueString() != "" {
+		m.StartDate = planStartDate
+		m.EndDate = planEndDate
+	} else {
+		m.StartDate = types.StringValue("")
+		m.EndDate = types.StringValue("")
 	}
 
 	saved_filters, diag := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
@@ -41,22 +49,44 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 
 	tfWidgets := make([]basetypes.ObjectValue, 0, len(payload.Widgets))
 	for _, widget := range payload.Widgets {
-		tfWidget := resource_dashboard.WidgetsValue{
-			Title:           types.StringValue(widget.Title),
-			WidgetableToken: types.StringValue(widget.WidgetableToken),
+		// Build settings object
+		var settingsObj basetypes.ObjectValue
+		settingsAttrTypes := map[string]attr.Type{
+			"display_type": types.StringType,
 		}
-
+		
 		if widget.Settings != nil {
-			s := resource_dashboard.SettingsValue{
-				DisplayType: types.StringValue(widget.Settings.DisplayType),
+			settingsAttrs := map[string]attr.Value{
+				"display_type": types.StringValue(widget.Settings.DisplayType),
 			}
-
-			sObj, diag := s.ToObjectValue(ctx)
+			settingsVal, diag := resource_dashboard.NewSettingsValue(settingsAttrTypes, settingsAttrs)
 			if diag.HasError() {
 				return diag
 			}
+			settingsObj, diag = settingsVal.ToObjectValue(ctx)
+			if diag.HasError() {
+				return diag
+			}
+		} else {
+			// Create null settings object when not provided
+			settingsObj = types.ObjectNull(settingsAttrTypes)
+		}
 
-			tfWidget.Settings = sObj
+		// Build widget using proper constructor with attribute types and values
+		widgetAttrTypes := map[string]attr.Type{
+			"settings": types.ObjectType{AttrTypes: settingsAttrTypes},
+			"title":            types.StringType,
+			"widgetable_token": types.StringType,
+		}
+		widgetAttrs := map[string]attr.Value{
+			"settings":         settingsObj,
+			"title":            types.StringValue(widget.Title),
+			"widgetable_token": types.StringValue(widget.WidgetableToken),
+		}
+
+		tfWidget, diag := resource_dashboard.NewWidgetsValue(widgetAttrTypes, widgetAttrs)
+		if diag.HasError() {
+			return diag
 		}
 
 		tfValue, diag := tfWidget.ToObjectValue(ctx)
@@ -123,7 +153,6 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 			widgets = append(widgets, widget)
 		}
 	}
-	tflog.Debug(ctx, fmt.Sprintf("DateInterval create %s", m.DateInterval.ValueString()))
 	payload := &modelsv2.CreateDashboard{
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
@@ -133,14 +162,12 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		DateInterval:      m.DateInterval.ValueString(),
 	}
 
-	if (m.DateInterval.ValueString() == "" && !m.StartDate.IsNull() && !m.EndDate.IsNull()) || m.DateInterval.ValueString() == "custom" {
-		// if m.DateInterval.ValueString() == "custom" {
+	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() && m.StartDate.ValueString() != "" &&
+		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
+		payload.DateInterval = "custom"
 	}
-	// else {
-	// 	payload.DateInterval = m.DateInterval.ValueString()
-	// }
 
 	return payload
 }
@@ -203,9 +230,11 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		DateInterval:      dateInterval,
 	}
 
-	if m.DateInterval.ValueString() == "custom" && !m.StartDate.IsNull() && !m.EndDate.IsNull() {
+	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() && m.StartDate.ValueString() != "" &&
+		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
 		payload.StartDate = m.StartDate.ValueString()
 		payload.EndDate = m.EndDate.ValueString()
+		payload.DateInterval = "custom"
 	}
 
 	return payload

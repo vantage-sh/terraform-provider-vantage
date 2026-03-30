@@ -80,16 +80,25 @@ func (d *costAlertsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			return
 		}
 
+		// Handle MinimumThreshold - API returns a pointer
+		var minimumThreshold basetypes.NumberValue
+		if alert.MinimumThreshold != nil {
+			minimumThreshold = basetypes.NewNumberValue(big.NewFloat(*alert.MinimumThreshold))
+		} else {
+			minimumThreshold = types.NumberNull()
+		}
+
 		alerts = append(alerts, costAlertDataSourceValue{
-			Token:           types.StringValue(alert.Token),
-			Title:           types.StringValue(alert.Title),
-			Interval:        types.StringValue(alert.Interval),
-			Threshold:       basetypes.NewNumberValue(big.NewFloat(alert.Threshold)),
-			UnitType:        types.StringValue(alert.UnitType),
-			EmailRecipients: emailRecipients,
-			SlackChannels:   slackChannels,
-			TeamsChannels:   teamsChannels,
-			ReportTokens:    reportTokens,
+			Token:            types.StringValue(alert.Token),
+			Title:            types.StringValue(alert.Title),
+			Interval:         types.StringValue(alert.Interval),
+			Threshold:        basetypes.NewNumberValue(big.NewFloat(alert.Threshold)),
+			MinimumThreshold: minimumThreshold,
+			UnitType:         types.StringValue(alert.UnitType),
+			EmailRecipients:  emailRecipients,
+			SlackChannels:    slackChannels,
+			TeamsChannels:    teamsChannels,
+			ReportTokens:     reportTokens,
 		})
 	}
 

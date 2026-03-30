@@ -17,6 +17,7 @@ type virtualTagConfigModel resource_virtual_tag_config.VirtualTagConfigModel
 type virtualTagConfigValueModel struct {
 	BusinessMetricToken types.String                                `tfsdk:"business_metric_token"`
 	CostMetric          resource_virtual_tag_config.CostMetricValue `tfsdk:"cost_metric"`
+	DateRanges          types.List                                  `tfsdk:"date_ranges"`
 	Filter              types.String                                `tfsdk:"filter"`
 	Name                types.String                                `tfsdk:"name"`
 	Percentages         types.List                                  `tfsdk:"percentages"`
@@ -36,6 +37,11 @@ type percentageData struct {
 	Value *string
 }
 
+type dateRangeData struct {
+	StartDate string
+	EndDate   string
+}
+
 type aggregationData struct {
 	Tag *string
 }
@@ -50,6 +56,7 @@ type valueData struct {
 	Filter              *string
 	BusinessMetricToken string
 	CostMetric          *costMetricData
+	DateRanges          []dateRangeData
 	Percentages         []percentageData
 }
 
@@ -59,7 +66,7 @@ func buildCostMetricFromPayload(ctx context.Context, cm *modelsv2.VirtualTagConf
 		aggregation, d := resource_virtual_tag_config.NewAggregationValue(
 			resource_virtual_tag_config.AggregationValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
-				"tag": types.StringValue(cm.Aggregation.Tag),
+				"tag": types.StringPointerValue(cm.Aggregation.Tag),
 			},
 		)
 		if d.HasError() {
@@ -74,7 +81,7 @@ func buildCostMetricFromPayload(ctx context.Context, cm *modelsv2.VirtualTagConf
 	costMetric, d := resource_virtual_tag_config.NewCostMetricValue(
 		resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx),
 		map[string]attr.Value{
-			"filter":      types.StringValue(cm.Filter),
+			"filter":      types.StringPointerValue(cm.Filter),
 			"aggregation": tfAggregation,
 		},
 	)
@@ -90,8 +97,8 @@ func buildPercentagesFromPayload(ctx context.Context, percentages []*modelsv2.Vi
 		pv, d := resource_virtual_tag_config.NewPercentagesValue(
 			resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
-				"pct":   types.Float64Value(*p.Pct),
-				"value": types.StringValue(*p.Value),
+				"pct":   types.Float64Value(p.Pct),
+				"value": types.StringValue(p.Value),
 			},
 		)
 		if d.HasError() {
@@ -102,27 +109,92 @@ func buildPercentagesFromPayload(ctx context.Context, percentages []*modelsv2.Vi
 	return types.ListValueFrom(ctx, resource_virtual_tag_config.PercentagesValue{}.Type(ctx), tfPercentages)
 }
 
+func buildDateRangesFromPayload(ctx context.Context, dateRanges []*modelsv2.VirtualTagConfigValueDateRange) (basetypes.ListValue, diag.Diagnostics) {
+	tfDateRanges := make([]resource_virtual_tag_config.DateRangesValue, 0, len(dateRanges))
+	for _, dr := range dateRanges {
+		drv, d := resource_virtual_tag_config.NewDateRangesValue(
+			resource_virtual_tag_config.DateRangesValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"start_date": types.StringPointerValue(dr.StartDate),
+				"end_date":   types.StringPointerValue(dr.EndDate),
+			},
+		)
+		if d.HasError() {
+			return basetypes.ListValue{}, d
+		}
+		tfDateRanges = append(tfDateRanges, drv)
+	}
+	return types.ListValueFrom(ctx, resource_virtual_tag_config.DateRangesValue{}.Type(ctx), tfDateRanges)
+}
+
 func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValue) (basetypes.ObjectValue, diag.Diagnostics) {
-	value := resource_virtual_tag_config.ValuesValue{
-		Name:                types.StringValue(v.Name),
-		Filter:              types.StringValue(v.Filter),
-		BusinessMetricToken: types.StringValue(v.BusinessMetricToken),
+	// For optional string fields, use null if empty, otherwise use the value
+	var nameValue attr.Value
+	if v.Name == nil || *v.Name == "" {
+		nameValue = types.StringNull()
+	} else {
+		nameValue = types.StringValue(*v.Name)
 	}
 
+	var businessMetricTokenValue attr.Value
+	if v.BusinessMetricToken == nil || *v.BusinessMetricToken == "" {
+		businessMetricTokenValue = types.StringNull()
+	} else {
+		businessMetricTokenValue = types.StringValue(*v.BusinessMetricToken)
+	}
+
+	// Build cost_metric value
+	var costMetricValue attr.Value = types.ObjectNull(resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx))
 	if v.CostMetric != nil {
 		costMetric, d := buildCostMetricFromPayload(ctx, v.CostMetric)
 		if d.HasError() {
 			return basetypes.ObjectValue{}, d
 		}
-		value.CostMetric = costMetric
+		costMetricValue = costMetric
 	}
 
-	if v.Percentages != nil {
+	// Build percentages value
+	var percentagesValue attr.Value = types.ListNull(resource_virtual_tag_config.PercentagesType{
+		ObjectType: basetypes.ObjectType{
+			AttrTypes: resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
+		},
+	})
+	if v.Percentages != nil && len(v.Percentages) > 0 {
 		percentages, d := buildPercentagesFromPayload(ctx, v.Percentages)
 		if d.HasError() {
 			return basetypes.ObjectValue{}, d
 		}
-		value.Percentages = percentages
+		percentagesValue = percentages
+	}
+
+	// Build date_ranges value
+	var dateRangesValue attr.Value = types.ListNull(resource_virtual_tag_config.DateRangesType{
+		ObjectType: basetypes.ObjectType{
+			AttrTypes: resource_virtual_tag_config.DateRangesValue{}.AttributeTypes(ctx),
+		},
+	})
+	if len(v.DateRanges) > 0 {
+		dateRanges, d := buildDateRangesFromPayload(ctx, v.DateRanges)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+		dateRangesValue = dateRanges
+	}
+
+	// Use the constructor to properly set the state field
+	value, diags := resource_virtual_tag_config.NewValuesValue(
+		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"name":                  nameValue,
+			"filter":                types.StringPointerValue(v.Filter),
+			"business_metric_token": businessMetricTokenValue,
+			"cost_metric":           costMetricValue,
+			"date_ranges":           dateRangesValue,
+			"percentages":           percentagesValue,
+		},
+	)
+	if diags.HasError() {
+		return basetypes.ObjectValue{}, diags
 	}
 
 	return value.ToObjectValue(ctx)
@@ -134,7 +206,7 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 	m.Key = types.StringValue(payload.Key)
 	m.Overridable = types.BoolValue(payload.Overridable)
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)
-	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
+	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
 
 	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(payload.CollapsedTagKeys))
 	for _, c := range payload.CollapsedTagKeys {
@@ -247,6 +319,17 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 					})
 				}
 			}
+
+			if len(data.DateRanges) > 0 {
+				value.DateRanges = make([]*modelsv2.CreateVirtualTagConfigValuesItems0DateRangesItems0, 0, len(data.DateRanges))
+				for _, dr := range data.DateRanges {
+					value.DateRanges = append(value.DateRanges, &modelsv2.CreateVirtualTagConfigValuesItems0DateRangesItems0{
+						StartDate: dr.StartDate,
+						EndDate:   dr.EndDate,
+					})
+				}
+			}
+
 			model.Values = append(model.Values, value)
 		}
 	}
@@ -330,6 +413,17 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 					})
 				}
 			}
+
+			if len(data.DateRanges) > 0 {
+				value.DateRanges = make([]*modelsv2.UpdateVirtualTagConfigValuesItems0DateRangesItems0, 0, len(data.DateRanges))
+				for _, dr := range data.DateRanges {
+					value.DateRanges = append(value.DateRanges, &modelsv2.UpdateVirtualTagConfigValuesItems0DateRangesItems0{
+						StartDate: dr.StartDate,
+						EndDate:   dr.EndDate,
+					})
+				}
+			}
+
 			model.Values = append(model.Values, value)
 		}
 	}
@@ -368,10 +462,14 @@ func (m *virtualTagConfigModel) collapsedTagKeysFromTf(ctx context.Context, diag
 
 	result := make([]collapsedTagKeyData, 0, len(tfCollapsedTagKeys))
 	for _, c := range tfCollapsedTagKeys {
-		providers := make([]string, 0, len(c.Providers.Elements()))
-		if d := c.Providers.ElementsAs(ctx, &providers, false); d.HasError() {
-			diags.Append(d...)
-			return nil
+		var providers []string
+		// Only extract providers if it's not null or unknown
+		if !c.Providers.IsNull() && !c.Providers.IsUnknown() {
+			providers = make([]string, 0, len(c.Providers.Elements()))
+			if d := c.Providers.ElementsAs(ctx, &providers, false); d.HasError() {
+				diags.Append(d...)
+				return nil
+			}
 		}
 		result = append(result, collapsedTagKeyData{
 			Key:       c.Key.ValueStringPointer(),
@@ -415,6 +513,21 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 			data.Percentages = append(data.Percentages, percentageData{
 				Pct:   float32(p.Pct.ValueFloat64()),
 				Value: p.Value.ValueStringPointer(),
+			})
+		}
+	}
+
+	if !v.DateRanges.IsNull() && !v.DateRanges.IsUnknown() {
+		tfDateRanges := make([]resource_virtual_tag_config.DateRangesValue, 0, len(v.DateRanges.Elements()))
+		if d := v.DateRanges.ElementsAs(ctx, &tfDateRanges, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		data.DateRanges = make([]dateRangeData, 0, len(tfDateRanges))
+		for _, dr := range tfDateRanges {
+			data.DateRanges = append(data.DateRanges, dateRangeData{
+				StartDate: dr.StartDate.ValueString(),
+				EndDate:   dr.EndDate.ValueString(),
 			})
 		}
 	}

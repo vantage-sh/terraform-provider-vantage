@@ -45,6 +45,7 @@ resource "vantage_managed_account" "terraform-managed-account" {
 
 - `access_credential_tokens` (List of String) Access Credential (aka Integrations) tokens to assign to the Managed Account.
 - `billing_rule_tokens` (List of String) Billing Rule tokens to assign to the Managed Account.
+- `email_domain` (String) Email domain to associate with this Managed Account for SSO.
 
 ### Read-Only
 

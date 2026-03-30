@@ -94,7 +94,7 @@ func (d *awsProviderInfoDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	state.ExternalID = types.StringValue(out.Payload.ExternalID)
-	state.IamRoleARN = types.StringValue(out.Payload.IamRoleArn)
+	state.IamRoleARN = types.StringPointerValue(out.Payload.IamRoleArn)
 	state.RootPolicy = types.StringValue(out.Payload.Policies.Root)
 	state.AutopilotPolicy = types.StringValue(out.Payload.Policies.Autopilot)
 	state.CloudwatchMetricsPolicy = types.StringValue(out.Payload.Policies.Cloudwatch)

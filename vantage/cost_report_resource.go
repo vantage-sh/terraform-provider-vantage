@@ -2,15 +2,23 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
@@ -29,6 +37,17 @@ func NewCostReportResource() resource.Resource {
 	return &CostReportResource{}
 }
 
+type CostReportSettingsModel struct {
+	IncludeCredits     types.Bool   `tfsdk:"include_credits"`
+	IncludeRefunds     types.Bool   `tfsdk:"include_refunds"`
+	IncludeDiscounts   types.Bool   `tfsdk:"include_discounts"`
+	IncludeTax         types.Bool   `tfsdk:"include_tax"`
+	Amortize           types.Bool   `tfsdk:"amortize"`
+	Unallocated        types.Bool   `tfsdk:"unallocated"`
+	AggregateBy        types.String `tfsdk:"aggregate_by"`
+	ShowPreviousPeriod types.Bool   `tfsdk:"show_previous_period"`
+}
+
 type CostReportResourceModel struct {
 	Token                   types.String `tfsdk:"token"`
 	Id                      types.String `tfsdk:"id"`
@@ -45,6 +64,49 @@ type CostReportResourceModel struct {
 	DateInterval            types.String `tfsdk:"date_interval"`
 	ChartType               types.String `tfsdk:"chart_type"`
 	DateBin                 types.String `tfsdk:"date_bin"`
+	Settings                types.Object `tfsdk:"settings"`
+	ChartSettings           types.Object `tfsdk:"chart_settings"`
+}
+
+// costReportSettingsAttrTypes defines the attribute types for the settings object.
+func costReportSettingsAttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"include_credits":      types.BoolType,
+		"include_refunds":      types.BoolType,
+		"include_discounts":    types.BoolType,
+		"include_tax":          types.BoolType,
+		"amortize":             types.BoolType,
+		"unallocated":          types.BoolType,
+		"aggregate_by":         types.StringType,
+		"show_previous_period": types.BoolType,
+	}
+}
+
+var chartSettingsAttrTypes = map[string]attr.Type{
+	"x_axis_dimension": types.ListType{ElemType: types.StringType},
+	"y_axis_dimension": types.StringType,
+}
+
+func chartSettingsFromPayload(ctx context.Context, cs *modelsv2.ChartSettings) (basetypes.ObjectValue, error) {
+	if cs == nil {
+		return types.ObjectNull(chartSettingsAttrTypes), nil
+	}
+
+	xAxisDimension, diags := types.ListValueFrom(ctx, types.StringType, cs.XAxisDimension)
+	if diags.HasError() {
+		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error converting x_axis_dimension")
+	}
+
+	attrValues := map[string]attr.Value{
+		"x_axis_dimension": xAxisDimension,
+		"y_axis_dimension": types.StringValue(cs.YAxisDimension),
+	}
+
+	obj, diags := types.ObjectValue(chartSettingsAttrTypes, attrValues)
+	if diags.HasError() {
+		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error building chart_settings object")
+	}
+	return obj, nil
 }
 
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -62,11 +124,17 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Token of the folder this Cost Report resides in.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"filter": schema.StringAttribute{
 				MarkdownDescription: "Filter query to apply to the Cost Report",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"groupings": schema.StringAttribute{
 				MarkdownDescription: "Grouping aggregations applied to the filtered data.",
@@ -116,11 +184,85 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:            true,
 				Computed:            true,
 			},
+			"chart_settings": schema.SingleNestedAttribute{
+				MarkdownDescription: "Chart settings for the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"x_axis_dimension": schema.ListAttribute{
+						ElementType:         types.StringType,
+						MarkdownDescription: "The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].",
+						Optional:            true,
+						Computed:            true,
+					},
+					"y_axis_dimension": schema.StringAttribute{
+						MarkdownDescription: "The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.",
+						Optional:            true,
+						Computed:            true,
+					},
+				},
+			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "Saved filter tokens to be applied to the Cost Report.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"settings": schema.SingleNestedAttribute{
+				MarkdownDescription: "Settings for the Cost Report.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"include_credits": schema.BoolAttribute{
+						MarkdownDescription: "Report will include credits.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"include_refunds": schema.BoolAttribute{
+						MarkdownDescription: "Report will include refunds.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"include_discounts": schema.BoolAttribute{
+						MarkdownDescription: "Report will include discounts.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"include_tax": schema.BoolAttribute{
+						MarkdownDescription: "Report will include tax.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"amortize": schema.BoolAttribute{
+						MarkdownDescription: "Report will amortize.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"unallocated": schema.BoolAttribute{
+						MarkdownDescription: "Report will show unallocated costs.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"aggregate_by": schema.StringAttribute{
+						MarkdownDescription: "Report will aggregate by cost or usage.",
+						Optional:            true,
+						Computed:            true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("cost", "usage"),
+						},
+					},
+					"show_previous_period": schema.BoolAttribute{
+						MarkdownDescription: "Report will show previous period costs or usage comparison.",
+						Optional:            true,
+						Computed:            true,
+					},
+				},
 			},
 			"workspace_token": schema.StringAttribute{
 				MarkdownDescription: "Workspace token to add the Cost Report to.",
@@ -191,26 +333,61 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		body.DateBin = data.DateBin.ValueStringPointer()
 	}
 
+	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
+		cs := &modelsv2.CreateCostReportChartSettings{}
+		attrs := data.ChartSettings.Attributes()
+		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
+			xAxisList := xAxis.(types.List)
+			items := []string{}
+			resp.Diagnostics.Append(xAxisList.ElementsAs(ctx, &items, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			cs.XAxisDimension = items
+		}
+		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
+			cs.YAxisDimension = yAxis.(types.String).ValueString()
+		}
+		body.ChartSettings = cs
+	}
+
+	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
+		var settings CostReportSettingsModel
+		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		body.Settings = &modelsv2.CreateCostReportSettings{
+			IncludeCredits:     settings.IncludeCredits.ValueBoolPointer(),
+			IncludeRefunds:     settings.IncludeRefunds.ValueBoolPointer(),
+			IncludeDiscounts:   settings.IncludeDiscounts.ValueBoolPointer(),
+			IncludeTax:         settings.IncludeTax.ValueBoolPointer(),
+			Amortize:           settings.Amortize.ValueBoolPointer(),
+			Unallocated:        settings.Unallocated.ValueBoolPointer(),
+			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
+			AggregateBy:        settings.AggregateBy.ValueStringPointer(),
+		}
+	}
+
 	params.WithCreateCostReport(body)
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
 	if err != nil {
-		//TODO(macb): Surface 400 errors more clearly.
 		handleError("Create Cost Report Resource", &resp.Diagnostics, err)
 		return
 	}
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Id = types.StringValue(out.Payload.Token)
-	data.Filter = types.StringValue(out.Payload.Filter)
-	data.Groupings = types.StringValue(out.Payload.Groupings)
-	data.StartDate = types.StringValue(out.Payload.StartDate)
-	data.EndDate = types.StringValue(out.Payload.EndDate)
-	data.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
-	data.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	data.Filter = types.StringPointerValue(out.Payload.Filter)
+	data.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
+	data.StartDate = types.StringPointerValue(out.Payload.StartDate)
+	data.EndDate = types.StringPointerValue(out.Payload.EndDate)
+	data.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
+	data.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
 	data.DateInterval = types.StringValue(out.Payload.DateInterval)
 	data.ChartType = types.StringValue(out.Payload.ChartType)
 	data.DateBin = types.StringValue(out.Payload.DateBin)
-	data.FolderToken = types.StringValue(out.Payload.FolderToken)
+	data.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -218,6 +395,19 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	data.SavedFilterTokens = savedFilterTokensValue
+	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
+	resp.Diagnostics.Append(settingsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Settings = settingsObj
+
+	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
+	if csErr != nil {
+		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+		return
+	}
+	data.ChartSettings = chartSettingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -245,25 +435,37 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
-	state.Filter = types.StringValue(out.Payload.Filter)
+	state.Filter = types.StringPointerValue(out.Payload.Filter)
 	state.Title = types.StringValue(out.Payload.Title)
-	state.Filter = types.StringValue(out.Payload.Filter)
-	state.Groupings = types.StringValue(out.Payload.Groupings)
-	state.StartDate = types.StringValue(out.Payload.StartDate)
-	state.EndDate = types.StringValue(out.Payload.EndDate)
-	state.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
-	state.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	state.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
+	state.StartDate = types.StringPointerValue(out.Payload.StartDate)
+	state.EndDate = types.StringPointerValue(out.Payload.EndDate)
+	state.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
+	state.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
 	state.DateInterval = types.StringValue(out.Payload.DateInterval)
 	state.ChartType = types.StringValue(out.Payload.ChartType)
 	state.DateBin = types.StringValue(out.Payload.DateBin)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	state.FolderToken = types.StringValue(out.Payload.FolderToken)
+	state.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 	state.SavedFilterTokens = savedFilterTokensValue
+	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
+	resp.Diagnostics.Append(settingsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.Settings = settingsObj
+
+	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
+	if csErr != nil {
+		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+		return
+	}
+	state.ChartSettings = chartSettingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -311,12 +513,48 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		model.DateBin = data.DateBin.ValueStringPointer()
 	}
 
+	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
+		cs := &modelsv2.UpdateCostReportChartSettings{}
+		attrs := data.ChartSettings.Attributes()
+		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
+			xAxisList := xAxis.(types.List)
+			items := []string{}
+			resp.Diagnostics.Append(xAxisList.ElementsAs(ctx, &items, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			cs.XAxisDimension = items
+		}
+		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
+			cs.YAxisDimension = yAxis.(types.String).ValueString()
+		}
+		model.ChartSettings = cs
+	}
+
 	if data.DateInterval.ValueString() == "custom" {
 		model.StartDate = data.StartDate.ValueString()
 		model.EndDate = data.EndDate.ValueString()
 		model.DateInterval = "custom"
 	} else {
 		model.DateInterval = data.DateInterval.ValueString()
+	}
+
+	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
+		var settings CostReportSettingsModel
+		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		model.Settings = &modelsv2.UpdateCostReportSettings{
+			IncludeCredits:     settings.IncludeCredits.ValueBoolPointer(),
+			IncludeRefunds:     settings.IncludeRefunds.ValueBoolPointer(),
+			IncludeDiscounts:   settings.IncludeDiscounts.ValueBoolPointer(),
+			IncludeTax:         settings.IncludeTax.ValueBoolPointer(),
+			Amortize:           settings.Amortize.ValueBoolPointer(),
+			Unallocated:        settings.Unallocated.ValueBoolPointer(),
+			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
+			AggregateBy:        settings.AggregateBy.ValueStringPointer(),
+		}
 	}
 
 	params.WithUpdateCostReport(model)
@@ -327,14 +565,14 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	data.Title = types.StringValue(out.Payload.Title)
-	data.FolderToken = types.StringValue(out.Payload.FolderToken)
-	data.Filter = types.StringValue(out.Payload.Filter)
-	data.Groupings = types.StringValue(out.Payload.Groupings)
+	data.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
+	data.Filter = types.StringPointerValue(out.Payload.Filter)
+	data.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.StartDate = types.StringValue(out.Payload.StartDate)
-	data.EndDate = types.StringValue(out.Payload.EndDate)
-	data.PreviousPeriodStartDate = types.StringValue(out.Payload.PreviousPeriodStartDate)
-	data.PreviousPeriodEndDate = types.StringValue(out.Payload.PreviousPeriodEndDate)
+	data.StartDate = types.StringPointerValue(out.Payload.StartDate)
+	data.EndDate = types.StringPointerValue(out.Payload.EndDate)
+	data.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
+	data.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
 	data.DateInterval = types.StringValue(out.Payload.DateInterval)
 	data.ChartType = types.StringValue(out.Payload.ChartType)
 	data.DateBin = types.StringValue(out.Payload.DateBin)
@@ -344,6 +582,19 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	data.SavedFilterTokens = savedFilterTokensValue
+	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
+	resp.Diagnostics.Append(settingsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Settings = settingsObj
+
+	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
+	if csErr != nil {
+		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
+		return
+	}
+	data.ChartSettings = chartSettingsObj
 
 	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -362,6 +613,23 @@ func (r CostReportResource) Delete(ctx context.Context, req resource.DeleteReque
 	if err != nil {
 		handleError("Delete Cost Report Resource", &resp.Diagnostics, err)
 	}
+}
+
+func costReportSettingsObjectFromPayload(ctx context.Context, s *modelsv2.CostReportSettings) (types.Object, diag.Diagnostics) {
+	if s == nil {
+		return types.ObjectNull(costReportSettingsAttrTypes()), nil
+	}
+	m := CostReportSettingsModel{
+		IncludeCredits:     types.BoolPointerValue(s.IncludeCredits),
+		IncludeRefunds:     types.BoolPointerValue(s.IncludeRefunds),
+		IncludeDiscounts:   types.BoolPointerValue(s.IncludeDiscounts),
+		IncludeTax:         types.BoolPointerValue(s.IncludeTax),
+		Amortize:           types.BoolPointerValue(s.Amortize),
+		Unallocated:        types.BoolPointerValue(s.Unallocated),
+		AggregateBy:        types.StringPointerValue(s.AggregateBy),
+		ShowPreviousPeriod: types.BoolPointerValue(s.ShowPreviousPeriod),
+	}
+	return types.ObjectValueFrom(ctx, costReportSettingsAttrTypes(), m)
 }
 
 // Configure adds the provider configured client to the data source.

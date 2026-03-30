@@ -22,6 +22,9 @@ resource "vantage_folder" "demo_folder" {
   # Uncomment one of the following:
   # parent_folder_token = "fldr_47c3254c790e9351"
   workspace_token = "wrkspc_47c3254c790e9351"
+
+  # Optional: Apply saved filters to all Cost Reports in this folder
+  # saved_filter_tokens = ["svd_fltr_1234567890abcdef"]
 }
 ```
 
@@ -35,6 +38,7 @@ resource "vantage_folder" "demo_folder" {
 ### Optional
 
 - `parent_folder_token` (String) Token of the folder's parent folder
+- `saved_filter_tokens` (List of String) Tokens of the SavedFilters to apply to any Cost Report contained within the Folder.
 - `workspace_token` (String) Workspace token to add the cost report to.
 
 ### Read-Only

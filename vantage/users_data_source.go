@@ -83,7 +83,7 @@ func (d *usersDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		users = append(users, userDataSourceModel{
 			Email: types.StringValue(u.Email),
 			Token: types.StringValue(u.Token),
-			Name:  types.StringValue(u.Name),
+			Name:  types.StringPointerValue(u.Name),
 			Role:  types.StringValue(u.Role),
 		})
 	}

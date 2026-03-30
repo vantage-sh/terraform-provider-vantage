@@ -29,6 +29,7 @@ Read-Only:
 - `billing_rule_tokens` (List of String) The tokens for the Billing Rules assigned to the Managed Account.
 - `business_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--managed_accounts--business_information_attributes))
 - `contact_email` (String)
+- `email_domain` (String) Email domain associated with this Managed Account for SSO.
 - `id` (String) The id of the resource
 - `msp_billing_profile_token` (String) Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)
 - `name` (String)

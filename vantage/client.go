@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -27,7 +28,25 @@ type Client struct {
 	Auth runtime.ClientAuthInfoWriter
 }
 
-func NewClient(host, token string, debug bool) (*Client, error) {
+// timeoutTransport wraps a runtime.ClientTransport and sets the request timeout
+// on every operation so the go-openapi default (30s) is overridden by the provider's configured timeout.
+type timeoutTransport struct {
+	inner   runtime.ClientTransport
+	timeout time.Duration
+}
+
+func (t *timeoutTransport) Submit(operation *runtime.ClientOperation) (interface{}, error) {
+	originalParams := operation.Params
+	operation.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, reg strfmt.Registry) error {
+		if err := originalParams.WriteToRequest(req, reg); err != nil {
+			return err
+		}
+		return req.SetTimeout(t.timeout)
+	})
+	return t.inner.Submit(operation)
+}
+
+func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, error) {
 	parsedURL, err := url.Parse(host)
 	if err != nil {
 		return nil, err
@@ -36,18 +55,24 @@ func NewClient(host, token string, debug bool) (*Client, error) {
 	v1Cfg := vantagev1.DefaultTransportConfig()
 	v1Cfg.WithHost(parsedURL.Host)
 	v1Cfg.WithSchemes([]string{parsedURL.Scheme})
-	transportv1 := httptransport.New(v1Cfg.Host, v1Cfg.BasePath, v1Cfg.Schemes)
-	transportv1.Transport = userAgentTripper(transportv1.Transport, userAgent)
+	httpClientV1 := &http.Client{
+		Timeout:   timeout,
+		Transport: userAgentTripper(http.DefaultTransport, userAgent),
+	}
+	transportv1 := httptransport.NewWithClient(v1Cfg.Host, v1Cfg.BasePath, v1Cfg.Schemes, httpClientV1)
 	transportv1.SetDebug(debug)
-	v1 := vantagev1.New(transportv1, strfmt.Default)
+	v1 := vantagev1.New(&timeoutTransport{inner: transportv1, timeout: timeout}, strfmt.Default)
 
 	v2Cfg := vantagev2.DefaultTransportConfig()
 	v2Cfg.WithHost(parsedURL.Host)
 	v2Cfg.WithSchemes([]string{parsedURL.Scheme})
-	transportv2 := httptransport.New(v2Cfg.Host, v2Cfg.BasePath, v2Cfg.Schemes)
-	transportv2.Transport = userAgentTripper(transportv2.Transport, userAgent)
+	httpClientV2 := &http.Client{
+		Timeout:   timeout,
+		Transport: userAgentTripper(http.DefaultTransport, userAgent),
+	}
+	transportv2 := httptransport.NewWithClient(v2Cfg.Host, v2Cfg.BasePath, v2Cfg.Schemes, httpClientV2)
 	transportv2.SetDebug(debug)
-	v2 := vantagev2.New(transportv2, strfmt.Default)
+	v2 := vantagev2.New(&timeoutTransport{inner: transportv2, timeout: timeout}, strfmt.Default)
 
 	bearerTokenAuth := httptransport.BearerToken(token)
 	return &Client{
@@ -88,6 +113,17 @@ type roundtripper struct {
 func (ug *roundtripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Set("User-Agent", ug.agent)
 	return ug.inner.RoundTrip(r)
+}
+
+// ptrStringOrEmpty returns a Terraform StringValue from a *string, falling back
+// to an empty string (rather than null) when the pointer is nil. Use this for
+// API fields that are semantically "optional empty string" so that the provider
+// doesn't produce null where Terraform planned for "".
+func ptrStringOrEmpty(s *string) types.String {
+	if s == nil {
+		return types.StringValue("")
+	}
+	return types.StringValue(*s)
 }
 
 func handleError(action string, d *diag.Diagnostics, err error) {

@@ -24,6 +24,7 @@ description: |-
 
 Read-Only:
 
+- `chart_settings` (Attributes) (see [below for nested schema](#nestedatt--cost_reports--chart_settings))
 - `chart_type` (String)
 - `date_bin` (String)
 - `date_interval` (String)
@@ -38,5 +39,13 @@ Read-Only:
 - `title` (String)
 - `token` (String)
 - `workspace_token` (String)
+
+<a id="nestedatt--cost_reports--chart_settings"></a>
+### Nested Schema for `cost_reports.chart_settings`
+
+Read-Only:
+
+- `x_axis_dimension` (List of String)
+- `y_axis_dimension` (String)
 
 

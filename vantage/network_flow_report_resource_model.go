@@ -16,19 +16,27 @@ type networkFlowReportResourceModel resource_network_flow_report.NetworkFlowRepo
 func (m *networkFlowReportResourceModel) applyPayload(ctx context.Context, payload *modelsv2.NetworkFlowReport) diag.Diagnostics {
 
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
-	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
-	m.DateInterval = types.StringValue(payload.DateInterval)
+	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
+	m.DateInterval = types.StringPointerValue(payload.DateInterval)
 	m.Default = types.BoolValue(payload.Default)
-	m.EndDate = types.StringValue(payload.EndDate)
-	m.Filter = types.StringValue(payload.Filter)
-	m.FlowDirection = types.StringValue(payload.FlowDirection)
+	m.EndDate = types.StringPointerValue(payload.EndDate)
+	m.Filter = types.StringPointerValue(payload.Filter)
+	m.FlowDirection = types.StringPointerValue(payload.FlowDirection)
 	m.FlowWeight = types.StringValue(payload.FlowWeight)
-	m.StartDate = types.StringValue(payload.StartDate)
+	m.StartDate = types.StringPointerValue(payload.StartDate)
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
-	groupings := strings.Split(payload.Groupings, ",")
+
+	// Handle groupings - strings.Split on empty string returns [""], not []
+	// so we need to handle that case explicitly
+	var groupings []string
+	if payload.Groupings != nil && *payload.Groupings != "" {
+		groupings = strings.Split(*payload.Groupings, ",")
+	} else {
+		groupings = []string{}
+	}
 
 	var d diag.Diagnostics
 	m.Groupings, d = types.ListValueFrom(ctx, types.StringType, groupings)

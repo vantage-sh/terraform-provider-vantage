@@ -65,7 +65,7 @@ func (r *resourceReportsDataSource) Read(ctx context.Context, req datasource.Rea
 		state.ResourceReports = append(state.ResourceReports, resourceReportDataSourceModel{
 			Token:          types.StringValue(report.Token),
 			Title:          types.StringValue(report.Title),
-			UserToken:      types.StringValue(report.UserToken),
+			UserToken:      types.StringPointerValue(report.UserToken),
 			WorkspaceToken: types.StringValue(report.WorkspaceToken),
 			CreatedAt:      types.StringValue(report.CreatedAt),
 		})

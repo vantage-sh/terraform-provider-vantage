@@ -62,6 +62,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 			Attributes: map[string]schema.Attribute{
 				// Reuse generated attributes unchanged
 				"business_metric_token": generatedValuesAttrs["business_metric_token"],
+				"date_ranges":           generatedValuesAttrs["date_ranges"],
 				"filter":                generatedValuesAttrs["filter"],
 				"name":                  generatedValuesAttrs["name"],
 				"percentages":           generatedValuesAttrs["percentages"],
@@ -131,6 +132,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.Append(diag...)
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -184,7 +186,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		WithToken(data.Token.ValueString()).
 		WithUpdateVirtualTagConfig(model)
 
-	out, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
+	out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
 		return

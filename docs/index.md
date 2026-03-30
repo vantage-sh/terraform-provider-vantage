@@ -47,3 +47,4 @@ resource "vantage_cost_report" "aws" {
 
 - `api_token` (String, Sensitive)
 - `host` (String)
+- `timeout` (String) The timeout duration for API requests (e.g., "30s", "5m"). Defaults to "30s".

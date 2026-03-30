@@ -61,8 +61,8 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
-	if payload.Percentage != "" {
-		rate, err := strconv.ParseFloat(payload.Percentage, 64)
+	if payload.Percentage != nil && *payload.Percentage != "" {
+		rate, err := strconv.ParseFloat(*payload.Percentage, 64)
 		if err != nil {
 			d := diag.Diagnostics{}
 			d.AddError("error converting rate to int", err.Error())
@@ -74,8 +74,8 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		m.Percentage = types.Float64Value(0.0)
 	}
 
-	if payload.Amount != "" {
-		amount, err := strconv.ParseFloat(payload.Amount, 64)
+	if payload.Amount != nil && *payload.Amount != "" {
+		amount, err := strconv.ParseFloat(*payload.Amount, 64)
 		if err != nil {
 			d := diag.Diagnostics{}
 			d.AddError("error converting rate to int", err.Error())
@@ -86,58 +86,20 @@ func (m *billingRuleModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		m.Amount = types.Float64Value(0.0)
 	}
 
-	m.ApplyToAll = types.BoolValue(payload.ApplyToAll)
+	m.ApplyToAll = types.BoolPointerValue(payload.ApplyToAll)
 
-	if payload.EndDate != "" {
-		m.EndDate = types.StringValue(payload.EndDate)
-	} else {
-		m.EndDate = types.StringNull()
-	}
-
-	if payload.StartDate != "" {
-		m.StartDate = types.StringValue(payload.StartDate)
-	} else {
-		m.StartDate = types.StringNull()
-	}
-
-	if payload.Category != "" {
-		m.Category = types.StringValue(payload.Category)
-	} else {
-		m.Category = types.StringNull()
-	}
-
-	if payload.ChargeType != "" {
-		m.ChargeType = types.StringValue(payload.ChargeType)
-	} else {
-		m.ChargeType = types.StringNull()
-	}
+	m.EndDate = types.StringPointerValue(payload.EndDate)
+	m.StartDate = types.StringPointerValue(payload.StartDate)
+	m.Category = types.StringPointerValue(payload.Category)
+	m.ChargeType = types.StringPointerValue(payload.ChargeType)
 
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.CreatedByToken = types.StringValue(payload.CreatedByToken)
 
-	if payload.Service != "" {
-		m.Service = types.StringValue(payload.Service)
-	} else {
-		m.Service = types.StringNull()
-	}
-
-	if payload.StartPeriod != "" {
-		m.StartPeriod = types.StringValue(payload.StartPeriod)
-	} else {
-		m.StartPeriod = types.StringNull()
-	}
-
-	if payload.SubCategory != "" {
-		m.SubCategory = types.StringValue(payload.SubCategory)
-	} else {
-		m.SubCategory = types.StringNull()
-	}
-
-	if payload.SQLQuery != "" {
-		m.SqlQuery = types.StringValue(payload.SQLQuery)
-	} else {
-		m.SqlQuery = types.StringNull()
-	}
+	m.Service = types.StringPointerValue(payload.Service)
+	m.StartPeriod = types.StringPointerValue(payload.StartPeriod)
+	m.SubCategory = types.StringPointerValue(payload.SubCategory)
+	m.SqlQuery = types.StringPointerValue(payload.SQLQuery)
 
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
