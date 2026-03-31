@@ -15,8 +15,8 @@ Manages a Workspace.
 ```terraform
 resource "vantage_workspace" "example" {
   name                       = "Example Workspace"
-  currency                   = "USD"
-  enable_currency_conversion = false
+  currency                   = "EUR"
+  enable_currency_conversion = true
   exchange_rate_date         = "daily_rate"
 }
 ```
@@ -30,12 +30,14 @@ resource "vantage_workspace" "example" {
 
 ### Optional
 
-- `currency` (String) Currency code for the workspace.
-- `enable_currency_conversion` (Boolean) Whether currency conversion is enabled for the workspace.
-- `exchange_rate_date` (String) Exchange rate strategy: `daily_rate` or `end_of_billing_period_rate`.
+- `currency` (String) Currency code for the workspace. Only applies when `enable_currency_conversion` is `true`; setting a non-USD currency while conversion is disabled is not supported.
+- `enable_currency_conversion` (Boolean) Enable currency conversion for the workspace.
+- `exchange_rate_date` (String) The date to use for currency conversion.
 
 ### Read-Only
 
-- `created_at` (String) When the workspace was created (UTC, ISO 8601).
+- `created_at` (String) The date and time, in UTC, the Workspace was created. ISO 8601 Formatted.
 - `id` (String) Alias of `token`.
-- `token` (String) Unique workspace identifier.
+- `token` (String) The token of the workspace
+
+

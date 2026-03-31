@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*WorkspaceResource)(nil)
-	_ resource.ResourceWithConfigure   = (*WorkspaceResource)(nil)
-	_ resource.ResourceWithImportState = (*WorkspaceResource)(nil)
+	_ resource.Resource                   = (*WorkspaceResource)(nil)
+	_ resource.ResourceWithConfigure      = (*WorkspaceResource)(nil)
+	_ resource.ResourceWithImportState    = (*WorkspaceResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*WorkspaceResource)(nil)
 )
 
 type WorkspaceResource struct {
@@ -173,6 +174,28 @@ func (r WorkspaceResource) Delete(ctx context.Context, req resource.DeleteReques
 func (r WorkspaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token"), types.StringValue(req.ID))...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), types.StringValue(req.ID))...)
+}
+
+func (r *WorkspaceResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data resource_workspace.WorkspaceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// currency is only meaningful when enable_currency_conversion is true.
+	// When conversion is disabled the API returns display_currency (USD) regardless.
+	if !data.EnableCurrencyConversion.IsNull() && !data.EnableCurrencyConversion.IsUnknown() &&
+		!data.EnableCurrencyConversion.ValueBool() &&
+		!data.Currency.IsNull() && !data.Currency.IsUnknown() &&
+		data.Currency.ValueString() != "" && data.Currency.ValueString() != "USD" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("currency"),
+			"Invalid Attribute Combination",
+			"currency can only be set to a non-USD value when enable_currency_conversion is true. "+
+				"When currency conversion is disabled, costs are displayed in USD.",
+		)
+	}
 }
 
 func (r *WorkspaceResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {

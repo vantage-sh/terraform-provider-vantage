@@ -75,6 +75,7 @@ Optional:
 - `x_axis_dimension` (List of String) The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].
 - `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.
 
+
 <a id="nestedatt--settings"></a>
 ### Nested Schema for `settings`
 
