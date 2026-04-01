@@ -37,8 +37,8 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 			"minimum_threshold": schema.Float64Attribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The minimum dollar amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.",
-				MarkdownDescription: "The minimum dollar amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.",
+				Description:         "The minimum monetary amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.",
+				MarkdownDescription: "The minimum monetary amount threshold for percentage-based alerts. Only applicable when unit_type is 'percentage'.",
 			},
 			"report_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,

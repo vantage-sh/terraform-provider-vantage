@@ -15,6 +15,7 @@ func (r *resourceReportModel) applyPayload(ctx context.Context, payload *modelsv
 	r.CreatedAt = types.StringValue(payload.CreatedAt)
 	r.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
 	r.Filter = types.StringPointerValue(payload.Filter)
+	r.FolderToken = types.StringPointerValue(payload.FolderToken)
 	r.Title = types.StringValue(payload.Title)
 	r.Token = types.StringValue(payload.Token)
 	r.Id = types.StringValue(payload.Token)
@@ -35,6 +36,10 @@ func (r *resourceReportModel) toCreateModel() *modelsv2.CreateResourceReport {
 		WorkspaceToken: r.WorkspaceToken.ValueStringPointer(),
 	}
 
+	if !r.FolderToken.IsNull() && !r.FolderToken.IsUnknown() {
+		dst.FolderToken = r.FolderToken.ValueString()
+	}
+
 	if !r.Columns.IsNull() && !r.Columns.IsUnknown() {
 		columns := make([]string, 0, len(r.Columns.Elements()))
 		for _, element := range r.Columns.Elements() {
@@ -52,6 +57,10 @@ func (r *resourceReportModel) toUpdateModel() *modelsv2.UpdateResourceReport {
 	dst := &modelsv2.UpdateResourceReport{
 		Title:  r.Title.ValueString(),
 		Filter: r.Filter.ValueString(),
+	}
+
+	if !r.FolderToken.IsNull() && !r.FolderToken.IsUnknown() {
+		dst.FolderToken = r.FolderToken.ValueString()
 	}
 
 	if !r.Columns.IsNull() && !r.Columns.IsUnknown() {

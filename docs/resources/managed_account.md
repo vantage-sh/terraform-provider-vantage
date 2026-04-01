@@ -50,7 +50,9 @@ resource "vantage_managed_account" "terraform-managed-account" {
 ### Read-Only
 
 - `id` (String) The id of the managed account
+- `include_managed_account_integrations` (Boolean) Whether to include managed account's own integrations in invoice cost calculations (MSP invoicing accounts only)
 - `parent_account_token` (String) The token for the parent Account.
+- `payment_terms_days` (Number) Number of days until payment is due after invoice date (MSP invoicing accounts only)
 - `token` (String) The token of the managed account
 
 

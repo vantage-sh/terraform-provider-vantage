@@ -147,6 +147,11 @@ func ManagedAccountsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The id of the resource",
 							MarkdownDescription: "The id of the resource",
 						},
+						"include_managed_account_integrations": schema.BoolAttribute{
+							Computed:            true,
+							Description:         "Whether to include managed account's own integrations in invoice cost calculations (MSP invoicing accounts only)",
+							MarkdownDescription: "Whether to include managed account's own integrations in invoice cost calculations (MSP invoicing accounts only)",
+						},
 						"msp_billing_profile_token": schema.StringAttribute{
 							Computed:            true,
 							Description:         "Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)",
@@ -159,6 +164,11 @@ func ManagedAccountsDataSourceSchema(ctx context.Context) schema.Schema {
 							Computed:            true,
 							Description:         "The token for the parent Account.",
 							MarkdownDescription: "The token for the parent Account.",
+						},
+						"payment_terms_days": schema.Int64Attribute{
+							Computed:            true,
+							Description:         "Number of days until payment is due after invoice date (MSP invoicing accounts only)",
+							MarkdownDescription: "Number of days until payment is due after invoice date (MSP invoicing accounts only)",
 						},
 						"token": schema.StringAttribute{
 							Computed: true,
@@ -331,6 +341,24 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
 	}
 
+	includeManagedAccountIntegrationsAttribute, ok := attributes["include_managed_account_integrations"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`include_managed_account_integrations is missing from object`)
+
+		return nil, diags
+	}
+
+	includeManagedAccountIntegrationsVal, ok := includeManagedAccountIntegrationsAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`include_managed_account_integrations expected to be basetypes.BoolValue, was: %T`, includeManagedAccountIntegrationsAttribute))
+	}
+
 	mspBillingProfileTokenAttribute, ok := attributes["msp_billing_profile_token"]
 
 	if !ok {
@@ -385,6 +413,24 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`parent_account_token expected to be basetypes.StringValue, was: %T`, parentAccountTokenAttribute))
 	}
 
+	paymentTermsDaysAttribute, ok := attributes["payment_terms_days"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`payment_terms_days is missing from object`)
+
+		return nil, diags
+	}
+
+	paymentTermsDaysVal, ok := paymentTermsDaysAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`payment_terms_days expected to be basetypes.Int64Value, was: %T`, paymentTermsDaysAttribute))
+	}
+
 	tokenAttribute, ok := attributes["token"]
 
 	if !ok {
@@ -408,18 +454,20 @@ func (t ManagedAccountsType) ValueFromObject(ctx context.Context, in basetypes.O
 	}
 
 	return ManagedAccountsValue{
-		AccessCredentialTokens:        accessCredentialTokensVal,
-		BillingInformationAttributes:  billingInformationAttributesVal,
-		BillingRuleTokens:             billingRuleTokensVal,
-		BusinessInformationAttributes: businessInformationAttributesVal,
-		ContactEmail:                  contactEmailVal,
-		EmailDomain:                   emailDomainVal,
-		Id:                            idVal,
-		MspBillingProfileToken:        mspBillingProfileTokenVal,
-		Name:                          nameVal,
-		ParentAccountToken:            parentAccountTokenVal,
-		Token:                         tokenVal,
-		state:                         attr.ValueStateKnown,
+		AccessCredentialTokens:            accessCredentialTokensVal,
+		BillingInformationAttributes:      billingInformationAttributesVal,
+		BillingRuleTokens:                 billingRuleTokensVal,
+		BusinessInformationAttributes:     businessInformationAttributesVal,
+		ContactEmail:                      contactEmailVal,
+		EmailDomain:                       emailDomainVal,
+		Id:                                idVal,
+		IncludeManagedAccountIntegrations: includeManagedAccountIntegrationsVal,
+		MspBillingProfileToken:            mspBillingProfileTokenVal,
+		Name:                              nameVal,
+		ParentAccountToken:                parentAccountTokenVal,
+		PaymentTermsDays:                  paymentTermsDaysVal,
+		Token:                             tokenVal,
+		state:                             attr.ValueStateKnown,
 	}, diags
 }
 
@@ -612,6 +660,24 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
 	}
 
+	includeManagedAccountIntegrationsAttribute, ok := attributes["include_managed_account_integrations"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`include_managed_account_integrations is missing from object`)
+
+		return NewManagedAccountsValueUnknown(), diags
+	}
+
+	includeManagedAccountIntegrationsVal, ok := includeManagedAccountIntegrationsAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`include_managed_account_integrations expected to be basetypes.BoolValue, was: %T`, includeManagedAccountIntegrationsAttribute))
+	}
+
 	mspBillingProfileTokenAttribute, ok := attributes["msp_billing_profile_token"]
 
 	if !ok {
@@ -666,6 +732,24 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`parent_account_token expected to be basetypes.StringValue, was: %T`, parentAccountTokenAttribute))
 	}
 
+	paymentTermsDaysAttribute, ok := attributes["payment_terms_days"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`payment_terms_days is missing from object`)
+
+		return NewManagedAccountsValueUnknown(), diags
+	}
+
+	paymentTermsDaysVal, ok := paymentTermsDaysAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`payment_terms_days expected to be basetypes.Int64Value, was: %T`, paymentTermsDaysAttribute))
+	}
+
 	tokenAttribute, ok := attributes["token"]
 
 	if !ok {
@@ -689,18 +773,20 @@ func NewManagedAccountsValue(attributeTypes map[string]attr.Type, attributes map
 	}
 
 	return ManagedAccountsValue{
-		AccessCredentialTokens:        accessCredentialTokensVal,
-		BillingInformationAttributes:  billingInformationAttributesVal,
-		BillingRuleTokens:             billingRuleTokensVal,
-		BusinessInformationAttributes: businessInformationAttributesVal,
-		ContactEmail:                  contactEmailVal,
-		EmailDomain:                   emailDomainVal,
-		Id:                            idVal,
-		MspBillingProfileToken:        mspBillingProfileTokenVal,
-		Name:                          nameVal,
-		ParentAccountToken:            parentAccountTokenVal,
-		Token:                         tokenVal,
-		state:                         attr.ValueStateKnown,
+		AccessCredentialTokens:            accessCredentialTokensVal,
+		BillingInformationAttributes:      billingInformationAttributesVal,
+		BillingRuleTokens:                 billingRuleTokensVal,
+		BusinessInformationAttributes:     businessInformationAttributesVal,
+		ContactEmail:                      contactEmailVal,
+		EmailDomain:                       emailDomainVal,
+		Id:                                idVal,
+		IncludeManagedAccountIntegrations: includeManagedAccountIntegrationsVal,
+		MspBillingProfileToken:            mspBillingProfileTokenVal,
+		Name:                              nameVal,
+		ParentAccountToken:                parentAccountTokenVal,
+		PaymentTermsDays:                  paymentTermsDaysVal,
+		Token:                             tokenVal,
+		state:                             attr.ValueStateKnown,
 	}, diags
 }
 
@@ -772,22 +858,24 @@ func (t ManagedAccountsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = ManagedAccountsValue{}
 
 type ManagedAccountsValue struct {
-	AccessCredentialTokens        basetypes.ListValue   `tfsdk:"access_credential_tokens"`
-	BillingInformationAttributes  basetypes.ObjectValue `tfsdk:"billing_information_attributes"`
-	BillingRuleTokens             basetypes.ListValue   `tfsdk:"billing_rule_tokens"`
-	BusinessInformationAttributes basetypes.ObjectValue `tfsdk:"business_information_attributes"`
-	ContactEmail                  basetypes.StringValue `tfsdk:"contact_email"`
-	EmailDomain                   basetypes.StringValue `tfsdk:"email_domain"`
-	Id                            basetypes.StringValue `tfsdk:"id"`
-	MspBillingProfileToken        basetypes.StringValue `tfsdk:"msp_billing_profile_token"`
-	Name                          basetypes.StringValue `tfsdk:"name"`
-	ParentAccountToken            basetypes.StringValue `tfsdk:"parent_account_token"`
-	Token                         basetypes.StringValue `tfsdk:"token"`
-	state                         attr.ValueState
+	AccessCredentialTokens            basetypes.ListValue   `tfsdk:"access_credential_tokens"`
+	BillingInformationAttributes      basetypes.ObjectValue `tfsdk:"billing_information_attributes"`
+	BillingRuleTokens                 basetypes.ListValue   `tfsdk:"billing_rule_tokens"`
+	BusinessInformationAttributes     basetypes.ObjectValue `tfsdk:"business_information_attributes"`
+	ContactEmail                      basetypes.StringValue `tfsdk:"contact_email"`
+	EmailDomain                       basetypes.StringValue `tfsdk:"email_domain"`
+	Id                                basetypes.StringValue `tfsdk:"id"`
+	IncludeManagedAccountIntegrations basetypes.BoolValue   `tfsdk:"include_managed_account_integrations"`
+	MspBillingProfileToken            basetypes.StringValue `tfsdk:"msp_billing_profile_token"`
+	Name                              basetypes.StringValue `tfsdk:"name"`
+	ParentAccountToken                basetypes.StringValue `tfsdk:"parent_account_token"`
+	PaymentTermsDays                  basetypes.Int64Value  `tfsdk:"payment_terms_days"`
+	Token                             basetypes.StringValue `tfsdk:"token"`
+	state                             attr.ValueState
 }
 
 func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 11)
+	attrTypes := make(map[string]tftypes.Type, 13)
 
 	var val tftypes.Value
 	var err error
@@ -807,16 +895,18 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 	attrTypes["contact_email"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["email_domain"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["include_managed_account_integrations"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["msp_billing_profile_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["parent_account_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["payment_terms_days"] = basetypes.Int64Type{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 11)
+		vals := make(map[string]tftypes.Value, 13)
 
 		val, err = v.AccessCredentialTokens.ToTerraformValue(ctx)
 
@@ -874,6 +964,14 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 		vals["id"] = val
 
+		val, err = v.IncludeManagedAccountIntegrations.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["include_managed_account_integrations"] = val
+
 		val, err = v.MspBillingProfileToken.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -897,6 +995,14 @@ func (v ManagedAccountsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["parent_account_token"] = val
+
+		val, err = v.PaymentTermsDays.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["payment_terms_days"] = val
 
 		val, err = v.Token.ToTerraformValue(ctx)
 
@@ -1003,13 +1109,15 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"business_information_attributes": basetypes.ObjectType{
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
-			"contact_email":             basetypes.StringType{},
-			"email_domain":              basetypes.StringType{},
-			"id":                        basetypes.StringType{},
-			"msp_billing_profile_token": basetypes.StringType{},
-			"name":                      basetypes.StringType{},
-			"parent_account_token":      basetypes.StringType{},
-			"token":                     basetypes.StringType{},
+			"contact_email":                        basetypes.StringType{},
+			"email_domain":                         basetypes.StringType{},
+			"id":                                   basetypes.StringType{},
+			"include_managed_account_integrations": basetypes.BoolType{},
+			"msp_billing_profile_token":            basetypes.StringType{},
+			"name":                                 basetypes.StringType{},
+			"parent_account_token":                 basetypes.StringType{},
+			"payment_terms_days":                   basetypes.Int64Type{},
+			"token":                                basetypes.StringType{},
 		}), diags
 	}
 
@@ -1039,13 +1147,15 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"business_information_attributes": basetypes.ObjectType{
 				AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 			},
-			"contact_email":             basetypes.StringType{},
-			"email_domain":              basetypes.StringType{},
-			"id":                        basetypes.StringType{},
-			"msp_billing_profile_token": basetypes.StringType{},
-			"name":                      basetypes.StringType{},
-			"parent_account_token":      basetypes.StringType{},
-			"token":                     basetypes.StringType{},
+			"contact_email":                        basetypes.StringType{},
+			"email_domain":                         basetypes.StringType{},
+			"id":                                   basetypes.StringType{},
+			"include_managed_account_integrations": basetypes.BoolType{},
+			"msp_billing_profile_token":            basetypes.StringType{},
+			"name":                                 basetypes.StringType{},
+			"parent_account_token":                 basetypes.StringType{},
+			"payment_terms_days":                   basetypes.Int64Type{},
+			"token":                                basetypes.StringType{},
 		}), diags
 	}
 
@@ -1062,13 +1172,15 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		"business_information_attributes": basetypes.ObjectType{
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
-		"contact_email":             basetypes.StringType{},
-		"email_domain":              basetypes.StringType{},
-		"id":                        basetypes.StringType{},
-		"msp_billing_profile_token": basetypes.StringType{},
-		"name":                      basetypes.StringType{},
-		"parent_account_token":      basetypes.StringType{},
-		"token":                     basetypes.StringType{},
+		"contact_email":                        basetypes.StringType{},
+		"email_domain":                         basetypes.StringType{},
+		"id":                                   basetypes.StringType{},
+		"include_managed_account_integrations": basetypes.BoolType{},
+		"msp_billing_profile_token":            basetypes.StringType{},
+		"name":                                 basetypes.StringType{},
+		"parent_account_token":                 basetypes.StringType{},
+		"payment_terms_days":                   basetypes.Int64Type{},
+		"token":                                basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -1082,17 +1194,19 @@ func (v ManagedAccountsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
-			"access_credential_tokens":        accessCredentialTokensVal,
-			"billing_information_attributes":  billingInformationAttributes,
-			"billing_rule_tokens":             billingRuleTokensVal,
-			"business_information_attributes": businessInformationAttributes,
-			"contact_email":                   v.ContactEmail,
-			"email_domain":                    v.EmailDomain,
-			"id":                              v.Id,
-			"msp_billing_profile_token":       v.MspBillingProfileToken,
-			"name":                            v.Name,
-			"parent_account_token":            v.ParentAccountToken,
-			"token":                           v.Token,
+			"access_credential_tokens":             accessCredentialTokensVal,
+			"billing_information_attributes":       billingInformationAttributes,
+			"billing_rule_tokens":                  billingRuleTokensVal,
+			"business_information_attributes":      businessInformationAttributes,
+			"contact_email":                        v.ContactEmail,
+			"email_domain":                         v.EmailDomain,
+			"id":                                   v.Id,
+			"include_managed_account_integrations": v.IncludeManagedAccountIntegrations,
+			"msp_billing_profile_token":            v.MspBillingProfileToken,
+			"name":                                 v.Name,
+			"parent_account_token":                 v.ParentAccountToken,
+			"payment_terms_days":                   v.PaymentTermsDays,
+			"token":                                v.Token,
 		})
 
 	return objVal, diags
@@ -1141,6 +1255,10 @@ func (v ManagedAccountsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.IncludeManagedAccountIntegrations.Equal(other.IncludeManagedAccountIntegrations) {
+		return false
+	}
+
 	if !v.MspBillingProfileToken.Equal(other.MspBillingProfileToken) {
 		return false
 	}
@@ -1150,6 +1268,10 @@ func (v ManagedAccountsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.ParentAccountToken.Equal(other.ParentAccountToken) {
+		return false
+	}
+
+	if !v.PaymentTermsDays.Equal(other.PaymentTermsDays) {
 		return false
 	}
 
@@ -1182,13 +1304,15 @@ func (v ManagedAccountsValue) AttributeTypes(ctx context.Context) map[string]att
 		"business_information_attributes": basetypes.ObjectType{
 			AttrTypes: BusinessInformationAttributesValue{}.AttributeTypes(ctx),
 		},
-		"contact_email":             basetypes.StringType{},
-		"email_domain":              basetypes.StringType{},
-		"id":                        basetypes.StringType{},
-		"msp_billing_profile_token": basetypes.StringType{},
-		"name":                      basetypes.StringType{},
-		"parent_account_token":      basetypes.StringType{},
-		"token":                     basetypes.StringType{},
+		"contact_email":                        basetypes.StringType{},
+		"email_domain":                         basetypes.StringType{},
+		"id":                                   basetypes.StringType{},
+		"include_managed_account_integrations": basetypes.BoolType{},
+		"msp_billing_profile_token":            basetypes.StringType{},
+		"name":                                 basetypes.StringType{},
+		"parent_account_token":                 basetypes.StringType{},
+		"payment_terms_days":                   basetypes.Int64Type{},
+		"token":                                basetypes.StringType{},
 	}
 }
 

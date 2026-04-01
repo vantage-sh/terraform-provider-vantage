@@ -83,6 +83,7 @@ Optional:
 
 - `business_metric_token` (String) The token of an associated business metric.
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric))
+- `date_ranges` (Attributes List) Date ranges restricting when this value applies. Each range has optional start_date and end_date (inclusive, YYYY-MM-DD). (see [below for nested schema](#nestedatt--values--date_ranges))
 - `name` (String) The name of the value.
 - `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--values--percentages))
 
@@ -101,6 +102,15 @@ Optional:
 
 - `tag` (String) The tag to aggregate on.
 
+
+
+<a id="nestedatt--values--date_ranges"></a>
+### Nested Schema for `values.date_ranges`
+
+Optional:
+
+- `end_date` (String) Inclusive end date (YYYY-MM-DD), or null for unbounded.
+- `start_date` (String) Inclusive start date (YYYY-MM-DD), or null for unbounded.
 
 
 <a id="nestedatt--values--percentages"></a>

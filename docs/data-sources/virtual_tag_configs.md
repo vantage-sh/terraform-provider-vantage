@@ -49,6 +49,8 @@ Read-Only:
 
 - `business_metric_token` (String) The token of the associated BusinessMetric.
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--virtual_tag_configs--values--cost_metric))
+- `date_ranges` (Attributes List) Date ranges restricting when this value applies. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--date_ranges))
+- `display_name` (String) The display name for this allocation value.
 - `filter` (String) The filter VQL for the Value.
 - `name` (String) The name of the Value.
 - `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--percentages))
@@ -68,6 +70,15 @@ Read-Only:
 
 - `tag` (String) The tag to aggregate on.
 
+
+
+<a id="nestedatt--virtual_tag_configs--values--date_ranges"></a>
+### Nested Schema for `virtual_tag_configs.values.date_ranges`
+
+Read-Only:
+
+- `end_date` (String) The end date of the range (inclusive), or null for unbounded.
+- `start_date` (String) The start date of the range (inclusive), or null for unbounded.
 
 
 <a id="nestedatt--virtual_tag_configs--values--percentages"></a>

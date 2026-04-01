@@ -31,7 +31,7 @@ resource "vantage_team" "demo_team" {
 
 ### Optional
 
-- `default_dashboard_token` (String) The token of the dashboard to use as the default for the Team. Remove from configuration to clear.
+- `default_dashboard_token` (String) The token of the dashboard to use as the default for the Team.
 - `description` (String) The description of the Team.
 - `role` (String) The role to assign to the provided Users. Defaults to 'editor' which has editor permissions.
 - `user_emails` (List of String) The User emails to associate to the Team.
