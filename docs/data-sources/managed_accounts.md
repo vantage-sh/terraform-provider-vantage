@@ -31,9 +31,11 @@ Read-Only:
 - `contact_email` (String)
 - `email_domain` (String) Email domain associated with this Managed Account for SSO.
 - `id` (String) The id of the resource
+- `include_managed_account_integrations` (Boolean) Whether to include managed account's own integrations in invoice cost calculations (MSP invoicing accounts only)
 - `msp_billing_profile_token` (String) Token of the MSP billing profile used for this managed account (MSP invoicing accounts only)
 - `name` (String)
 - `parent_account_token` (String) The token for the parent Account.
+- `payment_terms_days` (Number) Number of days until payment is due after invoice date (MSP invoicing accounts only)
 - `token` (String)
 
 <a id="nestedatt--managed_accounts--billing_information_attributes"></a>

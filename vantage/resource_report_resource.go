@@ -68,6 +68,12 @@ func (r *resourceReportResource) Schema(ctx context.Context, req resource.Schema
 				Description:         "The VQL filter for the ResourceReport.",
 				MarkdownDescription: "The VQL filter for the ResourceReport.",
 			},
+			"folder_token": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The token of the Folder to add the ResourceReport to.",
+				MarkdownDescription: "The token of the Folder to add the ResourceReport to.",
+			},
 			"title": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
