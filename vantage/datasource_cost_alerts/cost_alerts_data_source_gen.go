@@ -44,8 +44,8 @@ func CostAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"minimum_threshold": schema.NumberAttribute{
 							Computed:            true,
-							Description:         "The minimum dollar amount threshold for percentage-based alerts. When set, alerts will only trigger if the dollar change meets this minimum, even if the percentage threshold is exceeded.",
-							MarkdownDescription: "The minimum dollar amount threshold for percentage-based alerts. When set, alerts will only trigger if the dollar change meets this minimum, even if the percentage threshold is exceeded.",
+							Description:         "The minimum monetary amount threshold for percentage-based alerts. When set, alerts will only trigger if the cost change meets this minimum, even if the percentage threshold is exceeded.",
+							MarkdownDescription: "The minimum monetary amount threshold for percentage-based alerts. When set, alerts will only trigger if the cost change meets this minimum, even if the percentage threshold is exceeded.",
 						},
 						"report_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,

@@ -42,6 +42,11 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The id of the managed account",
 				MarkdownDescription: "The id of the managed account",
 			},
+			"include_managed_account_integrations": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether to include managed account's own integrations in invoice cost calculations (MSP invoicing accounts only)",
+				MarkdownDescription: "Whether to include managed account's own integrations in invoice cost calculations (MSP invoicing accounts only)",
+			},
 			"name": schema.StringAttribute{
 				Required:            true,
 				Description:         "The name of the Managed Account.",
@@ -51,6 +56,11 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "The token for the parent Account.",
 				MarkdownDescription: "The token for the parent Account.",
+			},
+			"payment_terms_days": schema.Int64Attribute{
+				Computed:            true,
+				Description:         "Number of days until payment is due after invoice date (MSP invoicing accounts only)",
+				MarkdownDescription: "Number of days until payment is due after invoice date (MSP invoicing accounts only)",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -62,12 +72,14 @@ func ManagedAccountResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type ManagedAccountModel struct {
-	AccessCredentialTokens types.List   `tfsdk:"access_credential_tokens"`
-	BillingRuleTokens      types.List   `tfsdk:"billing_rule_tokens"`
-	ContactEmail           types.String `tfsdk:"contact_email"`
-	EmailDomain            types.String `tfsdk:"email_domain"`
-	Id                     types.String `tfsdk:"id"`
-	Name                   types.String `tfsdk:"name"`
-	ParentAccountToken     types.String `tfsdk:"parent_account_token"`
-	Token                  types.String `tfsdk:"token"`
+	AccessCredentialTokens            types.List   `tfsdk:"access_credential_tokens"`
+	BillingRuleTokens                 types.List   `tfsdk:"billing_rule_tokens"`
+	ContactEmail                      types.String `tfsdk:"contact_email"`
+	EmailDomain                       types.String `tfsdk:"email_domain"`
+	Id                                types.String `tfsdk:"id"`
+	IncludeManagedAccountIntegrations types.Bool   `tfsdk:"include_managed_account_integrations"`
+	Name                              types.String `tfsdk:"name"`
+	ParentAccountToken                types.String `tfsdk:"parent_account_token"`
+	PaymentTermsDays                  types.Int64  `tfsdk:"payment_terms_days"`
+	Token                             types.String `tfsdk:"token"`
 }

@@ -18,6 +18,7 @@ type virtualTagConfigValueModel struct {
 	BusinessMetricToken types.String                                `tfsdk:"business_metric_token"`
 	CostMetric          resource_virtual_tag_config.CostMetricValue `tfsdk:"cost_metric"`
 	DateRanges          types.List                                  `tfsdk:"date_ranges"`
+	DisplayName         types.String                                `tfsdk:"display_name"`
 	Filter              types.String                                `tfsdk:"filter"`
 	Name                types.String                                `tfsdk:"name"`
 	Percentages         types.List                                  `tfsdk:"percentages"`
@@ -53,6 +54,7 @@ type costMetricData struct {
 
 type valueData struct {
 	Name                string
+	DisplayName         string
 	Filter              *string
 	BusinessMetricToken string
 	CostMetric          *costMetricData
@@ -136,6 +138,13 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		nameValue = types.StringValue(*v.Name)
 	}
 
+	var displayNameValue attr.Value
+	if v.DisplayName == nil || *v.DisplayName == "" {
+		displayNameValue = types.StringNull()
+	} else {
+		displayNameValue = types.StringValue(*v.DisplayName)
+	}
+
 	var businessMetricTokenValue attr.Value
 	if v.BusinessMetricToken == nil || *v.BusinessMetricToken == "" {
 		businessMetricTokenValue = types.StringNull()
@@ -190,6 +199,7 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 			"business_metric_token": businessMetricTokenValue,
 			"cost_metric":           costMetricValue,
 			"date_ranges":           dateRangesValue,
+			"display_name":          displayNameValue,
 			"percentages":           percentagesValue,
 		},
 	)
@@ -294,6 +304,7 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 
 			value := &modelsv2.CreateVirtualTagConfigValuesItems0{
 				Name:                data.Name,
+				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
 			}
@@ -388,6 +399,7 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 
 			value := &modelsv2.UpdateVirtualTagConfigValuesItems0{
 				Name:                data.Name,
+				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
 			}
@@ -483,6 +495,7 @@ func (m *virtualTagConfigModel) collapsedTagKeysFromTf(ctx context.Context, diag
 func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *diag.Diagnostics) *valueData {
 	data := &valueData{
 		Name:                v.Name.ValueString(),
+		DisplayName:         v.DisplayName.ValueString(),
 		Filter:              v.Filter.ValueStringPointer(),
 		BusinessMetricToken: v.BusinessMetricToken.ValueString(),
 	}

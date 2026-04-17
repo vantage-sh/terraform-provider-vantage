@@ -143,6 +143,12 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 							Description:         "Date ranges restricting when this value applies. Each range has optional start_date and end_date (inclusive, YYYY-MM-DD).",
 							MarkdownDescription: "Date ranges restricting when this value applies. Each range has optional start_date and end_date (inclusive, YYYY-MM-DD).",
 						},
+						"display_name": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "The display name for an allocation value (cost_metric or percentages). Invalid when name is set.",
+							MarkdownDescription: "The display name for an allocation value (cost_metric or percentages). Invalid when name is set.",
+						},
 						"filter": schema.StringAttribute{
 							Required:            true,
 							Description:         "The filter query language to apply to the value. Additional documentation available at https://docs.vantage.sh/vql.",
@@ -689,6 +695,24 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 			fmt.Sprintf(`date_ranges expected to be basetypes.ListValue, was: %T`, dateRangesAttribute))
 	}
 
+	displayNameAttribute, ok := attributes["display_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`display_name is missing from object`)
+
+		return nil, diags
+	}
+
+	displayNameVal, ok := displayNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`display_name expected to be basetypes.StringValue, was: %T`, displayNameAttribute))
+	}
+
 	filterAttribute, ok := attributes["filter"]
 
 	if !ok {
@@ -751,6 +775,7 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 		BusinessMetricToken: businessMetricTokenVal,
 		CostMetric:          costMetricVal,
 		DateRanges:          dateRangesVal,
+		DisplayName:         displayNameVal,
 		Filter:              filterVal,
 		Name:                nameVal,
 		Percentages:         percentagesVal,
@@ -875,6 +900,24 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 			fmt.Sprintf(`date_ranges expected to be basetypes.ListValue, was: %T`, dateRangesAttribute))
 	}
 
+	displayNameAttribute, ok := attributes["display_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`display_name is missing from object`)
+
+		return NewValuesValueUnknown(), diags
+	}
+
+	displayNameVal, ok := displayNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`display_name expected to be basetypes.StringValue, was: %T`, displayNameAttribute))
+	}
+
 	filterAttribute, ok := attributes["filter"]
 
 	if !ok {
@@ -937,6 +980,7 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 		BusinessMetricToken: businessMetricTokenVal,
 		CostMetric:          costMetricVal,
 		DateRanges:          dateRangesVal,
+		DisplayName:         displayNameVal,
 		Filter:              filterVal,
 		Name:                nameVal,
 		Percentages:         percentagesVal,
@@ -1015,6 +1059,7 @@ type ValuesValue struct {
 	BusinessMetricToken basetypes.StringValue `tfsdk:"business_metric_token"`
 	CostMetric          basetypes.ObjectValue `tfsdk:"cost_metric"`
 	DateRanges          basetypes.ListValue   `tfsdk:"date_ranges"`
+	DisplayName         basetypes.StringValue `tfsdk:"display_name"`
 	Filter              basetypes.StringValue `tfsdk:"filter"`
 	Name                basetypes.StringValue `tfsdk:"name"`
 	Percentages         basetypes.ListValue   `tfsdk:"percentages"`
@@ -1022,7 +1067,7 @@ type ValuesValue struct {
 }
 
 func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 6)
+	attrTypes := make(map[string]tftypes.Type, 7)
 
 	var val tftypes.Value
 	var err error
@@ -1034,6 +1079,7 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 	attrTypes["date_ranges"] = basetypes.ListType{
 		ElemType: DateRangesValue{}.Type(ctx),
 	}.TerraformType(ctx)
+	attrTypes["display_name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["percentages"] = basetypes.ListType{
@@ -1044,7 +1090,7 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 6)
+		vals := make(map[string]tftypes.Value, 7)
 
 		val, err = v.BusinessMetricToken.ToTerraformValue(ctx)
 
@@ -1069,6 +1115,14 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 		}
 
 		vals["date_ranges"] = val
+
+		val, err = v.DisplayName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["display_name"] = val
 
 		val, err = v.Filter.ToTerraformValue(ctx)
 
@@ -1210,8 +1264,9 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		"date_ranges": basetypes.ListType{
 			ElemType: DateRangesValue{}.Type(ctx),
 		},
-		"filter": basetypes.StringType{},
-		"name":   basetypes.StringType{},
+		"display_name": basetypes.StringType{},
+		"filter":       basetypes.StringType{},
+		"name":         basetypes.StringType{},
 		"percentages": basetypes.ListType{
 			ElemType: PercentagesValue{}.Type(ctx),
 		},
@@ -1231,6 +1286,7 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 			"business_metric_token": v.BusinessMetricToken,
 			"cost_metric":           costMetric,
 			"date_ranges":           dateRanges,
+			"display_name":          v.DisplayName,
 			"filter":                v.Filter,
 			"name":                  v.Name,
 			"percentages":           percentages,
@@ -1266,6 +1322,10 @@ func (v ValuesValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.DisplayName.Equal(other.DisplayName) {
+		return false
+	}
+
 	if !v.Filter.Equal(other.Filter) {
 		return false
 	}
@@ -1298,8 +1358,9 @@ func (v ValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		"date_ranges": basetypes.ListType{
 			ElemType: DateRangesValue{}.Type(ctx),
 		},
-		"filter": basetypes.StringType{},
-		"name":   basetypes.StringType{},
+		"display_name": basetypes.StringType{},
+		"filter":       basetypes.StringType{},
+		"name":         basetypes.StringType{},
 		"percentages": basetypes.ListType{
 			ElemType: PercentagesValue{}.Type(ctx),
 		},

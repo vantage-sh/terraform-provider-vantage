@@ -17,8 +17,8 @@ func TeamResourceSchema(ctx context.Context) schema.Schema {
 			"default_dashboard_token": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The token of the dashboard to use as the default for the Team.",
-				MarkdownDescription: "The token of the dashboard to use as the default for the Team.",
+				Description:         "The token of a Dashboard to set as the Team default. Send null to clear.",
+				MarkdownDescription: "The token of a Dashboard to set as the Team default. Send null to clear.",
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,

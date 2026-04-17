@@ -16,17 +16,19 @@ type managedAccountModel resource_managed_account.ManagedAccountModel
 // managedAccountDataSourceModel is used for the data source and includes
 // all read-only fields that are not part of the resource model.
 type managedAccountDataSourceModel struct {
-	AccessCredentialTokens        types.List   `tfsdk:"access_credential_tokens"`
-	BillingInformationAttributes  types.Object `tfsdk:"billing_information_attributes"`
-	BillingRuleTokens             types.List   `tfsdk:"billing_rule_tokens"`
-	BusinessInformationAttributes types.Object `tfsdk:"business_information_attributes"`
-	ContactEmail                  types.String `tfsdk:"contact_email"`
-	EmailDomain                   types.String `tfsdk:"email_domain"`
-	Id                            types.String `tfsdk:"id"`
-	MspBillingProfileToken        types.String `tfsdk:"msp_billing_profile_token"`
-	Name                          types.String `tfsdk:"name"`
-	ParentAccountToken            types.String `tfsdk:"parent_account_token"`
-	Token                         types.String `tfsdk:"token"`
+	AccessCredentialTokens            types.List   `tfsdk:"access_credential_tokens"`
+	BillingInformationAttributes      types.Object `tfsdk:"billing_information_attributes"`
+	BillingRuleTokens                 types.List   `tfsdk:"billing_rule_tokens"`
+	BusinessInformationAttributes     types.Object `tfsdk:"business_information_attributes"`
+	ContactEmail                      types.String `tfsdk:"contact_email"`
+	EmailDomain                       types.String `tfsdk:"email_domain"`
+	Id                                types.String `tfsdk:"id"`
+	IncludeManagedAccountIntegrations types.Bool   `tfsdk:"include_managed_account_integrations"`
+	MspBillingProfileToken            types.String `tfsdk:"msp_billing_profile_token"`
+	Name                              types.String `tfsdk:"name"`
+	ParentAccountToken                types.String `tfsdk:"parent_account_token"`
+	PaymentTermsDays                  types.Int64  `tfsdk:"payment_terms_days"`
+	Token                             types.String `tfsdk:"token"`
 }
 
 // applyPayloadDataSource populates the data source model from the API response.
@@ -40,6 +42,13 @@ func (m *managedAccountDataSourceModel) applyPayloadDataSource(ctx context.Conte
 	m.ParentAccountToken = types.StringValue(payload.ParentAccountToken)
 	m.EmailDomain = types.StringPointerValue(payload.EmailDomain)
 	m.MspBillingProfileToken = types.StringPointerValue(payload.MspBillingProfileToken)
+	m.IncludeManagedAccountIntegrations = types.BoolPointerValue(payload.IncludeManagedAccountIntegrations)
+	if payload.PaymentTermsDays != nil {
+		paymentTermsDays := int64(*payload.PaymentTermsDays)
+		m.PaymentTermsDays = types.Int64Value(paymentTermsDays)
+	} else {
+		m.PaymentTermsDays = types.Int64Null()
+	}
 
 	// Handle access_credential_tokens
 	if payload.AccessCredentialTokens != nil {
@@ -214,6 +223,13 @@ func (m *managedAccountModel) applyPayload(ctx context.Context, payload *modelsv
 	m.ParentAccountToken = types.StringValue(payload.ParentAccountToken)
 	m.Token = types.StringValue(payload.Token)
 	m.EmailDomain = types.StringPointerValue(payload.EmailDomain)
+	m.IncludeManagedAccountIntegrations = types.BoolPointerValue(payload.IncludeManagedAccountIntegrations)
+	if payload.PaymentTermsDays != nil {
+		paymentTermsDays := int64(*payload.PaymentTermsDays)
+		m.PaymentTermsDays = types.Int64Value(paymentTermsDays)
+	} else {
+		m.PaymentTermsDays = types.Int64Null()
+	}
 
 	return nil
 }
