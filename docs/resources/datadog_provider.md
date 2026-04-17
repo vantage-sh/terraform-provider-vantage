@@ -7,10 +7,14 @@ description: |-
 
 # vantage_datadog_provider (Resource)
 
+Manages a Datadog Account Integration in Vantage.
+
+~> **Note:** This resource is not yet fully supported. Creating or updating this resource will return an error until SDK support is added.
+
 ## Example Usage
 
 ```terraform
-resource "vantage_datadog_provider" "demo" {
+resource "vantage_datadog_provider" "example" {
   api_key = "ddapikey"
   app_key = "ddappkey"
 }
@@ -19,8 +23,10 @@ resource "vantage_datadog_provider" "demo" {
 ## Schema
 
 ### Required
-- `api_key` (String, Sensitive)
-- `app_key` (String, Sensitive)
+
+- `api_key` (String, Sensitive) The Datadog API key.
+- `app_key` (String, Sensitive) The Datadog application key.
 
 ### Read-Only
-- `id` (Integer)
+
+- `id` (String) Unique identifier of the Datadog integration.

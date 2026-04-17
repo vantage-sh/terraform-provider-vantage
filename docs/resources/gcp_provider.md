@@ -7,24 +7,28 @@ description: |-
 
 # vantage_gcp_provider (Resource)
 
+Manages a Google Cloud Platform Account Integration in Vantage.
+
 ## Example Usage
 
 ```terraform
-resource "vantage_gcp_provider" "demo" {
-  project_id      = "test-project"
+resource "vantage_gcp_provider" "example" {
+  project_id      = "my-gcp-project"
   billing_account = "000000-111111-222222"
-  service_account = <<EOF
-{ "type": "service_account", "project_id": "test-project" }
-EOF
+  dataset_name    = "my_billing_dataset"
 }
 ```
 
 ## Schema
 
 ### Required
-- `project_id` (String)
-- `billing_account` (String)
-- `service_account` (String, Sensitive)
+
+- `project_id` (String) The GCP project ID. Changing this value forces a new resource.
+- `billing_account` (String) The GCP billing account ID. Changing this value forces a new resource.
+- `dataset_name` (String) The BigQuery dataset name containing the billing export. Changing this value forces a new resource.
 
 ### Read-Only
-- `id` (Integer)
+
+- `id` (String) Same as `token`.
+- `token` (String) Unique token of the GCP integration.
+- `status` (String) The status of the integration.

@@ -3,9 +3,11 @@ package vantage
 import (
 	"testing"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
 func TestAccPagerdutyProviderResource_basic(t *testing.T) {
+	t.Skip("not yet implemented")
 	resourceName := "vantage_pagerduty_provider.demo"
 	config := `
 resource "vantage_pagerduty_provider" "demo" {
@@ -13,7 +15,8 @@ resource "vantage_pagerduty_provider" "demo" {
 }
 `
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: config,

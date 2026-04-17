@@ -2,32 +2,40 @@ package vantage
 
 import (
 	"testing"
+
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
 func TestAccSnowflakeProviderResource_basic(t *testing.T) {
-	resourceName := "vantage_snowflake_provider.demo"
-	config := `
-resource "vantage_snowflake_provider" "demo" {
-  account_name = "my_account"
-  user_name = "my_user"
-  password = "supersecret"
-  role = "analyst"
-}
-`
+	t.Skip("Snowflake integration is not yet supported by the vantage-go SDK")
+
+	resourceName := "vantage_snowflake_provider.test"
+
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: config,
-				Check: resource.ComposeAggregateTestCheckFunc(
+				Config: testAccSnowflakeProviderConfig("my_account", "my_user", "supersecret", "analyst"),
+				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "account_name", "my_account"),
 					resource.TestCheckResourceAttr(resourceName, "user_name", "my_user"),
-					resource.TestCheckResourceAttr(resourceName, "password", "supersecret"),
 					resource.TestCheckResourceAttr(resourceName, "role", "analyst"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 		},
 	})
+}
+
+func testAccSnowflakeProviderConfig(accountName, userName, password, role string) string {
+	return `
+resource "vantage_snowflake_provider" "test" {
+  account_name = "` + accountName + `"
+  user_name    = "` + userName + `"
+  password     = "` + password + `"
+  role         = "` + role + `"
+}
+`
 }

@@ -7,10 +7,14 @@ description: |-
 
 # vantage_snowflake_provider (Resource)
 
+Manages a Snowflake Account Integration in Vantage.
+
+~> **Note:** This resource is not yet fully supported. Creating or updating this resource will return an error until SDK support is added.
+
 ## Example Usage
 
 ```terraform
-resource "vantage_snowflake_provider" "demo" {
+resource "vantage_snowflake_provider" "example" {
   account_name = "my_account"
   user_name    = "my_user"
   password     = "supersecret"
@@ -21,12 +25,15 @@ resource "vantage_snowflake_provider" "demo" {
 ## Schema
 
 ### Required
-- `account_name` (String)
-- `user_name` (String)
-- `password` (String, Sensitive)
+
+- `account_name` (String) The Snowflake account name.
+- `user_name` (String) The Snowflake username.
+- `password` (String, Sensitive) The Snowflake password.
 
 ### Optional
-- `role` (String)
+
+- `role` (String) The Snowflake role to use.
 
 ### Read-Only
-- `id` (Integer)
+
+- `id` (String) Unique identifier of the Snowflake integration.

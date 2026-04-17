@@ -7,11 +7,15 @@ description: |-
 
 # vantage_databricks_provider (Resource)
 
+Manages a Databricks Account Integration in Vantage.
+
+~> **Note:** This resource is not yet implemented.
+
 ## Example Usage
 
 ```terraform
-resource "vantage_databricks_provider" "demo" {
-  host = "https://mycompany.cloud.databricks.com"
+resource "vantage_databricks_provider" "example" {
+  host  = "https://mycompany.cloud.databricks.com"
   token = "databricks-token"
 }
 ```
@@ -19,8 +23,10 @@ resource "vantage_databricks_provider" "demo" {
 ## Schema
 
 ### Required
-- `host` (String)
-- `token` (String, Sensitive)
+
+- `host` (String) The Databricks workspace URL.
+- `token` (String, Sensitive) The Databricks personal access token.
 
 ### Read-Only
-- `id` (Integer)
+
+- `id` (String) Unique identifier of the Databricks integration.

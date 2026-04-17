@@ -7,24 +7,28 @@ description: |-
 
 # vantage_azure_provider (Resource)
 
+Manages an Azure Account Integration in Vantage.
+
 ## Example Usage
 
 ```terraform
-resource "vantage_azure_provider" "demo" {
-  tenant_id       = "tenant-123"
-  subscription_id = "sub-abc"
-  client_id       = "client-xyz"
-  client_secret   = "supersecret"
+resource "vantage_azure_provider" "example" {
+  tenant   = "my-tenant-id"
+  app_id   = "azure-app-client-id"
+  password = "supersecret"
 }
 ```
 
 ## Schema
 
 ### Required
-- `tenant_id` (String)
-- `subscription_id` (String)
-- `client_id` (String)
-- `client_secret` (String, Sensitive)
+
+- `tenant` (String) The Azure Active Directory tenant ID. Changing this value forces a new resource.
+- `app_id` (String) The Azure application (client) ID. Changing this value forces a new resource.
+- `password` (String, Sensitive) The Azure application client secret. Changing this value forces a new resource.
 
 ### Read-Only
-- `id` (Integer)
+
+- `id` (String) Same as `token`.
+- `token` (String) Unique token of the Azure integration.
+- `status` (String) The status of the integration.

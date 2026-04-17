@@ -92,14 +92,14 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
     var plan AwsProviderResourceModel
     resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
     if resp.Diagnostics.HasError() { return }
-    params := integrationsv1.NewUpdateIntegrationsAWSParams()
+    params := integrationsv1.NewPutIntegrationsAWSParams()
     params.SetAccessCredentialID(int32(plan.Id.ValueInt64()))
-    payload := &modelsv1.UpdateIntegrationsAWS{
+    payload := &modelsv1.PutIntegrationsAWS{
         CrossAccountArn: plan.CrossAccountARN.ValueStringPointer(),
         BucketArn:       plan.BucketARN.ValueString(),
     }
-    params.WithUpdateIntegrationsAWS(payload)
-    out, err := r.client.V1.Integrations.UpdateIntegrationsAWS(params, r.client.Auth)
+    params.WithPutIntegrationsAWS(payload)
+    out, err := r.client.V1.Integrations.PutIntegrationsAWS(params, r.client.Auth)
     if err != nil { handleError("Update AWS Integration", &resp.Diagnostics, err); return }
     plan.Id = types.Int64Value(int64(out.Payload.ID))
     resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

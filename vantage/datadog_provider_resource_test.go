@@ -2,23 +2,23 @@ package vantage
 
 import (
 	"testing"
+
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
 func TestAccDatadogProviderResource_basic(t *testing.T) {
-	resourceName := "vantage_datadog_provider.demo"
-	config := `
-resource "vantage_datadog_provider" "demo" {
-  api_key = "ddapikey"
-  app_key = "ddappkey"
-}
-`
+	t.Skip("Datadog integration is not yet supported by the vantage-go SDK")
+
+	resourceName := "vantage_datadog_provider.test"
+
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: config,
-				Check: resource.ComposeAggregateTestCheckFunc(
+				Config: testAccDatadogProviderConfig("ddapikey", "ddappkey"),
+				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_key", "ddapikey"),
 					resource.TestCheckResourceAttr(resourceName, "app_key", "ddappkey"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -26,4 +26,13 @@ resource "vantage_datadog_provider" "demo" {
 			},
 		},
 	})
+}
+
+func testAccDatadogProviderConfig(apiKey, appKey string) string {
+	return `
+resource "vantage_datadog_provider" "test" {
+  api_key = "` + apiKey + `"
+  app_key = "` + appKey + `"
+}
+`
 }

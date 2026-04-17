@@ -1,4 +1,4 @@
 resource "vantage_custom_provider" "example" {
-  name       = "My Custom Provider"
-  identifier = "my_unique_provider"
+  name        = "My Custom Provider"
+  description = "An optional description for this provider"
 }

@@ -1,5 +1,9 @@
+resource "vantage_custom_provider" "example" {
+  name = "My Custom Provider"
+}
+
 resource "vantage_custom_provider_costs_upload" "example" {
-  provider_id = vantage_custom_provider.example.id
-  period      = "2023-12"
-  content     = file("${path.module}/costs.csv")
+  integration_token = vantage_custom_provider.example.token
+  csv_content       = file("${path.module}/costs.csv")
+  auto_transform    = true
 }
