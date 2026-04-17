@@ -241,6 +241,5 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewRecommendationViewResource,
 		NewCustomProviderResource,
 		NewCustomProviderCostsUploadResource,
-		NewElasticProviderResource,
 	}
 }
