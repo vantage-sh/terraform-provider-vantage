@@ -2,7 +2,6 @@ package vantage
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/go-openapi/runtime"
@@ -168,25 +167,14 @@ func (r *CustomProviderCostsUploadResource) Delete(ctx context.Context, req reso
 		return
 	}
 
-	params := integrationsv2.NewDeleteUserCostsUploadParams()
-	params.SetIntegrationToken(state.IntegrationToken.ValueString())
-
-	// The SDK uses int32 for the upload token path parameter. Extract the numeric
-	// suffix from the token string (e.g. "usr_csts_upld_1234" → 1234).
-	token := state.Token.ValueString()
-	parts := strings.Split(token, "_")
-	if len(parts) > 0 {
-		if n, err := strconv.ParseInt(parts[len(parts)-1], 10, 32); err == nil {
-			params.SetUserCostsUploadToken(int32(n))
-			_, deleteErr := r.client.V2.Integrations.DeleteUserCostsUpload(params, r.client.Auth)
-			if deleteErr != nil {
-				handleError("Delete Custom Provider Costs Upload", &resp.Diagnostics, deleteErr)
-			}
-			return
-		}
-	}
-	// If the token suffix is not an integer, remove from state without an API call.
+	// The costs upload delete API endpoint is not yet functional. The resource
+	// is removed from Terraform state, but the upload will continue to exist in
+	// Vantage and must be deleted manually via the UI or API.
+	resp.Diagnostics.AddWarning(
+		"Costs upload must be deleted manually",
+		"The costs upload with token \""+state.Token.ValueString()+"\" has been removed "+
+			"from Terraform state, but the delete API endpoint is not yet available. "+
+			"Please delete this upload manually via the Vantage UI or API.",
+	)
 }
 
-// parseInt32Suffix is unused but kept for reference.
-var _ = strconv.ParseInt

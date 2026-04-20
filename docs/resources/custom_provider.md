@@ -22,11 +22,11 @@ resource "vantage_custom_provider" "example" {
 
 ### Required
 
-- `name` (String) The name of the Custom Provider. Changing this value forces a new resource.
+- `name` (String) The display name for the custom provider. Cannot be changed after creation — a warning will be shown and the existing value preserved if a change is attempted.
 
 ### Optional
 
-- `description` (String) A description of the Custom Provider. Changing this value forces a new resource.
+- `description` (String) A description for the custom provider. Cannot be changed after creation — a warning will be shown and the existing value preserved if a change is attempted.
 
 ### Read-Only
 
