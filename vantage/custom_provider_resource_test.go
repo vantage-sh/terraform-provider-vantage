@@ -14,6 +14,7 @@ func TestAccCustomProviderResource_basic(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			// Step 1: Create.
 			{
 				Config: testAccCustomProviderConfig("Test Provider", ""),
 				Check: resource.ComposeTestCheckFunc(
@@ -21,13 +22,19 @@ func TestAccCustomProviderResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "status"),
-					// id and token must be identical
 					resource.TestCheckResourceAttrPair(resourceName, "id", resourceName, "token"),
 				),
 			},
-			// Verify no drift after creation — guards against the AccountIdentifier/Provider mix-up bug.
+			// Step 2: No drift after creation.
 			{
 				Config:             testAccCustomProviderConfig("Test Provider", ""),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// Step 3: Attempt to rename — the plan modifier emits a warning and
+			// reverts the value, so Terraform sees no effective change.
+			{
+				Config:             testAccCustomProviderConfig("Renamed Provider", ""),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
@@ -42,17 +49,25 @@ func TestAccCustomProviderResource_withDescription(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			// Step 1: Create with description.
 			{
-				Config: testAccCustomProviderConfig("Described Provider", "A test description"),
+				Config: testAccCustomProviderConfig("Provider With Desc", "Initial description"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "Described Provider"),
-					resource.TestCheckResourceAttr(resourceName, "description", "A test description"),
+					resource.TestCheckResourceAttr(resourceName, "name", "Provider With Desc"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Initial description"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 				),
 			},
-			// Verify no drift with description set.
+			// Step 2: No drift after creation.
 			{
-				Config:             testAccCustomProviderConfig("Described Provider", "A test description"),
+				Config:             testAccCustomProviderConfig("Provider With Desc", "Initial description"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// Step 3: Attempt to change description — plan modifier reverts it,
+			// so no effective change occurs.
+			{
+				Config:             testAccCustomProviderConfig("Provider With Desc", "Updated description"),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},

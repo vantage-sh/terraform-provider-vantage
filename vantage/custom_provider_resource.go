@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	integrationsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/integrations"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 )
 
 var (
@@ -47,13 +48,19 @@ func (r *CustomProviderResource) Schema(_ context.Context, _ resource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-				MarkdownDescription: "The display name for the custom provider.",
+				// Uncomment when update is available in the API.
+				// PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				// Remove when API supports updating.
+				PlanModifiers:       []planmodifier.String{planmodifiers.ImmutableAfterCreate("name")},
+				MarkdownDescription: "The display name for the custom provider. Cannot be changed after creation.",
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-				MarkdownDescription: "A description for the custom provider.",
+				// Uncomment when update is available in the API.
+				// PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				// Remove when API supports updating.
+				PlanModifiers:       []planmodifier.String{planmodifiers.ImmutableAfterCreate("description")},
+				MarkdownDescription: "A description for the custom provider. Cannot be changed after creation.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -130,19 +137,39 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Status = types.StringValue(out.Payload.Status)
-	// AccountIdentifier holds the user-supplied name for custom provider integrations.
-	// Provider holds the type slug (e.g. "custom_provider"), not the display name.
-	if out.Payload.AccountIdentifier != nil {
-		state.Name = types.StringValue(*out.Payload.AccountIdentifier)
+	// name and description are not returned by the generic GET endpoint in a
+	// reliable way, so preserve whatever is already in state. On a fresh import
+	// (state.Name is empty/unknown) we seed the value from AccountIdentifier,
+	// which the API populates with the user-supplied name on creation.
+	if state.Name.IsNull() || state.Name.IsUnknown() || state.Name.ValueString() == "" {
+		if out.Payload.AccountIdentifier != nil {
+			state.Name = types.StringValue(*out.Payload.AccountIdentifier)
+		}
 	}
+	// description is never returned by the API; always preserve state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *CustomProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// name and description are RequiresReplace, so Update is only reached if
-	// workspace_tokens changes (not exposed). Simply persist plan as-is.
+	// name and description are guarded by ImmutableAfterCreate plan modifiers,
+	// so they are always reverted to their state values before this method runs.
+	// Carry all fields forward from the plan (which already holds state values
+	// for name/description) without making an API call.
 	var plan CustomProviderResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state CustomProviderResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	plan.Token = state.Token
+	plan.Id = state.Id
+	plan.Status = state.Status
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
