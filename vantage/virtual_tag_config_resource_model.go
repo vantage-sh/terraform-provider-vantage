@@ -399,19 +399,12 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 				value.LabelTransforms = make([]*modelsv2.CreateVirtualTagConfigValuesItems0LabelTransformsItems0, 0, len(data.LabelTransforms))
 				for _, lt := range data.LabelTransforms {
 					ltType := lt.Type
-					item := &modelsv2.CreateVirtualTagConfigValuesItems0LabelTransformsItems0{
-						Type: &ltType,
-					}
-					if lt.Delimiter != nil {
-						item.Delimiter = *lt.Delimiter
-					}
-					if lt.Index != nil {
-						item.Index = *lt.Index
-					}
-					if lt.Template != nil {
-						item.Template = *lt.Template
-					}
-					value.LabelTransforms = append(value.LabelTransforms, item)
+					value.LabelTransforms = append(value.LabelTransforms, &modelsv2.CreateVirtualTagConfigValuesItems0LabelTransformsItems0{
+						Type:      &ltType,
+						Delimiter: lt.Delimiter,
+						Index:     lt.Index,
+						Template:  lt.Template,
+					})
 				}
 			}
 
@@ -518,19 +511,12 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 				value.LabelTransforms = make([]*modelsv2.UpdateVirtualTagConfigValuesItems0LabelTransformsItems0, 0, len(data.LabelTransforms))
 				for _, lt := range data.LabelTransforms {
 					ltType := lt.Type
-					item := &modelsv2.UpdateVirtualTagConfigValuesItems0LabelTransformsItems0{
-						Type: &ltType,
-					}
-					if lt.Delimiter != nil {
-						item.Delimiter = *lt.Delimiter
-					}
-					if lt.Index != nil {
-						item.Index = *lt.Index
-					}
-					if lt.Template != nil {
-						item.Template = *lt.Template
-					}
-					value.LabelTransforms = append(value.LabelTransforms, item)
+					value.LabelTransforms = append(value.LabelTransforms, &modelsv2.UpdateVirtualTagConfigValuesItems0LabelTransformsItems0{
+						Type:      &ltType,
+						Delimiter: lt.Delimiter,
+						Index:     lt.Index,
+						Template:  lt.Template,
+					})
 				}
 			}
 
