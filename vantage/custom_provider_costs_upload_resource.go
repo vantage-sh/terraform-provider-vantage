@@ -2,9 +2,11 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -167,14 +169,56 @@ func (r *CustomProviderCostsUploadResource) Delete(ctx context.Context, req reso
 		return
 	}
 
-	// The costs upload delete API endpoint is not yet functional. The resource
-	// is removed from Terraform state, but the upload will continue to exist in
-	// Vantage and must be deleted manually via the UI or API.
-	resp.Diagnostics.AddWarning(
-		"Costs upload must be deleted manually",
-		"The costs upload with token \""+state.Token.ValueString()+"\" has been removed "+
-			"from Terraform state, but the delete API endpoint is not yet available. "+
-			"Please delete this upload manually via the Vantage UI or API.",
-	)
+	// The SDK incorrectly types the user_costs_upload_token path parameter as
+	// int32. The API actually accepts a string. We bypass the SDK by submitting
+	// a raw ClientOperation through the existing transport so that auth,
+	// timeouts, and user-agent headers are all preserved.
+	op := &runtime.ClientOperation{
+		ID:                 "deleteUserCostsUpload",
+		Method:             "DELETE",
+		PathPattern:        "/integrations/{integration_token}/costs/{user_costs_upload_token}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"https"},
+		Params: &deleteUploadStringParams{
+			integrationToken:     state.IntegrationToken.ValueString(),
+			userCostsUploadToken: state.Token.ValueString(),
+		},
+		Reader:   &deleteUploadReader{},
+		AuthInfo: r.client.Auth,
+	}
+
+	if _, err := r.client.V2.Transport.Submit(op); err != nil {
+		handleError("Delete Custom Provider Costs Upload", &resp.Diagnostics, err)
+	}
+}
+
+// deleteUploadStringParams writes both path parameters as plain strings,
+// bypassing the SDK's incorrect int32 type for user_costs_upload_token.
+type deleteUploadStringParams struct {
+	integrationToken     string
+	userCostsUploadToken string
+}
+
+func (p *deleteUploadStringParams) WriteToRequest(r runtime.ClientRequest, _ strfmt.Registry) error {
+	if err := r.SetPathParam("integration_token", p.integrationToken); err != nil {
+		return err
+	}
+	return r.SetPathParam("user_costs_upload_token", p.userCostsUploadToken)
+}
+
+// deleteUploadReader accepts a 204 No Content or 200 OK response from the
+// delete endpoint and returns an error for anything else.
+type deleteUploadReader struct{}
+
+func (r *deleteUploadReader) ReadResponse(response runtime.ClientResponse, _ runtime.Consumer) (interface{}, error) {
+	switch response.Code() {
+	case 200, 204:
+		return nil, nil
+	case 404:
+		return nil, nil // already gone — treat as success
+	default:
+		return nil, fmt.Errorf("unexpected status %d from delete costs upload", response.Code())
+	}
 }
 

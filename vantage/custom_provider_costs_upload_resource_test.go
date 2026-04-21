@@ -20,6 +20,7 @@ func TestAccCustomProviderCostsUploadResource_basic(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			// Step 1: create the upload and verify computed attributes are populated.
 			{
 				Config: testAccCostsUploadConfig(testAccCostsCSV),
 				Check: resource.ComposeTestCheckFunc(
@@ -30,6 +31,40 @@ func TestAccCustomProviderCostsUploadResource_basic(t *testing.T) {
 					// id and token must be identical
 					resource.TestCheckResourceAttrPair(resourceName, "id", resourceName, "token"),
 				),
+			},
+			// Step 2: verify the resource can be imported by its token.
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				// csv_content is write-only and never returned by the API.
+				ImportStateVerifyIgnore: []string{"csv_content", "auto_transform"},
+			},
+		},
+	})
+}
+
+// TestAccCustomProviderCostsUploadResource_autoTransform verifies that setting
+// auto_transform = true is accepted and does not cause perpetual drift.
+func TestAccCustomProviderCostsUploadResource_autoTransform(t *testing.T) {
+	resourceName := "vantage_custom_provider_costs_upload.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCostsUploadAutoTransformConfig(testAccCostsCSV),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttr(resourceName, "auto_transform", "true"),
+				),
+			},
+			// Confirm no drift on a subsequent plan.
+			{
+				Config:             testAccCostsUploadAutoTransformConfig(testAccCostsCSV),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -43,6 +78,21 @@ resource "vantage_custom_provider" "test" {
 
 resource "vantage_custom_provider_costs_upload" "test" {
   integration_token = vantage_custom_provider.test.token
+  csv_content       = <<-CSV
+` + csvContent + `CSV
+}
+`
+}
+
+func testAccCostsUploadAutoTransformConfig(csvContent string) string {
+	return `
+resource "vantage_custom_provider" "test" {
+  name = "Test Provider for Costs Upload Auto Transform"
+}
+
+resource "vantage_custom_provider_costs_upload" "test" {
+  integration_token = vantage_custom_provider.test.token
+  auto_transform    = true
   csv_content       = <<-CSV
 ` + csvContent + `CSV
 }
