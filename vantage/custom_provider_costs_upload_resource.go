@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -18,9 +17,8 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*CustomProviderCostsUploadResource)(nil)
-	_ resource.ResourceWithConfigure   = (*CustomProviderCostsUploadResource)(nil)
-	_ resource.ResourceWithImportState = (*CustomProviderCostsUploadResource)(nil)
+	_ resource.Resource              = (*CustomProviderCostsUploadResource)(nil)
+	_ resource.ResourceWithConfigure = (*CustomProviderCostsUploadResource)(nil)
 )
 
 type CustomProviderCostsUploadResource struct{ client *Client }
@@ -108,10 +106,6 @@ func (r *CustomProviderCostsUploadResource) Schema(_ context.Context, _ resource
 		},
 		MarkdownDescription: "Uploads a CSV of costs for a Custom Provider integration.",
 	}
-}
-
-func (r *CustomProviderCostsUploadResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r *CustomProviderCostsUploadResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
