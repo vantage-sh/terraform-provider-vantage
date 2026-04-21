@@ -74,7 +74,8 @@ func (r *CustomProviderResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"status": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The status of the integration.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				MarkdownDescription: "The status of the integration. This is system-managed and cannot be configured.",
 			},
 		},
 		MarkdownDescription: "Manages a Custom Provider integration.",
@@ -150,6 +151,14 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
+//
+// To update name/description, the UI POST to /settings/custom_providers/${CUSTOM_PROVIDER_TOKEN}/update_details
+//
+// _method=patch
+// integrations_custom_provider_access[name]=${PROVIDER_NAME}
+// integrations_custom_provider_access[description]=${PROVIDER_DESCRIPTION}
+// commit=Update+Details
+//
 func (r *CustomProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// name and description are guarded by ImmutableAfterCreate plan modifiers,
 	// so they are always reverted to their state values before this method runs.

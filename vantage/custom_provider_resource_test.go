@@ -14,7 +14,7 @@ func TestAccCustomProviderResource_basic(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: Create.
+			// Step 1: Create and verify all fields including system-managed status.
 			{
 				Config: testAccCustomProviderConfig("Test Provider", ""),
 				Check: resource.ComposeTestCheckFunc(
@@ -25,14 +25,17 @@ func TestAccCustomProviderResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrPair(resourceName, "id", resourceName, "token"),
 				),
 			},
-			// Step 2: No drift after creation.
+			// Step 2: Confirm no drift even though status is system-managed.
+			// UseStateForUnknown preserves the API-returned status in the plan
+			// so it never appears as (known after apply).
 			{
 				Config:             testAccCustomProviderConfig("Test Provider", ""),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
-			// Step 3: Attempt to rename — the plan modifier emits a warning and
-			// reverts the value, so Terraform sees no effective change.
+			// Step 3: Attempt to rename — the ImmutableAfterCreate plan modifier
+			// reverts the value to its state value, so Terraform sees no effective
+			// change and the user-defined name field remains stable.
 			{
 				Config:             testAccCustomProviderConfig("Renamed Provider", ""),
 				PlanOnly:           true,
@@ -49,23 +52,27 @@ func TestAccCustomProviderResource_withDescription(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: Create with description.
+			// Step 1: Create with description; verify all user-defined and
+			// system-managed fields are populated.
 			{
 				Config: testAccCustomProviderConfig("Provider With Desc", "Initial description"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "Provider With Desc"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Initial description"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrSet(resourceName, "status"),
 				),
 			},
-			// Step 2: No drift after creation.
+			// Step 2: Confirm no drift. Verifies that system-managed status does
+			// not cause the plan to appear non-empty on subsequent runs.
 			{
 				Config:             testAccCustomProviderConfig("Provider With Desc", "Initial description"),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
-			// Step 3: Attempt to change description — plan modifier reverts it,
-			// so no effective change occurs.
+			// Step 3: Attempt to change description — plan modifier reverts it
+			// to the state value, so user-defined fields remain stable and the
+			// system-managed status field does not trigger a replacement.
 			{
 				Config:             testAccCustomProviderConfig("Provider With Desc", "Updated description"),
 				PlanOnly:           true,
