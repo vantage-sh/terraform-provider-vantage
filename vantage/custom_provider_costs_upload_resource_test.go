@@ -20,7 +20,7 @@ func TestAccCustomProviderCostsUploadResource_basic(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: create the upload and verify computed attributes are populated.
+			// Create the upload and verify computed attributes are populated.
 			{
 				Config: testAccCostsUploadConfig(testAccCostsCSV),
 				Check: resource.ComposeTestCheckFunc(
@@ -31,14 +31,6 @@ func TestAccCustomProviderCostsUploadResource_basic(t *testing.T) {
 					// id and token must be identical
 					resource.TestCheckResourceAttrPair(resourceName, "id", resourceName, "token"),
 				),
-			},
-			// Step 2: verify the resource can be imported by its token.
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				// csv_content is write-only and never returned by the API.
-				ImportStateVerifyIgnore: []string{"csv_content", "auto_transform"},
 			},
 		},
 	})

@@ -12,6 +12,8 @@ Uploads a CSV of costs for a Custom Provider integration. The CSV must conform t
 
 Destroying this resource deletes the upload from Vantage.
 
+> **Note:** This resource does not support `terraform import`. There is no GET endpoint for individual uploads, so import cannot hydrate the required `integration_token` and `csv_content` fields. Manage this resource exclusively through Terraform from initial creation.
+
 ## Example Usage
 
 ```terraform
@@ -47,14 +49,3 @@ resource "vantage_custom_provider_costs_upload" "example" {
 - `import_status` (String) The import status of the upload (e.g. `processing`, `complete`, `error`).
 - `start_date` (String) The start date of the billing period covered by the upload.
 - `token` (String) Unique token of the costs upload.
-
-## Import
-
-Import is supported. Use the upload token as the import ID:
-
-```shell
-terraform import vantage_custom_provider_costs_upload.example usr_csts_upld_abc123
-```
-
-Note: `csv_content` and `auto_transform` are not returned by the API and will not be populated after import. Add them to your configuration manually to avoid perpetual drift.
-
