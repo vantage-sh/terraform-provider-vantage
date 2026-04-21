@@ -464,6 +464,123 @@ func TestAccVantageVirtualTagConfig_withDateRanges(t *testing.T) {
 	})
 }
 
+func TestAccVantageVirtualTagConfig_withLabelTransforms(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	bmTitle := "tf-acc-bm-" + sdkacctest.RandStringFromCharSet(8, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create: value with a split+format label_transforms chain
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, `
+					label_transforms = [
+						{
+							type      = "split"
+							delimiter = "&&&"
+							index     = 0
+						},
+						{
+							type     = "format"
+							template = "team-{0}"
+						}
+					]
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.0.business_metric_token"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.type", "split"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.delimiter", "&&&"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.index", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.1.type", "format"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.1.template", "team-{0}"),
+				),
+			},
+			// No drift
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, `
+					label_transforms = [
+						{
+							type      = "split"
+							delimiter = "&&&"
+							index     = 0
+						},
+						{
+							type     = "format"
+							template = "team-{0}"
+						}
+					]
+				`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// Update: swap to a single split transform at a different index
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, `
+					label_transforms = [
+						{
+							type      = "split"
+							delimiter = "|||"
+							index     = 1
+						}
+					]
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.type", "split"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.delimiter", "|||"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.index", "1"),
+				),
+			},
+			// Remove label_transforms
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, labelTransformsHCL string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" "test" {
+  title = %[2]q
+  values = [
+    {
+      date   = "2024-01-01"
+      amount = 1.0
+      label  = "team-a&&&proj-1"
+    },
+    {
+      date   = "2024-01-01"
+      amount = 1.0
+      label  = "team-b&&&proj-2"
+    }
+  ]
+}
+
+resource "vantage_virtual_tag_config" "test" {
+  key            = %[1]q
+  overridable    = true
+  backfill_until = %[3]q
+  values = [
+    {
+      filter                = "costs.provider = 'aws'"
+      business_metric_token = vantage_business_metric.test.token
+      %[4]s
+    }
+  ]
+}
+`, key, bmTitle, backfillUntil, labelTransformsHCL)
+}
+
 func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, rest string) string {
 	return fmt.Sprintf(
 		`data "vantage_virtual_tag_configs" %[1]q {}

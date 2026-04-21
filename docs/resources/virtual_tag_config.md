@@ -69,6 +69,7 @@ Required:
 
 Optional:
 
+- `filter` (String) The VQL filter this collapsed tag key applies to.
 - `providers` (List of String) The providers this collapsed tag key applies to. Defaults to all providers.
 
 
@@ -84,6 +85,7 @@ Optional:
 - `business_metric_token` (String) The token of an associated business metric.
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric))
 - `date_ranges` (Attributes List) Date ranges restricting when this value applies. Each range has optional start_date and end_date (inclusive, YYYY-MM-DD). (see [below for nested schema](#nestedatt--values--date_ranges))
+- `label_transforms` (Attributes List) Label transforms applied to business metric labels. (see [below for nested schema](#nestedatt--values--label_transforms))
 - `name` (String) The name of the value.
 - `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--values--percentages))
 
@@ -111,6 +113,20 @@ Optional:
 
 - `end_date` (String) Inclusive end date (YYYY-MM-DD), or null for unbounded.
 - `start_date` (String) Inclusive start date (YYYY-MM-DD), or null for unbounded.
+
+
+<a id="nestedatt--values--label_transforms"></a>
+### Nested Schema for `values.label_transforms`
+
+Required:
+
+- `type` (String) The label transform type. One of `split` or `format`.
+
+Optional:
+
+- `delimiter` (String) Delimiter used by split transforms.
+- `index` (Number) Zero-based index used by split transforms.
+- `template` (String) Template used by format transforms.
 
 
 <a id="nestedatt--values--percentages"></a>

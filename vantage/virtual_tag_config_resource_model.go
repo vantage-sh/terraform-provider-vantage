@@ -20,6 +20,7 @@ type virtualTagConfigValueModel struct {
 	DateRanges          types.List                                  `tfsdk:"date_ranges"`
 	DisplayName         types.String                                `tfsdk:"display_name"`
 	Filter              types.String                                `tfsdk:"filter"`
+	LabelTransforms     types.List                                  `tfsdk:"label_transforms"`
 	Name                types.String                                `tfsdk:"name"`
 	Percentages         types.List                                  `tfsdk:"percentages"`
 }
@@ -29,6 +30,7 @@ type virtualTagConfigValueModel struct {
 // Terraform state is identical.
 
 type collapsedTagKeyData struct {
+	Filter    *string
 	Key       *string
 	Providers []string
 }
@@ -41,6 +43,13 @@ type percentageData struct {
 type dateRangeData struct {
 	StartDate string
 	EndDate   string
+}
+
+type labelTransformData struct {
+	Type      string
+	Delimiter *string
+	Index     *int32
+	Template  *string
 }
 
 type aggregationData struct {
@@ -59,6 +68,7 @@ type valueData struct {
 	BusinessMetricToken string
 	CostMetric          *costMetricData
 	DateRanges          []dateRangeData
+	LabelTransforms     []labelTransformData
 	Percentages         []percentageData
 }
 
@@ -109,6 +119,30 @@ func buildPercentagesFromPayload(ctx context.Context, percentages []*modelsv2.Vi
 		tfPercentages = append(tfPercentages, pv)
 	}
 	return types.ListValueFrom(ctx, resource_virtual_tag_config.PercentagesValue{}.Type(ctx), tfPercentages)
+}
+
+func buildLabelTransformsFromPayload(ctx context.Context, labelTransforms []*modelsv2.VirtualTagConfigValueLabelTransform) (basetypes.ListValue, diag.Diagnostics) {
+	tfLabelTransforms := make([]resource_virtual_tag_config.LabelTransformsValue, 0, len(labelTransforms))
+	for _, lt := range labelTransforms {
+		var indexValue attr.Value = types.Int64Null()
+		if lt.Index != nil {
+			indexValue = types.Int64Value(int64(*lt.Index))
+		}
+		ltv, d := resource_virtual_tag_config.NewLabelTransformsValue(
+			resource_virtual_tag_config.LabelTransformsValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"type":      types.StringValue(lt.Type),
+				"delimiter": types.StringPointerValue(lt.Delimiter),
+				"index":     indexValue,
+				"template":  types.StringPointerValue(lt.Template),
+			},
+		)
+		if d.HasError() {
+			return basetypes.ListValue{}, d
+		}
+		tfLabelTransforms = append(tfLabelTransforms, ltv)
+	}
+	return types.ListValueFrom(ctx, resource_virtual_tag_config.LabelTransformsValue{}.Type(ctx), tfLabelTransforms)
 }
 
 func buildDateRangesFromPayload(ctx context.Context, dateRanges []*modelsv2.VirtualTagConfigValueDateRange) (basetypes.ListValue, diag.Diagnostics) {
@@ -190,6 +224,20 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		dateRangesValue = dateRanges
 	}
 
+	// Build label_transforms value
+	var labelTransformsValue attr.Value = types.ListNull(resource_virtual_tag_config.LabelTransformsType{
+		ObjectType: basetypes.ObjectType{
+			AttrTypes: resource_virtual_tag_config.LabelTransformsValue{}.AttributeTypes(ctx),
+		},
+	})
+	if len(v.LabelTransforms) > 0 {
+		labelTransforms, d := buildLabelTransformsFromPayload(ctx, v.LabelTransforms)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+		labelTransformsValue = labelTransforms
+	}
+
 	// Use the constructor to properly set the state field
 	value, diags := resource_virtual_tag_config.NewValuesValue(
 		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
@@ -200,6 +248,7 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 			"cost_metric":           costMetricValue,
 			"date_ranges":           dateRangesValue,
 			"display_name":          displayNameValue,
+			"label_transforms":      labelTransformsValue,
 			"percentages":           percentagesValue,
 		},
 	)
@@ -227,6 +276,7 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 		collapsedTagKey, diag := resource_virtual_tag_config.NewCollapsedTagKeysValue(
 			resource_virtual_tag_config.CollapsedTagKeysValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
+				"filter":    types.StringPointerValue(c.Filter),
 				"key":       types.StringValue(c.Key),
 				"providers": tfProviders,
 			},
@@ -283,10 +333,14 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 		}
 		model.CollapsedTagKeys = make([]*modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0, 0, len(collapsedTagKeys))
 		for _, c := range collapsedTagKeys {
-			model.CollapsedTagKeys = append(model.CollapsedTagKeys, &modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0{
+			item := &modelsv2.CreateVirtualTagConfigCollapsedTagKeysItems0{
 				Key:       c.Key,
 				Providers: c.Providers,
-			})
+			}
+			if c.Filter != nil {
+				item.Filter = *c.Filter
+			}
+			model.CollapsedTagKeys = append(model.CollapsedTagKeys, item)
 		}
 	}
 
@@ -341,6 +395,19 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 				}
 			}
 
+			if len(data.LabelTransforms) > 0 {
+				value.LabelTransforms = make([]*modelsv2.CreateVirtualTagConfigValuesItems0LabelTransformsItems0, 0, len(data.LabelTransforms))
+				for _, lt := range data.LabelTransforms {
+					ltType := lt.Type
+					value.LabelTransforms = append(value.LabelTransforms, &modelsv2.CreateVirtualTagConfigValuesItems0LabelTransformsItems0{
+						Type:      &ltType,
+						Delimiter: lt.Delimiter,
+						Index:     lt.Index,
+						Template:  lt.Template,
+					})
+				}
+			}
+
 			model.Values = append(model.Values, value)
 		}
 	}
@@ -377,10 +444,14 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 		}
 		model.CollapsedTagKeys = make([]*modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0, 0, len(collapsedTagKeys))
 		for _, c := range collapsedTagKeys {
-			model.CollapsedTagKeys = append(model.CollapsedTagKeys, &modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0{
+			item := &modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0{
 				Key:       c.Key,
 				Providers: c.Providers,
-			})
+			}
+			if c.Filter != nil {
+				item.Filter = *c.Filter
+			}
+			model.CollapsedTagKeys = append(model.CollapsedTagKeys, item)
 		}
 	}
 
@@ -436,6 +507,19 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 				}
 			}
 
+			if len(data.LabelTransforms) > 0 {
+				value.LabelTransforms = make([]*modelsv2.UpdateVirtualTagConfigValuesItems0LabelTransformsItems0, 0, len(data.LabelTransforms))
+				for _, lt := range data.LabelTransforms {
+					ltType := lt.Type
+					value.LabelTransforms = append(value.LabelTransforms, &modelsv2.UpdateVirtualTagConfigValuesItems0LabelTransformsItems0{
+						Type:      &ltType,
+						Delimiter: lt.Delimiter,
+						Index:     lt.Index,
+						Template:  lt.Template,
+					})
+				}
+			}
+
 			model.Values = append(model.Values, value)
 		}
 	}
@@ -484,6 +568,7 @@ func (m *virtualTagConfigModel) collapsedTagKeysFromTf(ctx context.Context, diag
 			}
 		}
 		result = append(result, collapsedTagKeyData{
+			Filter:    c.Filter.ValueStringPointer(),
 			Key:       c.Key.ValueStringPointer(),
 			Providers: providers,
 		})
@@ -542,6 +627,28 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 				StartDate: dr.StartDate.ValueString(),
 				EndDate:   dr.EndDate.ValueString(),
 			})
+		}
+	}
+
+	if !v.LabelTransforms.IsNull() && !v.LabelTransforms.IsUnknown() {
+		tfLabelTransforms := make([]resource_virtual_tag_config.LabelTransformsValue, 0, len(v.LabelTransforms.Elements()))
+		if d := v.LabelTransforms.ElementsAs(ctx, &tfLabelTransforms, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		data.LabelTransforms = make([]labelTransformData, 0, len(tfLabelTransforms))
+		for _, lt := range tfLabelTransforms {
+			lt := lt
+			item := labelTransformData{
+				Type:      lt.LabelTransformsType.ValueString(),
+				Delimiter: lt.Delimiter.ValueStringPointer(),
+				Template:  lt.Template.ValueStringPointer(),
+			}
+			if !lt.Index.IsNull() && !lt.Index.IsUnknown() {
+				idx := int32(lt.Index.ValueInt64())
+				item.Index = &idx
+			}
+			data.LabelTransforms = append(data.LabelTransforms, item)
 		}
 	}
 
