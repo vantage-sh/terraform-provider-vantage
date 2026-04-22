@@ -311,32 +311,32 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 		update.ChartSettings = cs
 	}
 
-	// Handle settings (UpdateCostReportSettings uses value types, not pointers)
+	// Handle settings
 	if !m.Settings.IsNull() && !m.Settings.IsUnknown() {
 		s := &modelsv2.UpdateCostReportSettings{}
 		if !m.Settings.AggregateBy.IsNull() && !m.Settings.AggregateBy.IsUnknown() {
-			s.AggregateBy = m.Settings.AggregateBy.ValueString()
+			s.AggregateBy = m.Settings.AggregateBy.ValueStringPointer()
 		}
 		if !m.Settings.Amortize.IsNull() && !m.Settings.Amortize.IsUnknown() {
-			s.Amortize = m.Settings.Amortize.ValueBool()
+			s.Amortize = m.Settings.Amortize.ValueBoolPointer()
 		}
 		if !m.Settings.IncludeCredits.IsNull() && !m.Settings.IncludeCredits.IsUnknown() {
-			s.IncludeCredits = m.Settings.IncludeCredits.ValueBool()
+			s.IncludeCredits = m.Settings.IncludeCredits.ValueBoolPointer()
 		}
 		if !m.Settings.IncludeDiscounts.IsNull() && !m.Settings.IncludeDiscounts.IsUnknown() {
-			s.IncludeDiscounts = m.Settings.IncludeDiscounts.ValueBool()
+			s.IncludeDiscounts = m.Settings.IncludeDiscounts.ValueBoolPointer()
 		}
 		if !m.Settings.IncludeRefunds.IsNull() && !m.Settings.IncludeRefunds.IsUnknown() {
-			s.IncludeRefunds = m.Settings.IncludeRefunds.ValueBool()
+			s.IncludeRefunds = m.Settings.IncludeRefunds.ValueBoolPointer()
 		}
 		if !m.Settings.IncludeTax.IsNull() && !m.Settings.IncludeTax.IsUnknown() {
-			s.IncludeTax = m.Settings.IncludeTax.ValueBool()
+			s.IncludeTax = m.Settings.IncludeTax.ValueBoolPointer()
 		}
 		if !m.Settings.ShowPreviousPeriod.IsNull() && !m.Settings.ShowPreviousPeriod.IsUnknown() {
-			s.ShowPreviousPeriod = m.Settings.ShowPreviousPeriod.ValueBool()
+			s.ShowPreviousPeriod = m.Settings.ShowPreviousPeriod.ValueBoolPointer()
 		}
 		if !m.Settings.Unallocated.IsNull() && !m.Settings.Unallocated.IsUnknown() {
-			s.Unallocated = m.Settings.Unallocated.ValueBool()
+			s.Unallocated = m.Settings.Unallocated.ValueBoolPointer()
 		}
 		update.Settings = s
 	}
