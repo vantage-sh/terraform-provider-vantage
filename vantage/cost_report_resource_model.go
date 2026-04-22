@@ -12,7 +12,7 @@ import (
 
 type costReportModel resource_cost_report.CostReportModel
 
-func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.CostReport, isDataSource bool) diag.Diagnostics {
+func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.CostReport) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	m.Token = types.StringValue(payload.Token)

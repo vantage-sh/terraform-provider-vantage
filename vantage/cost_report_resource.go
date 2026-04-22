@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -38,9 +39,10 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 	attrs := s.GetAttributes()
 
 	// Attribute overrides:
-	// - token, id, workspace_token, previous_period_start_date,
-	//   previous_period_end_date: the code generator does not emit plan modifiers,
-	//   so add UseStateForUnknown to avoid "(known after apply)" noise.
+	// - token, id, workspace_token, folder_token, filter,
+	//   previous_period_start_date, previous_period_end_date, and
+	//   saved_filter_tokens: the code generator does not emit plan modifiers, so
+	//   add UseStateForUnknown to avoid "(known after apply)" noise.
 	// - end_date, previous_period_end_date: grape-swagger loses conditional
 	//   required-ness and emits these as unconditionally required even though the
 	//   API treats them as optional unless paired with the corresponding start date.
@@ -87,6 +89,26 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
+	s.Attributes["filter"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["filter"].GetMarkdownDescription(),
+		Description:         attrs["filter"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["folder_token"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["folder_token"].GetMarkdownDescription(),
+		Description:         attrs["folder_token"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
 	s.Attributes["end_date"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
@@ -128,6 +150,17 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
+	s.Attributes["saved_filter_tokens"] = schema.ListAttribute{
+		ElementType:         attrs["saved_filter_tokens"].(schema.ListAttribute).ElementType,
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["saved_filter_tokens"].GetMarkdownDescription(),
+		Description:         attrs["saved_filter_tokens"].GetDescription(),
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+	}
+
 	s.MarkdownDescription = "Manages a CostReport."
 	resp.Schema = s
 }
@@ -157,7 +190,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload, false)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -187,7 +220,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload, false)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -225,7 +258,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload, false)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
