@@ -41,7 +41,9 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	// Handle chart_settings from API payload.
 	// Only populate when the user has configured chart_settings to avoid drift
 	// on plans where the block is omitted from the config.
-	if !m.ChartSettings.IsNull() && !m.ChartSettings.IsUnknown() && payload.ChartSettings != nil {
+	if payload.ChartSettings == nil || m.ChartSettings.IsNull() || m.ChartSettings.IsUnknown() {
+		m.ChartSettings = resource_cost_report.NewChartSettingsValueNull()
+	} else {
 		xAxisDimension, d := types.ListValueFrom(ctx, types.StringType, payload.ChartSettings.XAxisDimension)
 		if d.HasError() {
 			diags.Append(d...)
@@ -59,8 +61,6 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 			return diags
 		}
 		m.ChartSettings = csValue
-	} else if m.ChartSettings.IsNull() || m.ChartSettings.IsUnknown() {
-		m.ChartSettings = resource_cost_report.NewChartSettingsValueNull()
 	}
 
 	// Handle settings from API payload.
@@ -68,7 +68,9 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	// avoid drift on plans where settings is omitted from the config. For
 	// Optional+Computed nested objects, Terraform cannot reconcile state values
 	// with an absent config block, causing perpetual "(known after apply)" drift.
-	if !m.Settings.IsNull() && !m.Settings.IsUnknown() && payload.Settings != nil {
+	if payload.Settings == nil || m.Settings.IsNull() || m.Settings.IsUnknown() {
+		m.Settings = resource_cost_report.NewSettingsValueNull()
+	} else {
 		settingsValue, d := resource_cost_report.NewSettingsValue(
 			resource_cost_report.SettingsValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
@@ -87,8 +89,6 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 			return diags
 		}
 		m.Settings = settingsValue
-	} else if m.Settings.IsNull() || m.Settings.IsUnknown() {
-		m.Settings = resource_cost_report.NewSettingsValueNull()
 	}
 
 	// Handle business_metric_tokens_with_metadata from API payload.
