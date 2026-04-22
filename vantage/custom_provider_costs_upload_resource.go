@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	integrationsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/integrations"
@@ -99,9 +100,11 @@ func (r *CustomProviderCostsUploadResource) Schema(_ context.Context, _ resource
 				MarkdownDescription: "The total amount of costs in the upload.",
 			},
 			"filename": schema.StringAttribute{
+				Optional:            true,
 				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				MarkdownDescription: "The filename of the uploaded costs file.",
+				Default:             stringdefault.StaticString("costs.csv"),
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				MarkdownDescription: "Filename to use when uploading the CSV. Defaults to `costs.csv`. The API records this name and returns it in the `filename` attribute after upload. Changing this value forces a new upload.",
 			},
 		},
 		MarkdownDescription: "Uploads a CSV of costs for a Custom Provider integration.",
@@ -115,7 +118,7 @@ func (r *CustomProviderCostsUploadResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	csvReader := runtime.NamedReader("costs.csv", strings.NewReader(data.CsvContent.ValueString()))
+	csvReader := runtime.NamedReader(data.Filename.ValueString(), strings.NewReader(data.CsvContent.ValueString()))
 
 	params := integrationsv2.NewCreateUserCostsUploadViaCsvParams()
 	params.SetIntegrationToken(data.IntegrationToken.ValueString())

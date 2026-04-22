@@ -39,12 +39,13 @@ resource "vantage_custom_provider_costs_upload" "example" {
 ### Optional
 
 - `auto_transform` (Boolean) When true, Vantage attempts to automatically transform the CSV to match the FOCUS format. Defaults to false.
+- `filename` (String) Filename to use when uploading the CSV. Defaults to `costs.csv`. The API records this name and returns it in the `filename` attribute after upload. Changing this value forces a new upload.
 
 ### Read-Only
 
 - `amount` (String) The total amount of costs in the upload.
 - `end_date` (String) The end date of the billing period covered by the upload.
-- `filename` (String) The filename of the uploaded costs file as recorded by Vantage.
+- `filename` (String) The filename recorded by the API after upload.
 - `id` (String) Same as `token`.
 - `import_status` (String) The import status of the upload (e.g. `processing`, `complete`, `error`).
 - `start_date` (String) The start date of the billing period covered by the upload.

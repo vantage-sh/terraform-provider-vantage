@@ -71,8 +71,7 @@ func TestAccCustomProviderCostsUploadResource_autoTransform(t *testing.T) {
 	// Non-FOCUS CSV that requires auto_transform to be processed by Vantage.
 	const csv = `date,service,category,cost,description
 2024-08-01,vm_server,compute,150.00,onprem_cluster1
-2024-08-01,storage_array,storage,50.00,onprem_nas
-`
+2024-08-01,storage_array,storage,50.00,onprem_nas`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
@@ -95,6 +94,41 @@ func TestAccCustomProviderCostsUploadResource_autoTransform(t *testing.T) {
 	})
 }
 
+// TestAccCustomProviderCostsUploadResource_customFilename verifies that a
+// user-supplied filename is passed to the API and reflected back in state.
+func TestAccCustomProviderCostsUploadResource_customFilename(t *testing.T) {
+	resourceName := "vantage_custom_provider_costs_upload.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCostsUploadFilenameConfig(testAccCostsCSV, "january-2024.csv"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					// The API echoes back the filename used in the multipart upload.
+					resource.TestCheckResourceAttr(resourceName, "filename", "january-2024.csv"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCostsUploadFilenameConfig(csvContent, filename string) string {
+	return `
+resource "vantage_custom_provider" "test" {
+  name = "Test Provider for Costs Upload Filename"
+}
+
+resource "vantage_custom_provider_costs_upload" "test" {
+  integration_token = vantage_custom_provider.test.token
+  filename          = "` + filename + `"
+  csv_content       = <<-CSV
+` + csvContent + `CSV
+}
+`
+}
 func testAccCostsUploadConfig(csvContent string) string {
 	return `
 resource "vantage_custom_provider" "test" {
