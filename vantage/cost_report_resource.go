@@ -38,14 +38,16 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 	attrs := s.GetAttributes()
 
 	// Attribute overrides:
-	// - token, id, workspace_token, previous_period_start_date: the code generator
-	//   does not emit PlanModifiers, so we add UseStateForUnknown to prevent these
-	//   Computed fields from showing "(known after apply)" on every plan.
-	// - end_date, previous_period_end_date: the swagger spec marks these as required
-	//   because of Grape's `given`/`requires` pattern (conditionally required when
-	//   start_date or previous_period_start_date is provided), but grape-swagger
-	//   loses the conditional context and emits them as unconditionally required.
-	//   They are actually optional, so we override them to Optional+Computed.
+	// - token, id, workspace_token, previous_period_start_date,
+	//   previous_period_end_date: the code generator does not emit plan modifiers,
+	//   so add UseStateForUnknown to avoid "(known after apply)" noise.
+	// - end_date, previous_period_end_date: grape-swagger loses conditional
+	//   required-ness and emits these as unconditionally required even though the
+	//   API treats them as optional unless paired with the corresponding start date.
+	// - groupings: default to an empty string so removing it from config clears the
+	//   value instead of preserving prior state.
+	// - chart_type, date_bin: remove generated defaults to preserve existing API
+	//   values for upgraded resources when the config omits these attributes.
 
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
@@ -92,14 +94,28 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Description:         attrs["end_date"].GetDescription(),
 	}
 
-	// groupings: Override to add a Default of "" so that removing groupings from
-	// config clears it instead of preserving the prior state value.
 	s.Attributes["groupings"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
 		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
 		Description:         attrs["groupings"].GetDescription(),
 		Default:             stringdefault.StaticString(""),
+	}
+
+	s.Attributes["chart_type"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["chart_type"].GetMarkdownDescription(),
+		Description:         attrs["chart_type"].GetDescription(),
+		Validators:          attrs["chart_type"].(schema.StringAttribute).Validators,
+	}
+
+	s.Attributes["date_bin"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["date_bin"].GetMarkdownDescription(),
+		Description:         attrs["date_bin"].GetDescription(),
+		Validators:          attrs["date_bin"].(schema.StringAttribute).Validators,
 	}
 
 	s.Attributes["workspace_token"] = schema.StringAttribute{
@@ -112,15 +128,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
-	// Override groupings to default to empty string so clearing it works properly
-	s.Attributes["groupings"] = schema.StringAttribute{
-		Optional:            true,
-		Computed:            true,
-		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
-		Description:         attrs["groupings"].GetDescription(),
-		Default:             stringdefault.StaticString(""),
-	}
-
 	s.MarkdownDescription = "Manages a CostReport."
 	resp.Schema = s
 }
@@ -128,9 +135,7 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 func (r CostReportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data costReportModel
 
-	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

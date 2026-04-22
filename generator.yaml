@@ -263,6 +263,26 @@ resources:
     delete:
       path: /virtual_tag_configs/{token}
       method: DELETE
+  workspace:
+    create:
+      path: /workspaces
+      method: POST
+    read:
+      path: /workspaces/{workspace_token}
+      method: GET
+    update:
+      path: /workspaces/{workspace_token}
+      method: PUT
+    delete:
+      path: /workspaces/{workspace_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the workspace
+        aliases:
+          workspace_token: token
   invoice:
     create:
       path: /invoices

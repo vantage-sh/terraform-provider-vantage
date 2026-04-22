@@ -63,7 +63,9 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				// Reuse generated attributes unchanged
 				"business_metric_token": generatedValuesAttrs["business_metric_token"],
 				"date_ranges":           generatedValuesAttrs["date_ranges"],
+				"display_name":          generatedValuesAttrs["display_name"],
 				"filter":                generatedValuesAttrs["filter"],
+				"label_transforms":      generatedValuesAttrs["label_transforms"],
 				"name":                  generatedValuesAttrs["name"],
 				"percentages":           generatedValuesAttrs["percentages"],
 				// Override cost_metric: make aggregation, aggregation.tag, and filter Optional
@@ -186,7 +188,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		WithToken(data.Token.ValueString()).
 		WithUpdateVirtualTagConfig(model)
 
-	out, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
+	out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
 	if err != nil {
 		handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
 		return
