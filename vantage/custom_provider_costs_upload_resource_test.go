@@ -71,7 +71,8 @@ func TestAccCustomProviderCostsUploadResource_autoTransform(t *testing.T) {
 	// Non-FOCUS CSV that requires auto_transform to be processed by Vantage.
 	const csv = `date,service,category,cost,description
 2024-08-01,vm_server,compute,150.00,onprem_cluster1
-2024-08-01,storage_array,storage,50.00,onprem_nas`
+2024-08-01,storage_array,storage,50.00,onprem_nas
+`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
