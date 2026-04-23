@@ -194,7 +194,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload, false)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -224,7 +224,7 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload, false)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -262,7 +262,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload, false)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return

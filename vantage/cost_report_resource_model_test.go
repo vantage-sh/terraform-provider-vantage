@@ -74,7 +74,7 @@ func TestApplyPayload_ClearsStaleChartSettingsAndSettings(t *testing.T) {
 		Settings:          nil,
 	}
 
-	diags := model.applyPayload(ctx, payload, false)
+	diags := model.applyPayload(ctx, payload)
 	if diags.HasError() {
 		t.Fatalf("applyPayload returned errors: %v", diags)
 	}
@@ -154,7 +154,7 @@ func TestApplyPayload_PopulatesChartSettingsAndSettingsFromAPI(t *testing.T) {
 		},
 	}
 
-	diags := model.applyPayload(ctx, payload, false)
+	diags := model.applyPayload(ctx, payload)
 	if diags.HasError() {
 		t.Fatalf("applyPayload returned errors: %v", diags)
 	}
@@ -209,7 +209,7 @@ func TestApplyPayload_NullStateStaysNull(t *testing.T) {
 		},
 	}
 
-	diags := model.applyPayload(ctx, payload, false)
+	diags := model.applyPayload(ctx, payload)
 	if diags.HasError() {
 		t.Fatalf("applyPayload returned errors: %v", diags)
 	}
