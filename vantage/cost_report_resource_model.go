@@ -39,9 +39,18 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	m.SavedFilterTokens = savedFilterTokensValue
 
 	// Handle chart_settings from API payload.
-	// Only populate when the user has configured chart_settings to avoid drift
-	// on plans where the block is omitted from the config.
-	if !m.ChartSettings.IsNull() && !m.ChartSettings.IsUnknown() && payload.ChartSettings != nil {
+	// Only populate from the API when both the plan has chart_settings
+	// configured and the API actually returned a value. This avoids capturing
+	// API-side defaults when the config omits the block (which would otherwise
+	// cause perpetual drift on plans where the block is absent).
+	//
+	// In every other case explicitly set the attribute to null. The previous
+	// implementation only reset to null when state was already null/unknown,
+	// which meant that when state held a non-null chart_settings value and the
+	// API returned nil, neither branch executed and the stale state was
+	// silently retained. Subsequent Read calls hit the same condition and the
+	// drift persisted indefinitely.
+	if payload.ChartSettings != nil && !m.ChartSettings.IsNull() && !m.ChartSettings.IsUnknown() {
 		xAxisDimension, d := types.ListValueFrom(ctx, types.StringType, payload.ChartSettings.XAxisDimension)
 		if d.HasError() {
 			diags.Append(d...)
@@ -59,16 +68,16 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 			return diags
 		}
 		m.ChartSettings = csValue
-	} else if m.ChartSettings.IsNull() || m.ChartSettings.IsUnknown() {
+	} else {
 		m.ChartSettings = resource_cost_report.NewChartSettingsValueNull()
 	}
 
 	// Handle settings from API payload.
-	// Only populate when the user has configured settings (not null/unknown) to
-	// avoid drift on plans where settings is omitted from the config. For
-	// Optional+Computed nested objects, Terraform cannot reconcile state values
-	// with an absent config block, causing perpetual "(known after apply)" drift.
-	if !m.Settings.IsNull() && !m.Settings.IsUnknown() && payload.Settings != nil {
+	// Same reconciliation logic as chart_settings above: populate from the API
+	// only when config has settings set and the API returned a value, and fall
+	// through to null otherwise. This fixes a bug where a non-null state
+	// combined with a nil API payload left stale data in state.
+	if payload.Settings != nil && !m.Settings.IsNull() && !m.Settings.IsUnknown() {
 		settingsValue, d := resource_cost_report.NewSettingsValue(
 			resource_cost_report.SettingsValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
@@ -87,7 +96,7 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 			return diags
 		}
 		m.Settings = settingsValue
-	} else if m.Settings.IsNull() || m.Settings.IsUnknown() {
+	} else {
 		m.Settings = resource_cost_report.NewSettingsValueNull()
 	}
 
