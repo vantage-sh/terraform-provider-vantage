@@ -2,31 +2,25 @@ package vantage
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
 var (
-	_ resource.Resource                = (*CostReportResource)(nil)
-	_ resource.ResourceWithConfigure   = (*CostReportResource)(nil)
-	_ resource.ResourceWithImportState = (*CostReportResource)(nil)
+	_ resource.Resource                     = (*CostReportResource)(nil)
+	_ resource.ResourceWithConfigure        = (*CostReportResource)(nil)
+	_ resource.ResourceWithImportState      = (*CostReportResource)(nil)
+	_ resource.ResourceWithConfigValidators = (*CostReportResource)(nil)
 )
 
 type CostReportResource struct {
@@ -37,391 +31,188 @@ func NewCostReportResource() resource.Resource {
 	return &CostReportResource{}
 }
 
-type CostReportSettingsModel struct {
-	IncludeCredits     types.Bool   `tfsdk:"include_credits"`
-	IncludeRefunds     types.Bool   `tfsdk:"include_refunds"`
-	IncludeDiscounts   types.Bool   `tfsdk:"include_discounts"`
-	IncludeTax         types.Bool   `tfsdk:"include_tax"`
-	Amortize           types.Bool   `tfsdk:"amortize"`
-	Unallocated        types.Bool   `tfsdk:"unallocated"`
-	AggregateBy        types.String `tfsdk:"aggregate_by"`
-	ShowPreviousPeriod types.Bool   `tfsdk:"show_previous_period"`
-}
-
-type CostReportResourceModel struct {
-	Token                   types.String `tfsdk:"token"`
-	Id                      types.String `tfsdk:"id"`
-	Title                   types.String `tfsdk:"title"`
-	FolderToken             types.String `tfsdk:"folder_token"`
-	Filter                  types.String `tfsdk:"filter"`
-	SavedFilterTokens       types.List   `tfsdk:"saved_filter_tokens"`
-	WorkspaceToken          types.String `tfsdk:"workspace_token"`
-	Groupings               types.String `tfsdk:"groupings"`
-	StartDate               types.String `tfsdk:"start_date"`
-	EndDate                 types.String `tfsdk:"end_date"`
-	PreviousPeriodStartDate types.String `tfsdk:"previous_period_start_date"`
-	PreviousPeriodEndDate   types.String `tfsdk:"previous_period_end_date"`
-	DateInterval            types.String `tfsdk:"date_interval"`
-	ChartType               types.String `tfsdk:"chart_type"`
-	DateBin                 types.String `tfsdk:"date_bin"`
-	Settings                types.Object `tfsdk:"settings"`
-	ChartSettings           types.Object `tfsdk:"chart_settings"`
-}
-
-// costReportSettingsAttrTypes defines the attribute types for the settings object.
-func costReportSettingsAttrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"include_credits":      types.BoolType,
-		"include_refunds":      types.BoolType,
-		"include_discounts":    types.BoolType,
-		"include_tax":          types.BoolType,
-		"amortize":             types.BoolType,
-		"unallocated":          types.BoolType,
-		"aggregate_by":         types.StringType,
-		"show_previous_period": types.BoolType,
-	}
-}
-
-var chartSettingsAttrTypes = map[string]attr.Type{
-	"x_axis_dimension": types.ListType{ElemType: types.StringType},
-	"y_axis_dimension": types.StringType,
-}
-
-func chartSettingsFromPayload(ctx context.Context, cs *modelsv2.ChartSettings) (basetypes.ObjectValue, error) {
-	if cs == nil {
-		return types.ObjectNull(chartSettingsAttrTypes), nil
-	}
-
-	xAxisDimension, diags := types.ListValueFrom(ctx, types.StringType, cs.XAxisDimension)
-	if diags.HasError() {
-		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error converting x_axis_dimension")
-	}
-
-	attrValues := map[string]attr.Value{
-		"x_axis_dimension": xAxisDimension,
-		"y_axis_dimension": types.StringValue(cs.YAxisDimension),
-	}
-
-	obj, diags := types.ObjectValue(chartSettingsAttrTypes, attrValues)
-	if diags.HasError() {
-		return types.ObjectNull(chartSettingsAttrTypes), fmt.Errorf("error building chart_settings object")
-	}
-	return obj, nil
-}
-
 func (r *CostReportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_cost_report"
 }
 
 func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"title": schema.StringAttribute{
-				MarkdownDescription: "Title of the Cost Report",
-				Required:            true,
-			},
-			"folder_token": schema.StringAttribute{
-				MarkdownDescription: "Token of the folder this Cost Report resides in.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"filter": schema.StringAttribute{
-				MarkdownDescription: "Filter query to apply to the Cost Report",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"groupings": schema.StringAttribute{
-				MarkdownDescription: "Grouping aggregations applied to the filtered data.",
-				Optional:            true,
-				Computed:            true,
-				// https://discuss.hashicorp.com/t/framework-migration-test-produces-non-empty-plan/54523/8
-				Default: stringdefault.StaticString(""),
-			},
-			"start_date": schema.StringAttribute{
-				MarkdownDescription: "Start date to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"end_date": schema.StringAttribute{
-				MarkdownDescription: "End date to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"previous_period_start_date": schema.StringAttribute{
-				MarkdownDescription: "Start date to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"previous_period_end_date": schema.StringAttribute{
-				MarkdownDescription: "End date to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"date_interval": schema.StringAttribute{
-				MarkdownDescription: "Date interval to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"chart_type": schema.StringAttribute{
-				MarkdownDescription: "Chart type to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"date_bin": schema.StringAttribute{
-				MarkdownDescription: "Date bin to apply to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"chart_settings": schema.SingleNestedAttribute{
-				MarkdownDescription: "Chart settings for the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"x_axis_dimension": schema.ListAttribute{
-						ElementType:         types.StringType,
-						MarkdownDescription: "The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].",
-						Optional:            true,
-						Computed:            true,
-					},
-					"y_axis_dimension": schema.StringAttribute{
-						MarkdownDescription: "The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.",
-						Optional:            true,
-						Computed:            true,
-					},
-				},
-			},
-			"saved_filter_tokens": schema.ListAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "Saved filter tokens to be applied to the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"settings": schema.SingleNestedAttribute{
-				MarkdownDescription: "Settings for the Cost Report.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
-				Attributes: map[string]schema.Attribute{
-					"include_credits": schema.BoolAttribute{
-						MarkdownDescription: "Report will include credits.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"include_refunds": schema.BoolAttribute{
-						MarkdownDescription: "Report will include refunds.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"include_discounts": schema.BoolAttribute{
-						MarkdownDescription: "Report will include discounts.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"include_tax": schema.BoolAttribute{
-						MarkdownDescription: "Report will include tax.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"amortize": schema.BoolAttribute{
-						MarkdownDescription: "Report will amortize.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"unallocated": schema.BoolAttribute{
-						MarkdownDescription: "Report will show unallocated costs.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"aggregate_by": schema.StringAttribute{
-						MarkdownDescription: "Report will aggregate by cost or usage.",
-						Optional:            true,
-						Computed:            true,
-						Validators: []validator.String{
-							stringvalidator.OneOf("cost", "usage"),
-						},
-					},
-					"show_previous_period": schema.BoolAttribute{
-						MarkdownDescription: "Report will show previous period costs or usage comparison.",
-						Optional:            true,
-						Computed:            true,
-					},
-				},
-			},
-			"workspace_token": schema.StringAttribute{
-				MarkdownDescription: "Workspace token to add the Cost Report to.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"token": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Unique cost report identifier",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Unique cost report identifier (aliases to token)",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+	s := resource_cost_report.CostReportResourceSchema(ctx)
+	attrs := s.GetAttributes()
+
+	// Attribute overrides:
+	// - token, id, workspace_token, previous_period_start_date,
+	//   previous_period_end_date, filter, folder_token, saved_filter_tokens:
+	//   the code generator does not emit plan modifiers, so add
+	//   UseStateForUnknown to avoid "(known after apply)" noise. applyPayload
+	//   populates these fields unconditionally from the API response, so
+	//   without UseStateForUnknown any user who doesn't set them in config
+	//   would see perpetual drift on subsequent plans.
+	// - end_date, previous_period_end_date: grape-swagger loses conditional
+	//   required-ness and emits these as unconditionally required even though the
+	//   API treats them as optional unless paired with the corresponding start date.
+	// - groupings: default to an empty string so removing it from config clears the
+	//   value instead of preserving prior state.
+	// - chart_type, date_bin: remove generated defaults to preserve existing API
+	//   values for upgraded resources when the config omits these attributes.
+
+	s.Attributes["token"] = schema.StringAttribute{
+		Computed:            true,
+		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
+		Description:         attrs["token"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 		},
-		MarkdownDescription: "Manages a CostReport.",
 	}
+
+	s.Attributes["id"] = schema.StringAttribute{
+		Computed:            true,
+		MarkdownDescription: attrs["id"].GetMarkdownDescription(),
+		Description:         attrs["id"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["previous_period_start_date"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["previous_period_start_date"].GetMarkdownDescription(),
+		Description:         attrs["previous_period_start_date"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["previous_period_end_date"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["previous_period_end_date"].GetMarkdownDescription(),
+		Description:         attrs["previous_period_end_date"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["end_date"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["end_date"].GetMarkdownDescription(),
+		Description:         attrs["end_date"].GetDescription(),
+	}
+
+	s.Attributes["groupings"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["groupings"].GetMarkdownDescription(),
+		Description:         attrs["groupings"].GetDescription(),
+		Default:             stringdefault.StaticString(""),
+	}
+
+	s.Attributes["chart_type"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["chart_type"].GetMarkdownDescription(),
+		Description:         attrs["chart_type"].GetDescription(),
+		Validators:          attrs["chart_type"].(schema.StringAttribute).Validators,
+	}
+
+	s.Attributes["date_bin"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["date_bin"].GetMarkdownDescription(),
+		Description:         attrs["date_bin"].GetDescription(),
+		Validators:          attrs["date_bin"].(schema.StringAttribute).Validators,
+	}
+
+	s.Attributes["workspace_token"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription(),
+		Description:         attrs["workspace_token"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["folder_token"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["folder_token"].GetMarkdownDescription(),
+		Description:         attrs["folder_token"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["filter"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["filter"].GetMarkdownDescription(),
+		Description:         attrs["filter"].GetDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.Attributes["saved_filter_tokens"] = schema.ListAttribute{
+		ElementType:         types.StringType,
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["saved_filter_tokens"].GetMarkdownDescription(),
+		Description:         attrs["saved_filter_tokens"].GetDescription(),
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	s.MarkdownDescription = "Manages a CostReport."
+	resp.Schema = s
 }
 
 func (r CostReportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *CostReportResourceModel
+	var data costReportModel
 
-	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	sft := []types.String{}
-	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
-		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
-		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	params := costsv2.NewCreateCostReportParams()
-	body := &modelsv2.CreateCostReport{
-		Title:                   data.Title.ValueStringPointer(),
-		FolderToken:             data.FolderToken.ValueString(),
-		Filter:                  data.Filter.ValueString(),
-		Groupings:               data.Groupings.ValueString(),
-		SavedFilterTokens:       fromStringsValue(sft),
-		WorkspaceToken:          data.WorkspaceToken.ValueString(),
-		StartDate:               data.StartDate.ValueString(),
-		EndDate:                 data.EndDate.ValueStringPointer(),
-		DateInterval:            data.DateInterval.ValueString(),
-		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
-		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueStringPointer(),
-	}
-
-	if !data.ChartType.IsUnknown() && !data.ChartType.IsNull() {
-		body.ChartType = data.ChartType.ValueStringPointer()
-	}
-
-	if !data.DateBin.IsUnknown() && !data.DateBin.IsNull() {
-		body.DateBin = data.DateBin.ValueStringPointer()
-	}
-
-	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
-		cs := &modelsv2.CreateCostReportChartSettings{}
-		attrs := data.ChartSettings.Attributes()
-		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
-			xAxisList := xAxis.(types.List)
-			items := []string{}
-			resp.Diagnostics.Append(xAxisList.ElementsAs(ctx, &items, false)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			cs.XAxisDimension = items
-		}
-		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
-			cs.YAxisDimension = yAxis.(types.String).ValueString()
-		}
-		body.ChartSettings = cs
-	}
-
-	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
-		var settings CostReportSettingsModel
-		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		body.Settings = &modelsv2.CreateCostReportSettings{
-			IncludeCredits:     settings.IncludeCredits.ValueBoolPointer(),
-			IncludeRefunds:     settings.IncludeRefunds.ValueBoolPointer(),
-			IncludeDiscounts:   settings.IncludeDiscounts.ValueBoolPointer(),
-			IncludeTax:         settings.IncludeTax.ValueBoolPointer(),
-			Amortize:           settings.Amortize.ValueBoolPointer(),
-			Unallocated:        settings.Unallocated.ValueBoolPointer(),
-			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
-			AggregateBy:        settings.AggregateBy.ValueStringPointer(),
-		}
-	}
-
-	params.WithCreateCostReport(body)
-	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Cost Report Resource", &resp.Diagnostics, err)
+	model := data.toCreateModel(ctx, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	data.Token = types.StringValue(out.Payload.Token)
-	data.Id = types.StringValue(out.Payload.Token)
-	data.Filter = types.StringPointerValue(out.Payload.Filter)
-	data.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
-	data.StartDate = types.StringPointerValue(out.Payload.StartDate)
-	data.EndDate = types.StringPointerValue(out.Payload.EndDate)
-	data.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
-	data.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
-	data.DateInterval = types.StringValue(out.Payload.DateInterval)
-	data.ChartType = types.StringValue(out.Payload.ChartType)
-	data.DateBin = types.StringValue(out.Payload.DateBin)
-	data.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
-	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	params := costsv2.NewCreateCostReportParams().WithCreateCostReport(model)
+
+	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
+	if err != nil {
+		if e, ok := err.(*costsv2.CreateCostReportBadRequest); ok {
+			handleBadRequest("Create CostReport Resource", &resp.Diagnostics, e.GetPayload())
+			return
+		}
+		handleError("Create CostReport Resource", &resp.Diagnostics, err)
+		return
+	}
+
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
-	data.SavedFilterTokens = savedFilterTokensValue
-	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
-	resp.Diagnostics.Append(settingsDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.Settings = settingsObj
-
-	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
-	if csErr != nil {
-		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
-		return
-	}
-	data.ChartSettings = chartSettingsObj
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *CostReportResourceModel
-	diags := req.State.Get(ctx, &state)
+	var data costReportModel
+
+	diags := req.State.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	params := costsv2.NewGetCostReportParams()
-	params.SetCostReportToken(state.Token.ValueString())
+	params := costsv2.NewGetCostReportParams().WithCostReportToken(data.Token.ValueString())
 	out, err := r.client.V2.Costs.GetCostReport(params, r.client.Auth)
 	if err != nil {
 		if _, ok := err.(*costsv2.GetCostReportNotFound); ok {
@@ -429,207 +220,71 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 			return
 		}
 
-		handleError("Get Cost Report Resource", &resp.Diagnostics, err)
+		handleError("Read CostReport Resource", &resp.Diagnostics, err)
 		return
 	}
 
-	state.Token = types.StringValue(out.Payload.Token)
-	state.Id = types.StringValue(out.Payload.Token)
-	state.Filter = types.StringPointerValue(out.Payload.Filter)
-	state.Title = types.StringValue(out.Payload.Title)
-	state.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
-	state.StartDate = types.StringPointerValue(out.Payload.StartDate)
-	state.EndDate = types.StringPointerValue(out.Payload.EndDate)
-	state.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
-	state.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
-	state.DateInterval = types.StringValue(out.Payload.DateInterval)
-	state.ChartType = types.StringValue(out.Payload.ChartType)
-	state.DateBin = types.StringValue(out.Payload.DateBin)
-	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	state.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
-	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
-	state.SavedFilterTokens = savedFilterTokensValue
-	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
-	resp.Diagnostics.Append(settingsDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	state.Settings = settingsObj
 
-	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
-	if csErr != nil {
-		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
-		return
-	}
-	state.ChartSettings = chartSettingsObj
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r CostReportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Set BOTH id and token from the provided ID
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), types.StringValue(req.ID))...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("token"), types.StringValue(req.ID))...)
-
+	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
 }
 
 func (r CostReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *CostReportResourceModel
+	var data costReportModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	sft := []types.String{}
-	if !data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() {
-		sft = make([]types.String, 0, len(data.SavedFilterTokens.Elements()))
-		resp.Diagnostics.Append(data.SavedFilterTokens.ElementsAs(ctx, &sft, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	params := costsv2.NewUpdateCostReportParams()
-	params.WithCostReportToken(data.Token.ValueString())
-	model := &modelsv2.UpdateCostReport{
-		FolderToken:             data.FolderToken.ValueString(),
-		Title:                   data.Title.ValueString(),
-		Filter:                  data.Filter.ValueString(),
-		SavedFilterTokens:       fromStringsValue(sft),
-		Groupings:               data.Groupings.ValueString(),
-		PreviousPeriodStartDate: data.PreviousPeriodStartDate.ValueString(),
-		PreviousPeriodEndDate:   data.PreviousPeriodEndDate.ValueString(),
-	}
-
-	if !data.ChartType.IsUnknown() && !data.ChartType.IsNull() {
-		model.ChartType = data.ChartType.ValueStringPointer()
-	}
-
-	if !data.DateBin.IsUnknown() && !data.DateBin.IsNull() {
-		model.DateBin = data.DateBin.ValueStringPointer()
-	}
-
-	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
-		cs := &modelsv2.UpdateCostReportChartSettings{}
-		attrs := data.ChartSettings.Attributes()
-		if xAxis, ok := attrs["x_axis_dimension"]; ok && !xAxis.IsNull() && !xAxis.IsUnknown() {
-			xAxisList := xAxis.(types.List)
-			items := []string{}
-			resp.Diagnostics.Append(xAxisList.ElementsAs(ctx, &items, false)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			cs.XAxisDimension = items
-		}
-		if yAxis, ok := attrs["y_axis_dimension"]; ok && !yAxis.IsNull() && !yAxis.IsUnknown() {
-			cs.YAxisDimension = yAxis.(types.String).ValueString()
-		}
-		model.ChartSettings = cs
-	}
-
-	if data.DateInterval.ValueString() == "custom" {
-		model.StartDate = data.StartDate.ValueString()
-		model.EndDate = data.EndDate.ValueString()
-		model.DateInterval = "custom"
-	} else {
-		model.DateInterval = data.DateInterval.ValueString()
-	}
-
-	if !data.Settings.IsNull() && !data.Settings.IsUnknown() {
-		var settings CostReportSettingsModel
-		resp.Diagnostics.Append(data.Settings.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		model.Settings = &modelsv2.UpdateCostReportSettings{
-			IncludeCredits:     settings.IncludeCredits.ValueBoolPointer(),
-			IncludeRefunds:     settings.IncludeRefunds.ValueBoolPointer(),
-			IncludeDiscounts:   settings.IncludeDiscounts.ValueBoolPointer(),
-			IncludeTax:         settings.IncludeTax.ValueBoolPointer(),
-			Amortize:           settings.Amortize.ValueBoolPointer(),
-			Unallocated:        settings.Unallocated.ValueBoolPointer(),
-			ShowPreviousPeriod: settings.ShowPreviousPeriod.ValueBoolPointer(),
-			AggregateBy:        settings.AggregateBy.ValueStringPointer(),
-		}
-	}
-
-	params.WithUpdateCostReport(model)
-	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Cost Report Resource", &resp.Diagnostics, err)
+	model := data.toUpdateModel(ctx, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	data.Title = types.StringValue(out.Payload.Title)
-	data.FolderToken = types.StringPointerValue(out.Payload.FolderToken)
-	data.Filter = types.StringPointerValue(out.Payload.Filter)
-	data.Groupings = ptrStringOrEmpty(out.Payload.Groupings)
-	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
-	data.StartDate = types.StringPointerValue(out.Payload.StartDate)
-	data.EndDate = types.StringPointerValue(out.Payload.EndDate)
-	data.PreviousPeriodStartDate = types.StringPointerValue(out.Payload.PreviousPeriodStartDate)
-	data.PreviousPeriodEndDate = types.StringPointerValue(out.Payload.PreviousPeriodEndDate)
-	data.DateInterval = types.StringValue(out.Payload.DateInterval)
-	data.ChartType = types.StringValue(out.Payload.ChartType)
-	data.DateBin = types.StringValue(out.Payload.DateBin)
-	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
+	params := costsv2.NewUpdateCostReportParams().WithUpdateCostReport(model).WithCostReportToken(data.Token.ValueString())
+
+	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
+	if err != nil {
+		if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
+			handleBadRequest("Update CostReport Resource", &resp.Diagnostics, e.GetPayload())
+			return
+		}
+
+		handleError("Update CostReport Resource", &resp.Diagnostics, err)
+		return
+	}
+
+	diag := data.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
-	data.SavedFilterTokens = savedFilterTokensValue
-	settingsObj, settingsDiags := costReportSettingsObjectFromPayload(ctx, out.Payload.Settings)
-	resp.Diagnostics.Append(settingsDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.Settings = settingsObj
 
-	chartSettingsObj, csErr := chartSettingsFromPayload(ctx, out.Payload.ChartSettings)
-	if csErr != nil {
-		resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
-		return
-	}
-	data.ChartSettings = chartSettingsObj
-
-	data.Id = types.StringValue(out.Payload.Token)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r CostReportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state *CostReportResourceModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	var data costReportModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	params := costsv2.NewDeleteCostReportParams()
-	params.SetCostReportToken(state.Token.ValueString())
+	params := costsv2.NewDeleteCostReportParams().WithCostReportToken(data.Token.ValueString())
+
 	_, err := r.client.V2.Costs.DeleteCostReport(params, r.client.Auth)
 	if err != nil {
-		handleError("Delete Cost Report Resource", &resp.Diagnostics, err)
+		handleError("Delete CostReport Resource", &resp.Diagnostics, err)
+		return
 	}
-}
-
-func costReportSettingsObjectFromPayload(ctx context.Context, s *modelsv2.CostReportSettings) (types.Object, diag.Diagnostics) {
-	if s == nil {
-		return types.ObjectNull(costReportSettingsAttrTypes()), nil
-	}
-	m := CostReportSettingsModel{
-		IncludeCredits:     types.BoolPointerValue(s.IncludeCredits),
-		IncludeRefunds:     types.BoolPointerValue(s.IncludeRefunds),
-		IncludeDiscounts:   types.BoolPointerValue(s.IncludeDiscounts),
-		IncludeTax:         types.BoolPointerValue(s.IncludeTax),
-		Amortize:           types.BoolPointerValue(s.Amortize),
-		Unallocated:        types.BoolPointerValue(s.Unallocated),
-		AggregateBy:        types.StringPointerValue(s.AggregateBy),
-		ShowPreviousPeriod: types.BoolPointerValue(s.ShowPreviousPeriod),
-	}
-	return types.ObjectValueFrom(ctx, costReportSettingsAttrTypes(), m)
 }
 
 // Configure adds the provider configured client to the data source.
