@@ -63,23 +63,20 @@ func TestAccCustomProviderCostsUploadResource_badHeaders(t *testing.T) {
 	})
 }
 
-// TestAccCustomProviderCostsUploadResource_autoTransform verifies that a
-// non-FOCUS CSV is accepted when auto_transform = true and does not cause drift.
+// TestAccCustomProviderCostsUploadResource_autoTransform verifies that the
+// auto_transform attribute is stored in state, sent to the API, and produces
+// no state drift. It uses a FOCUS-compatible CSV so the test does not depend
+// on the OpenAI-backed transformation path (which requires live credentials
+// not available in CI and is already covered by Rails unit tests).
 func TestAccCustomProviderCostsUploadResource_autoTransform(t *testing.T) {
 	resourceName := "vantage_custom_provider_costs_upload.test"
-
-	// Non-FOCUS CSV that requires auto_transform to be processed by Vantage.
-	const csv = `date,service,category,cost,description
-2024-08-01,vm_server,compute,150.00,onprem_cluster1
-2024-08-01,storage_array,storage,50.00,onprem_nas
-`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCostsUploadAutoTransformConfig(csv),
+				Config: testAccCostsUploadAutoTransformConfig(testAccCostsCSV),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttr(resourceName, "auto_transform", "true"),
@@ -87,7 +84,7 @@ func TestAccCustomProviderCostsUploadResource_autoTransform(t *testing.T) {
 			},
 			// Confirm no drift on a subsequent plan.
 			{
-				Config:             testAccCostsUploadAutoTransformConfig(csv),
+				Config:             testAccCostsUploadAutoTransformConfig(testAccCostsCSV),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
