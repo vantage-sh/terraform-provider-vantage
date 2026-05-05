@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -27,6 +28,7 @@ func NewCustomProviderResource() resource.Resource { return &CustomProviderResou
 type CustomProviderResourceModel struct {
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
+	Workspaces  types.Set    `tfsdk:"workspaces"`
 	Token       types.String `tfsdk:"token"`
 	Id          types.String `tfsdk:"id"`
 	Status      types.String `tfsdk:"status"`
@@ -47,20 +49,27 @@ func (r *CustomProviderResource) Schema(_ context.Context, _ resource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				Required:            true,
+				Required: true,
 				// Uncomment when update is available in the API.
-				// PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				// PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				// Remove when API supports updating.
 				PlanModifiers:       []planmodifier.String{planmodifiers.ImmutableAfterCreate("name")},
 				MarkdownDescription: "The display name for the custom provider. Cannot be changed after creation.",
 			},
 			"description": schema.StringAttribute{
-				Optional:            true,
+				Optional: true,
 				// Uncomment when update is available in the API.
-				// PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				// PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				// Remove when API supports updating.
 				PlanModifiers:       []planmodifier.String{planmodifiers.ImmutableAfterCreate("description")},
 				MarkdownDescription: "A description for the custom provider. Cannot be changed after creation.",
+			},
+			"workspaces": schema.SetAttribute{
+				Optional:            true,
+				Computed:            true,
+				ElementType:         types.StringType,
+				PlanModifiers:       []planmodifier.Set{planmodifiers.UseStateWhenEmpty()},
+				MarkdownDescription: "Workspace tokens to associate with the integration. Can be updated in-place. Note: the Vantage API requires at least one token — workspace associations cannot be fully removed once set.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -112,6 +121,18 @@ func (r *CustomProviderResource) Create(ctx context.Context, req resource.Create
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Status = types.StringValue(out.Payload.Status)
+
+	// Associate workspaces immediately after creation if specified;
+	// otherwise resolve to an empty set so the value is always known after apply.
+	if !data.Workspaces.IsNull() && !data.Workspaces.IsUnknown() {
+		data.Workspaces = r.applyWorkspaces(ctx, out.Payload.Token, data.Workspaces, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		data.Workspaces, _ = types.SetValueFrom(ctx, types.StringType, []string{})
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -138,6 +159,15 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 	state.Token = types.StringValue(out.Payload.Token)
 	state.Id = types.StringValue(out.Payload.Token)
 	state.Status = types.StringValue(out.Payload.Status)
+
+	// Populate workspaces from the API response.
+	workspaces, diags := types.SetValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.Workspaces = workspaces
+
 	// name and description are not returned by the generic GET endpoint in a
 	// reliable way, so preserve whatever is already in state. On a fresh import
 	// (state.Name is empty/unknown) we seed the value from AccountIdentifier,
@@ -152,7 +182,7 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 //
-// To update name/description, the UI POST to /settings/custom_providers/${CUSTOM_PROVIDER_TOKEN}/update_details
+// To update name/description, the UI POSTs to /settings/custom_providers/${CUSTOM_PROVIDER_TOKEN}/update_details
 //
 // _method=patch
 // integrations_custom_provider_access[name]=${PROVIDER_NAME}
@@ -161,9 +191,7 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 //
 func (r *CustomProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// name and description are guarded by ImmutableAfterCreate plan modifiers,
-	// so they are always reverted to their state values before this method runs.
-	// Carry all fields forward from the plan (which already holds state values
-	// for name/description) without making an API call.
+	// so they are always reverted to their state values before Update runs.
 	var plan CustomProviderResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -179,6 +207,13 @@ func (r *CustomProviderResource) Update(ctx context.Context, req resource.Update
 	plan.Token = state.Token
 	plan.Id = state.Id
 	plan.Status = state.Status
+
+	// Apply workspace changes via the update endpoint.
+	plan.Workspaces = r.applyWorkspaces(ctx, state.Token.ValueString(), plan.Workspaces, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -197,3 +232,41 @@ func (r *CustomProviderResource) Delete(ctx context.Context, req resource.Delete
 		handleError("Delete Custom Provider", &resp.Diagnostics, err)
 	}
 }
+
+// applyWorkspaces calls the UpdateIntegration endpoint with the given workspace
+// tokens and returns the set value to store in state. It is used by both Create
+// (post-creation association) and Update (in-place workspace change).
+//
+// Note: the Vantage API requires workspace_tokens to be non-empty. Passing an
+// empty set is a no-op — the existing associations are preserved and the empty
+// set is returned as-is.
+func (r *CustomProviderResource) applyWorkspaces(ctx context.Context, integrationToken string, workspaces types.Set, diags *diag.Diagnostics) types.Set {
+	var tokens []string
+	diags.Append(workspaces.ElementsAs(ctx, &tokens, false)...)
+	if diags.HasError() {
+		return workspaces
+	}
+
+	// The API rejects an empty workspace_tokens array. Nothing to do.
+	if len(tokens) == 0 {
+		return workspaces
+	}
+
+	updateParams := integrationsv2.NewUpdateIntegrationParams()
+	updateParams.SetIntegrationToken(integrationToken)
+	updateParams.WithUpdateIntegration(&modelsv2.UpdateIntegration{
+		WorkspaceTokens: tokens,
+	})
+
+	out, err := r.client.V2.Integrations.UpdateIntegration(updateParams, r.client.Auth)
+	if err != nil {
+		handleError("Update Custom Provider Workspaces", diags, err)
+		return workspaces
+	}
+
+	// Return the workspace tokens as confirmed by the API response.
+	result, d := types.SetValueFrom(ctx, types.StringType, out.Payload.WorkspaceTokens)
+	diags.Append(d...)
+	return result
+}
+
