@@ -1,13 +1,13 @@
 ---
-page_title: "vantage_custom_provider_by_name Data Source - terraform-provider-vantage"
-subcategory: "Vendor Integrations"
+page_title: "vantage_integration_by_name Data Source - terraform-provider-vantage"
+subcategory: "Integrations"
 description: |-
-  Looks up a Custom Provider integration by display name.
+  Looks up an integration by name.
 ---
 
-# vantage_custom_provider_by_name (Data Source)
+# vantage_integration_by_name (Data Source)
 
-Looks up a Custom Provider integration by its display name. This data source calls the [Get All Integrations](https://docs.vantage.sh/api/integrations/get-all-integrations) endpoint (up to 1,000 results) and returns the first integration whose name matches the supplied value.
+Looks up an integration by its display name. Searches up to 1,000 integrations returned by the [Get All Integrations](https://docs.vantage.sh/api/integrations/get-all-integrations) endpoint and returns the first match.
 
 Use `provider_filter` to restrict the search to a specific integration type, which can improve performance when you have many integrations.
 
@@ -15,18 +15,18 @@ Use `provider_filter` to restrict the search to a specific integration type, whi
 
 ```terraform
 # Look up by name only
-data "vantage_custom_provider_by_name" "example" {
+data "vantage_integration_by_name" "example" {
   name = "My Custom Provider"
 }
 
 # Look up by name, restricted to custom_provider integrations
-data "vantage_custom_provider_by_name" "filtered" {
+data "vantage_integration_by_name" "filtered" {
   name            = "My Custom Provider"
   provider_filter = "custom_provider"
 }
 
 output "token" {
-  value = data.vantage_custom_provider_by_name.example.token
+  value = data.vantage_integration_by_name.example.token
 }
 ```
 
@@ -34,7 +34,7 @@ output "token" {
 
 ### Required
 
-- `name` (String) The display name of the Custom Provider integration to find.
+- `name` (String) The display name of the integration to find.
 
 ### Optional
 

@@ -11,23 +11,22 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = (*customProviderByNameDataSource)(nil)
-	_ datasource.DataSourceWithConfigure = (*customProviderByNameDataSource)(nil)
+	_ datasource.DataSource              = (*integrationByNameDataSource)(nil)
+	_ datasource.DataSourceWithConfigure = (*integrationByNameDataSource)(nil)
 )
 
-func NewCustomProviderByNameDataSource() datasource.DataSource {
-	return &customProviderByNameDataSource{}
+func NewIntegrationByNameDataSource() datasource.DataSource {
+	return &integrationByNameDataSource{}
 }
 
-// customProviderByNameDataSourceModel is the config/state model for this data source.
-// It embeds the same read-only fields returned by vantage_custom_provider so
-// callers get a consistent shape regardless of which data source they use.
-type customProviderByNameDataSourceModel struct {
+// integrationByNameDataSourceModel is the config/state model for the
+// vantage_integration_by_name data source.
+type integrationByNameDataSourceModel struct {
 	// Input fields
 	Name           types.String `tfsdk:"name"`
 	ProviderFilter types.String `tfsdk:"provider_filter"`
 
-	// Output fields (same as customProviderDataSourceModel)
+	// Output fields
 	Token                types.String `tfsdk:"token"`
 	Status               types.String `tfsdk:"status"`
 	CreatedAt            types.String `tfsdk:"created_at"`
@@ -36,28 +35,28 @@ type customProviderByNameDataSourceModel struct {
 	ManagedAccountTokens types.Set    `tfsdk:"managed_account_tokens"`
 }
 
-type customProviderByNameDataSource struct {
+type integrationByNameDataSource struct {
 	client *Client
 }
 
-func (d *customProviderByNameDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *integrationByNameDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*Client)
 }
 
-func (d *customProviderByNameDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_custom_provider_by_name"
+func (d *integrationByNameDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_integration_by_name"
 }
 
-func (d *customProviderByNameDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *integrationByNameDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Looks up a Custom Provider integration by name. Searches up to 1000 integrations returned by the Vantage API. Use `provider_filter` to narrow the search to a specific integration type.",
+		MarkdownDescription: "Looks up an integration by name. Searches up to 1,000 integrations returned by the Vantage API. Use `provider_filter` to narrow the search to a specific integration type.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The display name of the Custom Provider integration to find.",
+				MarkdownDescription: "The display name of the integration to find.",
 			},
 			"provider_filter": schema.StringAttribute{
 				Optional:            true,
@@ -93,8 +92,8 @@ func (d *customProviderByNameDataSource) Schema(_ context.Context, _ datasource.
 	}
 }
 
-func (d *customProviderByNameDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state customProviderByNameDataSourceModel
+func (d *integrationByNameDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state integrationByNameDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -111,7 +110,7 @@ func (d *customProviderByNameDataSource) Read(ctx context.Context, req datasourc
 
 	out, err := d.client.V2.Integrations.GetIntegrations(params, d.client.Auth)
 	if err != nil {
-		handleError("Read Custom Provider By Name", &resp.Diagnostics, err)
+		handleError("Read Integration By Name", &resp.Diagnostics, err)
 		return
 	}
 
@@ -150,7 +149,7 @@ func (d *customProviderByNameDataSource) Read(ctx context.Context, req datasourc
 	}
 
 	resp.Diagnostics.AddError(
-		"Custom Provider Not Found",
+		"Integration Not Found",
 		fmt.Sprintf("No integration with name %q was found. If the integration exists, try omitting provider_filter or verify the name is correct.", target),
 	)
 }

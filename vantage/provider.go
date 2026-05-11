@@ -210,8 +210,8 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewInvoicesDataSource,
 		NewBillingProfilesDataSource,
 		NewRecommendationViewsDataSource,
-		NewCustomProviderDataSource,
-		NewCustomProviderByNameDataSource,
+		NewIntegrationsDataSource,
+		NewIntegrationByNameDataSource,
 	}
 }
 
