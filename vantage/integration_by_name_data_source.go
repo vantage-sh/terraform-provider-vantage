@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	integrationsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/integrations"
 )
 
 var (
@@ -99,23 +98,20 @@ func (d *integrationByNameDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	limit := int32(1000)
-	params := integrationsv2.NewGetIntegrationsParams()
-	params.SetLimit(&limit)
-
+	var providerFilter *string
 	if !state.ProviderFilter.IsNull() && !state.ProviderFilter.IsUnknown() {
 		p := state.ProviderFilter.ValueString()
-		params.SetProvider(&p)
+		providerFilter = &p
 	}
 
-	out, err := d.client.V2.Integrations.GetIntegrations(params, d.client.Auth)
+	allIntegrations, err := fetchAllIntegrations(d.client, providerFilter)
 	if err != nil {
 		handleError("Read Integration By Name", &resp.Diagnostics, err)
 		return
 	}
 
 	target := state.Name.ValueString()
-	for _, integration := range out.Payload.Integrations {
+	for _, integration := range allIntegrations {
 		if integration.AccountIdentifier == nil || *integration.AccountIdentifier != target {
 			continue
 		}

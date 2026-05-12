@@ -2,10 +2,14 @@ package vantage
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	integrationsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/integrations"
 )
 
@@ -107,23 +111,20 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	limit := int32(1000)
-	params := integrationsv2.NewGetIntegrationsParams()
-	params.SetLimit(&limit)
-
+	var providerFilter *string
 	if !state.ProviderFilter.IsNull() && !state.ProviderFilter.IsUnknown() {
 		p := state.ProviderFilter.ValueString()
-		params.SetProvider(&p)
+		providerFilter = &p
 	}
 
-	out, err := d.client.V2.Integrations.GetIntegrations(params, d.client.Auth)
+	allIntegrations, err := fetchAllIntegrations(d.client, providerFilter)
 	if err != nil {
 		handleError("Read Integrations", &resp.Diagnostics, err)
 		return
 	}
 
-	state.Integrations = make([]integrationItemModel, 0, len(out.Payload.Integrations))
-	for _, integration := range out.Payload.Integrations {
+	state.Integrations = make([]integrationItemModel, 0, len(allIntegrations))
+	for _, integration := range allIntegrations {
 		item := integrationItemModel{
 			Token:     types.StringValue(integration.Token),
 			Status:    types.StringValue(integration.Status),
@@ -160,4 +161,60 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// fetchAllIntegrations pages through the Get All Integrations endpoint until
+// links.next is nil, collecting every integration across all pages.
+func fetchAllIntegrations(client *Client, providerFilter *string) ([]*modelsv2.Integration, error) {
+	limit := int32(1000)
+	var all []*modelsv2.Integration
+	var page *int32
+
+	for {
+		params := integrationsv2.NewGetIntegrationsParams()
+		params.SetLimit(&limit)
+		if providerFilter != nil {
+			params.SetProvider(providerFilter)
+		}
+		if page != nil {
+			params.SetPage(page)
+		}
+
+		out, err := client.V2.Integrations.GetIntegrations(params, client.Auth)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, out.Payload.Integrations...)
+
+		// Stop when there is no next page.
+		if out.Payload.Links == nil || out.Payload.Links.Next == nil {
+			break
+		}
+
+		nextPage, err := pageFromURL(*out.Payload.Links.Next)
+		if err != nil {
+			return nil, fmt.Errorf("parsing next page from links.next %q: %w", *out.Payload.Links.Next, err)
+		}
+		page = &nextPage
+	}
+
+	return all, nil
+}
+
+// pageFromURL extracts the "page" query parameter from a pagination link URL.
+func pageFromURL(rawURL string) (int32, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return 0, err
+	}
+	pageStr := u.Query().Get("page")
+	if pageStr == "" {
+		return 0, fmt.Errorf("no page parameter in URL")
+	}
+	n, err := strconv.ParseInt(pageStr, 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("page parameter %q is not an integer: %w", pageStr, err)
+	}
+	return int32(n), nil
 }
