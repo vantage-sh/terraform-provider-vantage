@@ -2,10 +2,14 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
@@ -13,6 +17,33 @@ var (
 	_ datasource.DataSource              = &costReportsDataSource{}
 	_ datasource.DataSourceWithConfigure = &costReportsDataSource{}
 )
+
+var costReportChartSettingsAttrTypes = map[string]attr.Type{
+	"x_axis_dimension": types.ListType{ElemType: types.StringType},
+	"y_axis_dimension": types.StringType,
+}
+
+func chartSettingsFromPayload(ctx context.Context, cs *modelsv2.ChartSettings) (basetypes.ObjectValue, error) {
+	if cs == nil {
+		return types.ObjectNull(costReportChartSettingsAttrTypes), nil
+	}
+
+	xAxisDimension, diags := types.ListValueFrom(ctx, types.StringType, cs.XAxisDimension)
+	if diags.HasError() {
+		return types.ObjectNull(costReportChartSettingsAttrTypes), fmt.Errorf("error converting x_axis_dimension")
+	}
+
+	attrValues := map[string]attr.Value{
+		"x_axis_dimension": xAxisDimension,
+		"y_axis_dimension": types.StringValue(cs.YAxisDimension),
+	}
+
+	obj, diags := types.ObjectValue(costReportChartSettingsAttrTypes, attrValues)
+	if diags.HasError() {
+		return types.ObjectNull(costReportChartSettingsAttrTypes), fmt.Errorf("error building chart_settings object")
+	}
+	return obj, nil
+}
 
 func NewCostReportsDataSource() datasource.DataSource {
 	return &costReportsDataSource{}
