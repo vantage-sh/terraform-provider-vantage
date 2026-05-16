@@ -99,7 +99,7 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 		Optional: true,
 		Computed: true,
 		PlanModifiers: []planmodifier.String{
-			stringplanmodifier.UseStateForUnknown(),
+			stringplanmodifier.UseNonNullStateForUnknown(),
 			&NullableModifier{},
 		},
 		MarkdownDescription: attrs["date_interval"].GetMarkdownDescription(),
