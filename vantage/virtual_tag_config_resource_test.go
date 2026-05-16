@@ -581,6 +581,75 @@ resource "vantage_virtual_tag_config" "test" {
 `, key, bmTitle, backfillUntil, labelTransformsHCL)
 }
 
+// Regression for ENG-2415. Customer hit "Provider produced inconsistent result
+// after apply" when collapsed_tag_keys[].providers and values[].date_ranges
+// round-tripped as null while the plan held known list values. Exercises the
+// same shape (single-element providers, several values with no nested lists)
+// and asserts an immediate re-plan reports no drift.
+func TestAccVantageVirtualTagConfig_optionalListsConsistent(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+
+	config := testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+		collapsed_tag_keys = [
+			{
+				key       = "environment"
+				providers = ["aws"]
+			},
+			{
+				key = "service"
+			}
+		]
+		values = [
+			{
+				name   = "v0"
+				filter = "costs.provider = 'aws'"
+			},
+			{
+				name   = "v1"
+				filter = "costs.provider = 'gcp'"
+			},
+			{
+				name        = "v2"
+				filter      = "costs.provider = 'azure'"
+				date_ranges = []
+			}
+		]`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create — this step also runs the post-apply consistency check
+			// that fired in the customer report. With the old read path,
+			// providers=["aws"] in plan vs null in state would fail here.
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.0.key", "environment"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.0.providers.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.0.providers.0", "aws"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.1.key", "service"),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.percentages.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.2.date_ranges.#", "0"),
+				),
+			},
+			// No drift on re-plan.
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, rest string) string {
 	return fmt.Sprintf(
 		`data "vantage_virtual_tag_configs" %[1]q {}
