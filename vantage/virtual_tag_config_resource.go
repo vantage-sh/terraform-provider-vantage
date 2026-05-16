@@ -65,6 +65,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				"date_ranges":           generatedValuesAttrs["date_ranges"],
 				"display_name":          generatedValuesAttrs["display_name"],
 				"filter":                generatedValuesAttrs["filter"],
+				"label_transforms":      generatedValuesAttrs["label_transforms"],
 				"name":                  generatedValuesAttrs["name"],
 				"percentages":           generatedValuesAttrs["percentages"],
 				// Override cost_metric: make aggregation, aggregation.tag, and filter Optional

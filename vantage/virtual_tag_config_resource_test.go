@@ -464,6 +464,192 @@ func TestAccVantageVirtualTagConfig_withDateRanges(t *testing.T) {
 	})
 }
 
+func TestAccVantageVirtualTagConfig_withLabelTransforms(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	bmTitle := "tf-acc-bm-" + sdkacctest.RandStringFromCharSet(8, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create: value with a split+format label_transforms chain
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, `
+					label_transforms = [
+						{
+							type      = "split"
+							delimiter = "&&&"
+							index     = 0
+						},
+						{
+							type     = "format"
+							template = "team-{0}"
+						}
+					]
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.0.business_metric_token"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.type", "split"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.delimiter", "&&&"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.index", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.1.type", "format"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.1.template", "team-{0}"),
+				),
+			},
+			// No drift
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, `
+					label_transforms = [
+						{
+							type      = "split"
+							delimiter = "&&&"
+							index     = 0
+						},
+						{
+							type     = "format"
+							template = "team-{0}"
+						}
+					]
+				`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// Update: swap to a single split transform at a different index
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, `
+					label_transforms = [
+						{
+							type      = "split"
+							delimiter = "|||"
+							index     = 1
+						}
+					]
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.type", "split"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.delimiter", "|||"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.index", "1"),
+				),
+			},
+			// Remove label_transforms
+			{
+				Config: testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, labelTransformsHCL string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" "test" {
+  title = %[2]q
+  values = [
+    {
+      date   = "2024-01-01"
+      amount = 1.0
+      label  = "team-a&&&proj-1"
+    },
+    {
+      date   = "2024-01-01"
+      amount = 1.0
+      label  = "team-b&&&proj-2"
+    }
+  ]
+}
+
+resource "vantage_virtual_tag_config" "test" {
+  key            = %[1]q
+  overridable    = true
+  backfill_until = %[3]q
+  values = [
+    {
+      filter                = "costs.provider = 'aws'"
+      business_metric_token = vantage_business_metric.test.token
+      %[4]s
+    }
+  ]
+}
+`, key, bmTitle, backfillUntil, labelTransformsHCL)
+}
+
+// Regression for ENG-2415. Customer hit "Provider produced inconsistent result
+// after apply" when collapsed_tag_keys[].providers and values[].date_ranges
+// round-tripped as null while the plan held known list values. Exercises the
+// same shape (single-element providers, several values with no nested lists)
+// and asserts an immediate re-plan reports no drift.
+func TestAccVantageVirtualTagConfig_optionalListsConsistent(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+
+	config := testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, `
+		collapsed_tag_keys = [
+			{
+				key       = "environment"
+				providers = ["aws"]
+			},
+			{
+				key = "service"
+			}
+		]
+		values = [
+			{
+				name   = "v0"
+				filter = "costs.provider = 'aws'"
+			},
+			{
+				name   = "v1"
+				filter = "costs.provider = 'gcp'"
+			},
+			{
+				name        = "v2"
+				filter      = "costs.provider = 'azure'"
+				date_ranges = []
+			}
+		]`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create — this step also runs the post-apply consistency check
+			// that fired in the customer report. With the old read path,
+			// providers=["aws"] in plan vs null in state would fail here.
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.0.key", "environment"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.0.providers.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.0.providers.0", "aws"),
+					resource.TestCheckResourceAttr(resourceName, "collapsed_tag_keys.1.key", "service"),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.date_ranges.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.percentages.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "values.2.date_ranges.#", "0"),
+				),
+			},
+			// No drift on re-plan.
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, rest string) string {
 	return fmt.Sprintf(
 		`data "vantage_virtual_tag_configs" %[1]q {}

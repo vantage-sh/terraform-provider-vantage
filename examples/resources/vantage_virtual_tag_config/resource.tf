@@ -21,5 +21,15 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
     #   filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
     #   business_metric_token = ""
     # }
+    # Example: apply label_transforms to a business-metric-backed value to
+    # split a "&&&"-delimited project label and reformat it into a team tag.
+    # {
+    #   filter                = "costs.provider = 'aws'"
+    #   business_metric_token = "bsnss_mtrc_XXXXXXXX"
+    #   label_transforms = [
+    #     { type = "split", delimiter = "&&&", index = 0 },
+    #     { type = "format", template = "team-{0}" },
+    #   ]
+    # }
   ]
 }
