@@ -1,0 +1,5 @@
+# Dependabot dependency manifests — @vantage-sh/engineering-platform
+# Tailored from .github/dependabot.yml + repo manifests (ecosystems: github-actions, gomod).
+/.github/workflows/**/* @vantage-sh/engineering-platform
+/go.mod @vantage-sh/engineering-platform
+/go.sum @vantage-sh/engineering-platform
