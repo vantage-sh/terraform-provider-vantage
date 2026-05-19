@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
@@ -52,8 +53,26 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+	applyEmptyLabelDefault(s.Attributes, "values")
+	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
 
 	resp.Schema = s
+}
+
+func applyEmptyLabelDefault(attrs map[string]schema.Attribute, attrName string) {
+	attr, ok := attrs[attrName].(schema.ListNestedAttribute)
+	if !ok {
+		return
+	}
+
+	labelAttr, ok := attr.NestedObject.Attributes["label"].(schema.StringAttribute)
+	if !ok {
+		return
+	}
+
+	labelAttr.Default = stringdefault.StaticString("")
+	attr.NestedObject.Attributes["label"] = labelAttr
+	attrs[attrName] = attr
 }
 
 func (r *businessMetricResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
