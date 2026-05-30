@@ -1107,3 +1107,102 @@ resource "vantage_business_metric" %[1]q {
 }
 `, id, title, date1, date2, futureDate1, futureDate2)
 }
+
+// TestAccBusinessMetric_omittedLabelFilter reproduces the customer-reported bug where
+// omitting label_filter (as opposed to setting it to []) from a
+// cost_report_tokens_with_metadata block causes perpetual plan drift on every update:
+//
+//	label_filter = [] -> (known after apply)
+//
+// After the fix (applyEmptyLabelFilterDefault), label_filter defaults to [] when
+// omitted so the plan stays stable after any update.
+func TestAccBusinessMetric_omittedLabelFilter(t *testing.T) {
+	resourceName := "vantage_business_metric.test_omitted_filter"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Step 1: create with label_filter entirely omitted from two tokens
+				// and explicitly empty on the third, to cover both cases.
+				Config: testAccVantageBusinessMetricTf_omittedLabelFilter("Omitted Label Filter Test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.#", "3"),
+					// All three tokens should resolve to an empty label_filter list.
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.1.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.2.label_filter.#", "0"),
+				),
+			},
+			{
+				// Step 2: title-only update. Before the fix, this showed spurious
+				// label_filter = [] -> (known after apply) changes for every token
+				// that had label_filter omitted. After the fix there must be no drift.
+				Config: testAccVantageBusinessMetricTf_omittedLabelFilter("Omitted Label Filter Test Updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", "Omitted Label Filter Test Updated"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.1.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.2.label_filter.#", "0"),
+				),
+			},
+			{
+				// Step 3: confirm no drift – running plan again must show no changes.
+				Config:             testAccVantageBusinessMetricTf_omittedLabelFilter("Omitted Label Filter Test Updated"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_omittedLabelFilter(title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "report_a" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report A for Omitted Label Filter Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "report_b" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report B for Omitted Label Filter Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "report_c" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report C for Omitted Label Filter Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_business_metric" "test_omitted_filter" {
+  title = %[1]q
+
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.report_a.token
+      unit_scale        = "per_unit"
+      # label_filter intentionally omitted — must not cause plan drift
+    },
+    {
+      cost_report_token = vantage_cost_report.report_b.token
+      unit_scale        = "per_unit"
+      # label_filter intentionally omitted — must not cause plan drift
+    },
+    {
+      cost_report_token = vantage_cost_report.report_c.token
+      unit_scale        = "per_unit"
+      label_filter      = []
+    },
+  ]
+}
+`, title)
+}
