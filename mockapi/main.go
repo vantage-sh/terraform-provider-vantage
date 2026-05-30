@@ -320,6 +320,7 @@ func handleCostReports(w http.ResponseWriter, r *http.Request, path string) {
 		case http.MethodPost:
 			var body map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&body)
+			mu.Lock()
 			reportCounter++
 			token := fmt.Sprintf("rprt_%04d", reportCounter)
 			report := map[string]interface{}{
@@ -333,7 +334,6 @@ func handleCostReports(w http.ResponseWriter, r *http.Request, path string) {
 				"groupings":        []string{},
 				"business_metric_tokens_with_metadata": []interface{}{},
 			}
-			mu.Lock()
 			costReports[token] = report
 			mu.Unlock()
 			log.Printf("  Created cost_report %s: %q", token, body["title"])
