@@ -1,6 +1,6 @@
 ---
 page_title: "vantage_integrations Data Source - terraform-provider-vantage"
-subcategory: "Integrations"
+subcategory: ""
 description: |-
   Returns all integrations visible to the API token, optionally filtered by provider type.
 ---
