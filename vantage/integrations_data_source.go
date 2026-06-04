@@ -3,8 +3,6 @@ package vantage
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -200,21 +198,4 @@ func fetchAllIntegrations(client *Client, providerFilter *string) ([]*modelsv2.I
 	}
 
 	return all, nil
-}
-
-// pageFromURL extracts the "page" query parameter from a pagination link URL.
-func pageFromURL(rawURL string) (int32, error) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return 0, err
-	}
-	pageStr := u.Query().Get("page")
-	if pageStr == "" {
-		return 0, fmt.Errorf("no page parameter in URL")
-	}
-	n, err := strconv.ParseInt(pageStr, 10, 32)
-	if err != nil {
-		return 0, fmt.Errorf("page parameter %q is not an integer: %w", pageStr, err)
-	}
-	return int32(n), nil
 }

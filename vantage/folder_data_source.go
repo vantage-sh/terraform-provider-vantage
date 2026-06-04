@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
 )
 
@@ -74,8 +75,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	params := foldersv2.NewGetFoldersParams()
-	out, err := d.client.V2.Folders.GetFolders(params, d.client.Auth)
+	allFolders, err := fetchAllFolders(d.client)
 	if err != nil {
 		handleError("Read Folder", &resp.Diagnostics, err)
 		return
@@ -92,7 +92,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		parentFolderFilter = state.ParentFolderToken.ValueString()
 	}
 
-	for _, folder := range out.Payload.Folders {
+	for _, folder := range allFolders {
 		if folder.Title == nil || *folder.Title != target {
 			continue
 		}
@@ -120,4 +120,39 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		"Folder Not Found",
 		fmt.Sprintf("No folder with title %q was found.", target),
 	)
+}
+
+// fetchAllFolders pages through the Get All Folders endpoint until
+// links.next is nil, collecting every folder across all pages.
+func fetchAllFolders(client *Client) ([]*modelsv2.Folder, error) {
+	limit := int32(1000)
+	var all []*modelsv2.Folder
+	var page *int32
+
+	for {
+		params := foldersv2.NewGetFoldersParams()
+		params.SetLimit(&limit)
+		if page != nil {
+			params.SetPage(page)
+		}
+
+		out, err := client.V2.Folders.GetFolders(params, client.Auth)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, out.Payload.Folders...)
+
+		if out.Payload.Links == nil || out.Payload.Links.Next == nil {
+			break
+		}
+
+		nextPage, err := pageFromURL(*out.Payload.Links.Next)
+		if err != nil {
+			return nil, fmt.Errorf("parsing next page from links.next %q: %w", *out.Payload.Links.Next, err)
+		}
+		page = &nextPage
+	}
+
+	return all, nil
 }
