@@ -87,8 +87,10 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		workspaceFilter = state.WorkspaceToken.ValueString()
 	}
 	var parentFolderFilter string
+	parentFolderFilterSet := false
 	if !state.ParentFolderToken.IsNull() && !state.ParentFolderToken.IsUnknown() {
 		parentFolderFilter = state.ParentFolderToken.ValueString()
+		parentFolderFilterSet = true
 	}
 
 	for _, folder := range out.Payload.Folders {
@@ -98,7 +100,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if workspaceFilter != "" && folder.WorkspaceToken != workspaceFilter {
 			continue
 		}
-		if parentFolderFilter != "" {
+		if parentFolderFilterSet {
 			folderParent := ""
 			if folder.ParentFolderToken != nil {
 				folderParent = *folder.ParentFolderToken
