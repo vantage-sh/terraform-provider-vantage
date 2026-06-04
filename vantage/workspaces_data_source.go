@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	workspacesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/workspaces"
 )
 
@@ -49,8 +51,7 @@ func (d *workspacesDataSource) Metadata(ctx context.Context, req datasource.Meta
 func (d *workspacesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state workspacesDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
-	params := workspacesv2.NewGetWorkspacesParams()
-	out, err := d.client.V2.Workspaces.GetWorkspaces(params, d.client.Auth)
+	workspaces, err := fetchAllWorkspaces(d.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Get Vantage Workspaces",
@@ -59,7 +60,7 @@ func (d *workspacesDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	for _, workspace := range out.Payload.Workspaces {
+	for _, workspace := range workspaces {
 		state.Workspaces = append(state.Workspaces, workspaceDataSourceModel{
 			Token: types.StringValue(workspace.Token),
 			Name:  types.StringValue(workspace.Name),
@@ -92,4 +93,37 @@ func (d *workspacesDataSource) Schema(ctx context.Context, req datasource.Schema
 			},
 		},
 	}
+}
+
+func fetchAllWorkspaces(client *Client) ([]*modelsv2.Workspace, error) {
+	limit := int32(1000)
+	var all []*modelsv2.Workspace
+	var page *int32
+
+	for {
+		params := workspacesv2.NewGetWorkspacesParams()
+		params.SetLimit(&limit)
+		if page != nil {
+			params.SetPage(page)
+		}
+
+		out, err := client.V2.Workspaces.GetWorkspaces(params, client.Auth)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, out.Payload.Workspaces...)
+
+		if out.Payload.Links == nil || out.Payload.Links.Next == nil {
+			break
+		}
+
+		nextPage, err := pageFromURL(*out.Payload.Links.Next)
+		if err != nil {
+			return nil, fmt.Errorf("parsing next page from links.next %q: %w", *out.Payload.Links.Next, err)
+		}
+		page = &nextPage
+	}
+
+	return all, nil
 }

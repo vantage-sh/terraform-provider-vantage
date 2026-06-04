@@ -2,10 +2,12 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
 )
 
@@ -73,8 +75,7 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 
-	params := foldersv2.NewGetFoldersParams()
-	out, err := d.client.V2.Folders.GetFolders(params, d.client.Auth)
+	allFolders, err := fetchAllFolders(d.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Get Vantage Folders",
@@ -85,7 +86,7 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	folders := []folderDataSourceModel{}
 
-	for _, f := range out.Payload.Folders {
+	for _, f := range allFolders {
 		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, f.SavedFilterTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
@@ -113,4 +114,37 @@ func (d *foldersDataSource) Configure(ctx context.Context, req datasource.Config
 	}
 
 	d.client = req.ProviderData.(*Client)
+}
+
+func fetchAllFolders(client *Client) ([]*modelsv2.Folder, error) {
+	limit := int32(1000)
+	var all []*modelsv2.Folder
+	var page *int32
+
+	for {
+		params := foldersv2.NewGetFoldersParams()
+		params.SetLimit(&limit)
+		if page != nil {
+			params.SetPage(page)
+		}
+
+		out, err := client.V2.Folders.GetFolders(params, client.Auth)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, out.Payload.Folders...)
+
+		if out.Payload.Links == nil || out.Payload.Links.Next == nil {
+			break
+		}
+
+		nextPage, err := pageFromURL(*out.Payload.Links.Next)
+		if err != nil {
+			return nil, fmt.Errorf("parsing next page from links.next %q: %w", *out.Payload.Links.Next, err)
+		}
+		page = &nextPage
+	}
+
+	return all, nil
 }
