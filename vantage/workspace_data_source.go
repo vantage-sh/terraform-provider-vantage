@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	workspacesv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/workspaces"
 )
 
@@ -62,15 +63,14 @@ func (d *workspaceLookupDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	params := workspacesv2.NewGetWorkspacesParams()
-	out, err := d.client.V2.Workspaces.GetWorkspaces(params, d.client.Auth)
+	allWorkspaces, err := fetchAllWorkspaces(d.client)
 	if err != nil {
 		handleError("Read Workspace", &resp.Diagnostics, err)
 		return
 	}
 
 	target := state.Name.ValueString()
-	for _, workspace := range out.Payload.Workspaces {
+	for _, workspace := range allWorkspaces {
 		if workspace.Name == target {
 			state.Token = types.StringValue(workspace.Token)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -82,4 +82,39 @@ func (d *workspaceLookupDataSource) Read(ctx context.Context, req datasource.Rea
 		"Workspace Not Found",
 		fmt.Sprintf("No workspace with name %q was found.", target),
 	)
+}
+
+// fetchAllWorkspaces pages through the Get All Workspaces endpoint until
+// links.next is nil, collecting every workspace across all pages.
+func fetchAllWorkspaces(client *Client) ([]*modelsv2.Workspace, error) {
+	limit := int32(1000)
+	var all []*modelsv2.Workspace
+	var page *int32
+
+	for {
+		params := workspacesv2.NewGetWorkspacesParams()
+		params.SetLimit(&limit)
+		if page != nil {
+			params.SetPage(page)
+		}
+
+		out, err := client.V2.Workspaces.GetWorkspaces(params, client.Auth)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, out.Payload.Workspaces...)
+
+		if out.Payload.Links == nil || out.Payload.Links.Next == nil {
+			break
+		}
+
+		nextPage, err := pageFromURL(*out.Payload.Links.Next)
+		if err != nil {
+			return nil, fmt.Errorf("parsing next page from links.next %q: %w", *out.Payload.Links.Next, err)
+		}
+		page = &nextPage
+	}
+
+	return all, nil
 }
