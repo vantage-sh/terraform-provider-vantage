@@ -57,7 +57,7 @@ func (d *folderLookupDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"parent_folder_token": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Filter folders by parent folder token. Also populated as an output with the parent folder token of the matched folder.",
+				MarkdownDescription: "Filter folders by parent folder token. Set to an empty string (`\"\"`) to match only root-level folders (those with no parent). Also populated as an output with the parent folder token of the matched folder.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -86,8 +86,9 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if !state.WorkspaceToken.IsNull() && !state.WorkspaceToken.IsUnknown() {
 		workspaceFilter = state.WorkspaceToken.ValueString()
 	}
+	filterByParent := !state.ParentFolderToken.IsNull() && !state.ParentFolderToken.IsUnknown()
 	var parentFolderFilter string
-	if !state.ParentFolderToken.IsNull() && !state.ParentFolderToken.IsUnknown() {
+	if filterByParent {
 		parentFolderFilter = state.ParentFolderToken.ValueString()
 	}
 
@@ -98,7 +99,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if workspaceFilter != "" && folder.WorkspaceToken != workspaceFilter {
 			continue
 		}
-		if parentFolderFilter != "" {
+		if filterByParent {
 			folderParent := ""
 			if folder.ParentFolderToken != nil {
 				folderParent = *folder.ParentFolderToken

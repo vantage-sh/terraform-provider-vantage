@@ -39,7 +39,7 @@ output "folder_token" {
 ### Optional
 
 - `workspace_token` (String) Filter folders by workspace token. If not specified, the first folder matching the title is returned. Also populated as an output with the workspace token of the matched folder.
-- `parent_folder_token` (String) Filter folders by parent folder token. Also populated as an output with the parent folder token of the matched folder.
+- `parent_folder_token` (String) Filter folders by parent folder token. Set to an empty string (`""`) to match only root-level folders (those with no parent). Also populated as an output with the parent folder token of the matched folder.
 
 ### Read-Only
 
