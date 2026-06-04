@@ -11,35 +11,35 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = (*workspaceByNameDataSource)(nil)
-	_ datasource.DataSourceWithConfigure = (*workspaceByNameDataSource)(nil)
+	_ datasource.DataSource              = (*workspaceLookupDataSource)(nil)
+	_ datasource.DataSourceWithConfigure = (*workspaceLookupDataSource)(nil)
 )
 
-func NewWorkspaceByNameDataSource() datasource.DataSource {
-	return &workspaceByNameDataSource{}
+func NewWorkspaceDataSource() datasource.DataSource {
+	return &workspaceLookupDataSource{}
 }
 
-type workspaceByNameDataSourceModel struct {
+type workspaceLookupModel struct {
 	Name  types.String `tfsdk:"name"`
 	Token types.String `tfsdk:"token"`
 }
 
-type workspaceByNameDataSource struct {
+type workspaceLookupDataSource struct {
 	client *Client
 }
 
-func (d *workspaceByNameDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *workspaceLookupDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*Client)
 }
 
-func (d *workspaceByNameDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_workspace_by_name"
+func (d *workspaceLookupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_workspace"
 }
 
-func (d *workspaceByNameDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *workspaceLookupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Looks up a workspace by name and returns its token.",
 		Attributes: map[string]schema.Attribute{
@@ -55,8 +55,8 @@ func (d *workspaceByNameDataSource) Schema(_ context.Context, _ datasource.Schem
 	}
 }
 
-func (d *workspaceByNameDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state workspaceByNameDataSourceModel
+func (d *workspaceLookupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state workspaceLookupModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -65,7 +65,7 @@ func (d *workspaceByNameDataSource) Read(ctx context.Context, req datasource.Rea
 	params := workspacesv2.NewGetWorkspacesParams()
 	out, err := d.client.V2.Workspaces.GetWorkspaces(params, d.client.Auth)
 	if err != nil {
-		handleError("Read Workspace By Name", &resp.Diagnostics, err)
+		handleError("Read Workspace", &resp.Diagnostics, err)
 		return
 	}
 

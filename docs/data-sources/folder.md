@@ -1,11 +1,11 @@
 ---
-page_title: "vantage_folder_by_name Data Source - terraform-provider-vantage"
+page_title: "vantage_folder Data Source - terraform-provider-vantage"
 subcategory: ""
 description: |-
   Looks up a folder by title.
 ---
 
-# vantage_folder_by_name (Data Source)
+# vantage_folder (Data Source)
 
 Looks up a folder by its title. Searches all folders returned by the [Get All Folders](https://docs.vantage.sh/api/folders/get-all-folders) endpoint and returns the first match.
 
@@ -15,18 +15,18 @@ Use `workspace_token` or `parent_folder_token` to narrow the search when multipl
 
 ```terraform
 # Look up by title only
-data "vantage_folder_by_name" "example" {
+data "vantage_folder" "example" {
   title = "Engineering"
 }
 
 # Look up by title within a specific workspace
-data "vantage_folder_by_name" "filtered" {
+data "vantage_folder" "filtered" {
   title           = "Engineering"
   workspace_token = "wrkspc_1a2b3c4d5e6f"
 }
 
 output "folder_token" {
-  value = data.vantage_folder_by_name.example.token
+  value = data.vantage_folder.example.token
 }
 ```
 

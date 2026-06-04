@@ -212,8 +212,8 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewRecommendationViewsDataSource,
 		NewIntegrationsDataSource,
 		NewIntegrationByNameDataSource,
-		NewWorkspaceByNameDataSource,
-		NewFolderByNameDataSource,
+		NewWorkspaceDataSource,
+		NewFolderDataSource,
 	}
 }
 

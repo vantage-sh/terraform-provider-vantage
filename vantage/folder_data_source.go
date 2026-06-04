@@ -11,37 +11,37 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = (*folderByNameDataSource)(nil)
-	_ datasource.DataSourceWithConfigure = (*folderByNameDataSource)(nil)
+	_ datasource.DataSource              = (*folderLookupDataSource)(nil)
+	_ datasource.DataSourceWithConfigure = (*folderLookupDataSource)(nil)
 )
 
-func NewFolderByNameDataSource() datasource.DataSource {
-	return &folderByNameDataSource{}
+func NewFolderDataSource() datasource.DataSource {
+	return &folderLookupDataSource{}
 }
 
-type folderByNameDataSourceModel struct {
+type folderLookupModel struct {
 	Title             types.String `tfsdk:"title"`
 	Token             types.String `tfsdk:"token"`
 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 }
 
-type folderByNameDataSource struct {
+type folderLookupDataSource struct {
 	client *Client
 }
 
-func (d *folderByNameDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *folderLookupDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*Client)
 }
 
-func (d *folderByNameDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_folder_by_name"
+func (d *folderLookupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_folder"
 }
 
-func (d *folderByNameDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *folderLookupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Looks up a folder by title and returns its token. Use `workspace_token` to narrow the search to a specific workspace.",
 		Attributes: map[string]schema.Attribute{
@@ -67,8 +67,8 @@ func (d *folderByNameDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	}
 }
 
-func (d *folderByNameDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state folderByNameDataSourceModel
+func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state folderLookupModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -77,7 +77,7 @@ func (d *folderByNameDataSource) Read(ctx context.Context, req datasource.ReadRe
 	params := foldersv2.NewGetFoldersParams()
 	out, err := d.client.V2.Folders.GetFolders(params, d.client.Auth)
 	if err != nil {
-		handleError("Read Folder By Name", &resp.Diagnostics, err)
+		handleError("Read Folder", &resp.Diagnostics, err)
 		return
 	}
 
