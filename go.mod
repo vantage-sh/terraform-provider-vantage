@@ -1,8 +1,6 @@
 module github.com/vantage-sh/terraform-provider-vantage
 
-go 1.26
-
-toolchain go1.26.2
+go 1.26.2
 
 require (
 	github.com/go-openapi/runtime v0.29.4
@@ -10,7 +8,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.5.0
 	github.com/hashicorp/terraform-plugin-testing v1.6.0
-	github.com/vantage-sh/vantage-go v0.1.2
+	github.com/vantage-sh/vantage-go v0.0.93
 )
 
 require (
@@ -82,7 +80,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0
 	github.com/hashicorp/terraform-plugin-go v0.20.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.30.0 // indirect
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.30.0
 	github.com/hashicorp/terraform-registry-address v0.2.3 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect

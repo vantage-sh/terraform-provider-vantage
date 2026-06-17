@@ -84,6 +84,26 @@ resources:
             description: The token of the business metric
         aliases:
           business_metric_token: token
+  canvases:
+    create:
+      path: /canvases
+      method: POST
+    read:
+      path: /canvases/{canvas_token}
+      method: GET
+    update:
+      path: /canvases/{canvas_token}
+      method: PUT
+    delete:
+      path: /canvases/{canvas_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the canvas
+        aliases:
+          canvas_token: token
   cost_alert:
     create:
       path: /cost_alerts
