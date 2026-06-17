@@ -167,6 +167,40 @@ resource "vantage_team" "team" {
 
 
 
+func TestTeamUserEmailsOrder(t *testing.T) {
+	rName := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Create a team with user_emails in reverse data-source order.
+				// If the API doesn't preserve input order, Terraform will error
+				// with "Provider produced inconsistent result after apply".
+				Config: testAccTeamWithUserEmailsReversed(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_emails.#", "2"),
+					resource.TestCheckResourceAttrPair("vantage_team.team", "user_emails.0", "data.vantage_users.test", "users.1.email"),
+					resource.TestCheckResourceAttrPair("vantage_team.team", "user_emails.1", "data.vantage_users.test", "users.0.email"),
+				),
+			},
+		},
+	})
+}
+
+func testAccTeamWithUserEmailsReversed(title string) string {
+	return fmt.Sprintf(`
+data "vantage_users" "test" {}
+resource "vantage_team" "team" {
+	name = %[1]q
+	description = ""
+	user_emails = [data.vantage_users.test.users[1].email, data.vantage_users.test.users[0].email]
+}
+`, title)
+}
+
 func testAccTeamWithUserTokens(title, description string) string {
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
