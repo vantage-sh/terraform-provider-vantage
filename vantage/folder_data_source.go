@@ -99,11 +99,11 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if workspaceFilter != "" && folder.WorkspaceToken != workspaceFilter {
 			continue
 		}
+		folderParent := ""
+		if folder.ParentFolderToken != nil {
+			folderParent = *folder.ParentFolderToken
+		}
 		if filterByParent {
-			folderParent := ""
-			if folder.ParentFolderToken != nil {
-				folderParent = *folder.ParentFolderToken
-			}
 			if folderParent != parentFolderFilter {
 				continue
 			}
@@ -111,7 +111,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 		state.Token = types.StringValue(folder.Token)
 		state.WorkspaceToken = types.StringValue(folder.WorkspaceToken)
-		state.ParentFolderToken = types.StringPointerValue(folder.ParentFolderToken)
+		state.ParentFolderToken = types.StringValue(folderParent)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
