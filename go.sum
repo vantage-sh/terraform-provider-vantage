@@ -248,8 +248,8 @@ github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/vantage-sh/vantage-go v0.1.2 h1:zkAAiaRitZnyTx4I+L8PaWh60Jr+JbgHTIVQUHl9KzE=
-github.com/vantage-sh/vantage-go v0.1.2/go.mod h1:MsSI4gX/Wvkzo9kqWphZfE6puolmnbHcXSaoGkDCmXg=
+github.com/vantage-sh/vantage-go v0.0.93 h1:Nh0MHO2XmDD4+nRjs8C/izWhmXepcO8eFy/kZPH4KEA=
+github.com/vantage-sh/vantage-go v0.0.93/go.mod h1:+AplFOIL/egitn/MvmQXPS4hQw7Yi61+H3HglnVWwpU=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=

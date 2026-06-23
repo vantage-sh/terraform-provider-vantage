@@ -506,11 +506,11 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	if !data.ChartType.IsUnknown() && !data.ChartType.IsNull() {
-		model.ChartType = data.ChartType.ValueStringPointer()
+		model.ChartType = data.ChartType.ValueString()
 	}
 
 	if !data.DateBin.IsUnknown() && !data.DateBin.IsNull() {
-		model.DateBin = data.DateBin.ValueStringPointer()
+		model.DateBin = data.DateBin.ValueString()
 	}
 
 	if !data.ChartSettings.IsNull() && !data.ChartSettings.IsUnknown() {
