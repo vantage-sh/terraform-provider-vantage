@@ -44,7 +44,7 @@ func (d *folderLookupDataSource) Metadata(_ context.Context, req datasource.Meta
 
 func (d *folderLookupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Looks up a folder by title and returns its token. Use `workspace_token` to narrow the search to a specific workspace.",
+		MarkdownDescription: "Looks up a folder by title and returns its token. Use `workspace_token` and `parent_folder_token` to narrow the search.",
 		Attributes: map[string]schema.Attribute{
 			"title": schema.StringAttribute{
 				Required:            true,
@@ -82,8 +82,9 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	target := state.Title.ValueString()
+	filterByWorkspace := !state.WorkspaceToken.IsNull() && !state.WorkspaceToken.IsUnknown()
 	var workspaceFilter string
-	if !state.WorkspaceToken.IsNull() && !state.WorkspaceToken.IsUnknown() {
+	if filterByWorkspace {
 		workspaceFilter = state.WorkspaceToken.ValueString()
 	}
 	filterByParent := !state.ParentFolderToken.IsNull() && !state.ParentFolderToken.IsUnknown()
@@ -96,7 +97,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if folder.Title == nil || *folder.Title != target {
 			continue
 		}
-		if workspaceFilter != "" && folder.WorkspaceToken != workspaceFilter {
+		if filterByWorkspace && folder.WorkspaceToken != workspaceFilter {
 			continue
 		}
 		folderParent := ""
@@ -111,14 +112,21 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 		state.Token = types.StringValue(folder.Token)
 		state.WorkspaceToken = types.StringValue(folder.WorkspaceToken)
-		state.ParentFolderToken = types.StringPointerValue(folderParent)
+		state.ParentFolderToken = types.StringPointerValue(folder.ParentFolderToken)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
 
+	filters := ""
+	if filterByWorkspace {
+		filters += fmt.Sprintf(" in workspace %q", workspaceFilter)
+	}
+	if filterByParent {
+		filters += fmt.Sprintf(" with parent folder %q", parentFolderFilter)
+	}
 	resp.Diagnostics.AddError(
 		"Folder Not Found",
-		fmt.Sprintf("No folder with title %q was found.", target),
+		fmt.Sprintf("No folder with title %q%s was found.", target, filters),
 	)
 }
 
