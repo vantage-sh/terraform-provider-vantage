@@ -1,6 +1,6 @@
 ---
 page_title: "vantage_integration_by_name Data Source - terraform-provider-vantage"
-subcategory: "Integrations"
+subcategory: ""
 description: |-
   Looks up an integration by name.
 ---
