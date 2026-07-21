@@ -96,10 +96,20 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 			"cost_report_tokens_with_metadata": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"calculation_type": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The calculation type applied when this BusinessMetric is used in the CostReport.",
+							MarkdownDescription: "The calculation type applied when this BusinessMetric is used in the CostReport.",
+						},
 						"cost_report_token": schema.StringAttribute{
 							Required:            true,
 							Description:         "The token of the CostReport the BusinessMetric is attached to.",
 							MarkdownDescription: "The token of the CostReport the BusinessMetric is attached to.",
+						},
+						"label": schema.StringAttribute{
+							Computed:            true,
+							Description:         "Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.",
+							MarkdownDescription: "Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.",
 						},
 						"label_filter": schema.ListAttribute{
 							ElementType:         types.StringType,
@@ -107,6 +117,15 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 							Computed:            true,
 							Description:         "Include only values with these labels in the CostReport.",
 							MarkdownDescription: "Include only values with these labels in the CostReport.",
+						},
+						"label_filters": schema.MapAttribute{
+							ElementType: types.ListType{
+								ElemType: types.StringType,
+							},
+							Optional:            true,
+							Computed:            true,
+							Description:         "Include only ClickHouse BusinessMetric values matching every label key and one of its values.",
+							MarkdownDescription: "Include only ClickHouse BusinessMetric values matching every label key and one of its values.",
 						},
 						"unit_scale": schema.StringAttribute{
 							Optional:            true,
@@ -206,6 +225,31 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The Integration token used to import the BusinessMetric.",
 				MarkdownDescription: "The Integration token used to import the BusinessMetric.",
 			},
+			"snowflake_metric_fields": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"integration_token": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "Integration token for the Snowflake integration from which you would like to fetch metrics.",
+						MarkdownDescription: "Integration token for the Snowflake integration from which you would like to fetch metrics.",
+					},
+					"sql_query": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "Snowflake SQL query returning date, value, and optional label columns.",
+						MarkdownDescription: "Snowflake SQL query returning date, value, and optional label columns.",
+					},
+				},
+				CustomType: SnowflakeMetricFieldsType{
+					ObjectType: types.ObjectType{
+						AttrTypes: SnowflakeMetricFieldsValue{}.AttributeTypes(ctx),
+					},
+				},
+				Optional:            true,
+				Computed:            true,
+				Description:         "Snowflake metric configuration fields.",
+				MarkdownDescription: "Snowflake metric configuration fields.",
+			},
 			"title": schema.StringAttribute{
 				Required:            true,
 				Description:         "The title of the BusinessMetrics.",
@@ -246,17 +290,18 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type BusinessMetricModel struct {
-	CloudwatchFields             CloudwatchFieldsValue    `tfsdk:"cloudwatch_fields"`
-	CostReportTokensWithMetadata types.List               `tfsdk:"cost_report_tokens_with_metadata"`
-	CreatedByToken               types.String             `tfsdk:"created_by_token"`
-	DatadogMetricFields          DatadogMetricFieldsValue `tfsdk:"datadog_metric_fields"`
-	ForecastedValues             types.List               `tfsdk:"forecasted_values"`
-	Id                           types.String             `tfsdk:"id"`
-	ImportType                   types.String             `tfsdk:"import_type"`
-	IntegrationToken             types.String             `tfsdk:"integration_token"`
-	Title                        types.String             `tfsdk:"title"`
-	Token                        types.String             `tfsdk:"token"`
-	Values                       types.List               `tfsdk:"values"`
+	CloudwatchFields             CloudwatchFieldsValue      `tfsdk:"cloudwatch_fields"`
+	CostReportTokensWithMetadata types.List                 `tfsdk:"cost_report_tokens_with_metadata"`
+	CreatedByToken               types.String               `tfsdk:"created_by_token"`
+	DatadogMetricFields          DatadogMetricFieldsValue   `tfsdk:"datadog_metric_fields"`
+	ForecastedValues             types.List                 `tfsdk:"forecasted_values"`
+	Id                           types.String               `tfsdk:"id"`
+	ImportType                   types.String               `tfsdk:"import_type"`
+	IntegrationToken             types.String               `tfsdk:"integration_token"`
+	SnowflakeMetricFields        SnowflakeMetricFieldsValue `tfsdk:"snowflake_metric_fields"`
+	Title                        types.String               `tfsdk:"title"`
+	Token                        types.String               `tfsdk:"token"`
+	Values                       types.List                 `tfsdk:"values"`
 }
 
 var _ basetypes.ObjectTypable = CloudwatchFieldsType{}
@@ -1352,6 +1397,24 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 
 	attributes := in.Attributes()
 
+	calculationTypeAttribute, ok := attributes["calculation_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`calculation_type is missing from object`)
+
+		return nil, diags
+	}
+
+	calculationTypeVal, ok := calculationTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`calculation_type expected to be basetypes.StringValue, was: %T`, calculationTypeAttribute))
+	}
+
 	costReportTokenAttribute, ok := attributes["cost_report_token"]
 
 	if !ok {
@@ -1370,6 +1433,24 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 			fmt.Sprintf(`cost_report_token expected to be basetypes.StringValue, was: %T`, costReportTokenAttribute))
 	}
 
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return nil, diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
 	labelFilterAttribute, ok := attributes["label_filter"]
 
 	if !ok {
@@ -1386,6 +1467,24 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`label_filter expected to be basetypes.ListValue, was: %T`, labelFilterAttribute))
+	}
+
+	labelFiltersAttribute, ok := attributes["label_filters"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filters is missing from object`)
+
+		return nil, diags
+	}
+
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -1411,8 +1510,11 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 	}
 
 	return CostReportTokensWithMetadataValue{
+		CalculationType: calculationTypeVal,
 		CostReportToken: costReportTokenVal,
+		Label:           labelVal,
 		LabelFilter:     labelFilterVal,
+		LabelFilters:    labelFiltersVal,
 		UnitScale:       unitScaleVal,
 		state:           attr.ValueStateKnown,
 	}, diags
@@ -1481,6 +1583,24 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 		return NewCostReportTokensWithMetadataValueUnknown(), diags
 	}
 
+	calculationTypeAttribute, ok := attributes["calculation_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`calculation_type is missing from object`)
+
+		return NewCostReportTokensWithMetadataValueUnknown(), diags
+	}
+
+	calculationTypeVal, ok := calculationTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`calculation_type expected to be basetypes.StringValue, was: %T`, calculationTypeAttribute))
+	}
+
 	costReportTokenAttribute, ok := attributes["cost_report_token"]
 
 	if !ok {
@@ -1499,6 +1619,24 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 			fmt.Sprintf(`cost_report_token expected to be basetypes.StringValue, was: %T`, costReportTokenAttribute))
 	}
 
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return NewCostReportTokensWithMetadataValueUnknown(), diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
 	labelFilterAttribute, ok := attributes["label_filter"]
 
 	if !ok {
@@ -1515,6 +1653,24 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`label_filter expected to be basetypes.ListValue, was: %T`, labelFilterAttribute))
+	}
+
+	labelFiltersAttribute, ok := attributes["label_filters"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filters is missing from object`)
+
+		return NewCostReportTokensWithMetadataValueUnknown(), diags
+	}
+
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -1540,8 +1696,11 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 	}
 
 	return CostReportTokensWithMetadataValue{
+		CalculationType: calculationTypeVal,
 		CostReportToken: costReportTokenVal,
+		Label:           labelVal,
 		LabelFilter:     labelFilterVal,
+		LabelFilters:    labelFiltersVal,
 		UnitScale:       unitScaleVal,
 		state:           attr.ValueStateKnown,
 	}, diags
@@ -1615,21 +1774,31 @@ func (t CostReportTokensWithMetadataType) ValueType(ctx context.Context) attr.Va
 var _ basetypes.ObjectValuable = CostReportTokensWithMetadataValue{}
 
 type CostReportTokensWithMetadataValue struct {
+	CalculationType basetypes.StringValue `tfsdk:"calculation_type"`
 	CostReportToken basetypes.StringValue `tfsdk:"cost_report_token"`
+	Label           basetypes.StringValue `tfsdk:"label"`
 	LabelFilter     basetypes.ListValue   `tfsdk:"label_filter"`
+	LabelFilters    basetypes.MapValue    `tfsdk:"label_filters"`
 	UnitScale       basetypes.StringValue `tfsdk:"unit_scale"`
 	state           attr.ValueState
 }
 
 func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 3)
+	attrTypes := make(map[string]tftypes.Type, 6)
 
 	var val tftypes.Value
 	var err error
 
+	attrTypes["calculation_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["cost_report_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["label_filter"] = basetypes.ListType{
 		ElemType: types.StringType,
+	}.TerraformType(ctx)
+	attrTypes["label_filters"] = basetypes.MapType{
+		ElemType: types.ListType{
+			ElemType: types.StringType,
+		},
 	}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -1637,7 +1806,15 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 3)
+		vals := make(map[string]tftypes.Value, 6)
+
+		val, err = v.CalculationType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["calculation_type"] = val
 
 		val, err = v.CostReportToken.ToTerraformValue(ctx)
 
@@ -1647,6 +1824,14 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 
 		vals["cost_report_token"] = val
 
+		val, err = v.Label.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label"] = val
+
 		val, err = v.LabelFilter.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -1654,6 +1839,14 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 		}
 
 		vals["label_filter"] = val
+
+		val, err = v.LabelFilters.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label_filters"] = val
 
 		val, err = v.UnitScale.ToTerraformValue(ctx)
 
@@ -1706,18 +1899,67 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 
 	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
+			"calculation_type":  basetypes.StringType{},
 			"cost_report_token": basetypes.StringType{},
+			"label":             basetypes.StringType{},
 			"label_filter": basetypes.ListType{
 				ElemType: types.StringType,
+			},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			"unit_scale": basetypes.StringType{},
+		}), diags
+	}
+
+	var labelFiltersVal basetypes.MapValue
+	switch {
+	case v.LabelFilters.IsUnknown():
+		labelFiltersVal = types.MapUnknown(types.ListType{
+			ElemType: types.StringType,
+		})
+	case v.LabelFilters.IsNull():
+		labelFiltersVal = types.MapNull(types.ListType{
+			ElemType: types.StringType,
+		})
+	default:
+		var d diag.Diagnostics
+		labelFiltersVal, d = types.MapValue(types.ListType{
+			ElemType: types.StringType,
+		}, v.LabelFilters.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"calculation_type":  basetypes.StringType{},
+			"cost_report_token": basetypes.StringType{},
+			"label":             basetypes.StringType{},
+			"label_filter": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
 			},
 			"unit_scale": basetypes.StringType{},
 		}), diags
 	}
 
 	attributeTypes := map[string]attr.Type{
+		"calculation_type":  basetypes.StringType{},
 		"cost_report_token": basetypes.StringType{},
+		"label":             basetypes.StringType{},
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
+		},
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -1733,8 +1975,11 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
+			"calculation_type":  v.CalculationType,
 			"cost_report_token": v.CostReportToken,
+			"label":             v.Label,
 			"label_filter":      labelFilterVal,
+			"label_filters":     labelFiltersVal,
 			"unit_scale":        v.UnitScale,
 		})
 
@@ -1756,11 +2001,23 @@ func (v CostReportTokensWithMetadataValue) Equal(o attr.Value) bool {
 		return true
 	}
 
+	if !v.CalculationType.Equal(other.CalculationType) {
+		return false
+	}
+
 	if !v.CostReportToken.Equal(other.CostReportToken) {
 		return false
 	}
 
+	if !v.Label.Equal(other.Label) {
+		return false
+	}
+
 	if !v.LabelFilter.Equal(other.LabelFilter) {
+		return false
+	}
+
+	if !v.LabelFilters.Equal(other.LabelFilters) {
 		return false
 	}
 
@@ -1781,9 +2038,16 @@ func (v CostReportTokensWithMetadataValue) Type(ctx context.Context) attr.Type {
 
 func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
+		"calculation_type":  basetypes.StringType{},
 		"cost_report_token": basetypes.StringType{},
+		"label":             basetypes.StringType{},
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
+		},
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -2599,6 +2863,385 @@ func (v ForecastedValuesValue) AttributeTypes(ctx context.Context) map[string]at
 		"amount": basetypes.Float64Type{},
 		"date":   basetypes.StringType{},
 		"label":  basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = SnowflakeMetricFieldsType{}
+
+type SnowflakeMetricFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t SnowflakeMetricFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(SnowflakeMetricFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t SnowflakeMetricFieldsType) String() string {
+	return "SnowflakeMetricFieldsType"
+}
+
+func (t SnowflakeMetricFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return nil, diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
+	}
+
+	sqlQueryAttribute, ok := attributes["sql_query"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`sql_query is missing from object`)
+
+		return nil, diags
+	}
+
+	sqlQueryVal, ok := sqlQueryAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`sql_query expected to be basetypes.StringValue, was: %T`, sqlQueryAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return SnowflakeMetricFieldsValue{
+		IntegrationToken: integrationTokenVal,
+		SqlQuery:         sqlQueryVal,
+		state:            attr.ValueStateKnown,
+	}, diags
+}
+
+func NewSnowflakeMetricFieldsValueNull() SnowflakeMetricFieldsValue {
+	return SnowflakeMetricFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewSnowflakeMetricFieldsValueUnknown() SnowflakeMetricFieldsValue {
+	return SnowflakeMetricFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewSnowflakeMetricFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (SnowflakeMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing SnowflakeMetricFieldsValue Attribute Value",
+				"While creating a SnowflakeMetricFieldsValue value, a missing attribute value was detected. "+
+					"A SnowflakeMetricFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("SnowflakeMetricFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid SnowflakeMetricFieldsValue Attribute Type",
+				"While creating a SnowflakeMetricFieldsValue value, an invalid attribute value was detected. "+
+					"A SnowflakeMetricFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("SnowflakeMetricFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("SnowflakeMetricFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra SnowflakeMetricFieldsValue Attribute Value",
+				"While creating a SnowflakeMetricFieldsValue value, an extra attribute value was detected. "+
+					"A SnowflakeMetricFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra SnowflakeMetricFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewSnowflakeMetricFieldsValueUnknown(), diags
+	}
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return NewSnowflakeMetricFieldsValueUnknown(), diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
+	}
+
+	sqlQueryAttribute, ok := attributes["sql_query"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`sql_query is missing from object`)
+
+		return NewSnowflakeMetricFieldsValueUnknown(), diags
+	}
+
+	sqlQueryVal, ok := sqlQueryAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`sql_query expected to be basetypes.StringValue, was: %T`, sqlQueryAttribute))
+	}
+
+	if diags.HasError() {
+		return NewSnowflakeMetricFieldsValueUnknown(), diags
+	}
+
+	return SnowflakeMetricFieldsValue{
+		IntegrationToken: integrationTokenVal,
+		SqlQuery:         sqlQueryVal,
+		state:            attr.ValueStateKnown,
+	}, diags
+}
+
+func NewSnowflakeMetricFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) SnowflakeMetricFieldsValue {
+	object, diags := NewSnowflakeMetricFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewSnowflakeMetricFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t SnowflakeMetricFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewSnowflakeMetricFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewSnowflakeMetricFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewSnowflakeMetricFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewSnowflakeMetricFieldsValueMust(SnowflakeMetricFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t SnowflakeMetricFieldsType) ValueType(ctx context.Context) attr.Value {
+	return SnowflakeMetricFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = SnowflakeMetricFieldsValue{}
+
+type SnowflakeMetricFieldsValue struct {
+	IntegrationToken basetypes.StringValue `tfsdk:"integration_token"`
+	SqlQuery         basetypes.StringValue `tfsdk:"sql_query"`
+	state            attr.ValueState
+}
+
+func (v SnowflakeMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["sql_query"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.IntegrationToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["integration_token"] = val
+
+		val, err = v.SqlQuery.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["sql_query"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v SnowflakeMetricFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v SnowflakeMetricFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v SnowflakeMetricFieldsValue) String() string {
+	return "SnowflakeMetricFieldsValue"
+}
+
+func (v SnowflakeMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"sql_query":         basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"integration_token": v.IntegrationToken,
+			"sql_query":         v.SqlQuery,
+		})
+
+	return objVal, diags
+}
+
+func (v SnowflakeMetricFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(SnowflakeMetricFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.IntegrationToken.Equal(other.IntegrationToken) {
+		return false
+	}
+
+	if !v.SqlQuery.Equal(other.SqlQuery) {
+		return false
+	}
+
+	return true
+}
+
+func (v SnowflakeMetricFieldsValue) Type(ctx context.Context) attr.Type {
+	return SnowflakeMetricFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v SnowflakeMetricFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"sql_query":         basetypes.StringType{},
 	}
 }
 

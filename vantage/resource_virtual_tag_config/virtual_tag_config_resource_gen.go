@@ -30,8 +30,8 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 						"filter": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							Description:         "The VQL filter this collapsed tag key applies to.",
-							MarkdownDescription: "The VQL filter this collapsed tag key applies to.",
+							Description:         "The VQL filter this collapsed tag key applies to. When set, do not also set providers; include any provider restrictions directly in filter.",
+							MarkdownDescription: "The VQL filter this collapsed tag key applies to. When set, do not also set providers; include any provider restrictions directly in filter.",
 						},
 						"key": schema.StringAttribute{
 							Required:            true,
@@ -42,8 +42,8 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 							ElementType:         types.StringType,
 							Optional:            true,
 							Computed:            true,
-							Description:         "The providers this collapsed tag key applies to. Defaults to all providers.",
-							MarkdownDescription: "The providers this collapsed tag key applies to. Defaults to all providers.",
+							Description:         "Provider-only scope for this collapsed tag key. Invalid when filter is set; include provider restrictions in filter instead. Defaults to all providers.",
+							MarkdownDescription: "Provider-only scope for this collapsed tag key. Invalid when filter is set; include provider restrictions in filter instead. Defaults to all providers.",
 						},
 					},
 					CustomType: CollapsedTagKeysType{
