@@ -64,6 +64,76 @@ func emptyDataSourceLabelFilters(ctx context.Context) types.Object {
 	return types.ObjectNull(datasource_business_metrics.LabelFiltersValue{}.AttributeTypes(ctx))
 }
 
+func labelFiltersToAPI(ctx context.Context, v types.Map, diags *diag.Diagnostics) map[string][]string {
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+
+	out := map[string][]string{}
+	diags.Append(v.ElementsAs(ctx, &out, false)...)
+	if diags.HasError() {
+		return nil
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func labelFiltersMapFromAPI(ctx context.Context, raw interface{}) (types.Map, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	elemType := types.ListType{ElemType: types.StringType}
+	if raw == nil {
+		return types.MapNull(elemType), diags
+	}
+
+	normalized, ok := normalizeLabelFilters(raw)
+	if !ok {
+		diags.AddWarning(
+			"Unable to parse label_filters from API",
+			fmt.Sprintf("Unexpected label_filters type %T; leaving attribute null.", raw),
+		)
+		return types.MapNull(elemType), diags
+	}
+	if len(normalized) == 0 {
+		return types.MapNull(elemType), diags
+	}
+
+	m, d := types.MapValueFrom(ctx, elemType, normalized)
+	diags.Append(d...)
+	return m, diags
+}
+
+func normalizeLabelFilters(raw interface{}) (map[string][]string, bool) {
+	switch v := raw.(type) {
+	case map[string][]string:
+		return v, true
+	case map[string]interface{}:
+		out := make(map[string][]string, len(v))
+		for key, val := range v {
+			switch values := val.(type) {
+			case []string:
+				out[key] = values
+			case []interface{}:
+				strs := make([]string, 0, len(values))
+				for _, item := range values {
+					s, ok := item.(string)
+					if !ok {
+						return nil, false
+					}
+					strs = append(strs, s)
+				}
+				out[key] = strs
+			default:
+				return nil, false
+			}
+		}
+		return out, true
+	default:
+		return nil, false
+	}
+}
+
 // Deprecated: use resourceCostReportTokenAttrTypes. Kept for unit tests that build plain objects.
 func costReportTokenAttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
@@ -324,6 +394,12 @@ func costReportTokensListForResource(ctx context.Context, payloadTokens []*model
 			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
 		}
 
+		labelFilters, d := labelFiltersMapFromAPI(ctx, costReportToken.LabelFilters)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
+		}
+
 		tokenValue, d := resource_business_metric.NewCostReportTokensWithMetadataValue(
 			attrTypes,
 			map[string]attr.Value{
@@ -332,7 +408,7 @@ func costReportTokensListForResource(ctx context.Context, payloadTokens []*model
 				"calculation_type":  types.StringValue(costReportToken.CalculationType),
 				"label":             types.StringPointerValue(costReportToken.Label),
 				"label_filter":      labelFilter,
-				"label_filters":     emptyLabelFiltersMap(),
+				"label_filters":     labelFilters,
 			},
 		)
 		diags.Append(d...)
@@ -488,6 +564,10 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 				CalculationType: calculationTypePointer(v.CalculationType),
 				Label:           v.Label.ValueString(),
 				LabelFilter:     tfLabelFilter,
+				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
+			}
+			if diags.HasError() {
+				return nil
 			}
 			costReportTokens = append(costReportTokens, costReportToken)
 		}
@@ -632,6 +712,10 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 				CalculationType: calculationTypePointer(v.CalculationType),
 				Label:           v.Label.ValueString(),
 				LabelFilter:     tfLabelFilter,
+				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
+			}
+			if diags.HasError() {
+				return nil
 			}
 			costReportTokens = append(costReportTokens, costReportToken)
 		}

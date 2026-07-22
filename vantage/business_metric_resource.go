@@ -82,23 +82,15 @@ func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
 		return
 	}
 
+	// Mutate in place so generated Validators (and other schema metadata) are preserved.
 	if calcAttr, ok := attr.NestedObject.Attributes["calculation_type"].(schema.StringAttribute); ok {
-		attr.NestedObject.Attributes["calculation_type"] = schema.StringAttribute{
-			Optional:            true,
-			Computed:            true,
-			Default:             stringdefault.StaticString("unit_cost"),
-			Description:         calcAttr.Description,
-			MarkdownDescription: calcAttr.MarkdownDescription,
-		}
+		calcAttr.Default = stringdefault.StaticString("unit_cost")
+		attr.NestedObject.Attributes["calculation_type"] = calcAttr
 	}
 
 	if labelAttr, ok := attr.NestedObject.Attributes["label"].(schema.StringAttribute); ok {
-		attr.NestedObject.Attributes["label"] = schema.StringAttribute{
-			Optional:            true,
-			Computed:            true,
-			Description:         labelAttr.Description,
-			MarkdownDescription: labelAttr.MarkdownDescription,
-		}
+		labelAttr.PlanModifiers = append(labelAttr.PlanModifiers, stringplanmodifier.UseStateForUnknown())
+		attr.NestedObject.Attributes["label"] = labelAttr
 	}
 
 	attrs["cost_report_tokens_with_metadata"] = attr
