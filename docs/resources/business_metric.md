@@ -67,6 +67,8 @@ Required:
 
 Optional:
 
+- `calculation_type` (String) The calculation type applied when this BusinessMetric is used in the CostReport. Defaults to `unit_cost`.
+- `label` (String) Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.
 - `label_filter` (List of String) Include only values with these labels in the CostReport.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within the CostReport.
 

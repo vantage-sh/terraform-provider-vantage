@@ -55,6 +55,7 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	}
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
+	applyCostReportTokenMetadataDefaults(s.Attributes)
 
 	resp.Schema = s
 }
@@ -73,6 +74,34 @@ func applyEmptyLabelDefault(attrs map[string]schema.Attribute, attrName string) 
 	labelAttr.Default = stringdefault.StaticString("")
 	attr.NestedObject.Attributes["label"] = labelAttr
 	attrs[attrName] = attr
+}
+
+func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
+	attr, ok := attrs["cost_report_tokens_with_metadata"].(schema.ListNestedAttribute)
+	if !ok {
+		return
+	}
+
+	if calcAttr, ok := attr.NestedObject.Attributes["calculation_type"].(schema.StringAttribute); ok {
+		attr.NestedObject.Attributes["calculation_type"] = schema.StringAttribute{
+			Optional:            true,
+			Computed:            true,
+			Default:             stringdefault.StaticString("unit_cost"),
+			Description:         calcAttr.Description,
+			MarkdownDescription: calcAttr.MarkdownDescription,
+		}
+	}
+
+	if labelAttr, ok := attr.NestedObject.Attributes["label"].(schema.StringAttribute); ok {
+		attr.NestedObject.Attributes["label"] = schema.StringAttribute{
+			Optional:            true,
+			Computed:            true,
+			Description:         labelAttr.Description,
+			MarkdownDescription: labelAttr.MarkdownDescription,
+		}
+	}
+
+	attrs["cost_report_tokens_with_metadata"] = attr
 }
 
 func (r *businessMetricResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
