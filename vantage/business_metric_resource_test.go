@@ -21,11 +21,7 @@ import (
 func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 	ctx := context.Background()
 
-	attrTypes := map[string]attr.Type{
-		"cost_report_token": types.StringType,
-		"unit_scale":        types.StringType,
-		"label_filter":      types.ListType{ElemType: types.StringType},
-	}
+	attrTypes := costReportTokenAttrTypes()
 
 	// Helper to create a cost report token object
 	createToken := func(token, unitScale string) attr.Value {
@@ -37,7 +33,10 @@ func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 		obj, err := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
 			"unit_scale":        types.StringValue(unitScale),
+			"calculation_type":  types.StringValue("unit_cost"),
+			"label":             types.StringNull(),
 			"label_filter":      labelFilter,
+			"label_filters":     emptyLabelFiltersMap(),
 		})
 		if err != nil {
 			t.Fatalf("failed to create cost report token object: %v", err)
@@ -115,11 +114,7 @@ func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 	ctx := context.Background()
 
-	attrTypes := map[string]attr.Type{
-		"cost_report_token": types.StringType,
-		"unit_scale":        types.StringType,
-		"label_filter":      types.ListType{ElemType: types.StringType},
-	}
+	attrTypes := costReportTokenAttrTypes()
 
 	// Helper to create a cost report token with empty label_filter (plan)
 	createTokenWithEmptyFilter := func(token, unitScale string) attr.Value {
@@ -131,7 +126,10 @@ func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 		obj, diags := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
 			"unit_scale":        types.StringValue(unitScale),
+			"calculation_type":  types.StringValue("unit_cost"),
+			"label":             types.StringNull(),
 			"label_filter":      labelFilter,
+			"label_filters":     emptyLabelFiltersMap(),
 		})
 		if diags.HasError() {
 			t.Fatalf("failed to create cost report token object (empty label_filter): %v", diags)
@@ -145,7 +143,10 @@ func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 		obj, diags := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
 			"unit_scale":        types.StringValue(unitScale),
+			"calculation_type":  types.StringValue("unit_cost"),
+			"label":             types.StringNull(),
 			"label_filter":      types.ListNull(types.StringType),
+			"label_filters":     emptyLabelFiltersMap(),
 		})
 		if diags.HasError() {
 			t.Fatalf("failed to create cost report token object (null label_filter): %v", diags)
@@ -610,6 +611,9 @@ func TestAccBusinessMetric_costReportTokensOrder(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.0.unit_scale", "per_unit"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.1.unit_scale", "per_thousand"),
 					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.2.unit_scale", "per_million"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.0.calculation_type", "unit_cost"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.1.calculation_type", "unit_cost"),
+					resource.TestCheckResourceAttr("vantage_business_metric.test-tokens", "cost_report_tokens_with_metadata.2.calculation_type", "unit_cost"),
 				),
 			},
 			{ // update title but keep same cost report tokens order
