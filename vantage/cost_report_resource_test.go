@@ -161,7 +161,7 @@ func TestAccCostReport_settings(t *testing.T) {
 				),
 			},
 			{ // update settings
-				Config: costReportWithSettings("test-settings", "test-settings", false, false, false, false, true, true, "usage", true),
+				Config: costReportWithSettings("test-settings", "test-settings", false, false, false, false, true, true, "count", true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_credits", "false"),
 					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_refunds", "false"),
@@ -169,12 +169,12 @@ func TestAccCostReport_settings(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.include_tax", "false"),
 					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.amortize", "true"),
 					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.unallocated", "true"),
-					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.aggregate_by", "usage"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.aggregate_by", "count"),
 					resource.TestCheckResourceAttr("vantage_cost_report.test-settings", "settings.show_previous_period", "true"),
 				),
 			},
 			{ // confirm no drift
-				Config:             costReportWithSettings("test-settings", "test-settings", false, false, false, false, true, true, "usage", true),
+				Config:             costReportWithSettings("test-settings", "test-settings", false, false, false, false, true, true, "count", true),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
@@ -220,15 +220,15 @@ func TestAccCostReport_chartSettings(t *testing.T) {
 				),
 			},
 			{ // update chart_settings
-				Config: costReportWithChartSettings("test-cs", "test-chart-settings", "service", "usage"),
+				Config: costReportWithChartSettings("test-cs", "test-chart-settings", "service", "count"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.x_axis_dimension.#", "1"),
 					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.x_axis_dimension.0", "service"),
-					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.y_axis_dimension", "usage"),
+					resource.TestCheckResourceAttr("vantage_cost_report.test-cs", "chart_settings.y_axis_dimension", "count"),
 				),
 			},
 			{ // confirm no drift
-				Config:             costReportWithChartSettings("test-cs", "test-chart-settings", "service", "usage"),
+				Config:             costReportWithChartSettings("test-cs", "test-chart-settings", "service", "count"),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
