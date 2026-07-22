@@ -60,10 +60,6 @@ func emptyLabelFiltersMap() types.Map {
 	return types.MapNull(types.ListType{ElemType: types.StringType})
 }
 
-func emptyDataSourceLabelFilters(ctx context.Context) types.Object {
-	return types.ObjectNull(datasource_business_metrics.LabelFiltersValue{}.AttributeTypes(ctx))
-}
-
 func labelFiltersToAPI(ctx context.Context, v types.Map, diags *diag.Diagnostics) map[string][]string {
 	if v.IsNull() || v.IsUnknown() {
 		return nil
@@ -435,6 +431,12 @@ func costReportTokensListForDataSource(ctx context.Context, payloadTokens []*mod
 			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
 		}
 
+		labelFilters, d := labelFiltersMapFromAPI(ctx, costReportToken.LabelFilters)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
+		}
+
 		tokenValue, d := datasource_business_metrics.NewCostReportTokensWithMetadataValue(
 			attrTypes,
 			map[string]attr.Value{
@@ -443,7 +445,7 @@ func costReportTokensListForDataSource(ctx context.Context, payloadTokens []*mod
 				"calculation_type":  types.StringValue(costReportToken.CalculationType),
 				"label":             types.StringPointerValue(costReportToken.Label),
 				"label_filter":      labelFilter,
-				"label_filters":     emptyDataSourceLabelFilters(ctx),
+				"label_filters":     labelFilters,
 			},
 		)
 		diags.Append(d...)
@@ -510,6 +512,13 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 			Query:            m.DatadogMetricFields.Query.ValueString(),
 		}
 		model.DatadogMetricFields = datadogMetricFields
+	}
+
+	if !m.SnowflakeMetricFields.IsNull() && !m.SnowflakeMetricFields.IsUnknown() {
+		model.SnowflakeMetricFields = &modelsv2.CreateBusinessMetricSnowflakeMetricFields{
+			IntegrationToken: m.SnowflakeMetricFields.IntegrationToken.ValueString(),
+			SQLQuery:         m.SnowflakeMetricFields.SqlQuery.ValueString(),
+		}
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
@@ -659,6 +668,13 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 			Query:            m.DatadogMetricFields.Query.ValueString(),
 		}
 		model.DatadogMetricFields = datadogMetricFields
+	}
+
+	if !m.SnowflakeMetricFields.IsNull() && !m.SnowflakeMetricFields.IsUnknown() {
+		model.SnowflakeMetricFields = &modelsv2.UpdateBusinessMetricSnowflakeMetricFields{
+			IntegrationToken: m.SnowflakeMetricFields.IntegrationToken.ValueString(),
+			SQLQuery:         m.SnowflakeMetricFields.SqlQuery.ValueString(),
+		}
 	}
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
