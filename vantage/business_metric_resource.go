@@ -233,21 +233,26 @@ func stateTokenCalculationType(stateToken *businessMetricResourceModelCostReport
 }
 
 // shouldInvalidateOmittedComputed is true when an omitted Optional+Computed string
-// still has a known plan/state value to clear, including reorder mismatches and
+// still has a stale planned value to clear, including reorder mismatches and
 // calculation_type changes that should re-derive the API default.
 func shouldInvalidateOmittedComputed(planValue, stateValue, stateCalcType, planCalcType types.String) bool {
 	if planValue.IsUnknown() {
 		return false
 	}
-	// Known planned value with config omitted — sticky carryover or reorder.
-	if !planValue.IsNull() {
+	if !stateCalcType.IsNull() && !stateCalcType.IsUnknown() && !planCalcType.Equal(stateCalcType) {
 		return true
+	}
+	// A known planned value is only stale when it differs from the matching state's
+	// value (for example after reorder-by-index carryover) or when there was no
+	// prior matching state to carry it from.
+	if !planValue.IsNull() {
+		if stateValue.IsNull() || stateValue.IsUnknown() {
+			return true
+		}
+		return !planValue.Equal(stateValue)
 	}
 	// Plan null but prior state still has a value — force unknown so apply clears it.
 	if !stateValue.IsNull() && !stateValue.IsUnknown() {
-		return true
-	}
-	if !stateCalcType.IsNull() && !stateCalcType.IsUnknown() && !planCalcType.Equal(stateCalcType) {
 		return true
 	}
 	return false

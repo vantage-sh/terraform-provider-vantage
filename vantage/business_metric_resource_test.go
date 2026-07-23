@@ -79,9 +79,9 @@ func TestCostReportTokenComputedAttrsToInvalidate(t *testing.T) {
 		}
 	})
 
-	t.Run("invalidates omitted label without calculation_type change", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Custom"), emptyLabelFiltersMap()))
-		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Custom"), emptyLabelFiltersMap()))
+	t.Run("keeps omitted derived label when calculation_type unchanged", func(t *testing.T) {
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
+		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
 		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), emptyLabelFiltersMap()))
 
 		var diags diag.Diagnostics
@@ -89,8 +89,8 @@ func TestCostReportTokenComputedAttrsToInvalidate(t *testing.T) {
 		if diags.HasError() {
 			t.Fatalf("unexpected diagnostics: %v", diags)
 		}
-		if len(result.LabelPaths) != 1 {
-			t.Fatalf("expected 1 label path, got %d (%v)", len(result.LabelPaths), result.LabelPaths)
+		if len(result.LabelPaths) != 0 {
+			t.Fatalf("expected no label paths, got %v", result.LabelPaths)
 		}
 	})
 
