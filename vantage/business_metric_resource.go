@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -55,8 +56,31 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	}
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
+	applyEmptyLabelFilterDefault(s.Attributes)
 
 	resp.Schema = s
+}
+
+// applyEmptyLabelFilterDefault sets the default value for the label_filter attribute
+// inside cost_report_tokens_with_metadata to an empty list. Without this default,
+// omitting label_filter from a cost_report_tokens_with_metadata block causes perpetual
+// plan drift: state holds [] but Terraform marks it as (known after apply) on every
+// update because the field is Optional+Computed with no default.
+func applyEmptyLabelFilterDefault(attrs map[string]schema.Attribute) {
+	crAttr, ok := attrs["cost_report_tokens_with_metadata"].(schema.ListNestedAttribute)
+	if !ok {
+		return
+	}
+
+	labelFilterAttr, ok := crAttr.NestedObject.Attributes["label_filter"].(schema.ListAttribute)
+	if !ok {
+		return
+	}
+
+	emptyList, _ := types.ListValue(types.StringType, []attr.Value{})
+	labelFilterAttr.Default = listdefault.StaticValue(emptyList)
+	crAttr.NestedObject.Attributes["label_filter"] = labelFilterAttr
+	attrs["cost_report_tokens_with_metadata"] = crAttr
 }
 
 func applyEmptyLabelDefault(attrs map[string]schema.Attribute, attrName string) {

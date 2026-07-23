@@ -9,11 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	schemalib "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
 )
 
 // TestAssignCostReportTokens_OrderPreservation tests that assignCostReportTokens
@@ -199,6 +201,68 @@ func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 	}
 	if len(tokens[0].LabelFilter.Elements()) != 0 {
 		t.Errorf("LabelFilter should have 0 elements, got %d", len(tokens[0].LabelFilter.Elements()))
+	}
+}
+
+// TestApplyEmptyLabelFilterDefault verifies that applyEmptyLabelFilterDefault sets
+// a default empty list on the label_filter attribute of cost_report_tokens_with_metadata.
+// Without this default, omitting label_filter from the config causes perpetual plan drift:
+// state holds [] but every update plan shows label_filter = [] -> (known after apply).
+func TestApplyEmptyLabelFilterDefault(t *testing.T) {
+	ctx := context.Background()
+
+	// Get the generated schema so we can verify what the attrs look like before/after.
+	s := resource_business_metric.BusinessMetricResourceSchema(ctx)
+	attrs := s.Attributes
+
+	// Get the cost_report_tokens_with_metadata attribute.
+	crAttrRaw, ok := attrs["cost_report_tokens_with_metadata"]
+	if !ok {
+		t.Fatal("cost_report_tokens_with_metadata attribute not found in schema")
+	}
+	crAttr, ok := crAttrRaw.(schemalib.ListNestedAttribute)
+	if !ok {
+		t.Fatalf("cost_report_tokens_with_metadata is type %T, want schema.ListNestedAttribute", crAttrRaw)
+	}
+	labelFilterAttrRaw, ok := crAttr.NestedObject.Attributes["label_filter"]
+	if !ok {
+		t.Fatal("label_filter attribute not found inside cost_report_tokens_with_metadata")
+	}
+	labelFilterAttrBefore, ok := labelFilterAttrRaw.(schemalib.ListAttribute)
+	if !ok {
+		t.Fatalf("label_filter is type %T, want schema.ListAttribute", labelFilterAttrRaw)
+	}
+
+	// The generated schema should NOT have a default (we apply it manually).
+	if labelFilterAttrBefore.Default != nil {
+		t.Log("NOTE: generated schema unexpectedly already has a default for label_filter")
+	}
+
+	// Apply the default.
+	applyEmptyLabelFilterDefault(attrs)
+
+	// After calling applyEmptyLabelFilterDefault, label_filter must have a default.
+	crAttrAfterRaw, ok := attrs["cost_report_tokens_with_metadata"]
+	if !ok {
+		t.Fatal("cost_report_tokens_with_metadata attribute disappeared after mutation")
+	}
+	crAttrAfter, ok := crAttrAfterRaw.(schemalib.ListNestedAttribute)
+	if !ok {
+		t.Fatalf("cost_report_tokens_with_metadata is type %T after mutation", crAttrAfterRaw)
+	}
+	labelFilterAttrAfterRaw, ok := crAttrAfter.NestedObject.Attributes["label_filter"]
+	if !ok {
+		t.Fatal("label_filter attribute disappeared after mutation")
+	}
+	labelFilterAttrAfter, ok := labelFilterAttrAfterRaw.(schemalib.ListAttribute)
+	if !ok {
+		t.Fatalf("label_filter is type %T after mutation", labelFilterAttrAfterRaw)
+	}
+
+	if labelFilterAttrAfter.Default == nil {
+		t.Fatal("label_filter.Default is nil after applyEmptyLabelFilterDefault — " +
+			"this causes perpetual plan drift: every update plan shows " +
+			"label_filter = [] -> (known after apply) when label_filter is omitted from config")
 	}
 }
 
@@ -1042,4 +1106,103 @@ resource "vantage_business_metric" %[1]q {
   ]
 }
 `, id, title, date1, date2, futureDate1, futureDate2)
+}
+
+// TestAccBusinessMetric_omittedLabelFilter reproduces the customer-reported bug where
+// omitting label_filter (as opposed to setting it to []) from a
+// cost_report_tokens_with_metadata block causes perpetual plan drift on every update:
+//
+//	label_filter = [] -> (known after apply)
+//
+// After the fix (applyEmptyLabelFilterDefault), label_filter defaults to [] when
+// omitted so the plan stays stable after any update.
+func TestAccBusinessMetric_omittedLabelFilter(t *testing.T) {
+	resourceName := "vantage_business_metric.test_omitted_filter"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Step 1: create with label_filter entirely omitted from two tokens
+				// and explicitly empty on the third, to cover both cases.
+				Config: testAccVantageBusinessMetricTf_omittedLabelFilter("Omitted Label Filter Test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.#", "3"),
+					// All three tokens should resolve to an empty label_filter list.
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.1.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.2.label_filter.#", "0"),
+				),
+			},
+			{
+				// Step 2: title-only update. Before the fix, this showed spurious
+				// label_filter = [] -> (known after apply) changes for every token
+				// that had label_filter omitted. After the fix there must be no drift.
+				Config: testAccVantageBusinessMetricTf_omittedLabelFilter("Omitted Label Filter Test Updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", "Omitted Label Filter Test Updated"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.1.label_filter.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.2.label_filter.#", "0"),
+				),
+			},
+			{
+				// Step 3: confirm no drift – running plan again must show no changes.
+				Config:             testAccVantageBusinessMetricTf_omittedLabelFilter("Omitted Label Filter Test Updated"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_omittedLabelFilter(title string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "report_a" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report A for Omitted Label Filter Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "report_b" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report B for Omitted Label Filter Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_cost_report" "report_c" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report C for Omitted Label Filter Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_business_metric" "test_omitted_filter" {
+  title = %[1]q
+
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.report_a.token
+      unit_scale        = "per_unit"
+      # label_filter intentionally omitted — must not cause plan drift
+    },
+    {
+      cost_report_token = vantage_cost_report.report_b.token
+      unit_scale        = "per_unit"
+      # label_filter intentionally omitted — must not cause plan drift
+    },
+    {
+      cost_report_token = vantage_cost_report.report_c.token
+      unit_scale        = "per_unit"
+      label_filter      = []
+    },
+  ]
+}
+`, title)
 }
