@@ -83,6 +83,7 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 			map[string]attr.Value{
 				"aggregate_by":         types.StringPointerValue(payload.Settings.AggregateBy),
 				"amortize":             types.BoolPointerValue(payload.Settings.Amortize),
+				"complete_period":      types.BoolPointerValue(payload.Settings.CompletePeriod),
 				"include_credits":      types.BoolPointerValue(payload.Settings.IncludeCredits),
 				"include_discounts":    types.BoolPointerValue(payload.Settings.IncludeDiscounts),
 				"include_refunds":      types.BoolPointerValue(payload.Settings.IncludeRefunds),
@@ -211,6 +212,9 @@ func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnos
 		if !m.Settings.Amortize.IsNull() && !m.Settings.Amortize.IsUnknown() {
 			s.Amortize = m.Settings.Amortize.ValueBoolPointer()
 		}
+		if !m.Settings.CompletePeriod.IsNull() && !m.Settings.CompletePeriod.IsUnknown() {
+			s.CompletePeriod = m.Settings.CompletePeriod.ValueBoolPointer()
+		}
 		if !m.Settings.IncludeCredits.IsNull() && !m.Settings.IncludeCredits.IsUnknown() {
 			s.IncludeCredits = m.Settings.IncludeCredits.ValueBoolPointer()
 		}
@@ -328,6 +332,15 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 		}
 		if !m.Settings.Amortize.IsNull() && !m.Settings.Amortize.IsUnknown() {
 			s.Amortize = m.Settings.Amortize.ValueBoolPointer()
+		}
+		// NOTE: vantage-go's UpdateCostReportSettings.CompletePeriod is a
+		// plain `bool` with `omitempty`, unlike the other bool fields which are
+		// `*bool`. That means an explicit `false` gets stripped from the JSON
+		// payload on update. This mirrors the same upstream quirk documented
+		// in the settings test and is a limitation of the SDK, not the
+		// provider. Only true→any transitions are round-trippable.
+		if !m.Settings.CompletePeriod.IsNull() && !m.Settings.CompletePeriod.IsUnknown() {
+			s.CompletePeriod = m.Settings.CompletePeriod.ValueBool()
 		}
 		if !m.Settings.IncludeCredits.IsNull() && !m.Settings.IncludeCredits.IsUnknown() {
 			s.IncludeCredits = m.Settings.IncludeCredits.ValueBoolPointer()

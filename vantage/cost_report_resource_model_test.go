@@ -44,6 +44,7 @@ func TestApplyPayload_ClearsStaleChartSettingsAndSettings(t *testing.T) {
 		map[string]attr.Value{
 			"aggregate_by":         types.StringValue("cost"),
 			"amortize":             types.BoolValue(true),
+			"complete_period":      types.BoolValue(true),
 			"include_credits":      types.BoolValue(true),
 			"include_discounts":    types.BoolValue(true),
 			"include_refunds":      types.BoolValue(true),
@@ -113,6 +114,7 @@ func TestApplyPayload_PopulatesChartSettingsAndSettingsFromAPI(t *testing.T) {
 		map[string]attr.Value{
 			"aggregate_by":         types.StringValue("cost"),
 			"amortize":             types.BoolValue(false),
+			"complete_period":      types.BoolValue(false),
 			"include_credits":      types.BoolValue(false),
 			"include_discounts":    types.BoolValue(false),
 			"include_refunds":      types.BoolValue(false),
@@ -132,6 +134,7 @@ func TestApplyPayload_PopulatesChartSettingsAndSettingsFromAPI(t *testing.T) {
 
 	aggregateBy := "usage"
 	amortize := true
+	completePeriod := true
 	includeCredits := true
 
 	payload := &modelsv2.CostReport{
@@ -150,6 +153,7 @@ func TestApplyPayload_PopulatesChartSettingsAndSettingsFromAPI(t *testing.T) {
 		Settings: &modelsv2.CostReportSettings{
 			AggregateBy:    &aggregateBy,
 			Amortize:       &amortize,
+			CompletePeriod: &completePeriod,
 			IncludeCredits: &includeCredits,
 		},
 	}
@@ -174,6 +178,9 @@ func TestApplyPayload_PopulatesChartSettingsAndSettingsFromAPI(t *testing.T) {
 	}
 	if !model.Settings.Amortize.ValueBool() {
 		t.Errorf("Settings.Amortize = false, want true")
+	}
+	if !model.Settings.CompletePeriod.ValueBool() {
+		t.Errorf("Settings.CompletePeriod = false, want true")
 	}
 }
 

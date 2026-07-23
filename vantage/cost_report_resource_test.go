@@ -733,6 +733,7 @@ resource "vantage_cost_report" "test" {
   settings = {
     aggregate_by         = "cost"
     amortize             = %[2]t
+    complete_period      = false
     include_credits      = %[3]t
     include_discounts    = true
     include_refunds      = false
@@ -742,6 +743,93 @@ resource "vantage_cost_report" "test" {
   }
 }
 `, title, amortize, includeCredits, includeTax)
+}
+
+// TestAccVantageCostReport_settingsCompletePeriod exercises the new
+// `complete_period` bool inside the settings nested block. It follows the
+// same false→true pattern as the other settings test because
+// UpdateCostReportSettings.CompletePeriod is a plain bool with omitempty in
+// vantage-go, so an explicit `false` is dropped from the update payload.
+func TestAccVantageCostReport_settingsCompletePeriod(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_cost_report.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create with complete_period=false (works via *bool on create).
+			{
+				Config: testAccCostReportConfig_completePeriod(rTitle, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rTitle),
+					resource.TestCheckResourceAttr(resourceName, "settings.complete_period", "false"),
+				),
+			},
+			// Step 2: Update false→true.
+			{
+				Config: testAccCostReportConfig_completePeriod(rTitle, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "settings.complete_period", "true"),
+				),
+			},
+			// Step 3: Verify no drift.
+			{
+				Config:             testAccCostReportConfig_completePeriod(rTitle, true),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccCostReportConfig_completePeriod(title string, completePeriod bool) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "test" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = %[1]q
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_7_days"
+  settings = {
+    aggregate_by         = "cost"
+    amortize             = true
+    complete_period      = %[2]t
+    include_credits      = false
+    include_discounts    = true
+    include_refunds      = false
+    include_tax          = true
+    show_previous_period = true
+    unallocated          = false
+  }
+}
+`, title, completePeriod)
+}
+
+// TestAccVantageCostReport_dateBinHour verifies that the `hour` value on
+// date_bin is accepted after the schema regeneration exposed it.
+func TestAccVantageCostReport_dateBinHour(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_cost_report.test-hour"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: costReportWithDateBin("test-hour", rTitle, "hour"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "date_bin", "hour"),
+				),
+			},
+			{
+				Config:             costReportWithDateBin("test-hour", rTitle, "hour"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
 }
 
 // ---------------------------------------------------------------------------

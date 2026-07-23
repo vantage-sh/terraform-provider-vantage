@@ -49,7 +49,7 @@ resource "vantage_cost_report" "demo_report" {
 
 - `chart_settings` (Attributes) Chart settings for the Cost Report. (see [below for nested schema](#nestedatt--chart_settings))
 - `chart_type` (String) Chart type to apply to the Cost Report.
-- `date_bin` (String) Date bin to apply to the Cost Report.
+- `date_bin` (String) Date bin to apply to the Cost Report. Allowed values: `cumulative`, `day`, `week`, `month`, `quarter`, `hour`.
 - `date_interval` (String) Date interval to apply to the Cost Report.
 - `end_date` (String) End date to apply to the Cost Report.
 - `filter` (String) Filter query to apply to the Cost Report
@@ -83,6 +83,7 @@ Optional:
 
 - `aggregate_by` (String) Report will aggregate by cost or usage.
 - `amortize` (Boolean) Report will amortize.
+- `complete_period` (Boolean) Report will restrict date ranges to completed periods only.
 - `include_credits` (Boolean) Report will include credits.
 - `include_discounts` (Boolean) Report will include discounts.
 - `include_refunds` (Boolean) Report will include refunds.
