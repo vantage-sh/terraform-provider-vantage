@@ -337,6 +337,20 @@ resources:
       path: /cost_reports/{cost_report_token}
       method: DELETE
     schema:
+      ignores:
+        # default_forecast is currently unsupported by vantage-go@v0.1.4
+        # (Create/Update/Read models omit it). Suppress it in the generated
+        # schema so users don't see an unwirable Computed nested attribute
+        # with no sub-fields, which would render as a permanent
+        # (known after apply) drift. Re-enable once the SDK exposes it.
+        - default_forecast
+        # business_metric_tokens_with_metadata.{calculation_type,label,label_filters}
+        # are new in the swagger but absent from vantage-go@v0.1.4's
+        # {Create,Update}CostReportBusinessMetricTokensWithMetadataItems0
+        # struct, so we cannot round-trip them yet. Ignore them for now.
+        - business_metric_tokens_with_metadata.calculation_type
+        - business_metric_tokens_with_metadata.label
+        - business_metric_tokens_with_metadata.label_filters
       attributes:
         overrides:
           token:

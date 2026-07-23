@@ -77,8 +77,8 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 					"y_axis_dimension": schema.StringAttribute{
 						Optional:            true,
 						Computed:            true,
-						Description:         "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.",
-						MarkdownDescription: "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.",
+						Description:         "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
+						MarkdownDescription: "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
 					},
 				},
 				CustomType: ChartSettingsType{
@@ -124,6 +124,7 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 						"week",
 						"month",
 						"quarter",
+						"hour",
 					),
 				},
 				Default: stringdefault.StaticString("cumulative"),
@@ -175,8 +176,8 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 			"groupings": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Grouping values for aggregating costs on the report. Valid groupings: account_id, billing_account_id, charge_type, cost_category, cost_subcategory, provider, region, resource_id, service, tagged, tag:<tag_value>. If providing multiple groupings, join as comma separated values: groupings=provider,service,region",
-				MarkdownDescription: "Grouping values for aggregating costs on the report. Valid groupings: account_id, billing_account_id, charge_type, cost_category, cost_subcategory, provider, region, resource_id, service, tagged, tag:<tag_value>. If providing multiple groupings, join as comma separated values: groupings=provider,service,region",
+				Description:         "Grouping values for aggregating costs on the report. Valid groupings: account_id, billing_account_id, charge_type, cost_category, cost_subcategory, provider, region, resource_id, service, tagged, usage_unit, tag:<tag_value>. If providing multiple groupings, join as comma separated values: groupings=provider,service,region",
+				MarkdownDescription: "Grouping values for aggregating costs on the report. Valid groupings: account_id, billing_account_id, charge_type, cost_category, cost_subcategory, provider, region, resource_id, service, tagged, usage_unit, tag:<tag_value>. If providing multiple groupings, join as comma separated values: groupings=provider,service,region",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -216,6 +217,13 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 						Description:         "Report will amortize.",
 						MarkdownDescription: "Report will amortize.",
 						Default:             booldefault.StaticBool(true),
+					},
+					"complete_period": schema.BoolAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "Report will restrict date ranges to completed periods only.",
+						MarkdownDescription: "Report will restrict date ranges to completed periods only.",
+						Default:             booldefault.StaticBool(false),
 					},
 					"include_credits": schema.BoolAttribute{
 						Optional:            true,
@@ -1247,6 +1255,24 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 			fmt.Sprintf(`amortize expected to be basetypes.BoolValue, was: %T`, amortizeAttribute))
 	}
 
+	completePeriodAttribute, ok := attributes["complete_period"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`complete_period is missing from object`)
+
+		return nil, diags
+	}
+
+	completePeriodVal, ok := completePeriodAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`complete_period expected to be basetypes.BoolValue, was: %T`, completePeriodAttribute))
+	}
+
 	includeCreditsAttribute, ok := attributes["include_credits"]
 
 	if !ok {
@@ -1362,6 +1388,7 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 	return SettingsValue{
 		AggregateBy:        aggregateByVal,
 		Amortize:           amortizeVal,
+		CompletePeriod:     completePeriodVal,
 		IncludeCredits:     includeCreditsVal,
 		IncludeDiscounts:   includeDiscountsVal,
 		IncludeRefunds:     includeRefundsVal,
@@ -1471,6 +1498,24 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 			fmt.Sprintf(`amortize expected to be basetypes.BoolValue, was: %T`, amortizeAttribute))
 	}
 
+	completePeriodAttribute, ok := attributes["complete_period"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`complete_period is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	completePeriodVal, ok := completePeriodAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`complete_period expected to be basetypes.BoolValue, was: %T`, completePeriodAttribute))
+	}
+
 	includeCreditsAttribute, ok := attributes["include_credits"]
 
 	if !ok {
@@ -1586,6 +1631,7 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 	return SettingsValue{
 		AggregateBy:        aggregateByVal,
 		Amortize:           amortizeVal,
+		CompletePeriod:     completePeriodVal,
 		IncludeCredits:     includeCreditsVal,
 		IncludeDiscounts:   includeDiscountsVal,
 		IncludeRefunds:     includeRefundsVal,
@@ -1666,6 +1712,7 @@ var _ basetypes.ObjectValuable = SettingsValue{}
 type SettingsValue struct {
 	AggregateBy        basetypes.StringValue `tfsdk:"aggregate_by"`
 	Amortize           basetypes.BoolValue   `tfsdk:"amortize"`
+	CompletePeriod     basetypes.BoolValue   `tfsdk:"complete_period"`
 	IncludeCredits     basetypes.BoolValue   `tfsdk:"include_credits"`
 	IncludeDiscounts   basetypes.BoolValue   `tfsdk:"include_discounts"`
 	IncludeRefunds     basetypes.BoolValue   `tfsdk:"include_refunds"`
@@ -1676,13 +1723,14 @@ type SettingsValue struct {
 }
 
 func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 8)
+	attrTypes := make(map[string]tftypes.Type, 9)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["aggregate_by"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["amortize"] = basetypes.BoolType{}.TerraformType(ctx)
+	attrTypes["complete_period"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["include_credits"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["include_discounts"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["include_refunds"] = basetypes.BoolType{}.TerraformType(ctx)
@@ -1694,7 +1742,7 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 8)
+		vals := make(map[string]tftypes.Value, 9)
 
 		val, err = v.AggregateBy.ToTerraformValue(ctx)
 
@@ -1711,6 +1759,14 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 		}
 
 		vals["amortize"] = val
+
+		val, err = v.CompletePeriod.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["complete_period"] = val
 
 		val, err = v.IncludeCredits.ToTerraformValue(ctx)
 
@@ -1792,6 +1848,7 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 	attributeTypes := map[string]attr.Type{
 		"aggregate_by":         basetypes.StringType{},
 		"amortize":             basetypes.BoolType{},
+		"complete_period":      basetypes.BoolType{},
 		"include_credits":      basetypes.BoolType{},
 		"include_discounts":    basetypes.BoolType{},
 		"include_refunds":      basetypes.BoolType{},
@@ -1813,6 +1870,7 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 		map[string]attr.Value{
 			"aggregate_by":         v.AggregateBy,
 			"amortize":             v.Amortize,
+			"complete_period":      v.CompletePeriod,
 			"include_credits":      v.IncludeCredits,
 			"include_discounts":    v.IncludeDiscounts,
 			"include_refunds":      v.IncludeRefunds,
@@ -1844,6 +1902,10 @@ func (v SettingsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.Amortize.Equal(other.Amortize) {
+		return false
+	}
+
+	if !v.CompletePeriod.Equal(other.CompletePeriod) {
 		return false
 	}
 
@@ -1886,6 +1948,7 @@ func (v SettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type 
 	return map[string]attr.Type{
 		"aggregate_by":         basetypes.StringType{},
 		"amortize":             basetypes.BoolType{},
+		"complete_period":      basetypes.BoolType{},
 		"include_credits":      basetypes.BoolType{},
 		"include_discounts":    basetypes.BoolType{},
 		"include_refunds":      basetypes.BoolType{},
