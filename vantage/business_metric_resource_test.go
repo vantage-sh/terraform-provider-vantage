@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -18,154 +17,65 @@ import (
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
 )
 
-func TestCostReportTokenComputedAttrsToInvalidate(t *testing.T) {
+func TestCostReportAttachmentLabelForAPI(t *testing.T) {
+	if got := costReportAttachmentLabelForAPI(types.StringNull()); got != "" {
+		t.Fatalf("expected empty string for null, got %q", got)
+	}
+	if got := costReportAttachmentLabelForAPI(types.StringUnknown()); got != "" {
+		t.Fatalf("expected empty string for unknown, got %q", got)
+	}
+	if got := costReportAttachmentLabelForAPI(types.StringValue("Custom")); got != "Custom" {
+		t.Fatalf("expected Custom, got %q", got)
+	}
+}
+
+func TestBusinessMetricOmittedAttachmentLabelPayload(t *testing.T) {
 	ctx := context.Background()
 	attrTypes := costReportTokenAttrTypes()
-
-	makeToken := func(token, calcType string, label types.String, labelFilters types.Map) attr.Value {
-		labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
-		if err != nil {
-			t.Fatalf("failed to create label_filter: %v", err)
-		}
-		if labelFilters.IsNull() {
-			labelFilters = emptyLabelFiltersMap()
-		}
-		obj, err := types.ObjectValue(attrTypes, map[string]attr.Value{
-			"cost_report_token": types.StringValue(token),
-			"unit_scale":        types.StringValue("per_unit"),
-			"calculation_type":  types.StringValue(calcType),
-			"label":             label,
-			"label_filter":      labelFilter,
-			"label_filters":     labelFilters,
-		})
-		if err != nil {
-			t.Fatalf("failed to create token object: %v", err)
-		}
-		return obj
+	labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
+	if err != nil {
+		t.Fatalf("failed to create label_filter: %v", err)
 	}
 
-	makeFilters := func(values map[string][]string) types.Map {
-		m, err := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, values)
-		if err != nil {
-			t.Fatalf("failed to create label_filters: %v", err)
-		}
-		return m
+	token, err := types.ObjectValue(attrTypes, map[string]attr.Value{
+		"cost_report_token": types.StringValue("rprt_1"),
+		"unit_scale":        types.StringValue("per_unit"),
+		"calculation_type":  types.StringValue("gross_margin"),
+		"label":             types.StringNull(),
+		"label_filter":      labelFilter,
+		"label_filters":     emptyLabelFiltersMap(),
+	})
+	if err != nil {
+		t.Fatalf("failed to create token: %v", err)
+	}
+	list, err := types.ListValue(types.ObjectType{AttrTypes: attrTypes}, []attr.Value{token})
+	if err != nil {
+		t.Fatalf("failed to create token list: %v", err)
 	}
 
-	makeModel := func(tokens ...attr.Value) *businessMetricResourceModel {
-		list, err := types.ListValue(types.ObjectType{AttrTypes: attrTypes}, tokens)
-		if err != nil {
-			t.Fatalf("failed to create tokens list: %v", err)
-		}
-		return &businessMetricResourceModel{CostReportTokensWithMetadata: list}
+	model := &businessMetricResourceModel{
+		Title:                        types.StringValue("Omitted Label"),
+		Token:                        types.StringValue("bmetr_test"),
+		CostReportTokensWithMetadata: list,
 	}
 
-	t.Run("invalidates omitted label when calculation_type changes", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
-		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
-		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringNull(), emptyLabelFiltersMap()))
+	var d diag.Diagnostics
+	createPayload := model.toCreate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if createPayload.CostReportTokensWithMetadata[0].Label != "" {
+		t.Fatalf("expected omitted create label to be empty, got %q", createPayload.CostReportTokensWithMetadata[0].Label)
+	}
 
-		var diags diag.Diagnostics
-		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
-		if diags.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", diags)
-		}
-		if len(result.LabelPaths) != 1 {
-			t.Fatalf("expected 1 label path, got %d (%v)", len(result.LabelPaths), result.LabelPaths)
-		}
-		expected := path.Root("cost_report_tokens_with_metadata").AtListIndex(0).AtName("label")
-		if !result.LabelPaths[0].Equal(expected) {
-			t.Fatalf("expected %s, got %s", expected, result.LabelPaths[0])
-		}
-	})
-
-	t.Run("keeps omitted derived label when calculation_type unchanged", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
-		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
-		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), emptyLabelFiltersMap()))
-
-		var diags diag.Diagnostics
-		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
-		if diags.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", diags)
-		}
-		if len(result.LabelPaths) != 0 {
-			t.Fatalf("expected no label paths, got %v", result.LabelPaths)
-		}
-	})
-
-	t.Run("invalidates wrong label after reorder by index", func(t *testing.T) {
-		// State was [A=LabelA, B=LabelB]. Config reorders to [B, A] omitting labels.
-		// Index-based carryover can leave plan as [B=LabelA, A=LabelB].
-		state := makeModel(
-			makeToken("rprt_A", "unit_cost", types.StringValue("LabelA"), emptyLabelFiltersMap()),
-			makeToken("rprt_B", "unit_cost", types.StringValue("LabelB"), emptyLabelFiltersMap()),
-		)
-		plan := makeModel(
-			makeToken("rprt_B", "unit_cost", types.StringValue("LabelA"), emptyLabelFiltersMap()),
-			makeToken("rprt_A", "unit_cost", types.StringValue("LabelB"), emptyLabelFiltersMap()),
-		)
-		config := makeModel(
-			makeToken("rprt_B", "unit_cost", types.StringNull(), emptyLabelFiltersMap()),
-			makeToken("rprt_A", "unit_cost", types.StringNull(), emptyLabelFiltersMap()),
-		)
-
-		var diags diag.Diagnostics
-		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
-		if diags.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", diags)
-		}
-		if len(result.LabelPaths) != 2 {
-			t.Fatalf("expected 2 label paths, got %d (%v)", len(result.LabelPaths), result.LabelPaths)
-		}
-	})
-
-	t.Run("keeps explicit config label", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
-		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom"), emptyLabelFiltersMap()))
-		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom"), emptyLabelFiltersMap()))
-
-		var diags diag.Diagnostics
-		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
-		if diags.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", diags)
-		}
-		if len(result.LabelPaths) != 0 {
-			t.Fatalf("expected no label paths, got %v", result.LabelPaths)
-		}
-	})
-
-	t.Run("invalidates omitted label_filters", func(t *testing.T) {
-		filters := makeFilters(map[string][]string{"team": {"platform"}})
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
-		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
-		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), types.MapNull(types.ListType{ElemType: types.StringType})))
-
-		var diags diag.Diagnostics
-		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
-		if diags.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", diags)
-		}
-		if len(result.LabelFiltersPaths) != 1 {
-			t.Fatalf("expected 1 label_filters path, got %d (%v)", len(result.LabelFiltersPaths), result.LabelFiltersPaths)
-		}
-	})
-
-	t.Run("keeps explicit config label_filters", func(t *testing.T) {
-		filters := makeFilters(map[string][]string{"team": {"platform"}})
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
-		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
-		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
-
-		var diags diag.Diagnostics
-		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
-		if diags.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", diags)
-		}
-		if len(result.LabelFiltersPaths) != 0 {
-			t.Fatalf("expected no label_filters paths, got %v", result.LabelFiltersPaths)
-		}
-	})
+	d = diag.Diagnostics{}
+	updatePayload := model.toUpdate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if updatePayload.CostReportTokensWithMetadata[0].Label != "" {
+		t.Fatalf("expected omitted update label to be empty, got %q", updatePayload.CostReportTokensWithMetadata[0].Label)
+	}
 }
 
 // TestAssignCostReportTokens_OrderPreservation tests that assignCostReportTokens

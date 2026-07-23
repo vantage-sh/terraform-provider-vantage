@@ -568,7 +568,7 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
 				CalculationType: calculationTypePointer(v.CalculationType),
-				Label:           v.Label.ValueString(),
+				Label:           costReportAttachmentLabelForAPI(v.Label),
 				LabelFilter:     tfLabelFilter,
 				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
 			}
@@ -723,7 +723,7 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
 				CalculationType: calculationTypePointer(v.CalculationType),
-				Label:           v.Label.ValueString(),
+				Label:           costReportAttachmentLabelForAPI(v.Label),
 				LabelFilter:     tfLabelFilter,
 				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
 			}
@@ -1019,4 +1019,14 @@ func calculationTypePointer(v types.String) *string {
 		return &unitCost
 	}
 	return v.ValueStringPointer()
+}
+
+// costReportAttachmentLabelForAPI returns the attachment label for create/update
+// payloads. Null or unknown (config omitted the attribute) become "" so the
+// SDK's omitempty tag drops the JSON key entirely.
+func costReportAttachmentLabelForAPI(v types.String) string {
+	if v.IsNull() || v.IsUnknown() {
+		return ""
+	}
+	return v.ValueString()
 }
