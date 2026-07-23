@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -196,9 +195,12 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 						Computed:            true,
 					},
 					"y_axis_dimension": schema.StringAttribute{
-						MarkdownDescription: "The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage'. Defaults to 'cost'.",
+						MarkdownDescription: "The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
 						Optional:            true,
 						Computed:            true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("cost", "usage", "count"),
+						},
 					},
 				},
 			},
@@ -215,9 +217,6 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Settings for the Cost Report.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"include_credits": schema.BoolAttribute{
 						MarkdownDescription: "Report will include credits.",
@@ -250,15 +249,15 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 						Computed:            true,
 					},
 					"aggregate_by": schema.StringAttribute{
-						MarkdownDescription: "Report will aggregate by cost or usage.",
+						MarkdownDescription: "Report will aggregate by cost, usage, or count.",
 						Optional:            true,
 						Computed:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf("cost", "usage"),
+							stringvalidator.OneOf("cost", "usage", "count"),
 						},
 					},
 					"show_previous_period": schema.BoolAttribute{
-						MarkdownDescription: "Report will show previous period costs or usage comparison.",
+						MarkdownDescription: "Report will show previous period cost, usage, or count comparison.",
 						Optional:            true,
 						Computed:            true,
 					},
