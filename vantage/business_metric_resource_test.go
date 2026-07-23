@@ -1384,3 +1384,35 @@ func TestBusinessMetricLabelFiltersPayload(t *testing.T) {
 		t.Fatalf("unexpected label_filters payload: %#v", got)
 	}
 }
+
+func TestLabelFiltersToAPIEmptyMap(t *testing.T) {
+	ctx := context.Background()
+	elemType := types.ListType{ElemType: types.StringType}
+
+	testCases := map[string]types.Map{
+		"null":    types.MapNull(elemType),
+		"unknown": types.MapUnknown(elemType),
+	}
+
+	emptyMap, err := types.MapValueFrom(ctx, elemType, map[string][]string{})
+	if err != nil {
+		t.Fatalf("failed to create empty label_filters map: %v", err)
+	}
+	testCases["empty"] = emptyMap
+
+	for name, input := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			got := labelFiltersToAPI(ctx, input, &diags)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+			if got == nil {
+				t.Fatal("expected empty map, got nil")
+			}
+			if len(got) != 0 {
+				t.Fatalf("expected empty map, got %#v", got)
+			}
+		})
+	}
+}

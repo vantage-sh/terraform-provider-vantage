@@ -62,15 +62,12 @@ func emptyLabelFiltersMap() types.Map {
 
 func labelFiltersToAPI(ctx context.Context, v types.Map, diags *diag.Diagnostics) map[string][]string {
 	if v.IsNull() || v.IsUnknown() {
-		return nil
+		return map[string][]string{}
 	}
 
 	out := map[string][]string{}
 	diags.Append(v.ElementsAs(ctx, &out, false)...)
 	if diags.HasError() {
-		return nil
-	}
-	if len(out) == 0 {
 		return nil
 	}
 	return out
