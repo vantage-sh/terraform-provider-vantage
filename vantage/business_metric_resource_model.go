@@ -845,14 +845,10 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 			}
 
 			label := apiToken.Label
-			if (label.IsNull() || label.IsUnknown()) && !planToken.Label.IsNull() && !planToken.Label.IsUnknown() {
-				label = planToken.Label
-			}
 
+			// Trust the API for label_filters so omitting them from config clears
+			// prior filters instead of re-sticking planned values into state.
 			labelFilters := apiToken.LabelFilters
-			if (labelFilters.IsNull() || labelFilters.IsUnknown()) && !planToken.LabelFilters.IsNull() && !planToken.LabelFilters.IsUnknown() {
-				labelFilters = planToken.LabelFilters
-			}
 			if labelFilters.IsNull() || labelFilters.IsUnknown() {
 				labelFilters = emptyLabelFiltersMap()
 			}

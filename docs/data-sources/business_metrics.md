@@ -31,6 +31,7 @@ Read-Only:
 - `id` (String) The id of the BusinessMetric.
 - `import_type` (String) The type of import for the BusinessMetric.
 - `integration_token` (String) The Integration token used to import the BusinessMetric.
+- `snowflake_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--snowflake_metric_fields))
 - `title` (String) The title of the BusinessMetric.
 - `token` (String) The token of the BusinessMetric.
 
@@ -61,8 +62,11 @@ Read-Only:
 
 Read-Only:
 
+- `calculation_type` (String) The calculation type applied when this BusinessMetric is used in the CostReport.
 - `cost_report_token` (String) The token of the CostReport the BusinessMetric is attached to.
+- `label` (String) Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.
 - `label_filter` (List of String) The labels that the BusinessMetric is filtered by within a particular CostReport.
+- `label_filters` (Map of List of String) The ClickHouse BusinessMetric label filters applied within a CostReport. Each key is required and values within a key are alternatives.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within a particular CostReport.
 
 
@@ -74,3 +78,9 @@ Read-Only:
 - `query` (String) The query used to import Datadog metrics.
 
 
+<a id="nestedatt--business_metrics--snowflake_metric_fields"></a>
+### Nested Schema for `business_metrics.snowflake_metric_fields`
+
+Read-Only:
+
+- `sql_query` (String) Snowflake SQL query returning date, value, and optional label columns.

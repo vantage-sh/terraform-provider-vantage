@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -90,23 +89,15 @@ func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
 		attr.NestedObject.Attributes["calculation_type"] = calcAttr
 	}
 
-	if labelAttr, ok := attr.NestedObject.Attributes["label"].(schema.StringAttribute); ok {
-		labelAttr.PlanModifiers = append(labelAttr.PlanModifiers, stringplanmodifier.UseStateForUnknown())
-		attr.NestedObject.Attributes["label"] = labelAttr
-	}
-
-	if labelFiltersAttr, ok := attr.NestedObject.Attributes["label_filters"].(schema.MapAttribute); ok {
-		labelFiltersAttr.PlanModifiers = append(labelFiltersAttr.PlanModifiers, mapplanmodifier.UseStateForUnknown())
-		attr.NestedObject.Attributes["label_filters"] = labelFiltersAttr
-	}
-
+	// Do not UseStateForUnknown for label / label_filters: omission must clear the
+	// prior value (API default / empty filters). Index-based state carryover also
+	// mis-attributes values when attachments are reordered.
 	attrs["cost_report_tokens_with_metadata"] = attr
 }
 
-// ModifyPlan marks omitted attachment labels unknown when calculation_type changes.
-// UseStateForUnknown otherwise copies the prior derived label into the plan as a
-// known value; after apply the API returns a newly derived label and Terraform
-// reports an inconsistent result. Unknown planned labels accept the API value.
+// ModifyPlan clears omitted attachment label / label_filters that are still known
+// in the plan (sticky carryover, reorder-by-index, or calculation_type changes) so
+// apply can accept the API result without an inconsistent-result error.
 func (r *businessMetricResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
@@ -120,38 +111,55 @@ func (r *businessMetricResource) ModifyPlan(ctx context.Context, req resource.Mo
 		return
 	}
 
-	for _, p := range costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &resp.Diagnostics) {
+	toInvalidate := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, p := range toInvalidate.LabelPaths {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.StringUnknown())...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.StringUnknown())...)
+	}
+	for _, p := range toInvalidate.LabelFiltersPaths {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.MapUnknown(types.ListType{ElemType: types.StringType}))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 }
 
-// costReportTokenLabelPathsToInvalidate returns paths of nested labels that must
-// be planned as unknown: config omits label and calculation_type differs from state.
-func costReportTokenLabelPathsToInvalidate(ctx context.Context, plan, state, config *businessMetricResourceModel, diags *diag.Diagnostics) []path.Path {
+type costReportTokenComputedAttrsToInvalidateResult struct {
+	LabelPaths        []path.Path
+	LabelFiltersPaths []path.Path
+}
+
+// costReportTokenComputedAttrsToInvalidate finds nested label / label_filters that
+// must be planned unknown because config omitted them while plan/state still hold
+// a prior value (including wrong values copied across reordered attachments).
+func costReportTokenComputedAttrsToInvalidate(ctx context.Context, plan, state, config *businessMetricResourceModel, diags *diag.Diagnostics) costReportTokenComputedAttrsToInvalidateResult {
+	var result costReportTokenComputedAttrsToInvalidateResult
 	if plan.CostReportTokensWithMetadata.IsNull() || plan.CostReportTokensWithMetadata.IsUnknown() {
-		return nil
-	}
-	if state.CostReportTokensWithMetadata.IsNull() || state.CostReportTokensWithMetadata.IsUnknown() {
-		return nil
+		return result
 	}
 
 	planTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(plan.CostReportTokensWithMetadata.Elements()))
 	diags.Append(plan.CostReportTokensWithMetadata.ElementsAs(ctx, &planTokens, false)...)
 	if diags.HasError() {
-		return nil
+		return result
 	}
 
 	stateByToken := map[string]*businessMetricResourceModelCostReportToken{}
-	stateTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(state.CostReportTokensWithMetadata.Elements()))
-	diags.Append(state.CostReportTokensWithMetadata.ElementsAs(ctx, &stateTokens, false)...)
-	if diags.HasError() {
-		return nil
-	}
-	for _, token := range stateTokens {
-		stateByToken[token.CostReportToken.ValueString()] = token
+	if !state.CostReportTokensWithMetadata.IsNull() && !state.CostReportTokensWithMetadata.IsUnknown() {
+		stateTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(state.CostReportTokensWithMetadata.Elements()))
+		diags.Append(state.CostReportTokensWithMetadata.ElementsAs(ctx, &stateTokens, false)...)
+		if diags.HasError() {
+			return result
+		}
+		for _, token := range stateTokens {
+			stateByToken[token.CostReportToken.ValueString()] = token
+		}
 	}
 
 	configByToken := map[string]*businessMetricResourceModelCostReportToken{}
@@ -159,31 +167,100 @@ func costReportTokenLabelPathsToInvalidate(ctx context.Context, plan, state, con
 		configTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(config.CostReportTokensWithMetadata.Elements()))
 		diags.Append(config.CostReportTokensWithMetadata.ElementsAs(ctx, &configTokens, false)...)
 		if diags.HasError() {
-			return nil
+			return result
 		}
 		for _, token := range configTokens {
 			configByToken[token.CostReportToken.ValueString()] = token
 		}
 	}
 
-	var paths []path.Path
 	for i, planToken := range planTokens {
 		tokenKey := planToken.CostReportToken.ValueString()
-		if configToken, ok := configByToken[tokenKey]; ok && !configToken.Label.IsNull() && !configToken.Label.IsUnknown() {
-			continue
+		configToken := configByToken[tokenKey]
+		stateToken := stateByToken[tokenKey]
+		basePath := path.Root("cost_report_tokens_with_metadata").AtListIndex(i)
+
+		if configOmitsString(configToken, func(t *businessMetricResourceModelCostReportToken) types.String { return t.Label }) {
+			if shouldInvalidateOmittedComputed(planToken.Label, stateTokenLabel(stateToken), stateTokenCalculationType(stateToken), planToken.CalculationType) {
+				result.LabelPaths = append(result.LabelPaths, basePath.AtName("label"))
+			}
 		}
 
-		stateToken, ok := stateByToken[tokenKey]
-		if !ok {
-			continue
+		if configOmitsMap(configToken, func(t *businessMetricResourceModelCostReportToken) types.Map { return t.LabelFilters }) {
+			if shouldInvalidateOmittedComputedMap(planToken.LabelFilters, stateTokenLabelFilters(stateToken)) {
+				result.LabelFiltersPaths = append(result.LabelFiltersPaths, basePath.AtName("label_filters"))
+			}
 		}
-		if planToken.CalculationType.Equal(stateToken.CalculationType) {
-			continue
-		}
-
-		paths = append(paths, path.Root("cost_report_tokens_with_metadata").AtListIndex(i).AtName("label"))
 	}
-	return paths
+	return result
+}
+
+func configOmitsString(configToken *businessMetricResourceModelCostReportToken, getter func(*businessMetricResourceModelCostReportToken) types.String) bool {
+	if configToken == nil {
+		return true
+	}
+	v := getter(configToken)
+	return v.IsNull() || v.IsUnknown()
+}
+
+func configOmitsMap(configToken *businessMetricResourceModelCostReportToken, getter func(*businessMetricResourceModelCostReportToken) types.Map) bool {
+	if configToken == nil {
+		return true
+	}
+	v := getter(configToken)
+	return v.IsNull() || v.IsUnknown()
+}
+
+func stateTokenLabel(stateToken *businessMetricResourceModelCostReportToken) types.String {
+	if stateToken == nil {
+		return types.StringNull()
+	}
+	return stateToken.Label
+}
+
+func stateTokenLabelFilters(stateToken *businessMetricResourceModelCostReportToken) types.Map {
+	if stateToken == nil {
+		return types.MapNull(types.ListType{ElemType: types.StringType})
+	}
+	return stateToken.LabelFilters
+}
+
+func stateTokenCalculationType(stateToken *businessMetricResourceModelCostReportToken) types.String {
+	if stateToken == nil {
+		return types.StringNull()
+	}
+	return stateToken.CalculationType
+}
+
+// shouldInvalidateOmittedComputed is true when an omitted Optional+Computed string
+// still has a known plan/state value to clear, including reorder mismatches and
+// calculation_type changes that should re-derive the API default.
+func shouldInvalidateOmittedComputed(planValue, stateValue, stateCalcType, planCalcType types.String) bool {
+	if planValue.IsUnknown() {
+		return false
+	}
+	// Known planned value with config omitted — sticky carryover or reorder.
+	if !planValue.IsNull() {
+		return true
+	}
+	// Plan null but prior state still has a value — force unknown so apply clears it.
+	if !stateValue.IsNull() && !stateValue.IsUnknown() {
+		return true
+	}
+	if !stateCalcType.IsNull() && !stateCalcType.IsUnknown() && !planCalcType.Equal(stateCalcType) {
+		return true
+	}
+	return false
+}
+
+func shouldInvalidateOmittedComputedMap(planValue, stateValue types.Map) bool {
+	if planValue.IsUnknown() {
+		return false
+	}
+	if !planValue.IsNull() {
+		return true
+	}
+	return !stateValue.IsNull() && !stateValue.IsUnknown()
 }
 
 func (r *businessMetricResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

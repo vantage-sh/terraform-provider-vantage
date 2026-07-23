@@ -15,16 +15,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
 )
 
-func TestCostReportTokenLabelPathsToInvalidate(t *testing.T) {
+func TestCostReportTokenComputedAttrsToInvalidate(t *testing.T) {
 	ctx := context.Background()
 	attrTypes := costReportTokenAttrTypes()
 
-	makeToken := func(token, calcType string, label types.String) attr.Value {
+	makeToken := func(token, calcType string, label types.String, labelFilters types.Map) attr.Value {
 		labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
 		if err != nil {
 			t.Fatalf("failed to create label_filter: %v", err)
+		}
+		if labelFilters.IsNull() {
+			labelFilters = emptyLabelFiltersMap()
 		}
 		obj, err := types.ObjectValue(attrTypes, map[string]attr.Value{
 			"cost_report_token": types.StringValue(token),
@@ -32,12 +36,20 @@ func TestCostReportTokenLabelPathsToInvalidate(t *testing.T) {
 			"calculation_type":  types.StringValue(calcType),
 			"label":             label,
 			"label_filter":      labelFilter,
-			"label_filters":     emptyLabelFiltersMap(),
+			"label_filters":     labelFilters,
 		})
 		if err != nil {
 			t.Fatalf("failed to create token object: %v", err)
 		}
 		return obj
+	}
+
+	makeFilters := func(values map[string][]string) types.Map {
+		m, err := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, values)
+		if err != nil {
+			t.Fatalf("failed to create label_filters: %v", err)
+		}
+		return m
 	}
 
 	makeModel := func(tokens ...attr.Value) *businessMetricResourceModel {
@@ -49,51 +61,109 @@ func TestCostReportTokenLabelPathsToInvalidate(t *testing.T) {
 	}
 
 	t.Run("invalidates omitted label when calculation_type changes", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
-		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Per Widgets")))
-		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringNull()))
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
+		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
+		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringNull(), emptyLabelFiltersMap()))
 
 		var diags diag.Diagnostics
-		paths := costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &diags)
+		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
 		if diags.HasError() {
 			t.Fatalf("unexpected diagnostics: %v", diags)
 		}
-		if len(paths) != 1 {
-			t.Fatalf("expected 1 path, got %d (%v)", len(paths), paths)
+		if len(result.LabelPaths) != 1 {
+			t.Fatalf("expected 1 label path, got %d (%v)", len(result.LabelPaths), result.LabelPaths)
 		}
 		expected := path.Root("cost_report_tokens_with_metadata").AtListIndex(0).AtName("label")
-		if !paths[0].Equal(expected) {
-			t.Fatalf("expected %s, got %s", expected, paths[0])
+		if !result.LabelPaths[0].Equal(expected) {
+			t.Fatalf("expected %s, got %s", expected, result.LabelPaths[0])
+		}
+	})
+
+	t.Run("invalidates omitted label without calculation_type change", func(t *testing.T) {
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Custom"), emptyLabelFiltersMap()))
+		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Custom"), emptyLabelFiltersMap()))
+		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), emptyLabelFiltersMap()))
+
+		var diags diag.Diagnostics
+		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if len(result.LabelPaths) != 1 {
+			t.Fatalf("expected 1 label path, got %d (%v)", len(result.LabelPaths), result.LabelPaths)
+		}
+	})
+
+	t.Run("invalidates wrong label after reorder by index", func(t *testing.T) {
+		// State was [A=LabelA, B=LabelB]. Config reorders to [B, A] omitting labels.
+		// Index-based carryover can leave plan as [B=LabelA, A=LabelB].
+		state := makeModel(
+			makeToken("rprt_A", "unit_cost", types.StringValue("LabelA"), emptyLabelFiltersMap()),
+			makeToken("rprt_B", "unit_cost", types.StringValue("LabelB"), emptyLabelFiltersMap()),
+		)
+		plan := makeModel(
+			makeToken("rprt_B", "unit_cost", types.StringValue("LabelA"), emptyLabelFiltersMap()),
+			makeToken("rprt_A", "unit_cost", types.StringValue("LabelB"), emptyLabelFiltersMap()),
+		)
+		config := makeModel(
+			makeToken("rprt_B", "unit_cost", types.StringNull(), emptyLabelFiltersMap()),
+			makeToken("rprt_A", "unit_cost", types.StringNull(), emptyLabelFiltersMap()),
+		)
+
+		var diags diag.Diagnostics
+		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if len(result.LabelPaths) != 2 {
+			t.Fatalf("expected 2 label paths, got %d (%v)", len(result.LabelPaths), result.LabelPaths)
 		}
 	})
 
 	t.Run("keeps explicit config label", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
-		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom")))
-		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom")))
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets"), emptyLabelFiltersMap()))
+		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom"), emptyLabelFiltersMap()))
+		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom"), emptyLabelFiltersMap()))
 
 		var diags diag.Diagnostics
-		paths := costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &diags)
+		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
 		if diags.HasError() {
 			t.Fatalf("unexpected diagnostics: %v", diags)
 		}
-		if len(paths) != 0 {
-			t.Fatalf("expected no paths, got %v", paths)
+		if len(result.LabelPaths) != 0 {
+			t.Fatalf("expected no label paths, got %v", result.LabelPaths)
 		}
 	})
 
-	t.Run("keeps omitted label when calculation_type unchanged", func(t *testing.T) {
-		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
-		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
-		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull()))
+	t.Run("invalidates omitted label_filters", func(t *testing.T) {
+		filters := makeFilters(map[string][]string{"team": {"platform"}})
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
+		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
+		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), types.MapNull(types.ListType{ElemType: types.StringType})))
 
 		var diags diag.Diagnostics
-		paths := costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &diags)
+		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
 		if diags.HasError() {
 			t.Fatalf("unexpected diagnostics: %v", diags)
 		}
-		if len(paths) != 0 {
-			t.Fatalf("expected no paths, got %v", paths)
+		if len(result.LabelFiltersPaths) != 1 {
+			t.Fatalf("expected 1 label_filters path, got %d (%v)", len(result.LabelFiltersPaths), result.LabelFiltersPaths)
+		}
+	})
+
+	t.Run("keeps explicit config label_filters", func(t *testing.T) {
+		filters := makeFilters(map[string][]string{"team": {"platform"}})
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
+		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
+		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull(), filters))
+
+		var diags diag.Diagnostics
+		result := costReportTokenComputedAttrsToInvalidate(ctx, plan, state, config, &diags)
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if len(result.LabelFiltersPaths) != 0 {
+			t.Fatalf("expected no label_filters paths, got %v", result.LabelFiltersPaths)
 		}
 	})
 }
@@ -767,6 +837,87 @@ resource "vantage_business_metric" %[1]q {
 `, id, title)
 }
 
+func TestAccBusinessMetric_costReportMetadataLabelAndCalculationType(t *testing.T) {
+	resourceName := "vantage_business_metric.test-metadata"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBusinessMetricTf_costReportMetadata(
+					"test-metadata",
+					"Metadata Test",
+					"gross_margin",
+					`label = "Custom Gross Margin"`,
+					`label_filter = ["alpha"]`,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.calculation_type", "gross_margin"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label", "Custom Gross Margin"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.0", "alpha"),
+				),
+			},
+			{
+				Config: testAccVantageBusinessMetricTf_costReportMetadata(
+					"test-metadata",
+					"Metadata Test Updated",
+					"raw_business_metric",
+					"",
+					`label_filter = []`,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", "Metadata Test Updated"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.calculation_type", "raw_business_metric"),
+					resource.TestCheckNoResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label"),
+					resource.TestCheckResourceAttr(resourceName, "cost_report_tokens_with_metadata.0.label_filter.#", "0"),
+				),
+			},
+			{
+				Config:             testAccVantageBusinessMetricTf_costReportMetadata("test-metadata", "Metadata Test Updated", "raw_business_metric", "", `label_filter = []`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageBusinessMetricTf_costReportMetadata(id, title, calculationType, labelLine, labelFilterLine string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "report" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Report for Business Metric Metadata Test"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_business_metric" %[1]q {
+  title = %[2]q
+
+  values = [
+    {
+      date   = "2024-01-01"
+      amount = 10
+    }
+  ]
+
+  cost_report_tokens_with_metadata = [
+    {
+      cost_report_token = vantage_cost_report.report.token
+      unit_scale        = "per_unit"
+      calculation_type  = %[3]q
+      %[4]s
+      %[5]s
+    }
+  ]
+}
+`, id, title, calculationType, labelLine, labelFilterLine)
+}
+
 // TestAccBusinessMetric_withValuesAndEmptyLabelFilter tests the exact scenario
 // from customer issue: business metric with CSV values and label_filter = []
 func TestAccBusinessMetric_withValuesAndEmptyLabelFilter(t *testing.T) {
@@ -1128,4 +1279,108 @@ resource "vantage_business_metric" %[1]q {
   ]
 }
 `, id, title, date1, date2, futureDate1, futureDate2)
+}
+
+func TestBusinessMetricSnowflakeFieldsPayload(t *testing.T) {
+	ctx := context.Background()
+	snowflakeFields, diags := resource_business_metric.NewSnowflakeMetricFieldsValue(
+		resource_business_metric.SnowflakeMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token": types.StringValue("accss_crdntl_snowflake"),
+			"sql_query":         types.StringValue("SELECT date, amount FROM metrics"),
+		},
+	)
+	if diags.HasError() {
+		t.Fatalf("failed to build snowflake fields: %v", diags)
+	}
+
+	model := &businessMetricResourceModel{
+		Title:                 types.StringValue("Snowflake Metric"),
+		Token:                 types.StringValue("bmetr_test"),
+		SnowflakeMetricFields: snowflakeFields,
+	}
+
+	t.Run("toCreate", func(t *testing.T) {
+		var d diag.Diagnostics
+		payload := model.toCreate(ctx, &d)
+		if d.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", d)
+		}
+		if payload.SnowflakeMetricFields == nil {
+			t.Fatal("expected snowflake_metric_fields on create payload")
+		}
+		if payload.SnowflakeMetricFields.IntegrationToken != "accss_crdntl_snowflake" {
+			t.Fatalf("unexpected integration token: %q", payload.SnowflakeMetricFields.IntegrationToken)
+		}
+		if payload.SnowflakeMetricFields.SQLQuery != "SELECT date, amount FROM metrics" {
+			t.Fatalf("unexpected sql query: %q", payload.SnowflakeMetricFields.SQLQuery)
+		}
+	})
+
+	t.Run("toUpdate", func(t *testing.T) {
+		var d diag.Diagnostics
+		payload := model.toUpdate(ctx, &d)
+		if d.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", d)
+		}
+		if payload.SnowflakeMetricFields == nil {
+			t.Fatal("expected snowflake_metric_fields on update payload")
+		}
+		if payload.SnowflakeMetricFields.IntegrationToken != "accss_crdntl_snowflake" {
+			t.Fatalf("unexpected integration token: %q", payload.SnowflakeMetricFields.IntegrationToken)
+		}
+		if payload.SnowflakeMetricFields.SQLQuery != "SELECT date, amount FROM metrics" {
+			t.Fatalf("unexpected sql query: %q", payload.SnowflakeMetricFields.SQLQuery)
+		}
+	})
+}
+
+func TestBusinessMetricLabelFiltersPayload(t *testing.T) {
+	ctx := context.Background()
+	attrTypes := costReportTokenAttrTypes()
+	labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
+	if err != nil {
+		t.Fatalf("failed to create label_filter: %v", err)
+	}
+	labelFilters, err := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, map[string][]string{
+		"team": {"platform", "finops"},
+	})
+	if err != nil {
+		t.Fatalf("failed to create label_filters: %v", err)
+	}
+
+	token, err := types.ObjectValue(attrTypes, map[string]attr.Value{
+		"cost_report_token": types.StringValue("rprt_1"),
+		"unit_scale":        types.StringValue("per_unit"),
+		"calculation_type":  types.StringValue("unit_cost"),
+		"label":             types.StringNull(),
+		"label_filter":      labelFilter,
+		"label_filters":     labelFilters,
+	})
+	if err != nil {
+		t.Fatalf("failed to create token: %v", err)
+	}
+	list, err := types.ListValue(types.ObjectType{AttrTypes: attrTypes}, []attr.Value{token})
+	if err != nil {
+		t.Fatalf("failed to create token list: %v", err)
+	}
+
+	model := &businessMetricResourceModel{
+		Title:                        types.StringValue("Filters Metric"),
+		Token:                        types.StringValue("bmetr_test"),
+		CostReportTokensWithMetadata: list,
+	}
+
+	var d diag.Diagnostics
+	payload := model.toUpdate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if len(payload.CostReportTokensWithMetadata) != 1 {
+		t.Fatalf("expected 1 attachment, got %d", len(payload.CostReportTokensWithMetadata))
+	}
+	got := payload.CostReportTokensWithMetadata[0].LabelFilters
+	if len(got) != 1 || len(got["team"]) != 2 || got["team"][0] != "platform" {
+		t.Fatalf("unexpected label_filters payload: %#v", got)
+	}
 }
