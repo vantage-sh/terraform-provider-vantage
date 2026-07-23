@@ -9,12 +9,94 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
+
+func TestCostReportTokenLabelPathsToInvalidate(t *testing.T) {
+	ctx := context.Background()
+	attrTypes := costReportTokenAttrTypes()
+
+	makeToken := func(token, calcType string, label types.String) attr.Value {
+		labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
+		if err != nil {
+			t.Fatalf("failed to create label_filter: %v", err)
+		}
+		obj, err := types.ObjectValue(attrTypes, map[string]attr.Value{
+			"cost_report_token": types.StringValue(token),
+			"unit_scale":        types.StringValue("per_unit"),
+			"calculation_type":  types.StringValue(calcType),
+			"label":             label,
+			"label_filter":      labelFilter,
+			"label_filters":     emptyLabelFiltersMap(),
+		})
+		if err != nil {
+			t.Fatalf("failed to create token object: %v", err)
+		}
+		return obj
+	}
+
+	makeModel := func(tokens ...attr.Value) *businessMetricResourceModel {
+		list, err := types.ListValue(types.ObjectType{AttrTypes: attrTypes}, tokens)
+		if err != nil {
+			t.Fatalf("failed to create tokens list: %v", err)
+		}
+		return &businessMetricResourceModel{CostReportTokensWithMetadata: list}
+	}
+
+	t.Run("invalidates omitted label when calculation_type changes", func(t *testing.T) {
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
+		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Per Widgets")))
+		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringNull()))
+
+		var diags diag.Diagnostics
+		paths := costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &diags)
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if len(paths) != 1 {
+			t.Fatalf("expected 1 path, got %d (%v)", len(paths), paths)
+		}
+		expected := path.Root("cost_report_tokens_with_metadata").AtListIndex(0).AtName("label")
+		if !paths[0].Equal(expected) {
+			t.Fatalf("expected %s, got %s", expected, paths[0])
+		}
+	})
+
+	t.Run("keeps explicit config label", func(t *testing.T) {
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
+		plan := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom")))
+		config := makeModel(makeToken("rprt_1", "gross_margin", types.StringValue("Custom")))
+
+		var diags diag.Diagnostics
+		paths := costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &diags)
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if len(paths) != 0 {
+			t.Fatalf("expected no paths, got %v", paths)
+		}
+	})
+
+	t.Run("keeps omitted label when calculation_type unchanged", func(t *testing.T) {
+		state := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
+		plan := makeModel(makeToken("rprt_1", "unit_cost", types.StringValue("Per Widgets")))
+		config := makeModel(makeToken("rprt_1", "unit_cost", types.StringNull()))
+
+		var diags diag.Diagnostics
+		paths := costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &diags)
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if len(paths) != 0 {
+			t.Fatalf("expected no paths, got %v", paths)
+		}
+	})
+}
 
 // TestAssignCostReportTokens_OrderPreservation tests that assignCostReportTokens
 // correctly reorders API response data to match the original plan order.

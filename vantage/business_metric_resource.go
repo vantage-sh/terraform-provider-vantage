@@ -21,6 +21,7 @@ var (
 	_ resource.Resource                = (*businessMetricResource)(nil)
 	_ resource.ResourceWithConfigure   = (*businessMetricResource)(nil)
 	_ resource.ResourceWithImportState = (*businessMetricResource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*businessMetricResource)(nil)
 )
 
 func NewBusinessMetricResource() resource.Resource {
@@ -102,20 +103,55 @@ func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
 	attrs["cost_report_tokens_with_metadata"] = attr
 }
 
-// clearOmittedCostReportTokenLabels nulls plan labels that were not set in config so
-// UseStateForUnknown does not re-send a stale derived label when calculation_type changes.
-func clearOmittedCostReportTokenLabels(ctx context.Context, plan, config *businessMetricResourceModel, diags *diag.Diagnostics) {
-	if plan == nil || config == nil {
+// ModifyPlan marks omitted attachment labels unknown when calculation_type changes.
+// UseStateForUnknown otherwise copies the prior derived label into the plan as a
+// known value; after apply the API returns a newly derived label and Terraform
+// reports an inconsistent result. Unknown planned labels accept the API value.
+func (r *businessMetricResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
 	}
-	if plan.CostReportTokensWithMetadata.IsNull() || plan.CostReportTokensWithMetadata.IsUnknown() {
+
+	var plan, state, config *businessMetricResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() || plan == nil || state == nil || config == nil {
 		return
+	}
+
+	for _, p := range costReportTokenLabelPathsToInvalidate(ctx, plan, state, config, &resp.Diagnostics) {
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.StringUnknown())...)
+	}
+}
+
+// costReportTokenLabelPathsToInvalidate returns paths of nested labels that must
+// be planned as unknown: config omits label and calculation_type differs from state.
+func costReportTokenLabelPathsToInvalidate(ctx context.Context, plan, state, config *businessMetricResourceModel, diags *diag.Diagnostics) []path.Path {
+	if plan.CostReportTokensWithMetadata.IsNull() || plan.CostReportTokensWithMetadata.IsUnknown() {
+		return nil
+	}
+	if state.CostReportTokensWithMetadata.IsNull() || state.CostReportTokensWithMetadata.IsUnknown() {
+		return nil
 	}
 
 	planTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(plan.CostReportTokensWithMetadata.Elements()))
 	diags.Append(plan.CostReportTokensWithMetadata.ElementsAs(ctx, &planTokens, false)...)
 	if diags.HasError() {
-		return
+		return nil
+	}
+
+	stateByToken := map[string]*businessMetricResourceModelCostReportToken{}
+	stateTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(state.CostReportTokensWithMetadata.Elements()))
+	diags.Append(state.CostReportTokensWithMetadata.ElementsAs(ctx, &stateTokens, false)...)
+	if diags.HasError() {
+		return nil
+	}
+	for _, token := range stateTokens {
+		stateByToken[token.CostReportToken.ValueString()] = token
 	}
 
 	configByToken := map[string]*businessMetricResourceModelCostReportToken{}
@@ -123,55 +159,31 @@ func clearOmittedCostReportTokenLabels(ctx context.Context, plan, config *busine
 		configTokens := make([]*businessMetricResourceModelCostReportToken, 0, len(config.CostReportTokensWithMetadata.Elements()))
 		diags.Append(config.CostReportTokensWithMetadata.ElementsAs(ctx, &configTokens, false)...)
 		if diags.HasError() {
-			return
+			return nil
 		}
 		for _, token := range configTokens {
 			configByToken[token.CostReportToken.ValueString()] = token
 		}
 	}
 
-	changed := false
-	for _, planToken := range planTokens {
-		configToken, ok := configByToken[planToken.CostReportToken.ValueString()]
-		if ok && !configToken.Label.IsNull() && !configToken.Label.IsUnknown() {
+	var paths []path.Path
+	for i, planToken := range planTokens {
+		tokenKey := planToken.CostReportToken.ValueString()
+		if configToken, ok := configByToken[tokenKey]; ok && !configToken.Label.IsNull() && !configToken.Label.IsUnknown() {
 			continue
 		}
-		if !planToken.Label.IsNull() && !planToken.Label.IsUnknown() {
-			planToken.Label = types.StringNull()
-			changed = true
-		}
-	}
-	if !changed {
-		return
-	}
 
-	elements := make([]attr.Value, 0, len(planTokens))
-	attrTypes := resourceCostReportTokenAttrTypes(ctx)
-	for _, token := range planTokens {
-		tokenValue, d := resource_business_metric.NewCostReportTokensWithMetadataValue(
-			attrTypes,
-			map[string]attr.Value{
-				"cost_report_token": token.CostReportToken,
-				"unit_scale":        token.UnitScale,
-				"calculation_type":  token.CalculationType,
-				"label":             token.Label,
-				"label_filter":      token.LabelFilter,
-				"label_filters":     token.LabelFilters,
-			},
-		)
-		diags.Append(d...)
-		if diags.HasError() {
-			return
+		stateToken, ok := stateByToken[tokenKey]
+		if !ok {
+			continue
 		}
-		elements = append(elements, tokenValue)
-	}
+		if planToken.CalculationType.Equal(stateToken.CalculationType) {
+			continue
+		}
 
-	newList, d := types.ListValue(resourceCostReportTokenListType(ctx), elements)
-	diags.Append(d...)
-	if diags.HasError() {
-		return
+		paths = append(paths, path.Root("cost_report_tokens_with_metadata").AtListIndex(i).AtName("label"))
 	}
-	plan.CostReportTokensWithMetadata = newList
+	return paths
 }
 
 func (r *businessMetricResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -355,19 +367,6 @@ func (r *businessMetricResource) ImportState(ctx context.Context, req resource.I
 func (r *businessMetricResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data *businessMetricResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	var config *businessMetricResourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// UseStateForUnknown can keep a previously derived label in plan when config omits
-	// it. Clear those so a calculation_type change can re-derive the API default.
-	clearOmittedCostReportTokenLabels(ctx, data, config, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
