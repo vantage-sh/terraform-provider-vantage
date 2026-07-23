@@ -127,18 +127,6 @@ func normalizeLabelFilters(raw interface{}) (map[string][]string, bool) {
 	}
 }
 
-// Deprecated: use resourceCostReportTokenAttrTypes. Kept for unit tests that build plain objects.
-func costReportTokenAttrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"cost_report_token": types.StringType,
-		"unit_scale":        types.StringType,
-		"calculation_type":  types.StringType,
-		"label":             types.StringType,
-		"label_filter":      types.ListType{ElemType: types.StringType},
-		"label_filters":     types.MapType{ElemType: types.ListType{ElemType: types.StringType}},
-	}
-}
-
 func (m *businessMetricResourceModel) SetTitle(title types.String) {
 	m.Title = title
 }

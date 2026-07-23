@@ -31,7 +31,7 @@ func TestCostReportAttachmentLabelForAPI(t *testing.T) {
 
 func TestBusinessMetricOmittedAttachmentLabelPayload(t *testing.T) {
 	ctx := context.Background()
-	attrTypes := costReportTokenAttrTypes()
+	attrTypes := resourceCostReportTokenAttrTypes(ctx)
 	labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
 	if err != nil {
 		t.Fatalf("failed to create label_filter: %v", err)
@@ -83,7 +83,7 @@ func TestBusinessMetricOmittedAttachmentLabelPayload(t *testing.T) {
 func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 	ctx := context.Background()
 
-	attrTypes := costReportTokenAttrTypes()
+	attrTypes := resourceCostReportTokenAttrTypes(ctx)
 
 	// Helper to create a cost report token object
 	createToken := func(token, unitScale string) attr.Value {
@@ -176,7 +176,7 @@ func TestAssignCostReportTokens_OrderPreservation(t *testing.T) {
 func TestAssignCostReportTokens_NullLabelFilter(t *testing.T) {
 	ctx := context.Background()
 
-	attrTypes := costReportTokenAttrTypes()
+	attrTypes := resourceCostReportTokenAttrTypes(ctx)
 
 	// Helper to create a cost report token with empty label_filter (plan)
 	createTokenWithEmptyFilter := func(token, unitScale string) attr.Value {
@@ -1247,7 +1247,7 @@ func TestBusinessMetricSnowflakeFieldsPayload(t *testing.T) {
 
 func TestBusinessMetricLabelFiltersPayload(t *testing.T) {
 	ctx := context.Background()
-	attrTypes := costReportTokenAttrTypes()
+	attrTypes := resourceCostReportTokenAttrTypes(ctx)
 	labelFilter, err := types.ListValueFrom(ctx, types.StringType, []string{})
 	if err != nil {
 		t.Fatalf("failed to create label_filter: %v", err)
