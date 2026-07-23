@@ -293,13 +293,8 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 	// Always send groupings so it can be cleared (empty string clears it)
 	update.Groupings = m.Groupings.ValueString()
 
-	if !m.PreviousPeriodStartDate.IsNull() && !m.PreviousPeriodStartDate.IsUnknown() {
-		update.PreviousPeriodStartDate = m.PreviousPeriodStartDate.ValueString()
-	}
-
-	if !m.PreviousPeriodEndDate.IsNull() && !m.PreviousPeriodEndDate.IsUnknown() {
-		update.PreviousPeriodEndDate = m.PreviousPeriodEndDate.ValueString()
-	}
+	update.PreviousPeriodStartDate = m.PreviousPeriodStartDate.ValueString()
+	update.PreviousPeriodEndDate = m.PreviousPeriodEndDate.ValueString()
 
 	if !m.ChartType.IsNull() && !m.ChartType.IsUnknown() {
 		update.ChartType = m.ChartType.ValueStringPointer()
