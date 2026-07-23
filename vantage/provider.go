@@ -210,6 +210,10 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewInvoicesDataSource,
 		NewBillingProfilesDataSource,
 		NewRecommendationViewsDataSource,
+		NewIntegrationsDataSource,
+		NewIntegrationByNameDataSource,
+		NewWorkspaceDataSource,
+		NewFolderDataSource,
 	}
 }
 
@@ -228,6 +232,7 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewAnomalyNotificationResource,
 		NewVirtualTagConfigResource,
 		NewBusinessMetricResource,
+		NewCanvasResource,
 		NewBudgetResource,
 		NewManagedAccountResource,
 		NewBillingRuleResource,
@@ -240,5 +245,7 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewBillingProfileResource,
 		NewRecommendationViewResource,
 		NewWorkspaceResource,
+		NewCustomProviderResource,
+		NewCustomProviderCostsUploadResource,
 	}
 }

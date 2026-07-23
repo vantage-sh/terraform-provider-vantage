@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
@@ -311,6 +313,140 @@ func testAccVantageBusinessMetricTf_basic(id string, title string, valuesStr str
 		 }
 		`, id, title, valuesStr,
 	)
+}
+
+func TestAccBusinessMetric_valuesKnownInUpdatePlan(t *testing.T) {
+	now := time.Now()
+	date1 := fmt.Sprintf("%d-01-01", now.Year())
+	date2 := fmt.Sprintf("%d-02-01", now.Year())
+	date3 := fmt.Sprintf("%d-03-01", now.Year())
+	resourceName := "vantage_business_metric.test_values_plan"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBusinessMetricTf_valuesKnownInUpdatePlan(
+					"Business Metric Values Plan Visibility",
+					[]testAccBusinessMetricValue{
+						{date: date1, amount: "100.50"},
+						{date: date2, amount: "200.75"},
+					},
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label", ""),
+					resource.TestCheckResourceAttr(resourceName, "values.1.label", ""),
+				),
+			},
+			{
+				Config: testAccVantageBusinessMetricTf_valuesKnownInUpdatePlan(
+					"Business Metric Values Plan Visibility Updated",
+					[]testAccBusinessMetricValue{
+						{date: date1, amount: "100.50"},
+						{date: date2, amount: "250.25"},
+						{date: date3, amount: "300.00"},
+					},
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+						expectKnownResourceValue(resourceName, "values.0.date", tfjsonpath.New("values").AtSliceIndex(0).AtMapKey("date")),
+						expectKnownResourceValue(resourceName, "values.0.amount", tfjsonpath.New("values").AtSliceIndex(0).AtMapKey("amount")),
+						expectKnownResourceValue(resourceName, "values.0.label", tfjsonpath.New("values").AtSliceIndex(0).AtMapKey("label")),
+						expectKnownResourceValue(resourceName, "values.1.date", tfjsonpath.New("values").AtSliceIndex(1).AtMapKey("date")),
+						expectKnownResourceValue(resourceName, "values.1.amount", tfjsonpath.New("values").AtSliceIndex(1).AtMapKey("amount")),
+						expectKnownResourceValue(resourceName, "values.1.label", tfjsonpath.New("values").AtSliceIndex(1).AtMapKey("label")),
+						expectKnownResourceValue(resourceName, "values.2.date", tfjsonpath.New("values").AtSliceIndex(2).AtMapKey("date")),
+						expectKnownResourceValue(resourceName, "values.2.amount", tfjsonpath.New("values").AtSliceIndex(2).AtMapKey("amount")),
+						expectKnownResourceValue(resourceName, "values.2.label", tfjsonpath.New("values").AtSliceIndex(2).AtMapKey("label")),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", "Business Metric Values Plan Visibility Updated"),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "values.1.amount", "250.25"),
+					resource.TestCheckResourceAttr(resourceName, "values.2.date", date3),
+					resource.TestCheckResourceAttr(resourceName, "values.2.label", ""),
+				),
+			},
+		},
+	})
+}
+
+type testAccBusinessMetricValue struct {
+	date   string
+	amount string
+	label  string
+}
+
+func testAccVantageBusinessMetricTf_valuesKnownInUpdatePlan(title string, values []testAccBusinessMetricValue) string {
+	valuesBlock := ""
+	if len(values) > 0 {
+		valueBlocks := make([]string, 0, len(values))
+		for _, value := range values {
+			fields := []string{
+				fmt.Sprintf("date = %[1]q", value.date),
+				fmt.Sprintf("amount = %[1]s", value.amount),
+			}
+			if value.label != "" {
+				fields = append(fields, fmt.Sprintf("label = %[1]q", value.label))
+			}
+			valueBlocks = append(valueBlocks, fmt.Sprintf(`{ %[1]s }`, strings.Join(fields, ", ")))
+		}
+		valuesBlock = fmt.Sprintf(`
+  values = [
+    %[1]s
+  ]
+`, strings.Join(valueBlocks, ",\n    "))
+	}
+
+	return fmt.Sprintf(`
+resource "vantage_business_metric" "test_values_plan" {
+  title = %[1]q
+%[2]s
+}
+`, title, valuesBlock)
+}
+
+type expectKnownResourceValuePlanCheck struct {
+	resourceAddress string
+	attributeName   string
+	attributePath   tfjsonpath.Path
+}
+
+func expectKnownResourceValue(resourceAddress, attributeName string, attributePath tfjsonpath.Path) plancheck.PlanCheck {
+	return expectKnownResourceValuePlanCheck{
+		resourceAddress: resourceAddress,
+		attributeName:   attributeName,
+		attributePath:   attributePath,
+	}
+}
+
+func (e expectKnownResourceValuePlanCheck) CheckPlan(_ context.Context, req plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
+	for _, resourceChange := range req.Plan.ResourceChanges {
+		if resourceChange.Address != e.resourceAddress {
+			continue
+		}
+		if resourceChange.Change == nil {
+			resp.Error = fmt.Errorf("resource %s has no planned change", e.resourceAddress)
+			return
+		}
+
+		if unknownValue, err := tfjsonpath.Traverse(resourceChange.Change.AfterUnknown, e.attributePath); err == nil {
+			resp.Error = fmt.Errorf("expected %s.%s to be known in the update plan, but it was marked unknown: %#v", e.resourceAddress, e.attributeName, unknownValue)
+			return
+		}
+
+		if _, err := tfjsonpath.Traverse(resourceChange.Change.After, e.attributePath); err != nil {
+			resp.Error = fmt.Errorf("expected %s.%s to be present in the planned values: %w", e.resourceAddress, e.attributeName, err)
+		}
+		return
+	}
+
+	resp.Error = fmt.Errorf("resource %s was not found in the plan", e.resourceAddress)
 }
 
 func TestAccBusinessMetric_cloudwatch(t *testing.T) {

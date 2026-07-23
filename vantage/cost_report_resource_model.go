@@ -302,11 +302,11 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 	}
 
 	if !m.ChartType.IsNull() && !m.ChartType.IsUnknown() {
-		update.ChartType = m.ChartType.ValueStringPointer()
+		update.ChartType = m.ChartType.ValueString()
 	}
 
 	if !m.DateBin.IsNull() && !m.DateBin.IsUnknown() {
-		update.DateBin = m.DateBin.ValueStringPointer()
+		update.DateBin = m.DateBin.ValueString()
 	}
 
 	// Handle chart_settings

@@ -196,46 +196,24 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		costMetricValue = costMetric
 	}
 
-	// Build percentages value
-	var percentagesValue attr.Value = types.ListNull(resource_virtual_tag_config.PercentagesType{
-		ObjectType: basetypes.ObjectType{
-			AttrTypes: resource_virtual_tag_config.PercentagesValue{}.AttributeTypes(ctx),
-		},
-	})
-	if v.Percentages != nil && len(v.Percentages) > 0 {
-		percentages, d := buildPercentagesFromPayload(ctx, v.Percentages)
-		if d.HasError() {
-			return basetypes.ObjectValue{}, d
-		}
-		percentagesValue = percentages
+	// Always build percentages/date_ranges/label_transforms as known lists (empty
+	// when the API returns no entries). Emitting types.ListNull here would
+	// mismatch a planned known-empty list and trigger "Provider produced
+	// inconsistent result after apply" — these attributes are Optional+Computed
+	// lists, so Terraform treats null and [] as distinct values.
+	percentagesValue, d := buildPercentagesFromPayload(ctx, v.Percentages)
+	if d.HasError() {
+		return basetypes.ObjectValue{}, d
 	}
 
-	// Build date_ranges value
-	var dateRangesValue attr.Value = types.ListNull(resource_virtual_tag_config.DateRangesType{
-		ObjectType: basetypes.ObjectType{
-			AttrTypes: resource_virtual_tag_config.DateRangesValue{}.AttributeTypes(ctx),
-		},
-	})
-	if len(v.DateRanges) > 0 {
-		dateRanges, d := buildDateRangesFromPayload(ctx, v.DateRanges)
-		if d.HasError() {
-			return basetypes.ObjectValue{}, d
-		}
-		dateRangesValue = dateRanges
+	dateRangesValue, d := buildDateRangesFromPayload(ctx, v.DateRanges)
+	if d.HasError() {
+		return basetypes.ObjectValue{}, d
 	}
 
-	// Build label_transforms value
-	var labelTransformsValue attr.Value = types.ListNull(resource_virtual_tag_config.LabelTransformsType{
-		ObjectType: basetypes.ObjectType{
-			AttrTypes: resource_virtual_tag_config.LabelTransformsValue{}.AttributeTypes(ctx),
-		},
-	})
-	if len(v.LabelTransforms) > 0 {
-		labelTransforms, d := buildLabelTransformsFromPayload(ctx, v.LabelTransforms)
-		if d.HasError() {
-			return basetypes.ObjectValue{}, d
-		}
-		labelTransformsValue = labelTransforms
+	labelTransformsValue, d := buildLabelTransformsFromPayload(ctx, v.LabelTransforms)
+	if d.HasError() {
+		return basetypes.ObjectValue{}, d
 	}
 
 	// Use the constructor to properly set the state field
@@ -269,7 +247,14 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 
 	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(payload.CollapsedTagKeys))
 	for _, c := range payload.CollapsedTagKeys {
-		tfProviders, diag := types.ListValueFrom(ctx, types.StringType, c.Providers)
+		// Coalesce a nil Providers slice to an empty slice so ListValueFrom emits
+		// a known-empty list instead of null. Schema declares providers as
+		// Optional+Computed; null vs [] would fail post-apply consistency checks.
+		providers := c.Providers
+		if providers == nil {
+			providers = []string{}
+		}
+		tfProviders, diag := types.ListValueFrom(ctx, types.StringType, providers)
 		if diag.HasError() {
 			return diag
 		}
