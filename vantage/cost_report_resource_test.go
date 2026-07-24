@@ -3,12 +3,34 @@ package vantage
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
+
+func TestCostReport_requiresFolderOrWorkspace(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+provider "vantage" {
+  api_token = "test"
+}
+
+resource "vantage_cost_report" "test" {
+  title = "test"
+}
+`,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile("Missing Attribute Configuration"),
+			},
+		},
+	})
+}
 
 func TestAccCostReport_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
