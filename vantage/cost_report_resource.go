@@ -224,6 +224,17 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 
 	payload := out.Payload
 	if !data.DefaultForecast.IsNull() && !data.DefaultForecast.IsUnknown() {
+		createdData := data
+		diag := createdData.applyPayload(ctx, payload)
+		resp.Diagnostics.Append(diag...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &createdData)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
 		updateModel := data.toUpdateModel(ctx, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return

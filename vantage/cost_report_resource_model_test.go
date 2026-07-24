@@ -267,6 +267,9 @@ func TestCostReportModel_toUpdateModelMapsDefaultForecast(t *testing.T) {
 	if got, want := update.DefaultForecast.ReportForecastToken, "rprt_fcst_test"; got != want {
 		t.Errorf("DefaultForecast.ReportForecastToken = %q, want %q", got, want)
 	}
+	if update.BusinessMetricTokensWithMetadata == nil || len(update.BusinessMetricTokensWithMetadata) != 0 {
+		t.Errorf("BusinessMetricTokensWithMetadata = %#v, want non-nil empty slice", update.BusinessMetricTokensWithMetadata)
+	}
 }
 
 func TestCostReportModelMapsBusinessMetricMetadata(t *testing.T) {

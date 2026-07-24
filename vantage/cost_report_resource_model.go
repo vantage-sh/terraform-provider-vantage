@@ -466,6 +466,8 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 			bmtItems = append(bmtItems, item)
 		}
 		update.BusinessMetricTokensWithMetadata = bmtItems
+	} else {
+		update.BusinessMetricTokensWithMetadata = []*modelsv2.UpdateCostReportBusinessMetricTokensWithMetadataItems0{}
 	}
 
 	// Handle date interval logic
