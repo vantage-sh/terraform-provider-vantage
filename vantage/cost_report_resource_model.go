@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -101,6 +102,23 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 		m.Settings = resource_cost_report.NewSettingsValueNull()
 	}
 
+	if payload.DefaultForecast != nil && !m.DefaultForecast.IsNull() && !m.DefaultForecast.IsUnknown() {
+		defaultForecastValue, d := resource_cost_report.NewDefaultForecastValue(
+			resource_cost_report.DefaultForecastValue{}.AttributeTypes(ctx),
+			map[string]attr.Value{
+				"kind":                  types.StringValue(payload.DefaultForecast.Kind),
+				"report_forecast_token": types.StringPointerValue(payload.DefaultForecast.ReportForecastToken),
+			},
+		)
+		if d.HasError() {
+			diags.Append(d...)
+			return diags
+		}
+		m.DefaultForecast = defaultForecastValue
+	} else {
+		m.DefaultForecast = resource_cost_report.NewDefaultForecastValueNull()
+	}
+
 	// Handle business_metric_tokens_with_metadata from API payload.
 	// Same conditional approach as settings to avoid drift.
 	bmtElemType := types.ObjectType{
@@ -114,11 +132,26 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 				diags.Append(d...)
 				return diags
 			}
+			labelFilters := types.MapNull(types.ListType{ElemType: types.StringType})
+			if bmt.LabelFilters != nil {
+				labelFilters, d = types.MapValueFrom(
+					ctx,
+					types.ListType{ElemType: types.StringType},
+					bmt.LabelFilters,
+				)
+				if d.HasError() {
+					diags.Append(d...)
+					return diags
+				}
+			}
 			objVal, d := types.ObjectValue(
 				resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
 				map[string]attr.Value{
 					"business_metric_token": types.StringValue(bmt.BusinessMetricToken),
+					"calculation_type":      types.StringValue(bmt.CalculationType),
+					"label":                 types.StringPointerValue(bmt.Label),
 					"label_filter":          labelFilter,
+					"label_filters":         labelFilters,
 					"unit_scale":            types.StringValue(bmt.UnitScale),
 				},
 			)
@@ -240,23 +273,42 @@ func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnos
 	if !m.BusinessMetricTokensWithMetadata.IsNull() && !m.BusinessMetricTokensWithMetadata.IsUnknown() {
 		bmtItems := make([]*modelsv2.CreateCostReportBusinessMetricTokensWithMetadataItems0, 0)
 		for _, elem := range m.BusinessMetricTokensWithMetadata.Elements() {
-			obj := elem.(types.Object)
-			attrs := obj.Attributes()
+			attrs := businessMetricMetadataAttributes(elem, diags)
+			if diags.HasError() {
+				return create
+			}
 			item := &modelsv2.CreateCostReportBusinessMetricTokensWithMetadataItems0{}
 			if token, ok := attrs["business_metric_token"]; ok && !token.IsNull() && !token.IsUnknown() {
 				item.BusinessMetricToken = token.(types.String).ValueStringPointer()
 			}
+			if calculationType, ok := attrs["calculation_type"]; ok && !calculationType.IsNull() && !calculationType.IsUnknown() {
+				item.CalculationType = calculationType.(types.String).ValueStringPointer()
+			}
+			if label, ok := attrs["label"]; ok && !label.IsNull() && !label.IsUnknown() {
+				item.Label = label.(types.String).ValueString()
+			}
 			if unitScale, ok := attrs["unit_scale"]; ok && !unitScale.IsNull() && !unitScale.IsUnknown() {
 				item.UnitScale = unitScale.(types.String).ValueStringPointer()
 			}
-			if lf, ok := attrs["label_filter"]; ok && !lf.IsNull() && !lf.IsUnknown() {
+			labelFilters, hasLabelFilters := attrs["label_filters"]
+			hasLabelFilters = hasLabelFilters && !labelFilters.IsNull() && !labelFilters.IsUnknown()
+			if lf, ok := attrs["label_filter"]; !hasLabelFilters && ok && !lf.IsNull() && !lf.IsUnknown() {
 				lfList := lf.(types.List)
 				items := []string{}
 				d := lfList.ElementsAs(ctx, &items, false)
 				diags.Append(d...)
 				item.LabelFilter = items
-			} else {
+			} else if !hasLabelFilters {
 				item.LabelFilter = []string{}
+			}
+			if hasLabelFilters {
+				items := map[string][]string{}
+				d := labelFilters.(types.Map).ElementsAs(ctx, &items, false)
+				diags.Append(d...)
+				if d.HasError() {
+					return create
+				}
+				item.LabelFilters = items
 			}
 			bmtItems = append(bmtItems, item)
 		}
@@ -363,27 +415,53 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 		update.Settings = s
 	}
 
+	if !m.DefaultForecast.IsNull() && !m.DefaultForecast.IsUnknown() {
+		update.DefaultForecast = &modelsv2.UpdateCostReportDefaultForecast{
+			Kind:                m.DefaultForecast.Kind.ValueStringPointer(),
+			ReportForecastToken: m.DefaultForecast.ReportForecastToken.ValueString(),
+		}
+	}
+
 	// Handle business_metric_tokens_with_metadata
 	if !m.BusinessMetricTokensWithMetadata.IsNull() && !m.BusinessMetricTokensWithMetadata.IsUnknown() {
 		bmtItems := make([]*modelsv2.UpdateCostReportBusinessMetricTokensWithMetadataItems0, 0)
 		for _, elem := range m.BusinessMetricTokensWithMetadata.Elements() {
-			obj := elem.(types.Object)
-			attrs := obj.Attributes()
+			attrs := businessMetricMetadataAttributes(elem, diags)
+			if diags.HasError() {
+				return update
+			}
 			item := &modelsv2.UpdateCostReportBusinessMetricTokensWithMetadataItems0{}
 			if token, ok := attrs["business_metric_token"]; ok && !token.IsNull() && !token.IsUnknown() {
 				item.BusinessMetricToken = token.(types.String).ValueStringPointer()
 			}
+			if calculationType, ok := attrs["calculation_type"]; ok && !calculationType.IsNull() && !calculationType.IsUnknown() {
+				item.CalculationType = calculationType.(types.String).ValueStringPointer()
+			}
+			if label, ok := attrs["label"]; ok && !label.IsNull() && !label.IsUnknown() {
+				item.Label = label.(types.String).ValueString()
+			}
 			if unitScale, ok := attrs["unit_scale"]; ok && !unitScale.IsNull() && !unitScale.IsUnknown() {
 				item.UnitScale = unitScale.(types.String).ValueStringPointer()
 			}
-			if lf, ok := attrs["label_filter"]; ok && !lf.IsNull() && !lf.IsUnknown() {
+			labelFilters, hasLabelFilters := attrs["label_filters"]
+			hasLabelFilters = hasLabelFilters && !labelFilters.IsNull() && !labelFilters.IsUnknown()
+			if lf, ok := attrs["label_filter"]; !hasLabelFilters && ok && !lf.IsNull() && !lf.IsUnknown() {
 				lfList := lf.(types.List)
 				items := []string{}
 				d := lfList.ElementsAs(ctx, &items, false)
 				diags.Append(d...)
 				item.LabelFilter = items
-			} else {
+			} else if !hasLabelFilters {
 				item.LabelFilter = []string{}
+			}
+			if hasLabelFilters {
+				items := map[string][]string{}
+				d := labelFilters.(types.Map).ElementsAs(ctx, &items, false)
+				diags.Append(d...)
+				if d.HasError() {
+					return update
+				}
+				item.LabelFilters = items
 			}
 			bmtItems = append(bmtItems, item)
 		}
@@ -413,4 +491,26 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 	}
 
 	return update
+}
+
+func businessMetricMetadataAttributes(elem attr.Value, diags *diag.Diagnostics) map[string]attr.Value {
+	switch value := elem.(type) {
+	case resource_cost_report.BusinessMetricTokensWithMetadataValue:
+		return map[string]attr.Value{
+			"business_metric_token": value.BusinessMetricToken,
+			"calculation_type":      value.CalculationType,
+			"label":                 value.Label,
+			"label_filter":          value.LabelFilter,
+			"label_filters":         value.LabelFilters,
+			"unit_scale":            value.UnitScale,
+		}
+	case types.Object:
+		return value.Attributes()
+	default:
+		diags.AddError(
+			"Unexpected Business Metric Metadata Type",
+			fmt.Sprintf("Expected business metric metadata object, got %T.", elem),
+		)
+		return nil
+	}
 }

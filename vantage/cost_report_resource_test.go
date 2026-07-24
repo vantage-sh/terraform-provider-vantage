@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -832,9 +833,204 @@ func TestAccVantageCostReport_dateBinHour(t *testing.T) {
 	})
 }
 
+func TestAccVantageCostReport_defaultForecast(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_cost_report.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCostReportConfig_defaultForecast(rTitle, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "default_forecast.kind", "baseline"),
+					resource.TestCheckNoResourceAttr(resourceName, "default_forecast.report_forecast_token"),
+				),
+			},
+			{
+				Config: testAccCostReportConfig_defaultForecast(rTitle, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "default_forecast.kind"),
+				),
+			},
+			{
+				Config: testAccCostReportConfig_defaultForecast(rTitle, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "default_forecast.kind", "baseline"),
+				),
+			},
+			{
+				Config:             testAccCostReportConfig_defaultForecast(rTitle, true),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccCostReportConfig_defaultForecast(title string, includeDefaultForecast bool) string {
+	defaultForecast := ""
+	if includeDefaultForecast {
+		defaultForecast = `
+  default_forecast = {
+    kind = "baseline"
+  }`
+	}
+
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "test" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = %[1]q
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_7_days"
+%[2]s
+}
+`, title, defaultForecast)
+}
+
 // ---------------------------------------------------------------------------
 // Business metric tokens with metadata tests
 // ---------------------------------------------------------------------------
+
+func TestAccVantageCostReport_businessMetricMetadata(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	bmTitle := "tf-test-bm-" + sdkacctest.RandStringFromCharSet(6, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_cost_report.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCostReportConfig_businessMetricMetadata(
+					rTitle,
+					bmTitle,
+					"unit_cost",
+					"Platform Unit Cost",
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.calculation_type", "unit_cost"),
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.label", "Platform Unit Cost"),
+				),
+			},
+			{
+				Config: testAccCostReportConfig_businessMetricMetadata(
+					rTitle,
+					bmTitle,
+					"gross_margin",
+					"Platform Gross Margin",
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.calculation_type", "gross_margin"),
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.label", "Platform Gross Margin"),
+				),
+			},
+			{
+				Config: testAccCostReportConfig_businessMetricMetadata(
+					rTitle,
+					bmTitle,
+					"gross_margin",
+					"Platform Gross Margin",
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccCostReportConfig_businessMetricMetadata(
+	title string,
+	businessMetricTitle string,
+	calculationType string,
+	label string,
+) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_business_metric" "test" {
+  title = %[2]q
+
+  lifecycle {
+    ignore_changes = [cost_report_tokens_with_metadata]
+  }
+}
+
+resource "vantage_cost_report" "test" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = %[1]q
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_7_days"
+
+  business_metric_tokens_with_metadata = [{
+    business_metric_token = vantage_business_metric.test.token
+    calculation_type      = %[3]q
+    label                 = %[4]q
+    unit_scale             = "per_unit"
+  }]
+}
+`, title, businessMetricTitle, calculationType, label)
+}
+
+func TestAccVantageCostReport_businessMetricLabelFilters(t *testing.T) {
+	businessMetricToken := os.Getenv("VANTAGE_CLICKHOUSE_BUSINESS_METRIC_TOKEN")
+	if businessMetricToken == "" {
+		t.Skip("VANTAGE_CLICKHOUSE_BUSINESS_METRIC_TOKEN must reference a ClickHouse BusinessMetric")
+	}
+
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_cost_report.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCostReportConfig_businessMetricLabelFilters(rTitle, businessMetricToken, "platform"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.label_filters.team.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.label_filters.team.0", "platform"),
+				),
+			},
+			{
+				Config: testAccCostReportConfig_businessMetricLabelFilters(rTitle, businessMetricToken, "finops"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "business_metric_tokens_with_metadata.0.label_filters.team.0", "finops"),
+				),
+			},
+			{
+				Config:             testAccCostReportConfig_businessMetricLabelFilters(rTitle, businessMetricToken, "finops"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccCostReportConfig_businessMetricLabelFilters(title, businessMetricToken, team string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "test" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = %[1]q
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_7_days"
+
+  business_metric_tokens_with_metadata = [{
+    business_metric_token = %[2]q
+    calculation_type      = "unit_cost"
+    label_filters = {
+      team = [%[3]q]
+    }
+    unit_scale = "per_unit"
+  }]
+}
+`, title, businessMetricToken, team)
+}
 
 func TestAccVantageCostReport_businessMetricTokensWithMetadata(t *testing.T) {
 	// This test requires existing business metric tokens. Skip if not available.

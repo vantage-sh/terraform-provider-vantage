@@ -30,12 +30,42 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The token of the BusinessMetric to attach to the CostReport.",
 							MarkdownDescription: "The token of the BusinessMetric to attach to the CostReport.",
 						},
+						"calculation_type": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "The calculation type applied when this BusinessMetric is used in the CostReport.",
+							MarkdownDescription: "The calculation type applied when this BusinessMetric is used in the CostReport.",
+							Validators: []validator.String{
+								stringvalidator.OneOf(
+									"unit_cost",
+									"gross_margin",
+									"usage_unit_cost",
+									"raw_business_metric",
+								),
+							},
+							Default: stringdefault.StaticString("unit_cost"),
+						},
+						"label": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.",
+							MarkdownDescription: "Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.",
+						},
 						"label_filter": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Optional:            true,
 							Computed:            true,
 							Description:         "Include only values with these labels in the CostReport.",
 							MarkdownDescription: "Include only values with these labels in the CostReport.",
+						},
+						"label_filters": schema.MapAttribute{
+							ElementType: types.ListType{
+								ElemType: types.StringType,
+							},
+							Optional:            true,
+							Computed:            true,
+							Description:         "Include only ClickHouse BusinessMetric values matching every label key and one of its values.",
+							MarkdownDescription: "Include only ClickHouse BusinessMetric values matching every label key and one of its values.",
 						},
 						"unit_scale": schema.StringAttribute{
 							Optional:            true,
@@ -155,6 +185,26 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 						"last_14_days",
 					),
 				},
+			},
+			"default_forecast": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						Computed:            true,
+						Description:         "The default forecast selection kind.",
+						MarkdownDescription: "The default forecast selection kind.",
+					},
+					"report_forecast_token": schema.StringAttribute{
+						Computed:            true,
+						Description:         "The token for the report forecast selected as the default.",
+						MarkdownDescription: "The token for the report forecast selected as the default.",
+					},
+				},
+				CustomType: DefaultForecastType{
+					ObjectType: types.ObjectType{
+						AttrTypes: DefaultForecastValue{}.AttributeTypes(ctx),
+					},
+				},
+				Computed: true,
 			},
 			"end_date": schema.StringAttribute{
 				Required:            true,
@@ -305,25 +355,26 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type CostReportModel struct {
-	BusinessMetricTokensWithMetadata types.List         `tfsdk:"business_metric_tokens_with_metadata"`
-	ChartSettings                    ChartSettingsValue `tfsdk:"chart_settings"`
-	ChartType                        types.String       `tfsdk:"chart_type"`
-	CreatedAt                        types.String       `tfsdk:"created_at"`
-	DateBin                          types.String       `tfsdk:"date_bin"`
-	DateInterval                     types.String       `tfsdk:"date_interval"`
-	EndDate                          types.String       `tfsdk:"end_date"`
-	Filter                           types.String       `tfsdk:"filter"`
-	FolderToken                      types.String       `tfsdk:"folder_token"`
-	Groupings                        types.String       `tfsdk:"groupings"`
-	Id                               types.String       `tfsdk:"id"`
-	PreviousPeriodEndDate            types.String       `tfsdk:"previous_period_end_date"`
-	PreviousPeriodStartDate          types.String       `tfsdk:"previous_period_start_date"`
-	SavedFilterTokens                types.List         `tfsdk:"saved_filter_tokens"`
-	Settings                         SettingsValue      `tfsdk:"settings"`
-	StartDate                        types.String       `tfsdk:"start_date"`
-	Title                            types.String       `tfsdk:"title"`
-	Token                            types.String       `tfsdk:"token"`
-	WorkspaceToken                   types.String       `tfsdk:"workspace_token"`
+	BusinessMetricTokensWithMetadata types.List           `tfsdk:"business_metric_tokens_with_metadata"`
+	ChartSettings                    ChartSettingsValue   `tfsdk:"chart_settings"`
+	ChartType                        types.String         `tfsdk:"chart_type"`
+	CreatedAt                        types.String         `tfsdk:"created_at"`
+	DateBin                          types.String         `tfsdk:"date_bin"`
+	DateInterval                     types.String         `tfsdk:"date_interval"`
+	DefaultForecast                  DefaultForecastValue `tfsdk:"default_forecast"`
+	EndDate                          types.String         `tfsdk:"end_date"`
+	Filter                           types.String         `tfsdk:"filter"`
+	FolderToken                      types.String         `tfsdk:"folder_token"`
+	Groupings                        types.String         `tfsdk:"groupings"`
+	Id                               types.String         `tfsdk:"id"`
+	PreviousPeriodEndDate            types.String         `tfsdk:"previous_period_end_date"`
+	PreviousPeriodStartDate          types.String         `tfsdk:"previous_period_start_date"`
+	SavedFilterTokens                types.List           `tfsdk:"saved_filter_tokens"`
+	Settings                         SettingsValue        `tfsdk:"settings"`
+	StartDate                        types.String         `tfsdk:"start_date"`
+	Title                            types.String         `tfsdk:"title"`
+	Token                            types.String         `tfsdk:"token"`
+	WorkspaceToken                   types.String         `tfsdk:"workspace_token"`
 }
 
 var _ basetypes.ObjectTypable = BusinessMetricTokensWithMetadataType{}
@@ -369,6 +420,42 @@ func (t BusinessMetricTokensWithMetadataType) ValueFromObject(ctx context.Contex
 			fmt.Sprintf(`business_metric_token expected to be basetypes.StringValue, was: %T`, businessMetricTokenAttribute))
 	}
 
+	calculationTypeAttribute, ok := attributes["calculation_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`calculation_type is missing from object`)
+
+		return nil, diags
+	}
+
+	calculationTypeVal, ok := calculationTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`calculation_type expected to be basetypes.StringValue, was: %T`, calculationTypeAttribute))
+	}
+
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return nil, diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
 	labelFilterAttribute, ok := attributes["label_filter"]
 
 	if !ok {
@@ -385,6 +472,24 @@ func (t BusinessMetricTokensWithMetadataType) ValueFromObject(ctx context.Contex
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`label_filter expected to be basetypes.ListValue, was: %T`, labelFilterAttribute))
+	}
+
+	labelFiltersAttribute, ok := attributes["label_filters"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filters is missing from object`)
+
+		return nil, diags
+	}
+
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -411,7 +516,10 @@ func (t BusinessMetricTokensWithMetadataType) ValueFromObject(ctx context.Contex
 
 	return BusinessMetricTokensWithMetadataValue{
 		BusinessMetricToken: businessMetricTokenVal,
+		CalculationType:     calculationTypeVal,
+		Label:               labelVal,
 		LabelFilter:         labelFilterVal,
+		LabelFilters:        labelFiltersVal,
 		UnitScale:           unitScaleVal,
 		state:               attr.ValueStateKnown,
 	}, diags
@@ -498,6 +606,42 @@ func NewBusinessMetricTokensWithMetadataValue(attributeTypes map[string]attr.Typ
 			fmt.Sprintf(`business_metric_token expected to be basetypes.StringValue, was: %T`, businessMetricTokenAttribute))
 	}
 
+	calculationTypeAttribute, ok := attributes["calculation_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`calculation_type is missing from object`)
+
+		return NewBusinessMetricTokensWithMetadataValueUnknown(), diags
+	}
+
+	calculationTypeVal, ok := calculationTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`calculation_type expected to be basetypes.StringValue, was: %T`, calculationTypeAttribute))
+	}
+
+	labelAttribute, ok := attributes["label"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label is missing from object`)
+
+		return NewBusinessMetricTokensWithMetadataValueUnknown(), diags
+	}
+
+	labelVal, ok := labelAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label expected to be basetypes.StringValue, was: %T`, labelAttribute))
+	}
+
 	labelFilterAttribute, ok := attributes["label_filter"]
 
 	if !ok {
@@ -514,6 +658,24 @@ func NewBusinessMetricTokensWithMetadataValue(attributeTypes map[string]attr.Typ
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`label_filter expected to be basetypes.ListValue, was: %T`, labelFilterAttribute))
+	}
+
+	labelFiltersAttribute, ok := attributes["label_filters"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filters is missing from object`)
+
+		return NewBusinessMetricTokensWithMetadataValueUnknown(), diags
+	}
+
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -540,7 +702,10 @@ func NewBusinessMetricTokensWithMetadataValue(attributeTypes map[string]attr.Typ
 
 	return BusinessMetricTokensWithMetadataValue{
 		BusinessMetricToken: businessMetricTokenVal,
+		CalculationType:     calculationTypeVal,
+		Label:               labelVal,
 		LabelFilter:         labelFilterVal,
+		LabelFilters:        labelFiltersVal,
 		UnitScale:           unitScaleVal,
 		state:               attr.ValueStateKnown,
 	}, diags
@@ -615,20 +780,30 @@ var _ basetypes.ObjectValuable = BusinessMetricTokensWithMetadataValue{}
 
 type BusinessMetricTokensWithMetadataValue struct {
 	BusinessMetricToken basetypes.StringValue `tfsdk:"business_metric_token"`
+	CalculationType     basetypes.StringValue `tfsdk:"calculation_type"`
+	Label               basetypes.StringValue `tfsdk:"label"`
 	LabelFilter         basetypes.ListValue   `tfsdk:"label_filter"`
+	LabelFilters        basetypes.MapValue    `tfsdk:"label_filters"`
 	UnitScale           basetypes.StringValue `tfsdk:"unit_scale"`
 	state               attr.ValueState
 }
 
 func (v BusinessMetricTokensWithMetadataValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 3)
+	attrTypes := make(map[string]tftypes.Type, 6)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["business_metric_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["calculation_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["label_filter"] = basetypes.ListType{
 		ElemType: types.StringType,
+	}.TerraformType(ctx)
+	attrTypes["label_filters"] = basetypes.MapType{
+		ElemType: types.ListType{
+			ElemType: types.StringType,
+		},
 	}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -636,7 +811,7 @@ func (v BusinessMetricTokensWithMetadataValue) ToTerraformValue(ctx context.Cont
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 3)
+		vals := make(map[string]tftypes.Value, 6)
 
 		val, err = v.BusinessMetricToken.ToTerraformValue(ctx)
 
@@ -646,6 +821,22 @@ func (v BusinessMetricTokensWithMetadataValue) ToTerraformValue(ctx context.Cont
 
 		vals["business_metric_token"] = val
 
+		val, err = v.CalculationType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["calculation_type"] = val
+
+		val, err = v.Label.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label"] = val
+
 		val, err = v.LabelFilter.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -653,6 +844,14 @@ func (v BusinessMetricTokensWithMetadataValue) ToTerraformValue(ctx context.Cont
 		}
 
 		vals["label_filter"] = val
+
+		val, err = v.LabelFilters.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label_filters"] = val
 
 		val, err = v.UnitScale.ToTerraformValue(ctx)
 
@@ -706,8 +905,50 @@ func (v BusinessMetricTokensWithMetadataValue) ToObjectValue(ctx context.Context
 	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"business_metric_token": basetypes.StringType{},
+			"calculation_type":      basetypes.StringType{},
+			"label":                 basetypes.StringType{},
 			"label_filter": basetypes.ListType{
 				ElemType: types.StringType,
+			},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			"unit_scale": basetypes.StringType{},
+		}), diags
+	}
+
+	var labelFiltersVal basetypes.MapValue
+	switch {
+	case v.LabelFilters.IsUnknown():
+		labelFiltersVal = types.MapUnknown(types.ListType{
+			ElemType: types.StringType,
+		})
+	case v.LabelFilters.IsNull():
+		labelFiltersVal = types.MapNull(types.ListType{
+			ElemType: types.StringType,
+		})
+	default:
+		var d diag.Diagnostics
+		labelFiltersVal, d = types.MapValue(types.ListType{
+			ElemType: types.StringType,
+		}, v.LabelFilters.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"business_metric_token": basetypes.StringType{},
+			"calculation_type":      basetypes.StringType{},
+			"label":                 basetypes.StringType{},
+			"label_filter": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
 			},
 			"unit_scale": basetypes.StringType{},
 		}), diags
@@ -715,8 +956,15 @@ func (v BusinessMetricTokensWithMetadataValue) ToObjectValue(ctx context.Context
 
 	attributeTypes := map[string]attr.Type{
 		"business_metric_token": basetypes.StringType{},
+		"calculation_type":      basetypes.StringType{},
+		"label":                 basetypes.StringType{},
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
+		},
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -733,7 +981,10 @@ func (v BusinessMetricTokensWithMetadataValue) ToObjectValue(ctx context.Context
 		attributeTypes,
 		map[string]attr.Value{
 			"business_metric_token": v.BusinessMetricToken,
+			"calculation_type":      v.CalculationType,
+			"label":                 v.Label,
 			"label_filter":          labelFilterVal,
+			"label_filters":         labelFiltersVal,
 			"unit_scale":            v.UnitScale,
 		})
 
@@ -759,7 +1010,19 @@ func (v BusinessMetricTokensWithMetadataValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.CalculationType.Equal(other.CalculationType) {
+		return false
+	}
+
+	if !v.Label.Equal(other.Label) {
+		return false
+	}
+
 	if !v.LabelFilter.Equal(other.LabelFilter) {
+		return false
+	}
+
+	if !v.LabelFilters.Equal(other.LabelFilters) {
 		return false
 	}
 
@@ -781,8 +1044,15 @@ func (v BusinessMetricTokensWithMetadataValue) Type(ctx context.Context) attr.Ty
 func (v BusinessMetricTokensWithMetadataValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"business_metric_token": basetypes.StringType{},
+		"calculation_type":      basetypes.StringType{},
+		"label":                 basetypes.StringType{},
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
+		},
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -1191,6 +1461,385 @@ func (v ChartSettingsValue) AttributeTypes(ctx context.Context) map[string]attr.
 			ElemType: types.StringType,
 		},
 		"y_axis_dimension": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = DefaultForecastType{}
+
+type DefaultForecastType struct {
+	basetypes.ObjectType
+}
+
+func (t DefaultForecastType) Equal(o attr.Type) bool {
+	other, ok := o.(DefaultForecastType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t DefaultForecastType) String() string {
+	return "DefaultForecastType"
+}
+
+func (t DefaultForecastType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	kindAttribute, ok := attributes["kind"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kind is missing from object`)
+
+		return nil, diags
+	}
+
+	kindVal, ok := kindAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kind expected to be basetypes.StringValue, was: %T`, kindAttribute))
+	}
+
+	reportForecastTokenAttribute, ok := attributes["report_forecast_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`report_forecast_token is missing from object`)
+
+		return nil, diags
+	}
+
+	reportForecastTokenVal, ok := reportForecastTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`report_forecast_token expected to be basetypes.StringValue, was: %T`, reportForecastTokenAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return DefaultForecastValue{
+		Kind:                kindVal,
+		ReportForecastToken: reportForecastTokenVal,
+		state:               attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDefaultForecastValueNull() DefaultForecastValue {
+	return DefaultForecastValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewDefaultForecastValueUnknown() DefaultForecastValue {
+	return DefaultForecastValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewDefaultForecastValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (DefaultForecastValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing DefaultForecastValue Attribute Value",
+				"While creating a DefaultForecastValue value, a missing attribute value was detected. "+
+					"A DefaultForecastValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DefaultForecastValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid DefaultForecastValue Attribute Type",
+				"While creating a DefaultForecastValue value, an invalid attribute value was detected. "+
+					"A DefaultForecastValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DefaultForecastValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("DefaultForecastValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra DefaultForecastValue Attribute Value",
+				"While creating a DefaultForecastValue value, an extra attribute value was detected. "+
+					"A DefaultForecastValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra DefaultForecastValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewDefaultForecastValueUnknown(), diags
+	}
+
+	kindAttribute, ok := attributes["kind"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kind is missing from object`)
+
+		return NewDefaultForecastValueUnknown(), diags
+	}
+
+	kindVal, ok := kindAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kind expected to be basetypes.StringValue, was: %T`, kindAttribute))
+	}
+
+	reportForecastTokenAttribute, ok := attributes["report_forecast_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`report_forecast_token is missing from object`)
+
+		return NewDefaultForecastValueUnknown(), diags
+	}
+
+	reportForecastTokenVal, ok := reportForecastTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`report_forecast_token expected to be basetypes.StringValue, was: %T`, reportForecastTokenAttribute))
+	}
+
+	if diags.HasError() {
+		return NewDefaultForecastValueUnknown(), diags
+	}
+
+	return DefaultForecastValue{
+		Kind:                kindVal,
+		ReportForecastToken: reportForecastTokenVal,
+		state:               attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDefaultForecastValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) DefaultForecastValue {
+	object, diags := NewDefaultForecastValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewDefaultForecastValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t DefaultForecastType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewDefaultForecastValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewDefaultForecastValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewDefaultForecastValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewDefaultForecastValueMust(DefaultForecastValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t DefaultForecastType) ValueType(ctx context.Context) attr.Value {
+	return DefaultForecastValue{}
+}
+
+var _ basetypes.ObjectValuable = DefaultForecastValue{}
+
+type DefaultForecastValue struct {
+	Kind                basetypes.StringValue `tfsdk:"kind"`
+	ReportForecastToken basetypes.StringValue `tfsdk:"report_forecast_token"`
+	state               attr.ValueState
+}
+
+func (v DefaultForecastValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["kind"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["report_forecast_token"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.Kind.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["kind"] = val
+
+		val, err = v.ReportForecastToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["report_forecast_token"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v DefaultForecastValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v DefaultForecastValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v DefaultForecastValue) String() string {
+	return "DefaultForecastValue"
+}
+
+func (v DefaultForecastValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"kind":                  basetypes.StringType{},
+		"report_forecast_token": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"kind":                  v.Kind,
+			"report_forecast_token": v.ReportForecastToken,
+		})
+
+	return objVal, diags
+}
+
+func (v DefaultForecastValue) Equal(o attr.Value) bool {
+	other, ok := o.(DefaultForecastValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.Kind.Equal(other.Kind) {
+		return false
+	}
+
+	if !v.ReportForecastToken.Equal(other.ReportForecastToken) {
+		return false
+	}
+
+	return true
+}
+
+func (v DefaultForecastValue) Type(ctx context.Context) attr.Type {
+	return DefaultForecastType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v DefaultForecastValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"kind":                  basetypes.StringType{},
+		"report_forecast_token": basetypes.StringType{},
 	}
 }
 

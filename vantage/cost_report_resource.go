@@ -3,7 +3,7 @@ package vantage
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -11,16 +11,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
 var (
-	_ resource.Resource                     = (*CostReportResource)(nil)
-	_ resource.ResourceWithConfigure        = (*CostReportResource)(nil)
-	_ resource.ResourceWithImportState      = (*CostReportResource)(nil)
-	_ resource.ResourceWithConfigValidators = (*CostReportResource)(nil)
+	_ resource.Resource                = (*CostReportResource)(nil)
+	_ resource.ResourceWithConfigure   = (*CostReportResource)(nil)
+	_ resource.ResourceWithImportState = (*CostReportResource)(nil)
 )
 
 type CostReportResource struct {
@@ -54,6 +54,10 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 	//   value instead of preserving prior state.
 	// - chart_type, date_bin: remove generated defaults to preserve existing API
 	//   values for upgraded resources when the config omits these attributes.
+	// - default_forecast: the API supports this field on update but not create,
+	//   so the generator sees the read-only response and emits Computed-only.
+	//   Make it configurable and perform a follow-up update after create when
+	//   users configure it.
 
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
@@ -165,6 +169,30 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
+	defaultForecast := attrs["default_forecast"].(schema.SingleNestedAttribute)
+	defaultForecastAttrs := defaultForecast.Attributes
+	s.Attributes["default_forecast"] = schema.SingleNestedAttribute{
+		Attributes: map[string]schema.Attribute{
+			"kind": schema.StringAttribute{
+				Required:            true,
+				MarkdownDescription: defaultForecastAttrs["kind"].GetMarkdownDescription(),
+				Description:         defaultForecastAttrs["kind"].GetDescription(),
+				Validators: []validator.String{
+					stringvalidator.OneOf("baseline", "report_forecast"),
+				},
+			},
+			"report_forecast_token": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: defaultForecastAttrs["report_forecast_token"].GetMarkdownDescription(),
+				Description:         defaultForecastAttrs["report_forecast_token"].GetDescription(),
+			},
+		},
+		CustomType:          defaultForecast.CustomType,
+		Optional:            true,
+		MarkdownDescription: defaultForecast.GetMarkdownDescription(),
+		Description:         defaultForecast.GetDescription(),
+	}
+
 	s.MarkdownDescription = "Manages a CostReport."
 	resp.Schema = s
 }
@@ -194,7 +222,29 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload)
+	payload := out.Payload
+	if !data.DefaultForecast.IsNull() && !data.DefaultForecast.IsUnknown() {
+		updateModel := data.toUpdateModel(ctx, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		updateParams := costsv2.NewUpdateCostReportParams().
+			WithCostReportToken(out.Payload.Token).
+			WithUpdateCostReport(updateModel)
+		updated, err := r.client.V2.Costs.UpdateCostReport(updateParams, r.client.Auth)
+		if err != nil {
+			if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
+				handleBadRequest("Set Default Forecast on CostReport Resource", &resp.Diagnostics, e.GetPayload())
+				return
+			}
+			handleError("Set Default Forecast on CostReport Resource", &resp.Diagnostics, err)
+			return
+		}
+		payload = updated.Payload
+	}
+
+	diag := data.applyPayload(ctx, payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
@@ -294,13 +344,4 @@ func (r *CostReportResource) Configure(_ context.Context, req resource.Configure
 	}
 
 	r.client = req.ProviderData.(*Client)
-}
-
-func (r *CostReportResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
-	return []resource.ConfigValidator{
-		resourcevalidator.AtLeastOneOf(
-			path.MatchRoot("folder_token"),
-			path.MatchRoot("workspace_token"),
-		),
-	}
 }

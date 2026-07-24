@@ -2,9 +2,11 @@ package vantage
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
@@ -226,5 +228,137 @@ func TestApplyPayload_NullStateStaysNull(t *testing.T) {
 	}
 	if !model.Settings.IsNull() {
 		t.Errorf("expected Settings to remain null when config omits the block")
+	}
+}
+
+func TestCostReportModel_toUpdateModelMapsDefaultForecast(t *testing.T) {
+	ctx := context.Background()
+	defaultForecast, d := resource_cost_report.NewDefaultForecastValue(
+		resource_cost_report.DefaultForecastValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"kind":                  types.StringValue("report_forecast"),
+			"report_forecast_token": types.StringValue("rprt_fcst_test"),
+		},
+	)
+	if d.HasError() {
+		t.Fatalf("unexpected diags building default_forecast: %v", d)
+	}
+
+	model := &costReportModel{
+		BusinessMetricTokensWithMetadata: types.ListNull(types.ObjectType{
+			AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
+		}),
+		ChartSettings:   resource_cost_report.NewChartSettingsValueNull(),
+		DefaultForecast: defaultForecast,
+		Settings:        resource_cost_report.NewSettingsValueNull(),
+	}
+
+	var diags diag.Diagnostics
+	update := model.toUpdateModel(ctx, &diags)
+	if diags.HasError() {
+		t.Fatalf("toUpdateModel returned errors: %v", diags)
+	}
+	if update.DefaultForecast == nil {
+		t.Fatal("expected DefaultForecast in update payload")
+	}
+	if got, want := *update.DefaultForecast.Kind, "report_forecast"; got != want {
+		t.Errorf("DefaultForecast.Kind = %q, want %q", got, want)
+	}
+	if got, want := update.DefaultForecast.ReportForecastToken, "rprt_fcst_test"; got != want {
+		t.Errorf("DefaultForecast.ReportForecastToken = %q, want %q", got, want)
+	}
+}
+
+func TestCostReportModelMapsBusinessMetricMetadata(t *testing.T) {
+	ctx := context.Background()
+	teamLabels, d := types.ListValueFrom(ctx, types.StringType, []string{"platform", "finops"})
+	if d.HasError() {
+		t.Fatalf("unexpected diags building team labels: %v", d)
+	}
+	labelFilters, d := types.MapValue(
+		types.ListType{ElemType: types.StringType},
+		map[string]attr.Value{"team": teamLabels},
+	)
+	if d.HasError() {
+		t.Fatalf("unexpected diags building label_filters: %v", d)
+	}
+	labelFilter, d := types.ListValueFrom(ctx, types.StringType, []string{})
+	if d.HasError() {
+		t.Fatalf("unexpected diags building label_filter: %v", d)
+	}
+	businessMetric, d := types.ObjectValue(
+		resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"business_metric_token": types.StringValue("bsnss_mtrc_test"),
+			"calculation_type":      types.StringValue("gross_margin"),
+			"label":                 types.StringValue("Platform Gross Margin"),
+			"label_filter":          labelFilter,
+			"label_filters":         labelFilters,
+			"unit_scale":            types.StringValue("per_hundred"),
+		},
+	)
+	if d.HasError() {
+		t.Fatalf("unexpected diags building business metric metadata: %v", d)
+	}
+	businessMetrics, d := types.ListValue(
+		types.ObjectType{
+			AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
+		},
+		[]attr.Value{businessMetric},
+	)
+	if d.HasError() {
+		t.Fatalf("unexpected diags building business metric list: %v", d)
+	}
+
+	model := &costReportModel{
+		BusinessMetricTokensWithMetadata: businessMetrics,
+		ChartSettings:                    resource_cost_report.NewChartSettingsValueNull(),
+		DefaultForecast:                  resource_cost_report.NewDefaultForecastValueNull(),
+		Settings:                         resource_cost_report.NewSettingsValueNull(),
+	}
+	var createDiags diag.Diagnostics
+	create := model.toCreateModel(ctx, &createDiags)
+	if createDiags.HasError() {
+		t.Fatalf("toCreateModel returned errors: %v", createDiags)
+	}
+	assertCreateBusinessMetricMetadata(t, create.BusinessMetricTokensWithMetadata)
+
+	var updateDiags diag.Diagnostics
+	update := model.toUpdateModel(ctx, &updateDiags)
+	if updateDiags.HasError() {
+		t.Fatalf("toUpdateModel returned errors: %v", updateDiags)
+	}
+	if len(update.BusinessMetricTokensWithMetadata) != 1 {
+		t.Fatalf("update business metric count = %d, want 1", len(update.BusinessMetricTokensWithMetadata))
+	}
+	updateItem := update.BusinessMetricTokensWithMetadata[0]
+	if got, want := *updateItem.CalculationType, "gross_margin"; got != want {
+		t.Errorf("update CalculationType = %q, want %q", got, want)
+	}
+	if got, want := updateItem.Label, "Platform Gross Margin"; got != want {
+		t.Errorf("update Label = %q, want %q", got, want)
+	}
+	if got, want := updateItem.LabelFilters["team"], []string{"platform", "finops"}; !slices.Equal(got, want) {
+		t.Errorf("update LabelFilters[team] = %v, want %v", got, want)
+	}
+}
+
+func assertCreateBusinessMetricMetadata(
+	t *testing.T,
+	items []*modelsv2.CreateCostReportBusinessMetricTokensWithMetadataItems0,
+) {
+	t.Helper()
+	if len(items) != 1 {
+		t.Fatalf("create business metric count = %d, want 1", len(items))
+	}
+	item := items[0]
+	if got, want := *item.CalculationType, "gross_margin"; got != want {
+		t.Errorf("create CalculationType = %q, want %q", got, want)
+	}
+	if got, want := item.Label, "Platform Gross Margin"; got != want {
+		t.Errorf("create Label = %q, want %q", got, want)
+	}
+	if got, want := item.LabelFilters["team"], []string{"platform", "finops"}; !slices.Equal(got, want) {
+		t.Errorf("create LabelFilters[team] = %v, want %v", got, want)
 	}
 }
