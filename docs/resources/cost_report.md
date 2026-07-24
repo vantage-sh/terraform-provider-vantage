@@ -18,9 +18,9 @@ resource "vantage_cost_report" "demo_report" {
   folder_token        = "fldr_3555785cd0409118"
   filter              = "costs.provider = 'aws'"
   saved_filter_tokens = ["svd_fltr_e844a2ccace05933", "svd_fltr_1b4b80a380ef4ba2"]
-  workspace_token = "wrkspc_47c3254c790e9351"
-  chart_type = "line" # Allowed: area, line, pie, bar, multi-bar
-  date_bin = "day"    # Allowed: cumulative, day, week, month, quarter
+  workspace_token     = "wrkspc_47c3254c790e9351"
+  chart_type          = "line" # Allowed: area, line, pie, bar, multi-bar
+  date_bin            = "day"  # Allowed: cumulative, day, week, month, quarter
 
   settings = {
     include_credits      = true
@@ -29,7 +29,7 @@ resource "vantage_cost_report" "demo_report" {
     include_tax          = true
     amortize             = false
     unallocated          = false
-    aggregate_by         = "cost" # Allowed: cost, usage
+    aggregate_by         = "cost" # Allowed: cost, usage, count
     show_previous_period = false
   }
 
@@ -92,7 +92,7 @@ Optional:
 Optional:
 
 - `x_axis_dimension` (List of String) The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].
-- `y_axis_dimension` (String) The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
+- `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
 
 
 <a id="nestedatt--default_forecast"></a>
@@ -112,12 +112,12 @@ Optional:
 
 Optional:
 
-- `aggregate_by` (String) Report will aggregate by cost or usage.
+- `aggregate_by` (String) Report will aggregate by cost, usage, or count.
 - `amortize` (Boolean) Report will amortize.
 - `complete_period` (Boolean) Report will restrict date ranges to completed periods only.
 - `include_credits` (Boolean) Report will include credits.
 - `include_discounts` (Boolean) Report will include discounts.
 - `include_refunds` (Boolean) Report will include refunds.
 - `include_tax` (Boolean) Report will include tax.
-- `show_previous_period` (Boolean) Report will show previous period costs or usage comparison.
+- `show_previous_period` (Boolean) Report will show previous period cost, usage, or count comparison.
 - `unallocated` (Boolean) Report will show unallocated costs.
