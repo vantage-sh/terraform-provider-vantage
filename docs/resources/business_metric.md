@@ -25,6 +25,7 @@ description: |-
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
 - `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
 - `forecasted_values` (Attributes List) The dates, amounts, and (optional) labels for forecasted BusinessMetric values. (see [below for nested schema](#nestedatt--forecasted_values))
+- `snowflake_metric_fields` (Attributes) Snowflake metric configuration fields (see [below for nested schema](#nestedatt--snowflake_metric_fields))
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
@@ -67,7 +68,10 @@ Required:
 
 Optional:
 
+- `calculation_type` (String) The calculation type applied when this BusinessMetric is used in the CostReport. Defaults to `unit_cost`.
+- `label` (String) Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.
 - `label_filter` (List of String) Include only values with these labels in the CostReport.
+- `label_filters` (Map of List of String) Include only ClickHouse BusinessMetric values matching every label key and one of its values.
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within the CostReport.
 
 
@@ -91,6 +95,15 @@ Required:
 Optional:
 
 - `label` (String)
+
+
+<a id="nestedatt--snowflake_metric_fields"></a>
+### Nested Schema for `snowflake_metric_fields`
+
+Optional:
+
+- `integration_token` (String) Integration token for the account from which you would like to fetch metrics.
+- `sql_query` (String) Snowflake SQL query returning date, value, and optional label columns.
 
 
 <a id="nestedatt--values"></a>
