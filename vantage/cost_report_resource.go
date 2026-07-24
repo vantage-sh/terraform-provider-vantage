@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,9 +19,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*CostReportResource)(nil)
-	_ resource.ResourceWithConfigure   = (*CostReportResource)(nil)
-	_ resource.ResourceWithImportState = (*CostReportResource)(nil)
+	_ resource.Resource                     = (*CostReportResource)(nil)
+	_ resource.ResourceWithConfigure        = (*CostReportResource)(nil)
+	_ resource.ResourceWithImportState      = (*CostReportResource)(nil)
+	_ resource.ResourceWithConfigValidators = (*CostReportResource)(nil)
 )
 
 type CostReportResource struct {
@@ -344,4 +346,13 @@ func (r *CostReportResource) Configure(_ context.Context, req resource.Configure
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+func (r *CostReportResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("folder_token"),
+			path.MatchRoot("workspace_token"),
+		),
+	}
 }
