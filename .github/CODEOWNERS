@@ -1,6 +1,6 @@
 * @vantage-sh/engineering-persona
 # Dependabot dependency manifests — @vantage-sh/engineering-approvers
 # Tailored from .github/dependabot.yml + repo manifests (ecosystems: github-actions, gomod).
-/.github/workflows/**/* @vantage-sh/engineering-approvers
-/go.mod @vantage-sh/engineering-approvers
-/go.sum @vantage-sh/engineering-approvers
+/.github/workflows/**/* @vantage-sh/engineering-persona @vantage-sh/engineering-approvers
+/go.mod @vantage-sh/engineering-persona @vantage-sh/engineering-approvers
+/go.sum @vantage-sh/engineering-persona @vantage-sh/engineering-approvers
