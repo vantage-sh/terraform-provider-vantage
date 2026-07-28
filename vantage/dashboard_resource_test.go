@@ -244,6 +244,79 @@ func TestAccDashboard_dateInterval(t *testing.T) {
 		},
 	})
 }
+
+// A null date_interval is only marked "known after apply" when the plan already
+// differs from prior state, and it applies back to null, so it never sustains a
+// diff of its own. Adding dates to a null interval must also survive apply even
+// though toUpdate rewrites the interval to "custom".
+func TestAccDashboard_nullDateIntervalNoDrift(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create with no interval and no dates.
+			{
+				Config: testAccDashboard_noDrift("no-drift", ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-no-drift", "date_interval"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-drift", "start_date", ""),
+				),
+			},
+			{
+				Config:             testAccDashboard_noDrift("no-drift", ""),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+
+			// Change an unrelated attribute: this is the only case where the
+			// framework marks the null interval unknown.
+			{
+				Config: testAccDashboard_noDrift("no-drift-renamed", ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-drift", "title", "no-drift-renamed"),
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-no-drift", "date_interval"),
+				),
+			},
+			{
+				Config:             testAccDashboard_noDrift("no-drift-renamed", ""),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+
+			// Add dates while the interval is null.
+			{
+				Config: testAccDashboard_noDrift("no-drift-renamed", `
+					start_date = "2023-01-01"
+					end_date   = "2023-01-31"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-drift", "date_interval", "custom"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-drift", "start_date", "2023-01-01"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-no-drift", "end_date", "2023-01-31"),
+				),
+			},
+			{
+				Config: testAccDashboard_noDrift("no-drift-renamed", `
+					start_date = "2023-01-01"
+					end_date   = "2023-01-31"`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccDashboard_noDrift(title, dates string) string {
+	return fmt.Sprintf(`
+		data "vantage_workspaces" "test" {}
+
+		resource "vantage_dashboard" "test-no-drift" {
+			workspace_token = data.vantage_workspaces.test.workspaces[0].token
+			title = %q
+			%s
+		}
+	`, title, dates)
+}
+
 func testAccDashboard_basicTfDatasourceWorkspaces() string {
 	return `
 		data "vantage_workspaces" "test" {}
