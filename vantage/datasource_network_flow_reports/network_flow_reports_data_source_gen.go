@@ -98,19 +98,12 @@ func NetworkFlowReportsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
-			"q": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "A search query to filter NetworkFlowReports by title.",
-				MarkdownDescription: "A search query to filter NetworkFlowReports by title.",
-			},
 		},
 	}
 }
 
 type NetworkFlowReportsModel struct {
-	NetworkFlowReports types.List   `tfsdk:"network_flow_reports"`
-	Q                  types.String `tfsdk:"q"`
+	NetworkFlowReports types.List `tfsdk:"network_flow_reports"`
 }
 
 var _ basetypes.ObjectTypable = NetworkFlowReportsType{}

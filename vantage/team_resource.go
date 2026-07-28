@@ -366,13 +366,22 @@ func (m nullableStringPlanModifier) PlanModifyString(_ context.Context, req plan
 	}
 }
 
-// nullableStringPointer returns a *string suitable for nullable API fields.
-// Empty string is treated as nil (null), which tells the API to clear the field.
+// nullableStringPointer returns a *string suitable for nullable API fields that
+// serialize nil as JSON null (no omitempty). Empty string is treated as nil.
 func nullableStringPointer(s types.String) *string {
 	if s.IsNull() || s.IsUnknown() || s.ValueString() == "" {
 		return nil
 	}
 	return s.ValueStringPointer()
+}
+
+// nullableStringFromAPI maps a nullable API string into Terraform state using ""
+// when the API returns null, matching nullableStringPlanModifier clear semantics.
+func nullableStringFromAPI(v *string) types.String {
+	if v == nil {
+		return types.StringValue("")
+	}
+	return types.StringValue(*v)
 }
 
 // setDescriptionFromPayload handles the description field from API responses.

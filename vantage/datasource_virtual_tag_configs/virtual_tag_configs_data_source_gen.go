@@ -18,12 +18,6 @@ import (
 func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"q": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "A search query to filter VirtualTagConfigs by key.",
-				MarkdownDescription: "A search query to filter VirtualTagConfigs by key.",
-			},
 			"virtual_tag_configs": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -37,8 +31,8 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 								Attributes: map[string]schema.Attribute{
 									"filter": schema.StringAttribute{
 										Computed:            true,
-										Description:         "The VQL filter this collapsed tag key applies to. Null when the key is provider-scoped or unset.",
-										MarkdownDescription: "The VQL filter this collapsed tag key applies to. Null when the key is provider-scoped or unset.",
+										Description:         "The VQL filter this collapsed tag key applies to.",
+										MarkdownDescription: "The VQL filter this collapsed tag key applies to.",
 									},
 									"key": schema.StringAttribute{
 										Computed:            true,
@@ -48,8 +42,8 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 									"providers": schema.ListAttribute{
 										ElementType:         types.StringType,
 										Computed:            true,
-										Description:         "The providers this collapsed tag key applies to. Empty when it applies to all providers.",
-										MarkdownDescription: "The providers this collapsed tag key applies to. Empty when it applies to all providers.",
+										Description:         "The providers this collapsed tag key applies to. Defaults to all providers when omitted.",
+										MarkdownDescription: "The providers this collapsed tag key applies to. Defaults to all providers when omitted.",
 									},
 								},
 								CustomType: CollapsedTagKeysType{
@@ -247,8 +241,7 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 }
 
 type VirtualTagConfigsModel struct {
-	Q                 types.String `tfsdk:"q"`
-	VirtualTagConfigs types.List   `tfsdk:"virtual_tag_configs"`
+	VirtualTagConfigs types.List `tfsdk:"virtual_tag_configs"`
 }
 
 var _ basetypes.ObjectTypable = VirtualTagConfigsType{}

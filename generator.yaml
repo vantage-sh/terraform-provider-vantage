@@ -433,6 +433,7 @@ data_sources:
         - limit
         - links
         - page
+        - q
   report_forecasts:
     read:
       path: /report_forecasts
@@ -442,6 +443,7 @@ data_sources:
         - limit
         - links
         - page
+        - q
   scenario_models:
     read:
       path: /scenario_models
@@ -479,6 +481,7 @@ data_sources:
         - limit
         - links
         - page
+        - q
   report_notifications:
     read:
       path: /report_notifications
@@ -506,6 +509,7 @@ data_sources:
         - limit
         - links
         - page
+        - q
   network_flow_reports:
     read:
       path: /network_flow_reports
@@ -515,6 +519,7 @@ data_sources:
         - limit
         - links
         - page
+        - q
   anomaly_notifications:
     read:
       path: /anomaly_notifications
@@ -533,6 +538,7 @@ data_sources:
         - limit
         - links
         - page
+        - q
   resource_report_columns:
     read:
       path: /resource_reports/columns
@@ -566,3 +572,4 @@ data_sources:
         - limit
         - links
         - page
+        - q

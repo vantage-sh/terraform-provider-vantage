@@ -19,7 +19,8 @@ func (m *reportForecastModel) applyPayload(ctx context.Context, src *modelsv2.Re
 	m.CreatedAt = types.StringValue(src.CreatedAt)
 	m.UpdatedAt = types.StringValue(src.UpdatedAt)
 	m.CreatedByToken = types.StringPointerValue(src.CreatedByToken)
-	m.BusinessMetricToken = types.StringPointerValue(src.BusinessMetricToken)
+	// Keep cleared optional strings as "" so nullableStringPlanModifier stays stable.
+	m.BusinessMetricToken = nullableStringFromAPI(src.BusinessMetricToken)
 	m.IsDefault = types.BoolValue(src.IsDefault)
 
 	if m.SetAsDefault.IsNull() || m.SetAsDefault.IsUnknown() {
@@ -45,6 +46,7 @@ func (m *reportForecastModel) toCreate(ctx context.Context, diags *diag.Diagnost
 	}
 
 	if !m.BusinessMetricToken.IsNull() && !m.BusinessMetricToken.IsUnknown() {
+		// Empty string pointer keeps the JSON key present under omitempty so the API clears.
 		dst.BusinessMetricToken = m.BusinessMetricToken.ValueStringPointer()
 	}
 	if !m.SetAsDefault.IsNull() && !m.SetAsDefault.IsUnknown() {
@@ -72,6 +74,7 @@ func (m *reportForecastModel) toUpdate(ctx context.Context, diags *diag.Diagnost
 		dst.Title = m.Title.ValueString()
 	}
 	if !m.BusinessMetricToken.IsNull() && !m.BusinessMetricToken.IsUnknown() {
+		// Empty string pointer keeps the JSON key present under omitempty so the API clears.
 		dst.BusinessMetricToken = m.BusinessMetricToken.ValueStringPointer()
 	}
 	if !m.SetAsDefault.IsNull() && !m.SetAsDefault.IsUnknown() {

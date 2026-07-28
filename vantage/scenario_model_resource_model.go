@@ -46,8 +46,9 @@ func (m *scenarioModelModel) applyPayload(ctx context.Context, src *modelsv2.Sce
 	m.UpdatedAt = types.StringValue(src.UpdatedAt)
 	m.CreatedByToken = types.StringPointerValue(src.CreatedByToken)
 	m.WorkspaceToken = types.StringPointerValue(src.WorkspaceToken)
-	m.CloudProvider = types.StringPointerValue(src.Provider)
-	m.Service = types.StringPointerValue(src.Service)
+	// Keep cleared optional strings as "" so nullableStringPlanModifier stays stable.
+	m.CloudProvider = nullableStringFromAPI(src.Provider)
+	m.Service = nullableStringFromAPI(src.Service)
 
 	if src.Priority != nil {
 		m.Priority = types.Int64Value(int64(*src.Priority))
@@ -123,6 +124,7 @@ func (m *scenarioModelModel) toCreate(ctx context.Context, diags *diag.Diagnosti
 		dst.Priority = &priority
 	}
 	if !m.CloudProvider.IsNull() && !m.CloudProvider.IsUnknown() {
+		// Empty string pointer keeps the JSON key present under omitempty so the API clears.
 		dst.Provider = m.CloudProvider.ValueStringPointer()
 	}
 	if !m.Service.IsNull() && !m.Service.IsUnknown() {
@@ -150,6 +152,7 @@ func (m *scenarioModelModel) toUpdate(ctx context.Context, diags *diag.Diagnosti
 		dst.Priority = &priority
 	}
 	if !m.CloudProvider.IsNull() && !m.CloudProvider.IsUnknown() {
+		// Empty string pointer keeps the JSON key present under omitempty so the API clears.
 		dst.Provider = m.CloudProvider.ValueStringPointer()
 	}
 	if !m.Service.IsNull() && !m.Service.IsUnknown() {
