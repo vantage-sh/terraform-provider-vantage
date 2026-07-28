@@ -363,6 +363,48 @@ resources:
             description: The token of the recommendation view
         aliases:
           recommendation_view_token: token
+  report_forecast:
+    create:
+      path: /report_forecasts
+      method: POST
+    read:
+      path: /report_forecasts/{report_forecast_token}
+      method: GET
+    update:
+      path: /report_forecasts/{report_forecast_token}
+      method: PUT
+    delete:
+      path: /report_forecasts/{report_forecast_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the report forecast
+        aliases:
+          report_forecast_token: token
+  scenario_model:
+    create:
+      path: /scenario_models
+      method: POST
+    read:
+      path: /scenario_models/{scenario_model_token}
+      method: GET
+    update:
+      path: /scenario_models/{scenario_model_token}
+      method: PUT
+    delete:
+      path: /scenario_models/{scenario_model_token}
+      method: DELETE
+    schema:
+      ignores:
+        - provider
+      attributes:
+        overrides:
+          token:
+            description: The token of the scenario model
+        aliases:
+          scenario_model_token: token
 data_sources:
   billing_rules:
     read:
@@ -391,6 +433,25 @@ data_sources:
         - limit
         - links
         - page
+  report_forecasts:
+    read:
+      path: /report_forecasts
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  scenario_models:
+    read:
+      path: /scenario_models
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+        - scenario_models.provider
   cost_alerts:
     read:
       path: /cost_alerts

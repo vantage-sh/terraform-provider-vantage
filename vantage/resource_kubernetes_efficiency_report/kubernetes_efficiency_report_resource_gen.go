@@ -94,8 +94,8 @@ func KubernetesEfficiencyReportResourceSchema(ctx context.Context) schema.Schema
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
-				MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
+				Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, region, labeled, category, pod, label, label:<label_name>.",
+				MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, region, labeled, category, pod, label, label:<label_name>.",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,

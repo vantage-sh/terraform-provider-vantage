@@ -37,5 +37,3 @@ Read-Only:
 - `title` (String) The title of the RecommendationView.
 - `token` (String) The token of the RecommendationView.
 - `workspace_token` (String) The token for the Workspace the RecommendationView is a part of.
-
-

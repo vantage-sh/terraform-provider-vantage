@@ -66,8 +66,12 @@ Read-Only:
 - `cost_report_token` (String) The token of the CostReport the BusinessMetric is attached to.
 - `label` (String) Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.
 - `label_filter` (List of String) The labels that the BusinessMetric is filtered by within a particular CostReport.
-- `label_filters` (Map of List of String) The ClickHouse BusinessMetric label filters applied within a CostReport. Each key is required and values within a key are alternatives.
+- `label_filters` (Attributes) The ClickHouse BusinessMetric label filters applied within a CostReport. Each key is required and values within a key are alternatives. (see [below for nested schema](#nestedatt--business_metrics--cost_report_tokens_with_metadata--label_filters))
 - `unit_scale` (String) Determines the scale of the BusinessMetric's values within a particular CostReport.
+
+<a id="nestedatt--business_metrics--cost_report_tokens_with_metadata--label_filters"></a>
+### Nested Schema for `business_metrics.cost_report_tokens_with_metadata.label_filters`
+
 
 
 <a id="nestedatt--business_metrics--datadog_metric_fields"></a>
@@ -83,4 +87,4 @@ Read-Only:
 
 Read-Only:
 
-- `sql_query` (String) Snowflake SQL query returning date, value, and optional label columns.
+- `sql_query` (String) The SQL query used to import Snowflake metrics.

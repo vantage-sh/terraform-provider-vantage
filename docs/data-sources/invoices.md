@@ -40,5 +40,3 @@ Read-Only:
 - `token` (String)
 - `total` (String) Total amount for the invoice period
 - `updated_at` (String) The date and time, in UTC, the invoice was last updated. ISO 8601 formatted.
-
-

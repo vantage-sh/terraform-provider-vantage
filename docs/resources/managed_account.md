@@ -44,7 +44,7 @@ resource "vantage_managed_account" "terraform-managed-account" {
 ### Optional
 
 - `access_credential_tokens` (List of String) Access Credential (aka Integrations) tokens to assign to the Managed Account.
-- `billing_rule_tokens` (List of String) Billing Rule tokens to assign to the Managed Account.
+- `billing_rule_tokens` (List of String) Billing Rule tokens to assign to the Managed Account, in their desired execution order. Tokens must be ordered by execution group: AWS transforms, then COST inserts, then COST transforms, then monthly post-transform inserts. Within a group any order is accepted and persisted as-is. Submitting a list whose cross-group ordering does not match the pipeline returns a 400.Existing rules with apply_to_all enabled will be added implicity to the end of their execution group.
 - `email_domain` (String) Email domain to associate with this Managed Account for SSO.
 
 ### Read-Only
@@ -54,5 +54,3 @@ resource "vantage_managed_account" "terraform-managed-account" {
 - `parent_account_token` (String) The token for the parent Account.
 - `payment_terms_days` (Number) Number of days until payment is due after invoice date (MSP invoicing accounts only)
 - `token` (String) The token of the managed account
-
-

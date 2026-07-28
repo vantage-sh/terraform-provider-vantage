@@ -42,5 +42,3 @@ resource "vantage_team" "demo_team" {
 
 - `id` (String) The id of the team
 - `token` (String) The token of the Team
-
-

@@ -33,5 +33,3 @@ Read-Only:
 - `token` (String)
 - `track_unallocated` (Boolean)
 - `workspace_token` (String)
-
-

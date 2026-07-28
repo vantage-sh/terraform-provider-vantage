@@ -34,5 +34,3 @@ resource "vantage_saved_filter" "demo_filter" {
 ### Read-Only
 
 - `token` (String) Unique saved filter identifier
-
-

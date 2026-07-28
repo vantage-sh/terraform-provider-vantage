@@ -53,6 +53,11 @@ func RecommendationViewsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The id of the resource",
 							MarkdownDescription: "The id of the resource",
 						},
+						"min_savings": schema.Float64Attribute{
+							Computed:            true,
+							Description:         "Filter recommendations with at least this amount of potential savings.",
+							MarkdownDescription: "Filter recommendations with at least this amount of potential savings.",
+						},
 						"provider_ids": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
@@ -87,6 +92,12 @@ func RecommendationViewsDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"token": schema.StringAttribute{
 							Computed: true,
+						},
+						"types": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Computed:            true,
+							Description:         "Filter by one or more recommendation type slugs.",
+							MarkdownDescription: "Filter by one or more recommendation type slugs.",
 						},
 						"workspace_token": schema.StringAttribute{
 							Computed:            true,
@@ -243,6 +254,24 @@ func (t RecommendationViewsType) ValueFromObject(ctx context.Context, in basetyp
 			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
 	}
 
+	minSavingsAttribute, ok := attributes["min_savings"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`min_savings is missing from object`)
+
+		return nil, diags
+	}
+
+	minSavingsVal, ok := minSavingsAttribute.(basetypes.Float64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`min_savings expected to be basetypes.Float64Value, was: %T`, minSavingsAttribute))
+	}
+
 	providerIdsAttribute, ok := attributes["provider_ids"]
 
 	if !ok {
@@ -369,6 +398,24 @@ func (t RecommendationViewsType) ValueFromObject(ctx context.Context, in basetyp
 			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
 	}
 
+	typesAttribute, ok := attributes["types"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`types is missing from object`)
+
+		return nil, diags
+	}
+
+	typesVal, ok := typesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`types expected to be basetypes.ListValue, was: %T`, typesAttribute))
+	}
+
 	workspaceTokenAttribute, ok := attributes["workspace_token"]
 
 	if !ok {
@@ -398,6 +445,7 @@ func (t RecommendationViewsType) ValueFromObject(ctx context.Context, in basetyp
 		CreatedBy:         createdByVal,
 		EndDate:           endDateVal,
 		Id:                idVal,
+		MinSavings:        minSavingsVal,
 		ProviderIds:       providerIdsVal,
 		Regions:           regionsVal,
 		StartDate:         startDateVal,
@@ -405,6 +453,7 @@ func (t RecommendationViewsType) ValueFromObject(ctx context.Context, in basetyp
 		TagValue:          tagValueVal,
 		Title:             titleVal,
 		Token:             tokenVal,
+		Types:             typesVal,
 		WorkspaceToken:    workspaceTokenVal,
 		state:             attr.ValueStateKnown,
 	}, diags
@@ -581,6 +630,24 @@ func NewRecommendationViewsValue(attributeTypes map[string]attr.Type, attributes
 			fmt.Sprintf(`id expected to be basetypes.StringValue, was: %T`, idAttribute))
 	}
 
+	minSavingsAttribute, ok := attributes["min_savings"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`min_savings is missing from object`)
+
+		return NewRecommendationViewsValueUnknown(), diags
+	}
+
+	minSavingsVal, ok := minSavingsAttribute.(basetypes.Float64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`min_savings expected to be basetypes.Float64Value, was: %T`, minSavingsAttribute))
+	}
+
 	providerIdsAttribute, ok := attributes["provider_ids"]
 
 	if !ok {
@@ -707,6 +774,24 @@ func NewRecommendationViewsValue(attributeTypes map[string]attr.Type, attributes
 			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
 	}
 
+	typesAttribute, ok := attributes["types"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`types is missing from object`)
+
+		return NewRecommendationViewsValueUnknown(), diags
+	}
+
+	typesVal, ok := typesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`types expected to be basetypes.ListValue, was: %T`, typesAttribute))
+	}
+
 	workspaceTokenAttribute, ok := attributes["workspace_token"]
 
 	if !ok {
@@ -736,6 +821,7 @@ func NewRecommendationViewsValue(attributeTypes map[string]attr.Type, attributes
 		CreatedBy:         createdByVal,
 		EndDate:           endDateVal,
 		Id:                idVal,
+		MinSavings:        minSavingsVal,
 		ProviderIds:       providerIdsVal,
 		Regions:           regionsVal,
 		StartDate:         startDateVal,
@@ -743,6 +829,7 @@ func NewRecommendationViewsValue(attributeTypes map[string]attr.Type, attributes
 		TagValue:          tagValueVal,
 		Title:             titleVal,
 		Token:             tokenVal,
+		Types:             typesVal,
 		WorkspaceToken:    workspaceTokenVal,
 		state:             attr.ValueStateKnown,
 	}, diags
@@ -816,25 +903,27 @@ func (t RecommendationViewsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = RecommendationViewsValue{}
 
 type RecommendationViewsValue struct {
-	AccountIds        basetypes.ListValue   `tfsdk:"account_ids"`
-	BillingAccountIds basetypes.ListValue   `tfsdk:"billing_account_ids"`
-	CreatedAt         basetypes.StringValue `tfsdk:"created_at"`
-	CreatedBy         basetypes.StringValue `tfsdk:"created_by"`
-	EndDate           basetypes.StringValue `tfsdk:"end_date"`
-	Id                basetypes.StringValue `tfsdk:"id"`
-	ProviderIds       basetypes.ListValue   `tfsdk:"provider_ids"`
-	Regions           basetypes.ListValue   `tfsdk:"regions"`
-	StartDate         basetypes.StringValue `tfsdk:"start_date"`
-	TagKey            basetypes.StringValue `tfsdk:"tag_key"`
-	TagValue          basetypes.StringValue `tfsdk:"tag_value"`
-	Title             basetypes.StringValue `tfsdk:"title"`
-	Token             basetypes.StringValue `tfsdk:"token"`
-	WorkspaceToken    basetypes.StringValue `tfsdk:"workspace_token"`
+	AccountIds        basetypes.ListValue    `tfsdk:"account_ids"`
+	BillingAccountIds basetypes.ListValue    `tfsdk:"billing_account_ids"`
+	CreatedAt         basetypes.StringValue  `tfsdk:"created_at"`
+	CreatedBy         basetypes.StringValue  `tfsdk:"created_by"`
+	EndDate           basetypes.StringValue  `tfsdk:"end_date"`
+	Id                basetypes.StringValue  `tfsdk:"id"`
+	MinSavings        basetypes.Float64Value `tfsdk:"min_savings"`
+	ProviderIds       basetypes.ListValue    `tfsdk:"provider_ids"`
+	Regions           basetypes.ListValue    `tfsdk:"regions"`
+	StartDate         basetypes.StringValue  `tfsdk:"start_date"`
+	TagKey            basetypes.StringValue  `tfsdk:"tag_key"`
+	TagValue          basetypes.StringValue  `tfsdk:"tag_value"`
+	Title             basetypes.StringValue  `tfsdk:"title"`
+	Token             basetypes.StringValue  `tfsdk:"token"`
+	Types             basetypes.ListValue    `tfsdk:"types"`
+	WorkspaceToken    basetypes.StringValue  `tfsdk:"workspace_token"`
 	state             attr.ValueState
 }
 
 func (v RecommendationViewsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 14)
+	attrTypes := make(map[string]tftypes.Type, 16)
 
 	var val tftypes.Value
 	var err error
@@ -849,6 +938,7 @@ func (v RecommendationViewsValue) ToTerraformValue(ctx context.Context) (tftypes
 	attrTypes["created_by"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["min_savings"] = basetypes.Float64Type{}.TerraformType(ctx)
 	attrTypes["provider_ids"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
@@ -860,13 +950,16 @@ func (v RecommendationViewsValue) ToTerraformValue(ctx context.Context) (tftypes
 	attrTypes["tag_value"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["types"] = basetypes.ListType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
 	attrTypes["workspace_token"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 14)
+		vals := make(map[string]tftypes.Value, 16)
 
 		val, err = v.AccountIds.ToTerraformValue(ctx)
 
@@ -915,6 +1008,14 @@ func (v RecommendationViewsValue) ToTerraformValue(ctx context.Context) (tftypes
 		}
 
 		vals["id"] = val
+
+		val, err = v.MinSavings.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["min_savings"] = val
 
 		val, err = v.ProviderIds.ToTerraformValue(ctx)
 
@@ -971,6 +1072,14 @@ func (v RecommendationViewsValue) ToTerraformValue(ctx context.Context) (tftypes
 		}
 
 		vals["token"] = val
+
+		val, err = v.Types.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["types"] = val
 
 		val, err = v.WorkspaceToken.ToTerraformValue(ctx)
 
@@ -1029,21 +1138,25 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"billing_account_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
+			"created_at":  basetypes.StringType{},
+			"created_by":  basetypes.StringType{},
+			"end_date":    basetypes.StringType{},
+			"id":          basetypes.StringType{},
+			"min_savings": basetypes.Float64Type{},
 			"provider_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
 			"regions": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
+			"start_date": basetypes.StringType{},
+			"tag_key":    basetypes.StringType{},
+			"tag_value":  basetypes.StringType{},
+			"title":      basetypes.StringType{},
+			"token":      basetypes.StringType{},
+			"types": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"workspace_token": basetypes.StringType{},
 		}), diags
 	}
@@ -1068,21 +1181,25 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"billing_account_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
+			"created_at":  basetypes.StringType{},
+			"created_by":  basetypes.StringType{},
+			"end_date":    basetypes.StringType{},
+			"id":          basetypes.StringType{},
+			"min_savings": basetypes.Float64Type{},
 			"provider_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
 			"regions": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
+			"start_date": basetypes.StringType{},
+			"tag_key":    basetypes.StringType{},
+			"tag_value":  basetypes.StringType{},
+			"title":      basetypes.StringType{},
+			"token":      basetypes.StringType{},
+			"types": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"workspace_token": basetypes.StringType{},
 		}), diags
 	}
@@ -1107,21 +1224,25 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"billing_account_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
+			"created_at":  basetypes.StringType{},
+			"created_by":  basetypes.StringType{},
+			"end_date":    basetypes.StringType{},
+			"id":          basetypes.StringType{},
+			"min_savings": basetypes.Float64Type{},
 			"provider_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
 			"regions": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
+			"start_date": basetypes.StringType{},
+			"tag_key":    basetypes.StringType{},
+			"tag_value":  basetypes.StringType{},
+			"title":      basetypes.StringType{},
+			"token":      basetypes.StringType{},
+			"types": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"workspace_token": basetypes.StringType{},
 		}), diags
 	}
@@ -1146,21 +1267,68 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"billing_account_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"created_at": basetypes.StringType{},
-			"created_by": basetypes.StringType{},
-			"end_date":   basetypes.StringType{},
-			"id":         basetypes.StringType{},
+			"created_at":  basetypes.StringType{},
+			"created_by":  basetypes.StringType{},
+			"end_date":    basetypes.StringType{},
+			"id":          basetypes.StringType{},
+			"min_savings": basetypes.Float64Type{},
 			"provider_ids": basetypes.ListType{
 				ElemType: types.StringType,
 			},
 			"regions": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"start_date":      basetypes.StringType{},
-			"tag_key":         basetypes.StringType{},
-			"tag_value":       basetypes.StringType{},
-			"title":           basetypes.StringType{},
-			"token":           basetypes.StringType{},
+			"start_date": basetypes.StringType{},
+			"tag_key":    basetypes.StringType{},
+			"tag_value":  basetypes.StringType{},
+			"title":      basetypes.StringType{},
+			"token":      basetypes.StringType{},
+			"types": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"workspace_token": basetypes.StringType{},
+		}), diags
+	}
+
+	var typesVal basetypes.ListValue
+	switch {
+	case v.Types.IsUnknown():
+		typesVal = types.ListUnknown(types.StringType)
+	case v.Types.IsNull():
+		typesVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		typesVal, d = types.ListValue(types.StringType, v.Types.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"account_ids": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"billing_account_ids": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"created_at":  basetypes.StringType{},
+			"created_by":  basetypes.StringType{},
+			"end_date":    basetypes.StringType{},
+			"id":          basetypes.StringType{},
+			"min_savings": basetypes.Float64Type{},
+			"provider_ids": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"regions": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"start_date": basetypes.StringType{},
+			"tag_key":    basetypes.StringType{},
+			"tag_value":  basetypes.StringType{},
+			"title":      basetypes.StringType{},
+			"token":      basetypes.StringType{},
+			"types": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"workspace_token": basetypes.StringType{},
 		}), diags
 	}
@@ -1172,21 +1340,25 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 		"billing_account_ids": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"created_at": basetypes.StringType{},
-		"created_by": basetypes.StringType{},
-		"end_date":   basetypes.StringType{},
-		"id":         basetypes.StringType{},
+		"created_at":  basetypes.StringType{},
+		"created_by":  basetypes.StringType{},
+		"end_date":    basetypes.StringType{},
+		"id":          basetypes.StringType{},
+		"min_savings": basetypes.Float64Type{},
 		"provider_ids": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"regions": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"start_date":      basetypes.StringType{},
-		"tag_key":         basetypes.StringType{},
-		"tag_value":       basetypes.StringType{},
-		"title":           basetypes.StringType{},
-		"token":           basetypes.StringType{},
+		"start_date": basetypes.StringType{},
+		"tag_key":    basetypes.StringType{},
+		"tag_value":  basetypes.StringType{},
+		"title":      basetypes.StringType{},
+		"token":      basetypes.StringType{},
+		"types": basetypes.ListType{
+			ElemType: types.StringType,
+		},
 		"workspace_token": basetypes.StringType{},
 	}
 
@@ -1207,6 +1379,7 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"created_by":          v.CreatedBy,
 			"end_date":            v.EndDate,
 			"id":                  v.Id,
+			"min_savings":         v.MinSavings,
 			"provider_ids":        providerIdsVal,
 			"regions":             regionsVal,
 			"start_date":          v.StartDate,
@@ -1214,6 +1387,7 @@ func (v RecommendationViewsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"tag_value":           v.TagValue,
 			"title":               v.Title,
 			"token":               v.Token,
+			"types":               typesVal,
 			"workspace_token":     v.WorkspaceToken,
 		})
 
@@ -1259,6 +1433,10 @@ func (v RecommendationViewsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.MinSavings.Equal(other.MinSavings) {
+		return false
+	}
+
 	if !v.ProviderIds.Equal(other.ProviderIds) {
 		return false
 	}
@@ -1287,6 +1465,10 @@ func (v RecommendationViewsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Types.Equal(other.Types) {
+		return false
+	}
+
 	if !v.WorkspaceToken.Equal(other.WorkspaceToken) {
 		return false
 	}
@@ -1310,21 +1492,25 @@ func (v RecommendationViewsValue) AttributeTypes(ctx context.Context) map[string
 		"billing_account_ids": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"created_at": basetypes.StringType{},
-		"created_by": basetypes.StringType{},
-		"end_date":   basetypes.StringType{},
-		"id":         basetypes.StringType{},
+		"created_at":  basetypes.StringType{},
+		"created_by":  basetypes.StringType{},
+		"end_date":    basetypes.StringType{},
+		"id":          basetypes.StringType{},
+		"min_savings": basetypes.Float64Type{},
 		"provider_ids": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"regions": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"start_date":      basetypes.StringType{},
-		"tag_key":         basetypes.StringType{},
-		"tag_value":       basetypes.StringType{},
-		"title":           basetypes.StringType{},
-		"token":           basetypes.StringType{},
+		"start_date": basetypes.StringType{},
+		"tag_key":    basetypes.StringType{},
+		"tag_value":  basetypes.StringType{},
+		"title":      basetypes.StringType{},
+		"token":      basetypes.StringType{},
+		"types": basetypes.ListType{
+			ElemType: types.StringType,
+		},
 		"workspace_token": basetypes.StringType{},
 	}
 }

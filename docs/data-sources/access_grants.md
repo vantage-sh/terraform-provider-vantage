@@ -28,5 +28,3 @@ Read-Only:
 - `resource_token` (String)
 - `team_token` (String)
 - `token` (String)
-
-

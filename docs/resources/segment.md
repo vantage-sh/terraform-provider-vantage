@@ -46,5 +46,3 @@ resource "vantage_segment" "demo_segment" {
 
 - `report_token` (String) Token of the report for this segment.
 - `token` (String) Unique segment identifier
-
-

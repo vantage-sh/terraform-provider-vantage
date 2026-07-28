@@ -27,12 +27,14 @@ func NetworkFlowReportResourceSchema(ctx context.Context) schema.Schema {
 			"date_interval": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The date interval of the NetworkFlowReport. Unless 'custom' is used, this is incompatible with 'start_date' and 'end_date' parameters. Defaults to 'last_7_days'.",
-				MarkdownDescription: "The date interval of the NetworkFlowReport. Unless 'custom' is used, this is incompatible with 'start_date' and 'end_date' parameters. Defaults to 'last_7_days'.",
+				Description:         "The date interval of the NetworkFlowReport. Dates are used only for the 'custom' interval. Defaults to 'last_7_days'.",
+				MarkdownDescription: "The date interval of the NetworkFlowReport. Dates are used only for the 'custom' interval. Defaults to 'last_7_days'.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"last_3_days",
 						"last_7_days",
+						"last_14_days",
+						"last_30_days",
 						"custom",
 					),
 				},
@@ -45,8 +47,8 @@ func NetworkFlowReportResourceSchema(ctx context.Context) schema.Schema {
 			"end_date": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The end date of the NetworkFlowReport. YYYY-MM-DD formatted. Incompatible with 'date_interval' parameter.",
-				MarkdownDescription: "The end date of the NetworkFlowReport. YYYY-MM-DD formatted. Incompatible with 'date_interval' parameter.",
+				Description:         "The end date of a custom NetworkFlowReport. YYYY-MM-DD formatted.",
+				MarkdownDescription: "The end date of a custom NetworkFlowReport. YYYY-MM-DD formatted.",
 			},
 			"filter": schema.StringAttribute{
 				Optional:            true,
@@ -61,6 +63,7 @@ func NetworkFlowReportResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The flow direction of the NetworkFlowReport.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
+						"all",
 						"ingress",
 						"egress",
 					),
@@ -93,8 +96,8 @@ func NetworkFlowReportResourceSchema(ctx context.Context) schema.Schema {
 			"start_date": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The start date of the NetworkFlowReport. YYYY-MM-DD formatted. Incompatible with 'date_interval' parameter.",
-				MarkdownDescription: "The start date of the NetworkFlowReport. YYYY-MM-DD formatted. Incompatible with 'date_interval' parameter.",
+				Description:         "The start date of a custom NetworkFlowReport. YYYY-MM-DD formatted.",
+				MarkdownDescription: "The start date of a custom NetworkFlowReport. YYYY-MM-DD formatted.",
 			},
 			"title": schema.StringAttribute{
 				Required:            true,

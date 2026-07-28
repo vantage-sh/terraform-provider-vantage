@@ -23,5 +23,3 @@ description: |-
 - `external_id` (String, Sensitive) The Vantage external ID to authenticate your account.
 - `iam_role_arn` (String) The IAM role that Vantage assumes into your account.
 - `root_policy` (String) The policy that allows Vantage to manage autopilot.
-
-

@@ -100,9 +100,12 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 										MarkdownDescription: "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 									},
-									"label_filters": schema.MapAttribute{
-										ElementType: types.ListType{
-											ElemType: types.StringType,
+									"label_filters": schema.SingleNestedAttribute{
+										Attributes: map[string]schema.Attribute{},
+										CustomType: LabelFiltersType{
+											ObjectType: types.ObjectType{
+												AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
+											},
 										},
 										Computed:            true,
 										Description:         "The ClickHouse BusinessMetric label filters applied within a CostReport. Each key is required and values within a key are alternatives.",
@@ -2256,12 +2259,12 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 		return nil, diags
 	}
 
-	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.ObjectValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
+			fmt.Sprintf(`label_filters expected to be basetypes.ObjectValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -2442,12 +2445,12 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 		return NewCostReportTokensWithMetadataValueUnknown(), diags
 	}
 
-	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.ObjectValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
+			fmt.Sprintf(`label_filters expected to be basetypes.ObjectValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -2555,7 +2558,7 @@ type CostReportTokensWithMetadataValue struct {
 	CostReportToken basetypes.StringValue `tfsdk:"cost_report_token"`
 	Label           basetypes.StringValue `tfsdk:"label"`
 	LabelFilter     basetypes.ListValue   `tfsdk:"label_filter"`
-	LabelFilters    basetypes.MapValue    `tfsdk:"label_filters"`
+	LabelFilters    basetypes.ObjectValue `tfsdk:"label_filters"`
 	UnitScale       basetypes.StringValue `tfsdk:"unit_scale"`
 	state           attr.ValueState
 }
@@ -2572,10 +2575,8 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 	attrTypes["label_filter"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
-	attrTypes["label_filters"] = basetypes.MapType{
-		ElemType: types.ListType{
-			ElemType: types.StringType,
-		},
+	attrTypes["label_filters"] = basetypes.ObjectType{
+		AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -2662,6 +2663,27 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var labelFilters basetypes.ObjectValue
+
+	if v.LabelFilters.IsNull() {
+		labelFilters = types.ObjectNull(
+			LabelFiltersValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.LabelFilters.IsUnknown() {
+		labelFilters = types.ObjectUnknown(
+			LabelFiltersValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.LabelFilters.IsNull() && !v.LabelFilters.IsUnknown() {
+		labelFilters = types.ObjectValueMust(
+			LabelFiltersValue{}.AttributeTypes(ctx),
+			v.LabelFilters.Attributes(),
+		)
+	}
+
 	var labelFilterVal basetypes.ListValue
 	switch {
 	case v.LabelFilter.IsUnknown():
@@ -2682,45 +2704,8 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 			"label_filter": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"label_filters": basetypes.MapType{
-				ElemType: types.ListType{
-					ElemType: types.StringType,
-				},
-			},
-			"unit_scale": basetypes.StringType{},
-		}), diags
-	}
-
-	var labelFiltersVal basetypes.MapValue
-	switch {
-	case v.LabelFilters.IsUnknown():
-		labelFiltersVal = types.MapUnknown(types.ListType{
-			ElemType: types.StringType,
-		})
-	case v.LabelFilters.IsNull():
-		labelFiltersVal = types.MapNull(types.ListType{
-			ElemType: types.StringType,
-		})
-	default:
-		var d diag.Diagnostics
-		labelFiltersVal, d = types.MapValue(types.ListType{
-			ElemType: types.StringType,
-		}, v.LabelFilters.Elements())
-		diags.Append(d...)
-	}
-
-	if diags.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"calculation_type":  basetypes.StringType{},
-			"cost_report_token": basetypes.StringType{},
-			"label":             basetypes.StringType{},
-			"label_filter": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"label_filters": basetypes.MapType{
-				ElemType: types.ListType{
-					ElemType: types.StringType,
-				},
+			"label_filters": basetypes.ObjectType{
+				AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 			},
 			"unit_scale": basetypes.StringType{},
 		}), diags
@@ -2733,10 +2718,8 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"label_filters": basetypes.MapType{
-			ElemType: types.ListType{
-				ElemType: types.StringType,
-			},
+		"label_filters": basetypes.ObjectType{
+			AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -2756,7 +2739,7 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 			"cost_report_token": v.CostReportToken,
 			"label":             v.Label,
 			"label_filter":      labelFilterVal,
-			"label_filters":     labelFiltersVal,
+			"label_filters":     labelFilters,
 			"unit_scale":        v.UnitScale,
 		})
 
@@ -2821,10 +2804,8 @@ func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) m
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"label_filters": basetypes.MapType{
-			ElemType: types.ListType{
-				ElemType: types.StringType,
-			},
+		"label_filters": basetypes.ObjectType{
+			AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 		},
 		"unit_scale": basetypes.StringType{},
 	}
