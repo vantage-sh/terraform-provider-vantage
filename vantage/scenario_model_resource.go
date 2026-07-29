@@ -74,9 +74,6 @@ func (r *scenarioModelResource) Schema(ctx context.Context, _ resource.SchemaReq
 		Computed:            true,
 		Description:         attrs["workspace_token"].GetDescription(),
 		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription(),
-		PlanModifiers: []planmodifier.String{
-			nullableStringPlanModifier{},
-		},
 	}
 
 	resp.Schema = s

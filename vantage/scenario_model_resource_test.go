@@ -1,6 +1,7 @@
 package vantage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
@@ -79,6 +82,22 @@ func TestAccVantageScenarioModel_basic(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestScenarioModelWorkspaceTokenPreservesComputedState(t *testing.T) {
+	var resp frameworkresource.SchemaResponse
+	(&scenarioModelResource{}).Schema(context.Background(), frameworkresource.SchemaRequest{}, &resp)
+
+	workspaceToken, ok := resp.Schema.GetAttributes()["workspace_token"].(resourceschema.StringAttribute)
+	if !ok {
+		t.Fatal("workspace_token is not a string attribute")
+	}
+	if !workspaceToken.Optional || !workspaceToken.Computed {
+		t.Fatal("workspace_token must remain optional and computed")
+	}
+	if len(workspaceToken.PlanModifiers) != 0 {
+		t.Fatal("workspace_token must preserve computed API state when omitted")
+	}
 }
 
 func TestAccVantageScenarioModelsDataSource_basic(t *testing.T) {
