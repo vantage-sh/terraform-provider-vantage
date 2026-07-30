@@ -234,47 +234,48 @@ func (r TeamResource) ImportState(ctx context.Context, req resource.ImportStateR
 }
 
 func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data, config *resource_team.TeamModel
+	var data, config, state *resource_team.TeamModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	params := teamsv2.NewUpdateTeamParams()
 	params.WithTeamToken(data.Token.ValueString())
 
-        userTokens := []string{}
-        userEmails := []string{}
+	userTokens := []string{}
+	userEmails := []string{}
 
-        userTokensConfigured := !config.UserTokens.IsNull() && !config.UserTokens.IsUnknown()
-        userEmailsConfigured := !config.UserEmails.IsNull() && !config.UserEmails.IsUnknown()
-        userTokensNonEmpty := userTokensConfigured && len(config.UserTokens.Elements()) > 0
-        userEmailsNonEmpty := userEmailsConfigured && len(config.UserEmails.Elements()) > 0
+	userTokensConfigured := !config.UserTokens.IsNull() && !config.UserTokens.IsUnknown()
+	userEmailsConfigured := !config.UserEmails.IsNull() && !config.UserEmails.IsUnknown()
+	userTokensNonEmpty := userTokensConfigured && len(config.UserTokens.Elements()) > 0
+	userEmailsNonEmpty := userEmailsConfigured && len(config.UserEmails.Elements()) > 0
 
-        // The API accepts user_tokens or user_emails, but rejects requests that
-        // contain both as non-empty arrays. Read populates both computed fields, so
-        // use config to preserve the identifier type selected by the practitioner.
-        // Imported teams have neither field in config; prefer tokens for them.
-        switch {
-        case userTokensNonEmpty && userEmailsNonEmpty:
-                resp.Diagnostics.AddError(
-                        "Conflicting Team Members",
-                        "user_tokens and user_emails cannot both be non-empty.",
-                )
-                return
-        case userTokensNonEmpty, userTokensConfigured && !userEmailsNonEmpty:
-                if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
-                        resp.Diagnostics.Append(data.UserTokens.ElementsAs(ctx, &userTokens, false)...)
-                }
-        case userEmailsNonEmpty, userEmailsConfigured:
-                if !data.UserEmails.IsNull() && !data.UserEmails.IsUnknown() {
-                        resp.Diagnostics.Append(data.UserEmails.ElementsAs(ctx, &userEmails, false)...)
-                }
-        default:
-                if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
-                        resp.Diagnostics.Append(data.UserTokens.ElementsAs(ctx, &userTokens, false)...)
-                }
-        }
+	// The API accepts user_tokens or user_emails, but rejects requests that
+	// contain both as non-empty arrays. Read populates both computed fields, so
+	// use config to preserve the identifier type selected by the practitioner.
+	// Imported teams have neither field in config; prefer tokens for them.
+	switch {
+	case userTokensNonEmpty && userEmailsNonEmpty:
+		resp.Diagnostics.AddError(
+			"Conflicting Team Members",
+			"user_tokens and user_emails cannot both be non-empty.",
+		)
+		return
+	case userTokensNonEmpty, userTokensConfigured && !userEmailsNonEmpty:
+		if !data.UserTokens.IsNull() && !data.UserTokens.IsUnknown() {
+			resp.Diagnostics.Append(data.UserTokens.ElementsAs(ctx, &userTokens, false)...)
+		}
+	case userEmailsNonEmpty, userEmailsConfigured:
+		if !data.UserEmails.IsNull() && !data.UserEmails.IsUnknown() {
+			resp.Diagnostics.Append(data.UserEmails.ElementsAs(ctx, &userEmails, false)...)
+		}
+	default:
+		if !state.UserTokens.IsNull() && !state.UserTokens.IsUnknown() {
+			resp.Diagnostics.Append(state.UserTokens.ElementsAs(ctx, &userTokens, false)...)
+		}
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
