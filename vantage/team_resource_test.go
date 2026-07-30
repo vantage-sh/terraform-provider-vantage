@@ -63,6 +63,26 @@ func TestTeam(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_team.team", "user_emails.#", "1"),
 				),
 			},
+			{
+				ResourceName:      "vantage_team.team",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				// update only the description after import populates both user fields
+				Config: testAccTeamWithDescription(rUpdatedName, "updated description"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rUpdatedName),
+					resource.TestCheckResourceAttr("vantage_team.team", "description", "updated description"),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_tokens.#", "1"),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_emails.#", "1"),
+				),
+			},
+			{
+				Config:             testAccTeamWithDescription(rUpdatedName, "updated description"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
 		},
 	})
 }
@@ -164,8 +184,6 @@ resource "vantage_team" "team" {
 }
 `, title)
 }
-
-
 
 func testAccTeamWithUserTokens(title, description string) string {
 	return fmt.Sprintf(`
