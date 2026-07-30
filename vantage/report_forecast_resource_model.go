@@ -50,7 +50,7 @@ func (m *reportForecastModel) toCreate(ctx context.Context, diags *diag.Diagnost
 		dst.BusinessMetricToken = m.BusinessMetricToken.ValueStringPointer()
 	}
 	if !m.SetAsDefault.IsNull() && !m.SetAsDefault.IsUnknown() {
-		dst.SetAsDefault = m.SetAsDefault.ValueBool()
+		dst.SetAsDefault = m.SetAsDefault.ValueBoolPointer()
 	}
 
 	if !m.ScenarioModelTokens.IsNull() && !m.ScenarioModelTokens.IsUnknown() {
@@ -78,7 +78,7 @@ func (m *reportForecastModel) toUpdate(ctx context.Context, diags *diag.Diagnost
 		dst.BusinessMetricToken = m.BusinessMetricToken.ValueStringPointer()
 	}
 	if !m.SetAsDefault.IsNull() && !m.SetAsDefault.IsUnknown() {
-		dst.SetAsDefault = m.SetAsDefault.ValueBool()
+		dst.SetAsDefault = m.SetAsDefault.ValueBoolPointer()
 	}
 
 	if !m.ScenarioModelTokens.IsNull() && !m.ScenarioModelTokens.IsUnknown() {
