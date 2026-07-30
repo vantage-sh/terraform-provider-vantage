@@ -142,6 +142,14 @@ func handleBadRequest(action string, d *diag.Diagnostics, mErr *modelsv2.Errors)
 	)
 }
 
+func handleForbidden(action string, d *diag.Diagnostics, mErr *modelsv2.Errors) {
+	message := "The API returned a 403 Forbidden response."
+	if mErr != nil && len(mErr.Errors) > 0 {
+		message = strings.Join(mErr.Errors, "\n")
+	}
+	d.AddError("Unable to "+action, message)
+}
+
 func toStringsValue(s []string) []basetypes.StringValue {
 	out := []basetypes.StringValue{}
 	for _, str := range s {

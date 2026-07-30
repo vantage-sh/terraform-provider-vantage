@@ -22,5 +22,3 @@ Data source for retrieving available columns for a specific resource type in res
 ### Read-Only
 
 - `columns` (List of String) Array of available column names for the specified resource type.
-
-

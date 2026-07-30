@@ -38,5 +38,3 @@ Read-Only:
 - `unit_type` (String) The unit type used to compare costs. Options are 'currency' or 'percentage'.
 - `updated_at` (String) The date and time, in UTC, for when the alert was last updated. ISO 8601 Formatted.
 - `workspace_token` (String) The ID of the organization that owns the CostAlert.
-
-

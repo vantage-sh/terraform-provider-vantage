@@ -38,5 +38,3 @@ Read-Only:
 - `token` (String)
 - `user_token` (String) The token for the User who created this FinancialCommitmentReport.
 - `workspace_token` (String) The token for the Workspace the FinancialCommitmentReport is a part of.
-
-

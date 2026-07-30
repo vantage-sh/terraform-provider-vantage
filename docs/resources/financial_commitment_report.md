@@ -37,5 +37,3 @@ description: |-
 - `id` (String) The id of the report
 - `token` (String) The token of the report
 - `user_token` (String) The token for the User who created this FinancialCommitmentReport.
-
-

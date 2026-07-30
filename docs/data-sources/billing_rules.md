@@ -41,5 +41,3 @@ Read-Only:
 - `title` (String) The title of the BillingRule.
 - `token` (String)
 - `type` (String) The type of the BillingRule.
-
-

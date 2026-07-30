@@ -117,5 +117,3 @@ Read-Only:
 - `amount` (String) Amount or percentage value for the adjustment
 - `calculation_type` (String) How the adjustment is calculated
 - `name` (String) Name of the adjustment (e.g., 'State Tax', 'Processing Fee')
-
-

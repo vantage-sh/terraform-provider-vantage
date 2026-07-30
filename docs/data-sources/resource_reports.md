@@ -29,5 +29,3 @@ Read-Only:
 - `token` (String)
 - `user_token` (String)
 - `workspace_token` (String)
-
-

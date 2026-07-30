@@ -28,5 +28,3 @@ Read-Only:
 - `title` (String)
 - `token` (String)
 - `workspace_token` (String)
-
-

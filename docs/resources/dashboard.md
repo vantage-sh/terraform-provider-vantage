@@ -37,7 +37,7 @@ resource "vantage_dashboard" "demo_dashboard" {
 - `saved_filter_tokens` (List of String) The tokens of the Saved Filters used in the Dashboard.
 - `start_date` (String) The start date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
 - `title` (String) The title of the Dashboard.
-- `widgets` (Attributes List) The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, and FinancialCommitmentReport. (see [below for nested schema](#nestedatt--widgets))
+- `widgets` (Attributes List) The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, FinancialCommitmentReport, and RecommendationView. (see [below for nested schema](#nestedatt--widgets))
 - `workspace_token` (String) The token of the Workspace to add the Dashboard to. Required if the API token is associated with multiple Workspaces.
 
 ### Read-Only
@@ -64,5 +64,3 @@ Optional:
 Required:
 
 - `display_type` (String)
-
-

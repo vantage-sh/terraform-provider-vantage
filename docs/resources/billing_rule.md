@@ -40,5 +40,3 @@ description: |-
 - `created_by_token` (String) The token of the Creator of the BillingRule.
 - `id` (String) The id of the billing rule
 - `token` (String) The token of the billing rule
-
-

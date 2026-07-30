@@ -71,5 +71,3 @@ Read-Only:
 - `actual` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
 - `amount` (String) The amount of the Budget Period as a string to ensure precision.
 - `date` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
-
-
