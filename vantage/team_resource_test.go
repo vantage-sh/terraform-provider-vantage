@@ -63,6 +63,21 @@ func TestTeam(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_team.team", "user_emails.#", "1"),
 				),
 			},
+			{
+				// update only the description after Read populates both user fields
+				Config: testAccTeamWithIgnoredUsers(rUpdatedName, "updated description"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rUpdatedName),
+					resource.TestCheckResourceAttr("vantage_team.team", "description", "updated description"),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_tokens.#", "1"),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_emails.#", "1"),
+				),
+			},
+			{
+				Config:             testAccTeamWithIgnoredUsers(rUpdatedName, "updated description"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
 		},
 	})
 }
@@ -165,8 +180,6 @@ resource "vantage_team" "team" {
 `, title)
 }
 
-
-
 func testAccTeamWithUserTokens(title, description string) string {
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
@@ -175,6 +188,20 @@ resource "vantage_team" "team" {
 	user_tokens = [data.vantage_users.test.users[0].token]
 	name = %[1]q
 	description = %[2]q
+}
+	`, title, description)
+}
+
+func testAccTeamWithIgnoredUsers(title, description string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+resource "vantage_team" "team" {
+	name = %[1]q
+	description = %[2]q
+
+	lifecycle {
+		ignore_changes = [user_emails, user_tokens]
+	}
 }
 	`, title, description)
 }
