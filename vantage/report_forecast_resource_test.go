@@ -20,7 +20,6 @@ func TestAccVantageReportForecast_basic(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				// Exercise set_as_default on create; updating it alone currently 500s in prod.
 				Config: testAccVantageReportForecastConfig_basic(rTitle, modelTitle, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", rTitle),
@@ -39,16 +38,16 @@ func TestAccVantageReportForecast_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"set_as_default"},
 			},
 			{
-				Config: testAccVantageReportForecastConfig_basic(rUpdatedTitle, modelTitle, true),
+				Config: testAccVantageReportForecastConfig_basic(rUpdatedTitle, modelTitle, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", rUpdatedTitle),
-					resource.TestCheckResourceAttr(resourceName, "set_as_default", "true"),
-					resource.TestCheckResourceAttr(resourceName, "is_default", "true"),
+					resource.TestCheckResourceAttr(resourceName, "set_as_default", "false"),
+					resource.TestCheckResourceAttr(resourceName, "is_default", "false"),
 					resource.TestCheckResourceAttr(resourceName, "scenario_model_tokens.#", "1"),
 				),
 			},
 			{
-				Config:             testAccVantageReportForecastConfig_basic(rUpdatedTitle, modelTitle, true),
+				Config:             testAccVantageReportForecastConfig_basic(rUpdatedTitle, modelTitle, false),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
@@ -114,10 +113,7 @@ func testAccVantageReportForecastConfig_basic(title, modelTitle string, setAsDef
 }
 
 func testAccVantageReportForecastConfig_basicNamed(title, modelTitle, resourceLabel string, setAsDefault bool) string {
-	setAsDefaultLine := ""
-	if setAsDefault {
-		setAsDefaultLine = "\n  set_as_default        = true"
-	}
+	setAsDefaultLine := fmt.Sprintf("\n  set_as_default        = %t", setAsDefault)
 
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
