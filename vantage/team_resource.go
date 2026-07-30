@@ -224,6 +224,12 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 	state.WorkspaceTokens = workspaceTokensValue
 
+	// Role is not returned by the API, so preserve the create/update default
+	// when initializing state during import.
+	if state.Role.IsNull() || state.Role.IsUnknown() {
+		state.Role = types.StringValue("editor")
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
