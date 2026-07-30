@@ -41,11 +41,14 @@ resource "vantage_business_metric" "fills_trades" {
     {
       cost_report_token = vantage_cost_report.all_resources.token
       unit_scale        = "per_unit"
+      calculation_type  = "unit_cost"
       label_filter      = []
     },
     {
       cost_report_token = vantage_cost_report.domains.token
       unit_scale        = "per_unit"
+      calculation_type  = "gross_margin"
+      label             = "Domain Gross Margin"
       label_filter      = []
     },
     {

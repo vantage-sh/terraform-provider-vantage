@@ -55,5 +55,3 @@ Read-Only:
 - `amount` (String) The amount of the Budget Period as a string to ensure precision.
 - `end_at` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
 - `start_at` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
-
-

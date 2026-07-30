@@ -37,5 +37,3 @@ description: |-
 - `default` (Boolean) Indicates whether the NetworkFlowReport is the default report.
 - `id` (String) The id of the report
 - `token` (String) The token of the report
-
-

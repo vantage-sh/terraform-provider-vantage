@@ -52,5 +52,3 @@ Read-Only:
 Read-Only:
 
 - `display_type` (String)
-
-

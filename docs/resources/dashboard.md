@@ -64,5 +64,3 @@ Optional:
 Required:
 
 - `display_type` (String)
-
-

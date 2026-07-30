@@ -55,6 +55,7 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	}
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
+	applyCostReportTokenMetadataDefaults(s.Attributes)
 
 	resp.Schema = s
 }
@@ -73,6 +74,24 @@ func applyEmptyLabelDefault(attrs map[string]schema.Attribute, attrName string) 
 	labelAttr.Default = stringdefault.StaticString("")
 	attr.NestedObject.Attributes["label"] = labelAttr
 	attrs[attrName] = attr
+}
+
+func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
+	attr, ok := attrs["cost_report_tokens_with_metadata"].(schema.ListNestedAttribute)
+	if !ok {
+		return
+	}
+
+	// Mutate in place so generated Validators (and other schema metadata) are preserved.
+	if calcAttr, ok := attr.NestedObject.Attributes["calculation_type"].(schema.StringAttribute); ok {
+		calcAttr.Default = stringdefault.StaticString("unit_cost")
+		attr.NestedObject.Attributes["calculation_type"] = calcAttr
+	}
+
+	// label and label_filters stay Optional+Computed with no UseStateForUnknown.
+	// When omitted from config their planned values are null/unknown, and
+	// toCreate/toUpdate omit those JSON keys. Independent of calculation_type.
+	attrs["cost_report_tokens_with_metadata"] = attr
 }
 
 func (r *businessMetricResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

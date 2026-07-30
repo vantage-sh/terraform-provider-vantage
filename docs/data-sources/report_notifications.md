@@ -32,5 +32,3 @@ Read-Only:
 - `title` (String) The title of the ReportNotification.
 - `token` (String)
 - `user_tokens` (List of String) The Users that receive the notification.
-
-

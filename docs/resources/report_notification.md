@@ -41,5 +41,3 @@ resource "vantage_report_notification" "test_notif" {
 ### Read-Only
 
 - `token` (String) Unique report notification identifier
-
-

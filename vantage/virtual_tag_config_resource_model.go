@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"slices"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -20,9 +21,12 @@ type virtualTagConfigValueModel struct {
 	DateRanges          types.List                                  `tfsdk:"date_ranges"`
 	DisplayName         types.String                                `tfsdk:"display_name"`
 	Filter              types.String                                `tfsdk:"filter"`
+	LabelKey            types.String                                `tfsdk:"label_key"`
 	LabelTransforms     types.List                                  `tfsdk:"label_transforms"`
+	LabelValues         types.List                                  `tfsdk:"label_values"`
 	Name                types.String                                `tfsdk:"name"`
 	Percentages         types.List                                  `tfsdk:"percentages"`
+	Token               types.String                                `tfsdk:"token"`
 }
 
 // Intermediate types for shared conversion logic between Create and Update operations.
@@ -66,10 +70,202 @@ type valueData struct {
 	DisplayName         string
 	Filter              *string
 	BusinessMetricToken string
+	LabelKey            string
+	LabelValues         []string
 	CostMetric          *costMetricData
 	DateRanges          []dateRangeData
 	LabelTransforms     []labelTransformData
 	Percentages         []percentageData
+}
+
+type virtualTagConfigValueChanges struct {
+	creates              []*virtualTagConfigValueModel
+	updates              []*virtualTagConfigValueModel
+	deletes              []*virtualTagConfigValueModel
+	requiresParentUpdate bool
+}
+
+func (m *virtualTagConfigModel) parentFieldsEqual(other *virtualTagConfigModel) bool {
+	return plannedValueEqual(m.Key, other.Key) &&
+		plannedValueEqual(m.Overridable, other.Overridable) &&
+		plannedValueEqual(m.BackfillUntil, other.BackfillUntil) &&
+		plannedValueEqual(m.CollapsedTagKeys, other.CollapsedTagKeys)
+}
+
+func (v *virtualTagConfigValueModel) equal(other *virtualTagConfigValueModel) bool {
+	return plannedValueEqual(v.BusinessMetricToken, other.BusinessMetricToken) &&
+		plannedValueEqual(v.CostMetric, other.CostMetric) &&
+		plannedValueEqual(v.DateRanges, other.DateRanges) &&
+		plannedValueEqual(v.DisplayName, other.DisplayName) &&
+		plannedValueEqual(v.Filter, other.Filter) &&
+		plannedValueEqual(v.LabelKey, other.LabelKey) &&
+		plannedValueEqual(v.LabelTransforms, other.LabelTransforms) &&
+		plannedValueEqual(v.LabelValues, other.LabelValues) &&
+		plannedValueEqual(v.Name, other.Name) &&
+		plannedValueEqual(v.Percentages, other.Percentages)
+}
+
+func (v *virtualTagConfigValueModel) valueType() string {
+	if !v.BusinessMetricToken.IsNull() && !v.BusinessMetricToken.IsUnknown() && v.BusinessMetricToken.ValueString() != "" {
+		return "business_metric"
+	}
+	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
+		return "cost_metric"
+	}
+	if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() && len(v.Percentages.Elements()) > 0 {
+		return "percentages"
+	}
+	if !v.Name.IsNull() && !v.Name.IsUnknown() && v.Name.ValueString() != "" {
+		return "name"
+	}
+	return ""
+}
+
+func (v *virtualTagConfigValueModel) fillUnknownsFrom(state *virtualTagConfigValueModel) {
+	if v.Filter.IsUnknown() {
+		v.Filter = state.Filter
+	}
+	if valueType := v.valueType(); valueType != "" && valueType != state.valueType() {
+		return
+	}
+	if v.DisplayName.IsUnknown() {
+		v.DisplayName = state.DisplayName
+	}
+}
+
+func plannedValueEqual(plan, state attr.Value) bool {
+	return plan.IsUnknown() || plan.Equal(state)
+}
+
+func (v *virtualTagConfigValueModel) requiresParentUpdateFrom(state *virtualTagConfigValueModel) bool {
+	return (state.valueType() != "" && v.valueType() == "") ||
+		clearsList(v.DateRanges, state.DateRanges) ||
+		clearsList(v.LabelTransforms, state.LabelTransforms) ||
+		clearsList(v.LabelValues, state.LabelValues) ||
+		(!state.LabelKey.IsNull() && state.LabelKey.ValueString() != "" &&
+			(v.LabelKey.IsNull() || v.LabelKey.IsUnknown() || v.LabelKey.ValueString() == ""))
+}
+
+func clearsList(plan, state types.List) bool {
+	return !state.IsNull() && !state.IsUnknown() && len(state.Elements()) > 0 &&
+		(plan.IsNull() || plan.IsUnknown() || len(plan.Elements()) == 0)
+}
+
+func diffVirtualTagConfigValues(plan, state []*virtualTagConfigValueModel) virtualTagConfigValueChanges {
+	changes := virtualTagConfigValueChanges{}
+	if !resolveVirtualTagConfigValueTokens(plan, state) {
+		changes.requiresParentUpdate = true
+		return changes
+	}
+	stateByToken := make(map[string]*virtualTagConfigValueModel, len(state))
+	for _, value := range state {
+		token := value.Token.ValueString()
+		if token == "" {
+			changes.requiresParentUpdate = true
+			return changes
+		}
+		stateByToken[token] = value
+	}
+
+	seen := make(map[string]bool, len(plan))
+	planTokens := make([]string, 0, len(plan))
+	for _, value := range plan {
+		token := value.Token.ValueString()
+		stateValue, exists := stateByToken[token]
+		if token == "" || !exists {
+			changes.creates = append(changes.creates, value)
+			continue
+		}
+		value.fillUnknownsFrom(stateValue)
+		if len(changes.creates) > 0 || seen[token] {
+			changes.requiresParentUpdate = true
+			return changes
+		}
+		seen[token] = true
+		planTokens = append(planTokens, token)
+		if value.requiresParentUpdateFrom(stateValue) {
+			changes.requiresParentUpdate = true
+			return changes
+		}
+		if !value.equal(stateValue) {
+			changes.updates = append(changes.updates, value)
+		}
+	}
+
+	stateTokens := make([]string, 0, len(state))
+	for _, value := range state {
+		token := value.Token.ValueString()
+		if seen[token] {
+			stateTokens = append(stateTokens, token)
+		} else {
+			changes.deletes = append(changes.deletes, value)
+		}
+	}
+	changes.requiresParentUpdate = !slices.Equal(planTokens, stateTokens)
+	return changes
+}
+
+func resolveVirtualTagConfigValueTokens(plan, state []*virtualTagConfigValueModel) bool {
+	usedState := make([]bool, len(state))
+	for _, planValue := range plan {
+		token := planValue.Token.ValueString()
+		if token == "" {
+			continue
+		}
+		found := false
+		for i, stateValue := range state {
+			if token == stateValue.Token.ValueString() {
+				usedState[i] = true
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	for _, planValue := range plan {
+		if planValue.Token.ValueString() != "" {
+			continue
+		}
+		match := -1
+		for i, stateValue := range state {
+			if !usedState[i] && planValue.equal(stateValue) {
+				if match != -1 {
+					match = -1
+					break
+				}
+				match = i
+			}
+		}
+		if match != -1 {
+			planValue.Token = state[match].Token
+			usedState[match] = true
+		}
+	}
+
+	unmatchedPlan := make([]*virtualTagConfigValueModel, 0)
+	for _, value := range plan {
+		if value.Token.ValueString() == "" {
+			unmatchedPlan = append(unmatchedPlan, value)
+		}
+	}
+	unmatchedState := make([]*virtualTagConfigValueModel, 0)
+	for i, value := range state {
+		if !usedState[i] {
+			unmatchedState = append(unmatchedState, value)
+		}
+	}
+	if len(unmatchedPlan) > 0 && len(unmatchedState) > 0 {
+		if len(unmatchedPlan) != len(unmatchedState) {
+			return false
+		}
+		for i := range unmatchedPlan {
+			unmatchedPlan[i].Token = unmatchedState[i].Token
+		}
+	}
+	return true
 }
 
 func buildCostMetricFromPayload(ctx context.Context, cm *modelsv2.VirtualTagConfigValueCostMetric) (basetypes.ObjectValue, diag.Diagnostics) {
@@ -216,6 +412,15 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		return basetypes.ObjectValue{}, d
 	}
 
+	labelValues := v.LabelValues
+	if labelValues == nil {
+		labelValues = []string{}
+	}
+	labelValuesValue, d := types.ListValueFrom(ctx, types.StringType, labelValues)
+	if d.HasError() {
+		return basetypes.ObjectValue{}, d
+	}
+
 	// Use the constructor to properly set the state field
 	value, diags := resource_virtual_tag_config.NewValuesValue(
 		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
@@ -226,8 +431,11 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 			"cost_metric":           costMetricValue,
 			"date_ranges":           dateRangesValue,
 			"display_name":          displayNameValue,
+			"label_key":             types.StringPointerValue(v.LabelKey),
 			"label_transforms":      labelTransformsValue,
+			"label_values":          labelValuesValue,
 			"percentages":           percentagesValue,
+			"token":                 types.StringValue(v.Token),
 		},
 	)
 	if diags.HasError() {
@@ -346,6 +554,8 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
+				LabelKey:            data.LabelKey,
+				LabelValues:         data.LabelValues,
 			}
 
 			if data.CostMetric != nil {
@@ -458,6 +668,8 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
+				LabelKey:            data.LabelKey,
+				LabelValues:         data.LabelValues,
 			}
 
 			if data.CostMetric != nil {
@@ -568,6 +780,16 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 		DisplayName:         v.DisplayName.ValueString(),
 		Filter:              v.Filter.ValueStringPointer(),
 		BusinessMetricToken: v.BusinessMetricToken.ValueString(),
+		LabelKey:            v.LabelKey.ValueString(),
+	}
+
+	if !v.LabelValues.IsNull() && !v.LabelValues.IsUnknown() {
+		labelValues := make([]string, 0, len(v.LabelValues.Elements()))
+		if d := v.LabelValues.ElementsAs(ctx, &labelValues, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		data.LabelValues = labelValues
 	}
 
 	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
@@ -638,4 +860,112 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 	}
 
 	return data
+}
+
+func (v *virtualTagConfigValueModel) toCreateValue(ctx context.Context, diags *diag.Diagnostics) *modelsv2.CreateVirtualTagConfigValue {
+	data := v.toValueData(ctx, diags)
+	if diags.HasError() {
+		return nil
+	}
+
+	value := &modelsv2.CreateVirtualTagConfigValue{
+		BusinessMetricToken: data.BusinessMetricToken,
+		Filter:              data.Filter,
+		LabelKey:            data.LabelKey,
+		LabelValues:         data.LabelValues,
+		Name:                data.Name,
+	}
+	if data.CostMetric != nil || len(data.Percentages) > 0 {
+		value.DisplayName = &data.DisplayName
+	}
+	if data.CostMetric != nil {
+		value.CostMetric = &modelsv2.CreateVirtualTagConfigValueCostMetric{Filter: data.CostMetric.Filter}
+		if data.CostMetric.Aggregation != nil {
+			value.CostMetric.Aggregation = &modelsv2.CreateVirtualTagConfigValueCostMetricAggregation{
+				Tag: data.CostMetric.Aggregation.Tag,
+			}
+		}
+	}
+	for _, percentage := range data.Percentages {
+		pct := percentage.Pct
+		value.Percentages = append(value.Percentages, &modelsv2.CreateVirtualTagConfigValuePercentagesItems0{
+			Pct:   &pct,
+			Value: percentage.Value,
+		})
+	}
+	for _, dateRange := range data.DateRanges {
+		item := &modelsv2.CreateVirtualTagConfigValueDateRangesItems0{}
+		if dateRange.StartDate != "" {
+			item.StartDate = &dateRange.StartDate
+		}
+		if dateRange.EndDate != "" {
+			item.EndDate = &dateRange.EndDate
+		}
+		value.DateRanges = append(value.DateRanges, item)
+	}
+	for _, transform := range data.LabelTransforms {
+		transformType := transform.Type
+		value.LabelTransforms = append(value.LabelTransforms, &modelsv2.CreateVirtualTagConfigValueLabelTransformsItems0{
+			Type:      &transformType,
+			Delimiter: transform.Delimiter,
+			Index:     transform.Index,
+			Template:  transform.Template,
+		})
+	}
+	return value
+}
+
+func (v *virtualTagConfigValueModel) toUpdateValue(ctx context.Context, diags *diag.Diagnostics) *modelsv2.UpdateVirtualTagConfigValue {
+	data := v.toValueData(ctx, diags)
+	if diags.HasError() {
+		return nil
+	}
+
+	value := &modelsv2.UpdateVirtualTagConfigValue{
+		BusinessMetricToken: data.BusinessMetricToken,
+		LabelKey:            data.LabelKey,
+		LabelValues:         data.LabelValues,
+		Name:                data.Name,
+	}
+	if data.Filter != nil {
+		value.Filter = *data.Filter
+	}
+	if data.CostMetric != nil || len(data.Percentages) > 0 {
+		value.DisplayName = &data.DisplayName
+	}
+	if data.CostMetric != nil {
+		value.CostMetric = &modelsv2.UpdateVirtualTagConfigValueCostMetric{Filter: data.CostMetric.Filter}
+		if data.CostMetric.Aggregation != nil {
+			value.CostMetric.Aggregation = &modelsv2.UpdateVirtualTagConfigValueCostMetricAggregation{
+				Tag: data.CostMetric.Aggregation.Tag,
+			}
+		}
+	}
+	for _, percentage := range data.Percentages {
+		pct := percentage.Pct
+		value.Percentages = append(value.Percentages, &modelsv2.UpdateVirtualTagConfigValuePercentagesItems0{
+			Pct:   &pct,
+			Value: percentage.Value,
+		})
+	}
+	for _, dateRange := range data.DateRanges {
+		item := &modelsv2.UpdateVirtualTagConfigValueDateRangesItems0{}
+		if dateRange.StartDate != "" {
+			item.StartDate = &dateRange.StartDate
+		}
+		if dateRange.EndDate != "" {
+			item.EndDate = &dateRange.EndDate
+		}
+		value.DateRanges = append(value.DateRanges, item)
+	}
+	for _, transform := range data.LabelTransforms {
+		transformType := transform.Type
+		value.LabelTransforms = append(value.LabelTransforms, &modelsv2.UpdateVirtualTagConfigValueLabelTransformsItems0{
+			Type:      &transformType,
+			Delimiter: transform.Delimiter,
+			Index:     transform.Index,
+			Template:  transform.Template,
+		})
+	}
+	return value
 }

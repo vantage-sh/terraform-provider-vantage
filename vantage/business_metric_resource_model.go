@@ -24,6 +24,7 @@ type BusinessMetricPayloadApplier interface {
 	SetIntegrationToken(integrationToken types.String)
 	SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue)
 	SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue)
+	SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue)
 }
 
 type businessMetricResourceModel resource_business_metric.BusinessMetricModel
@@ -37,7 +38,93 @@ type businessMetricResourceModelValue struct {
 type businessMetricResourceModelCostReportToken struct {
 	CostReportToken types.String `tfsdk:"cost_report_token"`
 	UnitScale       types.String `tfsdk:"unit_scale"`
+	CalculationType types.String `tfsdk:"calculation_type"`
+	Label           types.String `tfsdk:"label"`
 	LabelFilter     types.List   `tfsdk:"label_filter"`
+	LabelFilters    types.Map    `tfsdk:"label_filters"`
+}
+
+func resourceCostReportTokenAttrTypes(ctx context.Context) map[string]attr.Type {
+	return resource_business_metric.CostReportTokensWithMetadataValue{}.AttributeTypes(ctx)
+}
+
+func resourceCostReportTokenListType(ctx context.Context) attr.Type {
+	return resource_business_metric.CostReportTokensWithMetadataValue{}.Type(ctx)
+}
+
+func dataSourceCostReportTokenListType(ctx context.Context) attr.Type {
+	return datasource_business_metrics.CostReportTokensWithMetadataValue{}.Type(ctx)
+}
+
+func emptyLabelFiltersMap() types.Map {
+	return types.MapNull(types.ListType{ElemType: types.StringType})
+}
+
+func labelFiltersToAPI(ctx context.Context, v types.Map, diags *diag.Diagnostics) map[string][]string {
+	if v.IsNull() || v.IsUnknown() {
+		return map[string][]string{}
+	}
+
+	out := map[string][]string{}
+	diags.Append(v.ElementsAs(ctx, &out, false)...)
+	if diags.HasError() {
+		return nil
+	}
+	return out
+}
+
+func labelFiltersMapFromAPI(ctx context.Context, raw interface{}) (types.Map, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	elemType := types.ListType{ElemType: types.StringType}
+	if raw == nil {
+		return types.MapNull(elemType), diags
+	}
+
+	normalized, ok := normalizeLabelFilters(raw)
+	if !ok {
+		diags.AddWarning(
+			"Unable to parse label_filters from API",
+			fmt.Sprintf("Unexpected label_filters type %T; leaving attribute null.", raw),
+		)
+		return types.MapNull(elemType), diags
+	}
+	if len(normalized) == 0 {
+		return types.MapNull(elemType), diags
+	}
+
+	m, d := types.MapValueFrom(ctx, elemType, normalized)
+	diags.Append(d...)
+	return m, diags
+}
+
+func normalizeLabelFilters(raw interface{}) (map[string][]string, bool) {
+	switch v := raw.(type) {
+	case map[string][]string:
+		return v, true
+	case map[string]interface{}:
+		out := make(map[string][]string, len(v))
+		for key, val := range v {
+			switch values := val.(type) {
+			case []string:
+				out[key] = values
+			case []interface{}:
+				strs := make([]string, 0, len(values))
+				for _, item := range values {
+					s, ok := item.(string)
+					if !ok {
+						return nil, false
+					}
+					strs = append(strs, s)
+				}
+				out[key] = strs
+			default:
+				return nil, false
+			}
+		}
+		return out, true
+	default:
+		return nil, false
+	}
 }
 
 func (m *businessMetricResourceModel) SetTitle(title types.String) {
@@ -74,6 +161,10 @@ func (m *businessMetricResourceModel) SetCloudwatchFields(cloudwatchFields resou
 
 func (m *businessMetricResourceModel) SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue) {
 	m.DatadogMetricFields = datadogMetricFields
+}
+
+func (m *businessMetricResourceModel) SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue) {
+	m.SnowflakeMetricFields = snowflakeMetricFields
 }
 
 func (m *businessMetricDataSourceValue) SetTitle(title types.String) {
@@ -203,6 +294,28 @@ func (m *businessMetricDataSourceValue) SetDatadogMetricFields(datadogMetricFiel
 	m.DatadogMetricFields = objVal
 }
 
+func (m *businessMetricDataSourceValue) SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue) {
+	attrTypes := datasource_business_metrics.SnowflakeMetricFieldsValue{}.AttributeTypes(context.Background())
+
+	if snowflakeMetricFields.IsNull() {
+		m.SnowflakeMetricFields = types.ObjectNull(attrTypes)
+		return
+	}
+
+	sqlQuery := snowflakeMetricFields.SqlQuery
+	if sqlQuery.IsNull() || sqlQuery.IsUnknown() {
+		sqlQuery = types.StringValue("")
+	}
+
+	objVal, _ := types.ObjectValue(
+		attrTypes,
+		map[string]attr.Value{
+			"sql_query": sqlQuery,
+		},
+	)
+	m.SnowflakeMetricFields = objVal
+}
+
 func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payload *modelsv2.BusinessMetric) diag.Diagnostics {
 	m.SetTitle(types.StringValue(payload.Title))
 	m.SetToken(types.StringValue(payload.Token))
@@ -211,50 +324,125 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 	m.SetImportType(types.StringPointerValue(payload.ImportType))
 	m.SetIntegrationToken(types.StringPointerValue(payload.IntegrationToken))
 
-	tfCloudwatchFields, diag := cloudwatchFieldsFromApiModel(ctx, payload.CloudwatchFields, payload.IntegrationToken)
-	if diag.HasError() {
-		return diag
+	tfCloudwatchFields, d := cloudwatchFieldsFromApiModel(ctx, payload.CloudwatchFields, payload.IntegrationToken)
+	if d.HasError() {
+		return d
 	}
 	m.SetCloudwatchFields(tfCloudwatchFields)
 
-	tfDatadogMetricFields, diag := datadogMetricFieldsFromApiModel(ctx, payload.DatadogMetricFields, payload.IntegrationToken)
-	if diag.HasError() {
-		return diag
+	tfDatadogMetricFields, d := datadogMetricFieldsFromApiModel(ctx, payload.DatadogMetricFields, payload.IntegrationToken)
+	if d.HasError() {
+		return d
 	}
 	m.SetDatadogMetricFields(tfDatadogMetricFields)
 
+	tfSnowflakeMetricFields, d := snowflakeMetricFieldsFromApiModel(ctx, payload.SnowflakeMetricFields, payload.IntegrationToken)
+	if d.HasError() {
+		return d
+	}
+	m.SetSnowflakeMetricFields(tfSnowflakeMetricFields)
+
 	if payload.CostReportTokensWithMetadata != nil {
-		tfCostReportTokens := []businessMetricResourceModelCostReportToken{}
-		for _, costReportToken := range payload.CostReportTokensWithMetadata {
-			labelFilter, diag := types.ListValueFrom(ctx, types.StringType, costReportToken.LabelFilter)
-			if diag.HasError() {
-				return diag
-			}
-			tfCostReportTokens = append(tfCostReportTokens, businessMetricResourceModelCostReportToken{
-				CostReportToken: types.StringPointerValue(costReportToken.CostReportToken),
-				UnitScale:       types.StringValue(costReportToken.UnitScale),
-				LabelFilter:     labelFilter,
-			})
+		var costReportTokens types.List
+		var tokenDiags diag.Diagnostics
+
+		switch any(m).(type) {
+		case *businessMetricDataSourceValue:
+			costReportTokens, tokenDiags = costReportTokensListForDataSource(ctx, payload.CostReportTokensWithMetadata)
+		default:
+			costReportTokens, tokenDiags = costReportTokensListForResource(ctx, payload.CostReportTokensWithMetadata)
 		}
 
-		costReportTokens, diag := types.ListValueFrom(
-			ctx,
-			types.ObjectType{AttrTypes: map[string]attr.Type{
-				"cost_report_token": types.StringType,
-				"unit_scale":        types.StringType,
-				"label_filter":      types.ListType{ElemType: types.StringType},
-			}},
-			tfCostReportTokens,
-		)
-
-		if diag.HasError() {
-			return diag
+		if tokenDiags.HasError() {
+			return tokenDiags
 		}
 
 		m.SetCostReportTokensWithMetadata(costReportTokens)
 	}
 
 	return nil
+}
+
+func costReportTokensListForResource(ctx context.Context, payloadTokens []*modelsv2.AttachedCostReportForBusinessMetric) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	attrTypes := resourceCostReportTokenAttrTypes(ctx)
+	elements := make([]attr.Value, 0, len(payloadTokens))
+
+	for _, costReportToken := range payloadTokens {
+		labelFilter, d := types.ListValueFrom(ctx, types.StringType, costReportToken.LabelFilter)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
+		}
+
+		labelFilters, d := labelFiltersMapFromAPI(ctx, costReportToken.LabelFilters)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
+		}
+
+		tokenValue, d := resource_business_metric.NewCostReportTokensWithMetadataValue(
+			attrTypes,
+			map[string]attr.Value{
+				"cost_report_token": types.StringPointerValue(costReportToken.CostReportToken),
+				"unit_scale":        types.StringValue(costReportToken.UnitScale),
+				"calculation_type":  types.StringValue(costReportToken.CalculationType),
+				"label":             types.StringPointerValue(costReportToken.Label),
+				"label_filter":      labelFilter,
+				"label_filters":     labelFilters,
+			},
+		)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
+		}
+		elements = append(elements, tokenValue)
+	}
+
+	list, d := types.ListValue(resourceCostReportTokenListType(ctx), elements)
+	diags.Append(d...)
+	return list, diags
+}
+
+func costReportTokensListForDataSource(ctx context.Context, payloadTokens []*modelsv2.AttachedCostReportForBusinessMetric) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	attrTypes := datasource_business_metrics.CostReportTokensWithMetadataValue{}.AttributeTypes(ctx)
+	elements := make([]attr.Value, 0, len(payloadTokens))
+
+	for _, costReportToken := range payloadTokens {
+		labelFilter, d := types.ListValueFrom(ctx, types.StringType, costReportToken.LabelFilter)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
+		}
+
+		labelFilters, d := labelFiltersMapFromAPI(ctx, costReportToken.LabelFilters)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
+		}
+
+		tokenValue, d := datasource_business_metrics.NewCostReportTokensWithMetadataValue(
+			attrTypes,
+			map[string]attr.Value{
+				"cost_report_token": types.StringPointerValue(costReportToken.CostReportToken),
+				"unit_scale":        types.StringValue(costReportToken.UnitScale),
+				"calculation_type":  types.StringValue(costReportToken.CalculationType),
+				"label":             types.StringPointerValue(costReportToken.Label),
+				"label_filter":      labelFilter,
+				"label_filters":     labelFilters,
+			},
+		)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
+		}
+		elements = append(elements, tokenValue)
+	}
+
+	list, d := types.ListValue(dataSourceCostReportTokenListType(ctx), elements)
+	diags.Append(d...)
+	return list, diags
 }
 
 func (m *businessMetricDataSourceValue) applyPayload(ctx context.Context, payload *modelsv2.BusinessMetric) diag.Diagnostics {
@@ -311,6 +499,13 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 		model.DatadogMetricFields = datadogMetricFields
 	}
 
+	if !m.SnowflakeMetricFields.IsNull() && !m.SnowflakeMetricFields.IsUnknown() {
+		model.SnowflakeMetricFields = &modelsv2.CreateBusinessMetricSnowflakeMetricFields{
+			IntegrationToken: m.SnowflakeMetricFields.IntegrationToken.ValueString(),
+			SQLQuery:         m.SnowflakeMetricFields.SqlQuery.ValueString(),
+		}
+	}
+
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
 		tfValues := m.valuesFromTf(ctx, diags)
 		if diags.HasError() {
@@ -360,7 +555,13 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 			costReportToken := &modelsv2.CreateBusinessMetricCostReportTokensWithMetadataItems0{
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
+				CalculationType: calculationTypePointer(v.CalculationType),
+				Label:           costReportAttachmentLabelForAPI(v.Label),
 				LabelFilter:     tfLabelFilter,
+				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
+			}
+			if diags.HasError() {
+				return nil
 			}
 			costReportTokens = append(costReportTokens, costReportToken)
 		}
@@ -454,6 +655,13 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		model.DatadogMetricFields = datadogMetricFields
 	}
 
+	if !m.SnowflakeMetricFields.IsNull() && !m.SnowflakeMetricFields.IsUnknown() {
+		model.SnowflakeMetricFields = &modelsv2.UpdateBusinessMetricSnowflakeMetricFields{
+			IntegrationToken: m.SnowflakeMetricFields.IntegrationToken.ValueString(),
+			SQLQuery:         m.SnowflakeMetricFields.SqlQuery.ValueString(),
+		}
+	}
+
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
 		tfValues := m.valuesFromTf(ctx, diags)
 		if diags.HasError() {
@@ -502,7 +710,13 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 			costReportToken := &modelsv2.UpdateBusinessMetricCostReportTokensWithMetadataItems0{
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
+				CalculationType: calculationTypePointer(v.CalculationType),
+				Label:           costReportAttachmentLabelForAPI(v.Label),
 				LabelFilter:     tfLabelFilter,
+				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
+			}
+			if diags.HasError() {
+				return nil
 			}
 			costReportTokens = append(costReportTokens, costReportToken)
 		}
@@ -607,11 +821,31 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 				labelFilter, _ = types.ListValueFrom(ctx, types.StringType, []string{})
 			}
 
+			calculationType := apiToken.CalculationType
+			if (calculationType.IsNull() || calculationType.IsUnknown()) && !planToken.CalculationType.IsNull() && !planToken.CalculationType.IsUnknown() {
+				calculationType = planToken.CalculationType
+			}
+			if calculationType.IsNull() || calculationType.IsUnknown() {
+				calculationType = types.StringValue("unit_cost")
+			}
+
+			label := apiToken.Label
+
+			// Trust the API for label_filters so omitting them from config clears
+			// prior filters instead of re-sticking planned values into state.
+			labelFilters := apiToken.LabelFilters
+			if labelFilters.IsNull() || labelFilters.IsUnknown() {
+				labelFilters = emptyLabelFiltersMap()
+			}
+
 			// Use the plan's cost_report_token but take computed values from API
 			orderedTokens = append(orderedTokens, businessMetricResourceModelCostReportToken{
 				CostReportToken: planToken.CostReportToken,
 				UnitScale:       apiToken.UnitScale,
+				CalculationType: calculationType,
+				Label:           label,
 				LabelFilter:     labelFilter,
+				LabelFilters:    labelFilters,
 			})
 			delete(apiTokenMap, tokenKey)
 		} else {
@@ -630,13 +864,28 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 		orderedTokens = append(orderedTokens, *apiToken)
 	}
 
-	attrTypes := map[string]attr.Type{
-		"cost_report_token": types.StringType,
-		"unit_scale":        types.StringType,
-		"label_filter":      types.ListType{ElemType: types.StringType},
+	elements := make([]attr.Value, 0, len(orderedTokens))
+	attrTypes := resourceCostReportTokenAttrTypes(ctx)
+	for _, token := range orderedTokens {
+		tokenValue, d := resource_business_metric.NewCostReportTokensWithMetadataValue(
+			attrTypes,
+			map[string]attr.Value{
+				"cost_report_token": token.CostReportToken,
+				"unit_scale":        token.UnitScale,
+				"calculation_type":  token.CalculationType,
+				"label":             token.Label,
+				"label_filter":      token.LabelFilter,
+				"label_filters":     token.LabelFilters,
+			},
+		)
+		if d.HasError() {
+			diags.Append(d...)
+			return
+		}
+		elements = append(elements, tokenValue)
 	}
 
-	newList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, orderedTokens)
+	newList, d := types.ListValue(resourceCostReportTokenListType(ctx), elements)
 	if d.HasError() {
 		diags.Append(d...)
 		return
@@ -658,6 +907,24 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 		},
 		map[string]attr.Value{
 			"query":             types.StringValue(apiFields.Query),
+			"integration_token": types.StringPointerValue(integrationToken),
+		},
+	)
+	diags.Append(d...)
+
+	return tfValue, diags
+}
+
+func snowflakeMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.SnowflakeMetricFields, integrationToken *string) (resource_business_metric.SnowflakeMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if apiFields == nil {
+		return resource_business_metric.NewSnowflakeMetricFieldsValueNull(), diags
+	}
+
+	tfValue, d := resource_business_metric.NewSnowflakeMetricFieldsValue(
+		resource_business_metric.SnowflakeMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"sql_query":         types.StringValue(apiFields.SQLQuery),
 			"integration_token": types.StringPointerValue(integrationToken),
 		},
 	)
@@ -732,4 +999,22 @@ func cloudwatchFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Cloud
 	}
 
 	return tfValue, diags
+}
+
+func calculationTypePointer(v types.String) *string {
+	if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
+		unitCost := "unit_cost"
+		return &unitCost
+	}
+	return v.ValueStringPointer()
+}
+
+// costReportAttachmentLabelForAPI returns the attachment label for create/update
+// payloads. Null or unknown (config omitted the attribute) become "" so the
+// SDK's omitempty tag drops the JSON key entirely.
+func costReportAttachmentLabelForAPI(v types.String) string {
+	if v.IsNull() || v.IsUnknown() {
+		return ""
+	}
+	return v.ValueString()
 }

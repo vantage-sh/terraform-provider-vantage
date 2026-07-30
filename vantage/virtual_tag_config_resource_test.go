@@ -109,10 +109,13 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(ctx.resourceName, "token"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "3"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.name", "value-0"),
+					resource.TestCheckResourceAttrSet(ctx.resourceName, "values.0.token"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.0.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonEC2') OR (costs.provider = 'gcp' AND costs.service = 'ComputeEngine')"),
+					resource.TestCheckResourceAttrSet(ctx.resourceName, "values.1.token"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.filter", "(costs.provider = 'aws' AND costs.service = 'AwsApiGateway')"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.cost_metric.aggregation.tag", "environment"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.1.cost_metric.filter", "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"),
+					resource.TestCheckResourceAttrSet(ctx.resourceName, "values.2.token"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.filter", "(costs.provider = 'gcp' AND costs.service != 'ComputeEngine')"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.#", "3"),
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.0.pct", "25"),
@@ -645,6 +648,141 @@ func TestAccVantageVirtualTagConfig_optionalListsConsistent(t *testing.T) {
 				Config:             config,
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccVantageVirtualTagConfig_granularValueUpdates(t *testing.T) {
+	key := "tf-pla-1864-" + sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+	config := func(values string) string {
+		return testAccVantageVirtualTagConfig_basicTf("test", key, true, backfillUntil, "values = ["+values+"]")
+	}
+	a := `{ name = "a", filter = "costs.provider = 'aws'" }`
+	b := `{ name = "b", filter = "costs.provider = 'gcp'" }`
+	bUpdated := `{ name = "b-updated", filter = "costs.provider = 'gcp'" }`
+	c := `{ name = "c", filter = "costs.provider = 'azure'" }`
+	var tokenA, tokenB, tokenC string
+	capture := func(target *string) func(string) error {
+		return func(value string) error {
+			if value == "" {
+				return fmt.Errorf("value token is empty")
+			}
+			*target = value
+			return nil
+		}
+	}
+	unchanged := func(expected *string) func(string) error {
+		return func(value string) error {
+			if value != *expected {
+				return fmt.Errorf("value token changed from %q to %q", *expected, value)
+			}
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config(a + "," + b),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", capture(&tokenA)),
+					resource.TestCheckResourceAttrWith(resourceName, "values.1.token", capture(&tokenB)),
+				),
+			},
+			{
+				Config: config(a + "," + b + "," + c),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", unchanged(&tokenA)),
+					resource.TestCheckResourceAttrWith(resourceName, "values.1.token", unchanged(&tokenB)),
+					resource.TestCheckResourceAttrWith(resourceName, "values.2.token", capture(&tokenC)),
+				),
+			},
+			{
+				Config: config(a + "," + bUpdated + "," + c),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", unchanged(&tokenA)),
+					resource.TestCheckResourceAttrWith(resourceName, "values.1.token", unchanged(&tokenB)),
+					resource.TestCheckResourceAttrWith(resourceName, "values.2.token", unchanged(&tokenC)),
+					resource.TestCheckResourceAttr(resourceName, "values.1.name", "b-updated"),
+				),
+			},
+			{
+				Config: config(bUpdated + "," + c),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", unchanged(&tokenB)),
+					resource.TestCheckResourceAttrWith(resourceName, "values.1.token", unchanged(&tokenC)),
+				),
+			},
+			{
+				Config: config(c + "," + bUpdated),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.name", "c"),
+					resource.TestCheckResourceAttr(resourceName, "values.1.name", "b-updated"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.0.token"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.1.token"),
+				),
+			},
+			{
+				Config:             config(c + "," + bUpdated),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccVantageVirtualTagConfig_preservesComputedDisplayName(t *testing.T) {
+	key := "tf-pla-1864-" + sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+	value := func(filter, displayName string) string {
+		return fmt.Sprintf(`values = [{
+			filter = %[1]q
+			%[2]s
+			percentages = [
+				{ value = "allocation-a", pct = 60 },
+				{ value = "allocation-b", pct = 40 },
+			]
+		}]`, filter, displayName)
+	}
+	var token string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf(
+					"test", key, true, backfillUntil, value("costs.provider = 'aws'", `display_name = "Allocation"`),
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.display_name", "Allocation"),
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", func(value string) error {
+						token = value
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf(
+					"test", key, true, backfillUntil, value("costs.provider = 'gcp'", ""),
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.display_name", "Allocation"),
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", func(value string) error {
+						if value != token {
+							return fmt.Errorf("value token changed from %q to %q", token, value)
+						}
+						return nil
+					}),
+				),
 			},
 		},
 	})

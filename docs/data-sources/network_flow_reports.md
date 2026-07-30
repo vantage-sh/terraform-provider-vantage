@@ -38,5 +38,3 @@ Read-Only:
 - `title` (String) The title of the NetworkFlowReport.
 - `token` (String)
 - `workspace_token` (String) The token for the Workspace the NetworkFlowReport is a part of.
-
-

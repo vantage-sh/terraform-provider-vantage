@@ -32,5 +32,3 @@ Read-Only:
 - `token` (String)
 - `updated_at` (String) The date and time, in UTC, the AnomalyNotification was last updated at. ISO 8601 Formatted.
 - `user_tokens` (List of String) The tokens of the users that receive the notification.
-
-

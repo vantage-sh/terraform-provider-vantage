@@ -70,5 +70,3 @@ resource "vantage_recommendation_view" "tagged" {
 - `created_by` (String) The token for the Creator of this RecommendationView.
 - `id` (String) The id of the recommendation view
 - `token` (String) The token of the recommendation view
-
-

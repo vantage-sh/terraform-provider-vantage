@@ -26,5 +26,3 @@ Read-Only:
 
 - `name` (String)
 - `token` (String)
-
-

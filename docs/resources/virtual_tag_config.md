@@ -36,6 +36,16 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
     #   filter = "(costs.provider = 'aws' AND costs.service = 'AmazonECS')"
     #   business_metric_token = ""
     # }
+    # Example: apply label_transforms to a business-metric-backed value to
+    # split a "&&&"-delimited project label and reformat it into a team tag.
+    # {
+    #   filter                = "costs.provider = 'aws'"
+    #   business_metric_token = "bsnss_mtrc_XXXXXXXX"
+    #   label_transforms = [
+    #     { type = "split", delimiter = "&&&", index = 0 },
+    #     { type = "format", template = "team-{0}" },
+    #   ]
+    # }
   ]
 }
 ```
@@ -69,8 +79,8 @@ Required:
 
 Optional:
 
-- `filter` (String) The VQL filter this collapsed tag key applies to.
-- `providers` (List of String) The providers this collapsed tag key applies to. Defaults to all providers.
+- `filter` (String) The VQL filter this collapsed tag key applies to. When set, do not also set providers; include any provider restrictions directly in filter.
+- `providers` (List of String) Provider-only scope for this collapsed tag key. Invalid when filter is set; include provider restrictions in filter instead. Defaults to all providers.
 
 
 <a id="nestedatt--values"></a>
@@ -85,9 +95,13 @@ Optional:
 - `business_metric_token` (String) The token of an associated business metric.
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric))
 - `date_ranges` (Attributes List) Date ranges restricting when this value applies. Each range has optional start_date and end_date (inclusive, YYYY-MM-DD). (see [below for nested schema](#nestedatt--values--date_ranges))
+- `display_name` (String) The display name for an allocation value (cost_metric or percentages). Invalid when name is set.
+- `label_key` (String) The business metric label key used for this virtual tag value.
 - `label_transforms` (Attributes List) Label transforms applied to business metric labels. (see [below for nested schema](#nestedatt--values--label_transforms))
+- `label_values` (List of String) Optional business metric label values. An empty array includes every value for the label key.
 - `name` (String) The name of the value.
 - `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--values--percentages))
+- `token` (String) The token of the Value.
 
 <a id="nestedatt--values--cost_metric"></a>
 ### Nested Schema for `values.cost_metric`
@@ -120,7 +134,7 @@ Optional:
 
 Required:
 
-- `type` (String) The label transform type. One of `split` or `format`.
+- `type` (String) The label transform type.
 
 Optional:
 
@@ -136,5 +150,3 @@ Required:
 
 - `pct` (Number)
 - `value` (String) The tag value associated with a percentage of matched costs.
-
-

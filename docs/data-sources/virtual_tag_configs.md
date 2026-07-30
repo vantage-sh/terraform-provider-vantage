@@ -38,8 +38,9 @@ Read-Only:
 
 Read-Only:
 
+- `filter` (String) The VQL filter this collapsed tag key applies to. Null when the key is provider-scoped or unset.
 - `key` (String) The tag key to collapse values for.
-- `providers` (List of String) The providers this collapsed tag key applies to. Defaults to all providers.
+- `providers` (List of String) The providers this collapsed tag key applies to. Empty when it applies to all providers.
 
 
 <a id="nestedatt--virtual_tag_configs--values"></a>
@@ -52,8 +53,12 @@ Read-Only:
 - `date_ranges` (Attributes List) Date ranges restricting when this value applies. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--date_ranges))
 - `display_name` (String) The display name for this allocation value.
 - `filter` (String) The filter VQL for the Value.
+- `label_key` (String) The business metric label key used for this virtual tag value.
+- `label_transforms` (Attributes List) Label transforms applied to business metric labels. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--label_transforms))
+- `label_values` (List of String) Optional business metric label values. An empty array includes every value for the label key.
 - `name` (String) The name of the Value.
 - `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--percentages))
+- `token` (String) The token of the Value.
 
 <a id="nestedatt--virtual_tag_configs--values--cost_metric"></a>
 ### Nested Schema for `virtual_tag_configs.values.cost_metric`
@@ -64,7 +69,7 @@ Read-Only:
 - `filter` (String) The filter VQL for the cost metric.
 
 <a id="nestedatt--virtual_tag_configs--values--cost_metric--aggregation"></a>
-### Nested Schema for `virtual_tag_configs.values.cost_metric.filter`
+### Nested Schema for `virtual_tag_configs.values.cost_metric.aggregation`
 
 Read-Only:
 
@@ -81,6 +86,17 @@ Read-Only:
 - `start_date` (String) The start date of the range (inclusive), or null for unbounded.
 
 
+<a id="nestedatt--virtual_tag_configs--values--label_transforms"></a>
+### Nested Schema for `virtual_tag_configs.values.label_transforms`
+
+Read-Only:
+
+- `delimiter` (String) Delimiter used by split transforms.
+- `index` (Number) Zero-based index used by split transforms.
+- `template` (String) Template used by format transforms.
+- `type` (String) The label transform type.
+
+
 <a id="nestedatt--virtual_tag_configs--values--percentages"></a>
 ### Nested Schema for `virtual_tag_configs.values.percentages`
 
@@ -88,5 +104,3 @@ Read-Only:
 
 - `pct` (Number) The percentage of matched costs associated with the value.
 - `value` (String) The tag value associated with a percentage of matched costs.
-
-

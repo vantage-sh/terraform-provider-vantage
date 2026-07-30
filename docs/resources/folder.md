@@ -44,5 +44,3 @@ resource "vantage_folder" "demo_folder" {
 ### Read-Only
 
 - `token` (String) Unique folder identifier
-
-

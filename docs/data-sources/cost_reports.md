@@ -47,5 +47,3 @@ Read-Only:
 
 - `x_axis_dimension` (List of String)
 - `y_axis_dimension` (String)
-
-

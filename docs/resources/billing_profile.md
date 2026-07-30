@@ -161,5 +161,3 @@ Required:
 Optional:
 
 - `adjustment_type` (String) Type of adjustment
-
-

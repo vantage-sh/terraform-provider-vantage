@@ -38,5 +38,3 @@ Read-Only:
 - `token` (String)
 - `user_token` (String) The token for the User who created this KubernetesEfficiencyReport.
 - `workspace_token` (String) The token for the Workspace the KubernetesEfficiencyReport is a part of.
-
-

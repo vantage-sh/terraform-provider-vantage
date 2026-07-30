@@ -28,5 +28,3 @@ Read-Only:
 - `name` (String)
 - `role` (String)
 - `token` (String)
-
-

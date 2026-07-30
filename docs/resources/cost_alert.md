@@ -37,5 +37,3 @@ description: |-
 - `id` (String) The id of the cost alert
 - `token` (String) The token of the cost alert
 - `updated_at` (String) The date and time, in UTC, for when the alert was last updated. ISO 8601 Formatted.
-
-

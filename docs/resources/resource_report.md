@@ -31,6 +31,7 @@ resource "vantage_resource_report" "demo_resource_report" {
 
 - `columns` (List of String) Array of column names to display in the table. Column names should match those returned by the /resource_reports/columns endpoint. The order determines the display order. Only available for reports with a single resource type filter.
 - `filter` (String) The VQL filter for the ResourceReport.
+- `folder_token` (String) The token of the Folder to add the ResourceReport to.
 - `title` (String) The title of the ResourceReport.
 
 ### Read-Only
@@ -40,5 +41,3 @@ resource "vantage_resource_report" "demo_resource_report" {
 - `id` (String) The token of the report
 - `token` (String) The token of the report
 - `user_token` (String) The token for the User who created this ResourceReport.
-
-

@@ -76,5 +76,3 @@ Read-Only:
 
 - `name` (String) Custom field name
 - `value` (String) Custom field value
-
-

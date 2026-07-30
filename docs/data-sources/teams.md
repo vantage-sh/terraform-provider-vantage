@@ -31,5 +31,3 @@ Read-Only:
 - `user_emails` (Set of String)
 - `user_tokens` (Set of String)
 - `workspace_tokens` (Set of String)
-
-
