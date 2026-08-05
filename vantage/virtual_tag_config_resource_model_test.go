@@ -34,6 +34,7 @@ func TestVirtualTagConfig_ApplyPayload_NilNestedListsAreKnownEmpty(t *testing.T)
 		},
 		Values: []*modelsv2.VirtualTagConfigValue{
 			{
+				Token:           "vtag_val_test0",
 				Name:            &name,
 				Filter:          &filter,
 				DateRanges:      nil,
@@ -79,7 +80,14 @@ func TestVirtualTagConfig_ApplyPayload_NilNestedListsAreKnownEmpty(t *testing.T)
 		t.Fatalf("Values[0] is %T; want basetypes.ObjectValue", valueElements[0])
 	}
 	attrs := valueObj.Attributes()
-	for _, field := range []string{"date_ranges", "percentages", "label_transforms"} {
+	tokenAttr, ok := attrs["token"].(basetypes.StringValue)
+	if !ok {
+		t.Fatalf("values[0].token is %T; want basetypes.StringValue", attrs["token"])
+	}
+	if got := tokenAttr.ValueString(); got != "vtag_val_test0" {
+		t.Errorf("values[0].token = %q; want %q", got, "vtag_val_test0")
+	}
+	for _, field := range []string{"date_ranges", "percentages", "label_transforms", "label_values"} {
 		raw, exists := attrs[field]
 		if !exists {
 			t.Errorf("values[0].%s is missing", field)
@@ -124,6 +132,7 @@ func TestVirtualTagConfig_ApplyPayload_PopulatedNestedLists(t *testing.T) {
 		},
 		Values: []*modelsv2.VirtualTagConfigValue{
 			{
+				Token:  "vtag_val_test0",
 				Name:   &name,
 				Filter: &filter,
 				DateRanges: []*modelsv2.VirtualTagConfigValueDateRange{

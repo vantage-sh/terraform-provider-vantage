@@ -47,6 +47,12 @@ func RecommendationViewResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The id of the recommendation view",
 				MarkdownDescription: "The id of the recommendation view",
 			},
+			"min_savings": schema.Float64Attribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Filter recommendations with at least this amount of potential savings.",
+				MarkdownDescription: "Filter recommendations with at least this amount of potential savings.",
+			},
 			"provider_ids": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -89,6 +95,13 @@ func RecommendationViewResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the recommendation view",
 				MarkdownDescription: "The token of the recommendation view",
 			},
+			"types": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Filter by one or more recommendation type slugs.",
+				MarkdownDescription: "Filter by one or more recommendation type slugs.",
+			},
 			"workspace_token": schema.StringAttribute{
 				Required:            true,
 				Description:         "The Workspace to associate the RecommendationView with.",
@@ -99,18 +112,20 @@ func RecommendationViewResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type RecommendationViewModel struct {
-	AccountIds        types.List   `tfsdk:"account_ids"`
-	BillingAccountIds types.List   `tfsdk:"billing_account_ids"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	CreatedBy         types.String `tfsdk:"created_by"`
-	EndDate           types.String `tfsdk:"end_date"`
-	Id                types.String `tfsdk:"id"`
-	ProviderIds       types.List   `tfsdk:"provider_ids"`
-	Regions           types.List   `tfsdk:"regions"`
-	StartDate         types.String `tfsdk:"start_date"`
-	TagKey            types.String `tfsdk:"tag_key"`
-	TagValue          types.String `tfsdk:"tag_value"`
-	Title             types.String `tfsdk:"title"`
-	Token             types.String `tfsdk:"token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+	AccountIds        types.List    `tfsdk:"account_ids"`
+	BillingAccountIds types.List    `tfsdk:"billing_account_ids"`
+	CreatedAt         types.String  `tfsdk:"created_at"`
+	CreatedBy         types.String  `tfsdk:"created_by"`
+	EndDate           types.String  `tfsdk:"end_date"`
+	Id                types.String  `tfsdk:"id"`
+	MinSavings        types.Float64 `tfsdk:"min_savings"`
+	ProviderIds       types.List    `tfsdk:"provider_ids"`
+	Regions           types.List    `tfsdk:"regions"`
+	StartDate         types.String  `tfsdk:"start_date"`
+	TagKey            types.String  `tfsdk:"tag_key"`
+	TagValue          types.String  `tfsdk:"tag_value"`
+	Title             types.String  `tfsdk:"title"`
+	Token             types.String  `tfsdk:"token"`
+	Types             types.List    `tfsdk:"types"`
+	WorkspaceToken    types.String  `tfsdk:"workspace_token"`
 }
