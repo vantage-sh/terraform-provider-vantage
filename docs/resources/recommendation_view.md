@@ -58,13 +58,11 @@ resource "vantage_recommendation_view" "tagged" {
 - `account_ids` (List of String) Filter by cloud account identifiers.
 - `billing_account_ids` (List of String) Filter by billing account identifiers.
 - `end_date` (String) Filter recommendations created on/before this YYYY-MM-DD date.
-- `min_savings` (Number) Filter recommendations with at least this amount of potential savings.
 - `provider_ids` (List of String) Filter by one or more providers (e.g. aws, gcp, azure, kubernetes, datadog).
 - `regions` (List of String) Filter by region slugs (e.g. us-east-1, eastus, asia-east1).
 - `start_date` (String) Filter recommendations created on/after this YYYY-MM-DD date.
 - `tag_key` (String) Filter by tag key (must be used with tag_value).
 - `tag_value` (String) Filter by tag value (requires tag_key).
-- `types` (List of String) Filter by one or more recommendation type slugs.
 
 ### Read-Only
 

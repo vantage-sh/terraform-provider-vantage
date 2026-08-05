@@ -26,7 +26,7 @@ Read-Only:
 
 - `access_credential_tokens` (List of String) The tokens for the Access Credentials assigned to the Managed Account.
 - `billing_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--managed_accounts--billing_information_attributes))
-- `billing_rule_tokens` (List of String) The tokens for the Billing Rules assigned to the Managed Account, in the order they will execute against this account's cost data.
+- `billing_rule_tokens` (List of String) The tokens for the Billing Rules assigned to the Managed Account.
 - `business_information_attributes` (Attributes) (see [below for nested schema](#nestedatt--managed_accounts--business_information_attributes))
 - `contact_email` (String)
 - `email_domain` (String) Email domain associated with this Managed Account for SSO.

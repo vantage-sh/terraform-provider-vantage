@@ -65,9 +65,20 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				"date_ranges":           generatedValuesAttrs["date_ranges"],
 				"display_name":          generatedValuesAttrs["display_name"],
 				"filter":                generatedValuesAttrs["filter"],
+				"label_key":             generatedValuesAttrs["label_key"],
 				"label_transforms":      generatedValuesAttrs["label_transforms"],
+				"label_values":          generatedValuesAttrs["label_values"],
 				"name":                  generatedValuesAttrs["name"],
 				"percentages":           generatedValuesAttrs["percentages"],
+				"token": schema.StringAttribute{
+					// Optional+Computed so GET→config round-trips (e.g. copying
+					// values from the data source) remain valid. Create/update
+					// payloads intentionally omit token.
+					Optional:            true,
+					Computed:            true,
+					Description:         "The token of the Value.",
+					MarkdownDescription: "The token of the Value.",
+				},
 				// Override cost_metric: make aggregation, aggregation.tag, and filter Optional
 				"cost_metric": schema.SingleNestedAttribute{
 					Attributes: map[string]schema.Attribute{

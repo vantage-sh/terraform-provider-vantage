@@ -20,9 +20,12 @@ type virtualTagConfigValueModel struct {
 	DateRanges          types.List                                  `tfsdk:"date_ranges"`
 	DisplayName         types.String                                `tfsdk:"display_name"`
 	Filter              types.String                                `tfsdk:"filter"`
+	LabelKey            types.String                                `tfsdk:"label_key"`
 	LabelTransforms     types.List                                  `tfsdk:"label_transforms"`
+	LabelValues         types.List                                  `tfsdk:"label_values"`
 	Name                types.String                                `tfsdk:"name"`
 	Percentages         types.List                                  `tfsdk:"percentages"`
+	Token               types.String                                `tfsdk:"token"`
 }
 
 // Intermediate types for shared conversion logic between Create and Update operations.
@@ -66,6 +69,8 @@ type valueData struct {
 	DisplayName         string
 	Filter              *string
 	BusinessMetricToken string
+	LabelKey            string
+	LabelValues         []string
 	CostMetric          *costMetricData
 	DateRanges          []dateRangeData
 	LabelTransforms     []labelTransformData
@@ -216,6 +221,15 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		return basetypes.ObjectValue{}, d
 	}
 
+	labelValues := v.LabelValues
+	if labelValues == nil {
+		labelValues = []string{}
+	}
+	labelValuesValue, d := types.ListValueFrom(ctx, types.StringType, labelValues)
+	if d.HasError() {
+		return basetypes.ObjectValue{}, d
+	}
+
 	// Use the constructor to properly set the state field
 	value, diags := resource_virtual_tag_config.NewValuesValue(
 		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
@@ -226,8 +240,11 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 			"cost_metric":           costMetricValue,
 			"date_ranges":           dateRangesValue,
 			"display_name":          displayNameValue,
+			"label_key":             types.StringPointerValue(v.LabelKey),
 			"label_transforms":      labelTransformsValue,
+			"label_values":          labelValuesValue,
 			"percentages":           percentagesValue,
+			"token":                 types.StringValue(v.Token),
 		},
 	)
 	if diags.HasError() {
@@ -346,6 +363,8 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
+				LabelKey:            data.LabelKey,
+				LabelValues:         data.LabelValues,
 			}
 
 			if data.CostMetric != nil {
@@ -458,6 +477,8 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
+				LabelKey:            data.LabelKey,
+				LabelValues:         data.LabelValues,
 			}
 
 			if data.CostMetric != nil {
@@ -568,6 +589,16 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 		DisplayName:         v.DisplayName.ValueString(),
 		Filter:              v.Filter.ValueStringPointer(),
 		BusinessMetricToken: v.BusinessMetricToken.ValueString(),
+		LabelKey:            v.LabelKey.ValueString(),
+	}
+
+	if !v.LabelValues.IsNull() && !v.LabelValues.IsUnknown() {
+		labelValues := make([]string, 0, len(v.LabelValues.Elements()))
+		if d := v.LabelValues.ElementsAs(ctx, &labelValues, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		data.LabelValues = labelValues
 	}
 
 	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
