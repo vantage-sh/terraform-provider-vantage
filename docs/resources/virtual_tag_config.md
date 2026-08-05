@@ -101,9 +101,6 @@ Optional:
 - `label_values` (List of String) Optional business metric label values. An empty array includes every value for the label key.
 - `name` (String) The name of the value.
 - `percentages` (Attributes List) Labeled percentage allocations for matching costs. (see [below for nested schema](#nestedatt--values--percentages))
-
-Read-Only:
-
 - `token` (String) The token of the Value.
 
 <a id="nestedatt--values--cost_metric"></a>

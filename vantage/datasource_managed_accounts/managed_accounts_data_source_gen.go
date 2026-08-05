@@ -84,8 +84,8 @@ func ManagedAccountsDataSourceSchema(ctx context.Context) schema.Schema {
 						"billing_rule_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
-							Description:         "The tokens for the Billing Rules assigned to the Managed Account, in the order they will execute against this account's cost data.",
-							MarkdownDescription: "The tokens for the Billing Rules assigned to the Managed Account, in the order they will execute against this account's cost data.",
+							Description:         "The tokens for the Billing Rules assigned to the Managed Account.",
+							MarkdownDescription: "The tokens for the Billing Rules assigned to the Managed Account.",
 						},
 						"business_information_attributes": schema.SingleNestedAttribute{
 							Attributes: map[string]schema.Attribute{
