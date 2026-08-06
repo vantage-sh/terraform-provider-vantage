@@ -125,35 +125,11 @@ func (v *virtualTagConfigValueModel) fillUnknownsFrom(state *virtualTagConfigVal
 	if v.Filter.IsUnknown() {
 		v.Filter = state.Filter
 	}
-	if v.DateRanges.IsUnknown() {
-		v.DateRanges = state.DateRanges
-	}
 	if valueType := v.valueType(); valueType != "" && valueType != state.valueType() {
 		return
 	}
-	if v.BusinessMetricToken.IsUnknown() {
-		v.BusinessMetricToken = state.BusinessMetricToken
-	}
-	if v.CostMetric.IsUnknown() {
-		v.CostMetric = state.CostMetric
-	}
 	if v.DisplayName.IsUnknown() {
 		v.DisplayName = state.DisplayName
-	}
-	if v.LabelKey.IsUnknown() {
-		v.LabelKey = state.LabelKey
-	}
-	if v.LabelTransforms.IsUnknown() {
-		v.LabelTransforms = state.LabelTransforms
-	}
-	if v.LabelValues.IsUnknown() {
-		v.LabelValues = state.LabelValues
-	}
-	if v.Name.IsUnknown() {
-		v.Name = state.Name
-	}
-	if v.Percentages.IsUnknown() {
-		v.Percentages = state.Percentages
 	}
 }
 
@@ -167,12 +143,12 @@ func (v *virtualTagConfigValueModel) requiresParentUpdateFrom(state *virtualTagC
 		clearsList(v.LabelTransforms, state.LabelTransforms) ||
 		clearsList(v.LabelValues, state.LabelValues) ||
 		(!state.LabelKey.IsNull() && state.LabelKey.ValueString() != "" &&
-			!v.LabelKey.IsUnknown() && (v.LabelKey.IsNull() || v.LabelKey.ValueString() == ""))
+			(v.LabelKey.IsNull() || v.LabelKey.IsUnknown() || v.LabelKey.ValueString() == ""))
 }
 
 func clearsList(plan, state types.List) bool {
 	return !state.IsNull() && !state.IsUnknown() && len(state.Elements()) > 0 &&
-		!plan.IsUnknown() && (plan.IsNull() || len(plan.Elements()) == 0)
+		(plan.IsNull() || plan.IsUnknown() || len(plan.Elements()) == 0)
 }
 
 func diffVirtualTagConfigValues(plan, state []*virtualTagConfigValueModel) virtualTagConfigValueChanges {
@@ -207,11 +183,11 @@ func diffVirtualTagConfigValues(plan, state []*virtualTagConfigValueModel) virtu
 		}
 		seen[token] = true
 		planTokens = append(planTokens, token)
+		if value.requiresParentUpdateFrom(stateValue) {
+			changes.requiresParentUpdate = true
+			return changes
+		}
 		if !value.equal(stateValue) {
-			if value.requiresParentUpdateFrom(stateValue) {
-				changes.requiresParentUpdate = true
-				return changes
-			}
 			changes.updates = append(changes.updates, value)
 		}
 	}

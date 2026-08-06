@@ -196,12 +196,15 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	planValues := data.valuesFromTf(ctx, &resp.Diagnostics)
-	stateValues := state.valuesFromTf(ctx, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
+	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
+	if !changes.requiresParentUpdate {
+		planValues := data.valuesFromTf(ctx, &resp.Diagnostics)
+		stateValues := state.valuesFromTf(ctx, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		changes = diffVirtualTagConfigValues(planValues, stateValues)
 	}
-	changes := diffVirtualTagConfigValues(planValues, stateValues)
 
 	if !data.parentFieldsEqual(state) || changes.requiresParentUpdate {
 		model := data.toUpdate(ctx, &resp.Diagnostics)

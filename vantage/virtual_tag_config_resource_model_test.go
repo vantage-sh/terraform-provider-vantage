@@ -91,6 +91,18 @@ func TestVirtualTagConfigValueDiff(t *testing.T) {
 		}
 	})
 
+	t.Run("clear unknown list", func(t *testing.T) {
+		stateValue := value("vtv_a", "a")
+		stateValue.LabelTransforms = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("split")})
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("a")},
+			[]*virtualTagConfigValueModel{stateValue},
+		)
+		if !changes.requiresParentUpdate {
+			t.Fatal("an omitted non-empty list should require the parent update endpoint")
+		}
+	})
+
 	t.Run("clear active type", func(t *testing.T) {
 		planValue := planned("a")
 		planValue.Name = types.StringNull()
