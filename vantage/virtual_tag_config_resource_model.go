@@ -105,12 +105,65 @@ func (v *virtualTagConfigValueModel) equal(other *virtualTagConfigValueModel) bo
 		plannedValueEqual(v.Percentages, other.Percentages)
 }
 
+func (v *virtualTagConfigValueModel) valueType() string {
+	if !v.BusinessMetricToken.IsNull() && !v.BusinessMetricToken.IsUnknown() && v.BusinessMetricToken.ValueString() != "" {
+		return "business_metric"
+	}
+	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
+		return "cost_metric"
+	}
+	if !v.Percentages.IsNull() && !v.Percentages.IsUnknown() && len(v.Percentages.Elements()) > 0 {
+		return "percentages"
+	}
+	if !v.Name.IsNull() && !v.Name.IsUnknown() && v.Name.ValueString() != "" {
+		return "name"
+	}
+	return ""
+}
+
+func (v *virtualTagConfigValueModel) fillUnknownsFrom(state *virtualTagConfigValueModel) {
+	if v.Filter.IsUnknown() {
+		v.Filter = state.Filter
+	}
+	if v.DateRanges.IsUnknown() {
+		v.DateRanges = state.DateRanges
+	}
+	if valueType := v.valueType(); valueType != "" && valueType != state.valueType() {
+		return
+	}
+	if v.BusinessMetricToken.IsUnknown() {
+		v.BusinessMetricToken = state.BusinessMetricToken
+	}
+	if v.CostMetric.IsUnknown() {
+		v.CostMetric = state.CostMetric
+	}
+	if v.DisplayName.IsUnknown() {
+		v.DisplayName = state.DisplayName
+	}
+	if v.LabelKey.IsUnknown() {
+		v.LabelKey = state.LabelKey
+	}
+	if v.LabelTransforms.IsUnknown() {
+		v.LabelTransforms = state.LabelTransforms
+	}
+	if v.LabelValues.IsUnknown() {
+		v.LabelValues = state.LabelValues
+	}
+	if v.Name.IsUnknown() {
+		v.Name = state.Name
+	}
+	if v.Percentages.IsUnknown() {
+		v.Percentages = state.Percentages
+	}
+}
+
 func plannedValueEqual(plan, state attr.Value) bool {
 	return plan.IsUnknown() || plan.Equal(state)
 }
 
 func (v *virtualTagConfigValueModel) requiresParentUpdateFrom(state *virtualTagConfigValueModel) bool {
-	return clearsList(v.DateRanges, state.DateRanges) ||
+	return (state.valueType() != "" && v.valueType() == "") ||
+		clearsList(v.DateRanges, state.DateRanges) ||
 		clearsList(v.LabelTransforms, state.LabelTransforms) ||
 		clearsList(v.LabelValues, state.LabelValues) ||
 		(!state.LabelKey.IsNull() && state.LabelKey.ValueString() != "" &&
@@ -147,6 +200,7 @@ func diffVirtualTagConfigValues(plan, state []*virtualTagConfigValueModel) virtu
 			changes.creates = append(changes.creates, value)
 			continue
 		}
+		value.fillUnknownsFrom(stateValue)
 		if len(changes.creates) > 0 || seen[token] {
 			changes.requiresParentUpdate = true
 			return changes

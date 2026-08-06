@@ -737,6 +737,57 @@ func TestAccVantageVirtualTagConfig_granularValueUpdates(t *testing.T) {
 	})
 }
 
+func TestAccVantageVirtualTagConfig_preservesComputedDisplayName(t *testing.T) {
+	key := "tf-pla-1864-" + sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+	value := func(filter, displayName string) string {
+		return fmt.Sprintf(`values = [{
+			filter = %[1]q
+			%[2]s
+			percentages = [
+				{ value = "allocation-a", pct = 60 },
+				{ value = "allocation-b", pct = 40 },
+			]
+		}]`, filter, displayName)
+	}
+	var token string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf(
+					"test", key, true, backfillUntil, value("costs.provider = 'aws'", `display_name = "Allocation"`),
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.display_name", "Allocation"),
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", func(value string) error {
+						token = value
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testAccVantageVirtualTagConfig_basicTf(
+					"test", key, true, backfillUntil, value("costs.provider = 'gcp'", ""),
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.display_name", "Allocation"),
+					resource.TestCheckResourceAttrWith(resourceName, "values.0.token", func(value string) error {
+						if value != token {
+							return fmt.Errorf("value token changed from %q to %q", token, value)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
 func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable bool, backfillUntil string, rest string) string {
 	return fmt.Sprintf(
 		`data "vantage_virtual_tag_configs" %[1]q {}

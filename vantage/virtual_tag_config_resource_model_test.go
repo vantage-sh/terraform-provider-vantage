@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
@@ -87,6 +88,48 @@ func TestVirtualTagConfigValueDiff(t *testing.T) {
 		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{stateValue})
 		if !changes.requiresParentUpdate {
 			t.Fatal("clearing label_key should require the parent update endpoint")
+		}
+	})
+
+	t.Run("clear active type", func(t *testing.T) {
+		planValue := planned("a")
+		planValue.Name = types.StringNull()
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{a})
+		if !changes.requiresParentUpdate {
+			t.Fatal("clearing the active value type should require the parent update endpoint")
+		}
+	})
+
+	t.Run("preserve unknown display name", func(t *testing.T) {
+		percentages := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("allocation")})
+		stateValue := value("vtv_a", "")
+		stateValue.Name = types.StringNull()
+		stateValue.Percentages = percentages
+		stateValue.DisplayName = types.StringValue("Allocation")
+		planValue := planned("")
+		planValue.Name = types.StringUnknown()
+		planValue.Percentages = percentages
+		planValue.Filter = types.StringValue("costs.provider = 'gcp'")
+
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{stateValue})
+		if changes.requiresParentUpdate || len(changes.updates) != 1 {
+			t.Fatalf("changes = %#v; want one granular update", changes)
+		}
+		if got := planValue.DisplayName.ValueString(); got != "Allocation" {
+			t.Fatalf("display name = %q; want preserved state value", got)
+		}
+	})
+
+	t.Run("do not preserve old type during type change", func(t *testing.T) {
+		planValue := planned("")
+		planValue.Name = types.StringUnknown()
+		planValue.BusinessMetricToken = types.StringValue("bmet_test")
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{a})
+		if changes.requiresParentUpdate || len(changes.updates) != 1 {
+			t.Fatalf("changes = %#v; want one granular type update", changes)
+		}
+		if !planValue.Name.IsUnknown() {
+			t.Fatal("old name type should not be copied into a business metric update")
 		}
 	})
 }
