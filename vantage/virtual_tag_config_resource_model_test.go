@@ -4,10 +4,92 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
+
+func TestVirtualTagConfigValueDiff(t *testing.T) {
+	value := func(token, name string) *virtualTagConfigValueModel {
+		return &virtualTagConfigValueModel{
+			BusinessMetricToken: types.StringNull(),
+			CostMetric:          resource_virtual_tag_config.NewCostMetricValueNull(),
+			DateRanges:          types.ListNull(types.StringType),
+			DisplayName:         types.StringNull(),
+			Filter:              types.StringValue("costs.provider = 'aws'"),
+			LabelKey:            types.StringNull(),
+			LabelTransforms:     types.ListNull(types.StringType),
+			LabelValues:         types.ListNull(types.StringType),
+			Name:                types.StringValue(name),
+			Percentages:         types.ListNull(types.StringType),
+			Token:               types.StringValue(token),
+		}
+	}
+	a := value("vtv_a", "a")
+	b := value("vtv_b", "b")
+	planned := func(name string) *virtualTagConfigValueModel {
+		v := value("", name)
+		v.BusinessMetricToken = types.StringUnknown()
+		v.CostMetric = resource_virtual_tag_config.NewCostMetricValueUnknown()
+		v.DateRanges = types.ListUnknown(types.StringType)
+		v.DisplayName = types.StringUnknown()
+		v.LabelKey = types.StringUnknown()
+		v.LabelTransforms = types.ListUnknown(types.StringType)
+		v.LabelValues = types.ListUnknown(types.StringType)
+		v.Percentages = types.ListUnknown(types.StringType)
+		v.Token = types.StringUnknown()
+		return v
+	}
+
+	t.Run("append", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("a"), planned("b"), planned("c")},
+			[]*virtualTagConfigValueModel{a, b},
+		)
+		if changes.requiresParentUpdate || len(changes.creates) != 1 {
+			t.Fatalf("changes = %#v; want one granular create", changes)
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("a"), planned("updated")},
+			[]*virtualTagConfigValueModel{a, b},
+		)
+		if changes.requiresParentUpdate || len(changes.updates) != 1 {
+			t.Fatalf("changes = %#v; want one granular update", changes)
+		}
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planned("b")}, []*virtualTagConfigValueModel{a, b})
+		if changes.requiresParentUpdate || len(changes.deletes) != 1 {
+			t.Fatalf("changes = %#v; want one granular delete", changes)
+		}
+	})
+
+	t.Run("reorder", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("b"), planned("a")},
+			[]*virtualTagConfigValueModel{a, b},
+		)
+		if !changes.requiresParentUpdate {
+			t.Fatal("reorder should require the parent update endpoint")
+		}
+	})
+
+	t.Run("clear omitted patch field", func(t *testing.T) {
+		stateValue := value("vtv_a", "a")
+		stateValue.LabelKey = types.StringValue("team")
+		planValue := planned("a")
+		planValue.LabelKey = types.StringNull()
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{stateValue})
+		if !changes.requiresParentUpdate {
+			t.Fatal("clearing label_key should require the parent update endpoint")
+		}
+	})
+}
 
 // Regression for ENG-2415: applyPayload must emit known-empty lists (not null)
 // for Optional+Computed nested lists when the API response has nil/empty fields.
