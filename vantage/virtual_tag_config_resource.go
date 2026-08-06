@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	tagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
 
@@ -189,29 +190,106 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	model := data.toUpdate(ctx, &resp.Diagnostics)
+	var state *virtualTagConfigModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	params := tagsv2.
-		NewUpdateVirtualTagConfigParams().
-		WithToken(data.Token.ValueString()).
-		WithUpdateVirtualTagConfig(model)
+	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
+	if !changes.requiresParentUpdate {
+		planValues := data.valuesFromTf(ctx, &resp.Diagnostics)
+		stateValues := state.valuesFromTf(ctx, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		changes = diffVirtualTagConfigValues(planValues, stateValues)
+	}
 
-	out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
+	if !data.parentFieldsEqual(state) || changes.requiresParentUpdate {
+		model := data.toUpdate(ctx, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		params := tagsv2.
+			NewUpdateVirtualTagConfigParams().
+			WithToken(data.Token.ValueString()).
+			WithUpdateVirtualTagConfig(model)
+		out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
+		if err != nil {
+			handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
+			return
+		}
+		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
 
-	diag := data.applyPayload(ctx, out.Payload)
-	if diag.HasError() {
-		resp.Diagnostics.Append(diag...)
+	updateModels := make([]*modelsv2.UpdateVirtualTagConfigValue, len(changes.updates))
+	for i, value := range changes.updates {
+		updateModels[i] = value.toUpdateValue(ctx, &resp.Diagnostics)
+	}
+	createModels := make([]*modelsv2.CreateVirtualTagConfigValue, len(changes.creates))
+	for i, value := range changes.creates {
+		createModels[i] = value.toCreateValue(ctx, &resp.Diagnostics)
+	}
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	refreshState := func() {
+		params := tagsv2.NewGetVirtualTagConfigParams().WithToken(data.Token.ValueString())
+		out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
+		if err != nil {
+			handleError("Refresh Virtual Tag Config Resource", &resp.Diagnostics, err)
+			return
+		}
+		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
+		if !resp.Diagnostics.HasError() {
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		}
+	}
+	fail := func(title string, err error) {
+		refreshState()
+		handleError(title, &resp.Diagnostics, err)
+	}
+
+	for i, value := range changes.updates {
+		params := tagsv2.
+			NewUpdateVirtualTagConfigValueParams().
+			WithVirtualTagConfigToken(data.Token.ValueString()).
+			WithVirtualTagConfigValueToken(value.Token.ValueString()).
+			WithUpdateVirtualTagConfigValue(updateModels[i])
+		if _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfigValue(params, r.client.Auth); err != nil {
+			fail("Update Virtual Tag Config Value", err)
+			return
+		}
+	}
+	for _, value := range changes.deletes {
+		params := tagsv2.
+			NewDeleteVirtualTagConfigValueParams().
+			WithVirtualTagConfigToken(data.Token.ValueString()).
+			WithVirtualTagConfigValueToken(value.Token.ValueString())
+		if _, err := r.client.V2.VirtualTags.DeleteVirtualTagConfigValue(params, r.client.Auth); err != nil {
+			fail("Delete Virtual Tag Config Value", err)
+			return
+		}
+	}
+	for i := range changes.creates {
+		params := tagsv2.
+			NewCreateVirtualTagConfigValueParams().
+			WithVirtualTagConfigToken(data.Token.ValueString()).
+			WithCreateVirtualTagConfigValue(createModels[i])
+		if _, err := r.client.V2.VirtualTags.CreateVirtualTagConfigValue(params, r.client.Auth); err != nil {
+			fail("Create Virtual Tag Config Value", err)
+			return
+		}
+	}
+	refreshState()
 }
 
 func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

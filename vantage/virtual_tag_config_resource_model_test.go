@@ -4,10 +4,147 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
+
+func TestVirtualTagConfigValueDiff(t *testing.T) {
+	value := func(token, name string) *virtualTagConfigValueModel {
+		return &virtualTagConfigValueModel{
+			BusinessMetricToken: types.StringNull(),
+			CostMetric:          resource_virtual_tag_config.NewCostMetricValueNull(),
+			DateRanges:          types.ListNull(types.StringType),
+			DisplayName:         types.StringNull(),
+			Filter:              types.StringValue("costs.provider = 'aws'"),
+			LabelKey:            types.StringNull(),
+			LabelTransforms:     types.ListNull(types.StringType),
+			LabelValues:         types.ListNull(types.StringType),
+			Name:                types.StringValue(name),
+			Percentages:         types.ListNull(types.StringType),
+			Token:               types.StringValue(token),
+		}
+	}
+	a := value("vtv_a", "a")
+	b := value("vtv_b", "b")
+	planned := func(name string) *virtualTagConfigValueModel {
+		v := value("", name)
+		v.BusinessMetricToken = types.StringUnknown()
+		v.CostMetric = resource_virtual_tag_config.NewCostMetricValueUnknown()
+		v.DateRanges = types.ListUnknown(types.StringType)
+		v.DisplayName = types.StringUnknown()
+		v.LabelKey = types.StringUnknown()
+		v.LabelTransforms = types.ListUnknown(types.StringType)
+		v.LabelValues = types.ListUnknown(types.StringType)
+		v.Percentages = types.ListUnknown(types.StringType)
+		v.Token = types.StringUnknown()
+		return v
+	}
+
+	t.Run("append", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("a"), planned("b"), planned("c")},
+			[]*virtualTagConfigValueModel{a, b},
+		)
+		if changes.requiresParentUpdate || len(changes.creates) != 1 {
+			t.Fatalf("changes = %#v; want one granular create", changes)
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("a"), planned("updated")},
+			[]*virtualTagConfigValueModel{a, b},
+		)
+		if changes.requiresParentUpdate || len(changes.updates) != 1 {
+			t.Fatalf("changes = %#v; want one granular update", changes)
+		}
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planned("b")}, []*virtualTagConfigValueModel{a, b})
+		if changes.requiresParentUpdate || len(changes.deletes) != 1 {
+			t.Fatalf("changes = %#v; want one granular delete", changes)
+		}
+	})
+
+	t.Run("reorder", func(t *testing.T) {
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("b"), planned("a")},
+			[]*virtualTagConfigValueModel{a, b},
+		)
+		if !changes.requiresParentUpdate {
+			t.Fatal("reorder should require the parent update endpoint")
+		}
+	})
+
+	t.Run("clear omitted patch field", func(t *testing.T) {
+		stateValue := value("vtv_a", "a")
+		stateValue.LabelKey = types.StringValue("team")
+		planValue := planned("a")
+		planValue.LabelKey = types.StringNull()
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{stateValue})
+		if !changes.requiresParentUpdate {
+			t.Fatal("clearing label_key should require the parent update endpoint")
+		}
+	})
+
+	t.Run("clear unknown list", func(t *testing.T) {
+		stateValue := value("vtv_a", "a")
+		stateValue.LabelTransforms = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("split")})
+		changes := diffVirtualTagConfigValues(
+			[]*virtualTagConfigValueModel{planned("a")},
+			[]*virtualTagConfigValueModel{stateValue},
+		)
+		if !changes.requiresParentUpdate {
+			t.Fatal("an omitted non-empty list should require the parent update endpoint")
+		}
+	})
+
+	t.Run("clear active type", func(t *testing.T) {
+		planValue := planned("a")
+		planValue.Name = types.StringNull()
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{a})
+		if !changes.requiresParentUpdate {
+			t.Fatal("clearing the active value type should require the parent update endpoint")
+		}
+	})
+
+	t.Run("preserve unknown display name", func(t *testing.T) {
+		percentages := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("allocation")})
+		stateValue := value("vtv_a", "")
+		stateValue.Name = types.StringNull()
+		stateValue.Percentages = percentages
+		stateValue.DisplayName = types.StringValue("Allocation")
+		planValue := planned("")
+		planValue.Name = types.StringUnknown()
+		planValue.Percentages = percentages
+		planValue.Filter = types.StringValue("costs.provider = 'gcp'")
+
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{stateValue})
+		if changes.requiresParentUpdate || len(changes.updates) != 1 {
+			t.Fatalf("changes = %#v; want one granular update", changes)
+		}
+		if got := planValue.DisplayName.ValueString(); got != "Allocation" {
+			t.Fatalf("display name = %q; want preserved state value", got)
+		}
+	})
+
+	t.Run("do not preserve old type during type change", func(t *testing.T) {
+		planValue := planned("")
+		planValue.Name = types.StringUnknown()
+		planValue.BusinessMetricToken = types.StringValue("bmet_test")
+		changes := diffVirtualTagConfigValues([]*virtualTagConfigValueModel{planValue}, []*virtualTagConfigValueModel{a})
+		if changes.requiresParentUpdate || len(changes.updates) != 1 {
+			t.Fatalf("changes = %#v; want one granular type update", changes)
+		}
+		if !planValue.Name.IsUnknown() {
+			t.Fatal("old name type should not be copied into a business metric update")
+		}
+	})
+}
 
 // Regression for ENG-2415: applyPayload must emit known-empty lists (not null)
 // for Optional+Computed nested lists when the API response has nil/empty fields.
