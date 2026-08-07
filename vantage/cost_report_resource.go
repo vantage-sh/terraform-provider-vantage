@@ -56,6 +56,8 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 	//   value instead of preserving prior state.
 	// - chart_type, date_bin: remove generated defaults to preserve existing API
 	//   values for upgraded resources when the config omits these attributes.
+	// - settings: remove generated nested defaults so partial blocks do not
+	//   overwrite settings that users did not configure.
 	// - default_forecast: the API supports this field on update but not create,
 	//   so the generator sees the read-only response and emits Computed-only.
 	//   Make it configurable and perform a follow-up update after create when
@@ -129,6 +131,19 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Description:         attrs["date_bin"].GetDescription(),
 		Validators:          attrs["date_bin"].(schema.StringAttribute).Validators,
 	}
+
+	settings := attrs["settings"].(schema.SingleNestedAttribute)
+	for name, attr := range settings.Attributes {
+		switch attr := attr.(type) {
+		case schema.BoolAttribute:
+			attr.Default = nil
+			settings.Attributes[name] = attr
+		case schema.StringAttribute:
+			attr.Default = nil
+			settings.Attributes[name] = attr
+		}
+	}
+	s.Attributes["settings"] = settings
 
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,

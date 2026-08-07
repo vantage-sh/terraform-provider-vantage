@@ -7,10 +7,31 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
+
+func TestCostReportResourceSchemaSettingsHaveNoDefaults(t *testing.T) {
+	var resp resource.SchemaResponse
+	(&CostReportResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
+
+	settings := resp.Schema.Attributes["settings"].(schema.SingleNestedAttribute)
+	for name, attribute := range settings.Attributes {
+		switch attribute := attribute.(type) {
+		case schema.BoolAttribute:
+			if attribute.Default != nil {
+				t.Errorf("settings.%s unexpectedly has a default", name)
+			}
+		case schema.StringAttribute:
+			if attribute.Default != nil {
+				t.Errorf("settings.%s unexpectedly has a default", name)
+			}
+		}
+	}
+}
 
 // TestApplyPayload_ClearsStaleChartSettingsAndSettings verifies that when
 // state has non-null `chart_settings` and `settings` but the API payload
