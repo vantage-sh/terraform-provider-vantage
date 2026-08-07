@@ -125,6 +125,17 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 		AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
 	}
 	if !m.BusinessMetricTokensWithMetadata.IsNull() && !m.BusinessMetricTokensWithMetadata.IsUnknown() {
+		configuredBMTs := make(map[string]map[string]attr.Value, len(m.BusinessMetricTokensWithMetadata.Elements()))
+		for _, elem := range m.BusinessMetricTokensWithMetadata.Elements() {
+			attrs := businessMetricMetadataAttributes(elem, &diags)
+			if diags.HasError() {
+				return diags
+			}
+			if token, ok := attrs["business_metric_token"].(types.String); ok && !token.IsNull() && !token.IsUnknown() {
+				configuredBMTs[token.ValueString()] = attrs
+			}
+		}
+
 		bmtValues := make([]attr.Value, 0, len(payload.BusinessMetricTokensWithMetadata))
 		for _, bmt := range payload.BusinessMetricTokensWithMetadata {
 			labelFilter, d := types.ListValueFrom(ctx, types.StringType, bmt.LabelFilter)
@@ -144,12 +155,21 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 					return diags
 				}
 			}
+			label := types.StringPointerValue(bmt.Label)
+			if configured, ok := configuredBMTs[bmt.BusinessMetricToken]; ok {
+				if configuredLabel := configured["label"]; configuredLabel.IsNull() || configuredLabel.IsUnknown() {
+					label = types.StringNull()
+				}
+				if configuredLabelFilter := configured["label_filter"]; configuredLabelFilter.IsNull() || configuredLabelFilter.IsUnknown() {
+					labelFilter = types.ListNull(types.StringType)
+				}
+			}
 			objVal, d := types.ObjectValue(
 				resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
 				map[string]attr.Value{
 					"business_metric_token": types.StringValue(bmt.BusinessMetricToken),
 					"calculation_type":      types.StringValue(bmt.CalculationType),
-					"label":                 types.StringPointerValue(bmt.Label),
+					"label":                 label,
 					"label_filter":          labelFilter,
 					"label_filters":         labelFilters,
 					"unit_scale":            types.StringValue(bmt.UnitScale),

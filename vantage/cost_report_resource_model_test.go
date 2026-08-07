@@ -252,6 +252,70 @@ func TestApplyPayload_NullStateStaysNull(t *testing.T) {
 	}
 }
 
+func TestApplyPayload_PreservesOmittedBusinessMetricMetadata(t *testing.T) {
+	ctx := context.Background()
+	businessMetric, d := types.ObjectValue(
+		resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"business_metric_token": types.StringValue("bsnss_mtrc_test"),
+			"calculation_type":      types.StringValue("unit_cost"),
+			"label":                 types.StringNull(),
+			"label_filter":          types.ListNull(types.StringType),
+			"label_filters":         types.MapNull(types.ListType{ElemType: types.StringType}),
+			"unit_scale":            types.StringValue("per_unit"),
+		},
+	)
+	if d.HasError() {
+		t.Fatalf("unexpected diags building business metric metadata: %v", d)
+	}
+	businessMetrics, d := types.ListValue(
+		types.ObjectType{
+			AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
+		},
+		[]attr.Value{businessMetric},
+	)
+	if d.HasError() {
+		t.Fatalf("unexpected diags building business metric list: %v", d)
+	}
+
+	model := &costReportModel{
+		BusinessMetricTokensWithMetadata: businessMetrics,
+		ChartSettings:                    resource_cost_report.NewChartSettingsValueNull(),
+		DefaultForecast:                  resource_cost_report.NewDefaultForecastValueNull(),
+		Settings:                         resource_cost_report.NewSettingsValueNull(),
+	}
+	apiLabel := "Unit Cost"
+	payload := &modelsv2.CostReport{
+		Token:          "rprt_test",
+		Title:          "test",
+		WorkspaceToken: "wrkspc_test",
+		BusinessMetricTokensWithMetadata: []*modelsv2.AttachedBusinessMetricForCostReport{
+			{
+				BusinessMetricToken: "bsnss_mtrc_test",
+				CalculationType:     "unit_cost",
+				Label:               &apiLabel,
+				LabelFilter:         []string{},
+				UnitScale:           "per_unit",
+			},
+		},
+	}
+
+	diags := model.applyPayload(ctx, payload)
+	if diags.HasError() {
+		t.Fatalf("applyPayload returned errors: %v", diags)
+	}
+	attrs := businessMetricMetadataAttributes(model.BusinessMetricTokensWithMetadata.Elements()[0], &diags)
+	if diags.HasError() {
+		t.Fatalf("reading business metric metadata returned errors: %v", diags)
+	}
+	if !attrs["label"].IsNull() {
+		t.Errorf("expected omitted label to remain null, got %v", attrs["label"])
+	}
+	if !attrs["label_filter"].IsNull() {
+		t.Errorf("expected omitted label_filter to remain null, got %v", attrs["label_filter"])
+	}
+}
+
 func TestCostReportModel_toUpdateModelMapsDefaultForecast(t *testing.T) {
 	ctx := context.Background()
 	defaultForecast, d := resource_cost_report.NewDefaultForecastValue(
