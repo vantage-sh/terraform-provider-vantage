@@ -43,29 +43,48 @@ resource "vantage_cost_report" "demo_report" {
 
 ### Required
 
-- `title` (String) Title of the Cost Report
+- `title` (String) The title of the CostReport.
 
 ### Optional
 
-- `chart_settings` (Attributes) Chart settings for the Cost Report. (see [below for nested schema](#nestedatt--chart_settings))
-- `chart_type` (String) Chart type to apply to the Cost Report.
-- `date_bin` (String) Date bin to apply to the Cost Report.
-- `date_interval` (String) Date interval to apply to the Cost Report.
-- `end_date` (String) End date to apply to the Cost Report.
-- `filter` (String) Filter query to apply to the Cost Report
-- `folder_token` (String) Token of the folder this Cost Report resides in.
-- `groupings` (String) Grouping aggregations applied to the filtered data.
-- `previous_period_end_date` (String) End date to apply to the Cost Report.
-- `previous_period_start_date` (String) Start date to apply to the Cost Report.
-- `saved_filter_tokens` (List of String) Saved filter tokens to be applied to the Cost Report.
-- `settings` (Attributes) Settings for the Cost Report. (see [below for nested schema](#nestedatt--settings))
-- `start_date` (String) Start date to apply to the Cost Report.
-- `workspace_token` (String) Workspace token to add the Cost Report to.
+- `business_metric_tokens_with_metadata` (Attributes List) The tokens for any BusinessMetrics to attach to the CostReport, and the unit scale. (see [below for nested schema](#nestedatt--business_metric_tokens_with_metadata))
+- `chart_settings` (Attributes) Report chart settings. (see [below for nested schema](#nestedatt--chart_settings))
+- `chart_type` (String) The chart type of the CostReport.
+- `date_bin` (String) The date bin of the CostReport.
+- `date_interval` (String) The date interval of the CostReport. Incompatible with 'start_date' and 'end_date' parameters. Defaults to 'this_month' if start_date and end_date are not provided.
+- `default_forecast` (Attributes) (see [below for nested schema](#nestedatt--default_forecast))
+- `end_date` (String) The end date of the CostReport. ISO 8601 Formatted. Required when start_date is provided. Incompatible with 'date_interval' parameter.
+- `filter` (String) The filter query language to apply to the CostReport. Additional documentation available at https://docs.vantage.sh/vql.
+- `folder_token` (String) The token of the Folder to add the CostReport to. Determines the Workspace the report is assigned to.
+- `groupings` (String) Grouping values for aggregating costs on the report. Valid groupings: account_id, billing_account_id, charge_type, cost_category, cost_subcategory, provider, region, resource_id, service, tagged, usage_unit, tag:<tag_value>. If providing multiple groupings, join as comma separated values: groupings=provider,service,region
+- `previous_period_end_date` (String) The previous period end date of the CostReport. ISO 8601 Formatted. Required when previous_period_start_date is provided.
+- `previous_period_start_date` (String) The previous period start date of the CostReport. ISO 8601 Formatted.
+- `saved_filter_tokens` (List of String) The tokens of the SavedFilters to apply to the CostReport.
+- `settings` (Attributes) Report settings. (see [below for nested schema](#nestedatt--settings))
+- `start_date` (String) The start date of the CostReport. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
+- `workspace_token` (String) The token of the Workspace to add the Cost Report to. Ignored if 'folder_token' is set. Required if the API token is associated with multiple Workspaces.
 
 ### Read-Only
 
-- `id` (String) Unique cost report identifier (aliases to token)
-- `token` (String) Unique cost report identifier
+- `created_at` (String) The date and time, in UTC, the report was created. ISO 8601 Formatted.
+- `id` (String) The id of the cost report
+- `token` (String) The token of the cost report
+
+<a id="nestedatt--business_metric_tokens_with_metadata"></a>
+### Nested Schema for `business_metric_tokens_with_metadata`
+
+Required:
+
+- `business_metric_token` (String) The token of the BusinessMetric to attach to the CostReport.
+
+Optional:
+
+- `calculation_type` (String) The calculation type applied when this BusinessMetric is used in the CostReport.
+- `label` (String) Optional custom display name for this BusinessMetric on the CostReport. When omitted, a default is derived from the calculation type.
+- `label_filter` (List of String) Include only values with these labels in the CostReport.
+- `label_filters` (Map of List of String) Include only ClickHouse BusinessMetric values matching every label key and one of its values.
+- `unit_scale` (String) Determines the scale of the BusinessMetric's values within the CostReport.
+
 
 <a id="nestedatt--chart_settings"></a>
 ### Nested Schema for `chart_settings`
@@ -76,6 +95,18 @@ Optional:
 - `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
 
 
+<a id="nestedatt--default_forecast"></a>
+### Nested Schema for `default_forecast`
+
+Required:
+
+- `kind` (String) The default forecast selection kind.
+
+Optional:
+
+- `report_forecast_token` (String) The token for the report forecast selected as the default.
+
+
 <a id="nestedatt--settings"></a>
 ### Nested Schema for `settings`
 
@@ -83,6 +114,7 @@ Optional:
 
 - `aggregate_by` (String) Report will aggregate by cost, usage, or count.
 - `amortize` (Boolean) Report will amortize.
+- `complete_period` (Boolean) Report will restrict date ranges to completed periods only.
 - `include_credits` (Boolean) Report will include credits.
 - `include_discounts` (Boolean) Report will include discounts.
 - `include_refunds` (Boolean) Report will include refunds.
