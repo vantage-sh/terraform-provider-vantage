@@ -64,6 +64,33 @@ resources:
             description: The token of the budget
         aliases:
           budget_token: token
+  budget_alert:
+    create:
+      path: /budget_alerts
+      method: POST
+    read:
+      path: /budget_alerts/{budget_alert_token}
+      method: GET
+    update:
+      path: /budget_alerts/{budget_alert_token}
+      method: PUT
+    delete:
+      path: /budget_alerts/{budget_alert_token}
+      method: DELETE
+    schema:
+      # The create and update bodies type duration_in_days as a string, while the
+      # read response types it as an integer. The resource declares it by hand as
+      # an optional integer, so the generated string attribute is dropped here.
+      ignores:
+        - duration_in_days
+      attributes:
+        overrides:
+          token:
+            description: The token of the budget alert
+          workspace_token:
+            description: The token for the Workspace the budget alert is a part of.
+        aliases:
+          budget_alert_token: token
   business_metric:
     create:
       path: /business_metrics
@@ -424,6 +451,19 @@ data_sources:
         - limit
         - links
         - page
+  budget_alerts:
+    read:
+      path: /budget_alerts
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+      attributes:
+        overrides:
+          budget_alerts.workspace_token:
+            description: The token for the Workspace the budget alert is a part of.
   business_metrics:
     read:
       path: /business_metrics
