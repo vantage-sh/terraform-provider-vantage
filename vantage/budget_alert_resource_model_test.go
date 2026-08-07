@@ -33,8 +33,9 @@ func TestBudgetAlertDurationToAPI(t *testing.T) {
 }
 
 func TestBudgetAlertDurationFromAPI(t *testing.T) {
+	one := int32(1)
 	seven := int32(7)
-	zero := int32(0)
+	thirtyOne := int32(31)
 
 	tests := []struct {
 		name     string
@@ -42,8 +43,11 @@ func TestBudgetAlertDurationFromAPI(t *testing.T) {
 		want     types.Int64
 	}{
 		{"absent duration is the full month", nil, types.Int64Null()},
-		{"zero duration is the full month", &zero, types.Int64Null()},
+		// The API enforces a range of 1 to 31, so those are the only other
+		// values a response can carry.
+		{"one day", &one, types.Int64Value(1)},
 		{"seven days", &seven, types.Int64Value(7)},
+		{"thirty one days", &thirtyOne, types.Int64Value(31)},
 	}
 
 	for _, tt := range tests {

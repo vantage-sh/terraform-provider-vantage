@@ -219,7 +219,9 @@ func TestAccVantageBudgetAlert_clearUserTokens(t *testing.T) {
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
 					},
 				},
-				ExpectError: regexp.MustCompile(`at least one parameter must be provided`),
+				// Terraform wraps a long diagnostic, so the words are matched with
+				// flexible spacing rather than as one line.
+				ExpectError: regexp.MustCompile(`at\s+least\s+one\s+parameter\s+must\s+be\s+provided`),
 			},
 		},
 	})
@@ -310,11 +312,21 @@ func testAccVantageBudgetAlertConfig_multipleBudgets(title string, bothBudgets b
 		budgetTokens = "[vantage_budget.test_budget_alert.token, vantage_budget.test_budget_alert_second.token]"
 	}
 
+	// The second budget needs its own cost report. A report carries at most one
+	// budget, and two budgets created at once against the same report race each
+	// other, so one of them is rejected.
 	return testAccVantageBudgetAlertBudgets(title) + fmt.Sprintf(`
+resource "vantage_cost_report" "test_budget_alert_report_second" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Budget Alert Test Report %[1]s second"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
 resource "vantage_budget" "test_budget_alert_second" {
   name              = "%[1]s-second"
   workspace_token   = data.vantage_workspaces.test.workspaces[0].token
-  cost_report_token = vantage_cost_report.test_budget_alert_report.token
+  cost_report_token = vantage_cost_report.test_budget_alert_report_second.token
 }
 
 resource "vantage_budget_alert" "test" {

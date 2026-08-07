@@ -198,11 +198,11 @@ func budgetAlertDurationToAPI(duration types.Int64) string {
 }
 
 // budgetAlertDurationFromAPI reads duration_in_days out of a response, where the
-// field is an integer. The API reports the full month as an absent or zero
-// duration, and both map to a null attribute so that a config which omits
-// duration_in_days does not drift.
+// field is an integer. The API reports a full month as an absent duration, which
+// maps to a null attribute so that a configuration omitting duration_in_days does
+// not drift. Any other value is between 1 and 31, the range the API enforces.
 func budgetAlertDurationFromAPI(duration *int32) types.Int64 {
-	if duration == nil || *duration == 0 {
+	if duration == nil {
 		return types.Int64Null()
 	}
 	return types.Int64Value(int64(*duration))
