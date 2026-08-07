@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -177,6 +178,75 @@ func TestAccVantageBudgetAlert_multipleBudgets(t *testing.T) {
 	})
 }
 
+// TestAccVantageBudgetAlert_clearUserTokens covers emptying user_tokens. The API
+// answers "user_tokens is empty" to an empty array and to a null alike, so an
+// update can never take the last user off an alert and the alert is replaced.
+//
+// The step that empties the set asserts two things at once: the plan replaces
+// the alert rather than updating it, and the API refuses the replacement
+// because an alert has to reach somebody. Handing delivery to recipient_channels
+// instead would need a connected Slack or Teams integration, which this suite
+// does not assume.
+func TestAccVantageBudgetAlert_clearUserTokens(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_budget_alert.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create with one user receiving the alert.
+			{
+				Config: testAccVantageBudgetAlertConfig_basic(rTitle, 100),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "user_tokens.#", "1"),
+				),
+			},
+			// Leaving user_tokens out of the configuration keeps the prior users
+			// and plans nothing.
+			{
+				Config:             testAccVantageBudgetAlertConfig_noUserTokens(rTitle),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			// An explicit empty set asks for the users to go. That replaces the
+			// alert instead of updating it, and the API then refuses the new
+			// alert because it would reach nobody.
+			{
+				Config: testAccVantageBudgetAlertConfig_emptyUserTokens(rTitle),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				ExpectError: regexp.MustCompile(`at least one parameter must be provided`),
+			},
+		},
+	})
+}
+
+// TestAccVantageBudgetAlert_rejectsZeroDuration checks the validator. A zero
+// duration would read back as null, because the API reports a full month as an
+// absent duration, so the apply would contradict the configuration.
+func TestAccVantageBudgetAlert_rejectsZeroDuration(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccVantageBudgetAlertConfig_withDuration(rTitle, 0),
+				ExpectError: regexp.MustCompile(`must be between 1 and 31`),
+			},
+			{
+				Config:      testAccVantageBudgetAlertConfig_withDuration(rTitle, 32),
+				ExpectError: regexp.MustCompile(`must be between 1 and 31`),
+			},
+		},
+	})
+}
+
 // testAccVantageBudgetAlertBudgets declares the cost report and the budgets that
 // the alerts below watch.
 func testAccVantageBudgetAlertBudgets(title string) string {
@@ -253,6 +323,25 @@ resource "vantage_budget_alert" "test" {
   user_tokens   = [data.vantage_users.test.users[0].token]
 }
 `, title, budgetTokens)
+}
+
+func testAccVantageBudgetAlertConfig_noUserTokens(title string) string {
+	return testAccVantageBudgetAlertBudgets(title) + `
+resource "vantage_budget_alert" "test" {
+  budget_tokens = [vantage_budget.test_budget_alert.token]
+  threshold     = 100
+}
+`
+}
+
+func testAccVantageBudgetAlertConfig_emptyUserTokens(title string) string {
+	return testAccVantageBudgetAlertBudgets(title) + `
+resource "vantage_budget_alert" "test" {
+  budget_tokens = [vantage_budget.test_budget_alert.token]
+  threshold     = 100
+  user_tokens   = []
+}
+`
 }
 
 func testAccVantageBudgetAlertsDataSource() string {

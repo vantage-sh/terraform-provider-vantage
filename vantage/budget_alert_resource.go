@@ -5,14 +5,16 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget_alert"
 	budgetalertsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budget_alerts"
 )
@@ -83,19 +85,41 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 		MarkdownDescription: attrs["budget_tokens"].GetMarkdownDescription(),
 	}
 
-	// An empty set stays empty while the configuration names no recipients. A
-	// set that holds values is still cleared when it leaves the configuration.
-	for _, name := range []string{"recipient_channels", "user_tokens"} {
-		s.Attributes[name] = schema.SetAttribute{
-			ElementType:         types.StringType,
-			Optional:            true,
-			Computed:            true,
-			Description:         attrs[name].GetDescription(),
-			MarkdownDescription: attrs[name].GetMarkdownDescription(),
-			PlanModifiers: []planmodifier.Set{
-				planmodifiers.UseStateWhenEmpty(),
-			},
-		}
+	// The API accepts an empty recipient_channels and clears the channels with
+	// it. A configuration that names no channels keeps whatever the alert holds,
+	// so clearing them means setting the attribute to an empty set.
+	s.Attributes["recipient_channels"] = schema.SetAttribute{
+		ElementType:         types.StringType,
+		Optional:            true,
+		Computed:            true,
+		Description:         attrs["recipient_channels"].GetDescription(),
+		MarkdownDescription: attrs["recipient_channels"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.Set{
+			setplanmodifier.UseStateForUnknown(),
+		},
+	}
+
+	// user_tokens behaves differently. The API rejects both an empty array and a
+	// null with "user_tokens is empty", so an update can never take the last
+	// user off an alert. Emptying the set replaces the alert instead.
+	userTokensDescription := attrs["user_tokens"].GetDescription() +
+		" Emptying this set replaces the alert, because the API cannot remove the last user from an existing one."
+	s.Attributes["user_tokens"] = schema.SetAttribute{
+		ElementType:         types.StringType,
+		Optional:            true,
+		Computed:            true,
+		Description:         userTokensDescription,
+		MarkdownDescription: userTokensDescription,
+		PlanModifiers: []planmodifier.Set{
+			setplanmodifier.UseStateForUnknown(),
+			setplanmodifier.RequiresReplaceIf(
+				func(_ context.Context, req planmodifier.SetRequest, resp *setplanmodifier.RequiresReplaceIfFuncResponse) {
+					resp.RequiresReplace = budgetAlertUserTokensCleared(req.ConfigValue, req.StateValue)
+				},
+				"Replaces the alert when user_tokens becomes empty.",
+				"Replaces the alert when `user_tokens` becomes empty.",
+			),
+		},
 	}
 
 	// The API types duration_in_days as a string on write and as an integer on
@@ -104,11 +128,18 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 	//
 	// The update body omits an empty duration, so the API cannot move an alert
 	// back to the full month. Clearing the field replaces the alert instead.
-	durationDescription := "The number of days from the start or end of the month to trigger the alert if the threshold is reached. Omit to track the full month. Changing this to or from an omitted value replaces the alert."
+	//
+	// The validator keeps zero out of the configuration. The API reports a
+	// full month as an absent duration, which reads back as null, so a
+	// configured zero would never match the value the apply produces.
+	durationDescription := "The number of days from the start or end of the month to trigger the alert if the threshold is reached, between 1 and 31. Omit to track the full month. Changing this to or from an omitted value replaces the alert."
 	s.Attributes["duration_in_days"] = schema.Int64Attribute{
 		Optional:            true,
 		Description:         durationDescription,
 		MarkdownDescription: durationDescription,
+		Validators: []validator.Int64{
+			int64validator.Between(1, 31),
+		},
 		PlanModifiers: []planmodifier.Int64{
 			int64planmodifier.RequiresReplaceIf(
 				func(_ context.Context, req planmodifier.Int64Request, resp *int64planmodifier.RequiresReplaceIfFuncResponse) {
@@ -121,6 +152,19 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 	}
 
 	resp.Schema = s
+}
+
+// budgetAlertUserTokensCleared reports whether a plan takes the last user off an
+// existing alert. Only an explicit empty set does that. A set the configuration
+// leaves out keeps the prior value instead.
+func budgetAlertUserTokensCleared(configValue, stateValue types.Set) bool {
+	if configValue.IsNull() || configValue.IsUnknown() {
+		return false
+	}
+	if stateValue.IsNull() || stateValue.IsUnknown() {
+		return false
+	}
+	return len(configValue.Elements()) == 0 && len(stateValue.Elements()) > 0
 }
 
 // budgetAlertDerivedAttributes lists the computed attributes the API derives

@@ -40,10 +40,10 @@ resource "vantage_budget_alert" "demo_first_week_alert" {
 
 ### Optional
 
-- `duration_in_days` (Number) The number of days from the start or end of the month to trigger the alert if the threshold is reached. Omit to track the full month. Changing this to or from an omitted value replaces the alert.
+- `duration_in_days` (Number) The number of days from the start or end of the month to trigger the alert if the threshold is reached, between 1 and 31. Omit to track the full month. Changing this to or from an omitted value replaces the alert.
 - `period_to_track` (String) The period tracked on the alert. Used with duration_in_days to determine the time window of the alert. Defaults to start_of_the_month if not passed. Possible values: start_of_the_month, end_of_the_month.
 - `recipient_channels` (Set of String) The channels receiving the alerts. Requires an integration provider to be connected.
-- `user_tokens` (Set of String) The tokens of the users that receive the alert.
+- `user_tokens` (Set of String) The tokens of the users that receive the alert. Emptying this set replaces the alert, because the API cannot remove the last user from an existing one.
 
 ### Read-Only
 
