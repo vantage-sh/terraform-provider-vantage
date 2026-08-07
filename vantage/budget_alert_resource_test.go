@@ -47,6 +47,10 @@ func TestAccVantageBudgetAlert_basic(t *testing.T) {
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("user_token"), knownvalue.NotNull()),
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("period_to_track"), knownvalue.NotNull()),
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("user_tokens"), knownvalue.NotNull()),
+						// Derived values hold because the attributes behind them
+						// do not move when only the threshold changes.
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("workspace_token"), knownvalue.NotNull()),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("integration_provider"), knownvalue.NotNull()),
 					},
 				},
 				Check: resource.ComposeTestCheckFunc(

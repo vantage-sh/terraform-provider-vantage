@@ -70,6 +70,26 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 		},
 	}
 
+	// The API derives these two. The workspace comes from the budgets, and the
+	// integration comes from the channels the alert posts to. Each keeps its
+	// prior value while the attribute behind it holds still.
+	s.Attributes["workspace_token"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         attrs["workspace_token"].GetDescription(),
+		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			planmodifiers.StringDerivedFrom(path.Root("budget_tokens")),
+		},
+	}
+	s.Attributes["integration_provider"] = schema.StringAttribute{
+		Computed:            true,
+		Description:         attrs["integration_provider"].GetDescription(),
+		MarkdownDescription: attrs["integration_provider"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			planmodifiers.StringDerivedFrom(path.Root("recipient_channels")),
+		},
+	}
+
 	// An empty list stays empty while the configuration sets no recipients. A
 	// list that holds values is still cleared when it leaves the configuration.
 	for _, name := range []string{"recipient_channels", "user_tokens"} {
