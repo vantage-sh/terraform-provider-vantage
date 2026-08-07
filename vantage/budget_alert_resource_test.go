@@ -6,6 +6,9 @@ import (
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 )
 
@@ -29,9 +32,23 @@ func TestAccVantageBudgetAlert_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "period_to_track"),
 				),
 			},
-			// Update the threshold.
+			// Update the threshold. Everything the API fills in has to survive the
+			// update, otherwise a one-attribute change plans as a rewrite of the
+			// whole alert.
 			{
 				Config: testAccVantageBudgetAlertConfig_basic(rTitle, 80),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("threshold"), knownvalue.Int64Exact(80)),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("token"), knownvalue.NotNull()),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("id"), knownvalue.NotNull()),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("created_at"), knownvalue.NotNull()),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("user_token"), knownvalue.NotNull()),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("period_to_track"), knownvalue.NotNull()),
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("user_tokens"), knownvalue.NotNull()),
+					},
+				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "threshold", "80"),
 				),

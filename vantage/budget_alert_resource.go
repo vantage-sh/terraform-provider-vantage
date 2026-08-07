@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget_alert"
 	budgetalertsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budget_alerts"
 )
@@ -42,13 +44,45 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 	s := resource_budget_alert.BudgetAlertResourceSchema(ctx)
 	attrs := s.GetAttributes()
 
-	s.Attributes["token"] = schema.StringAttribute{
+	// These values are fixed once the alert exists. Without a plan modifier
+	// Terraform plans every computed attribute as "known after apply" on any
+	// change, which buries the one attribute that really changes.
+	for _, name := range []string{"created_at", "id", "token", "user_token"} {
+		s.Attributes[name] = schema.StringAttribute{
+			Computed:            true,
+			Description:         attrs[name].GetDescription(),
+			MarkdownDescription: attrs[name].GetMarkdownDescription(),
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		}
+	}
+
+	// The API defaults period_to_track and keeps the value afterwards, so the
+	// prior value stands when the configuration does not set one.
+	s.Attributes["period_to_track"] = schema.StringAttribute{
+		Optional:            true,
 		Computed:            true,
-		Description:         attrs["token"].GetDescription(),
-		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
+		Description:         attrs["period_to_track"].GetDescription(),
+		MarkdownDescription: attrs["period_to_track"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
 		},
+	}
+
+	// An empty list stays empty while the configuration sets no recipients. A
+	// list that holds values is still cleared when it leaves the configuration.
+	for _, name := range []string{"recipient_channels", "user_tokens"} {
+		s.Attributes[name] = schema.ListAttribute{
+			ElementType:         types.StringType,
+			Optional:            true,
+			Computed:            true,
+			Description:         attrs[name].GetDescription(),
+			MarkdownDescription: attrs[name].GetMarkdownDescription(),
+			PlanModifiers: []planmodifier.List{
+				planmodifiers.ListUseStateWhenEmpty(),
+			},
+		}
 	}
 
 	// The API types duration_in_days as a string on write and as an integer on
