@@ -2,6 +2,8 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -121,15 +123,15 @@ func TestBudgetAlertApplyPayloadEmptyLists(t *testing.T) {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 
-	for name, list := range map[string]types.List{
+	for name, set := range map[string]types.Set{
 		"budget_tokens":      model.BudgetTokens,
 		"recipient_channels": model.RecipientChannels,
 		"user_tokens":        model.UserTokens,
 	} {
-		if list.IsNull() {
-			t.Fatalf("%s is null, want an empty list", name)
+		if set.IsNull() {
+			t.Fatalf("%s is null, want an empty set", name)
 		}
-		if got := len(list.Elements()); got != 0 {
+		if got := len(set.Elements()); got != 0 {
 			t.Fatalf("%s length = %d, want 0", name, got)
 		}
 	}
@@ -145,11 +147,11 @@ func TestBudgetAlertToCreate(t *testing.T) {
 	t.Run("full month sends an empty duration", func(t *testing.T) {
 		var diags diag.Diagnostics
 		model := &budgetAlertModel{
-			BudgetTokens:      testBudgetAlertList(t, "bdgt_1"),
+			BudgetTokens:      testBudgetAlertSet(t, "bdgt_1"),
 			Threshold:         types.Int64Value(100),
 			DurationInDays:    types.Int64Null(),
-			RecipientChannels: types.ListNull(types.StringType),
-			UserTokens:        types.ListNull(types.StringType),
+			RecipientChannels: types.SetNull(types.StringType),
+			UserTokens:        types.SetNull(types.StringType),
 			PeriodToTrack:     types.StringNull(),
 		}
 
@@ -158,21 +160,21 @@ func TestBudgetAlertToCreate(t *testing.T) {
 			t.Fatalf("unexpected diagnostics: %v", diags)
 		}
 
-		if payload.DurationInDays == nil {
-			t.Fatal("duration_in_days is nil, want a pointer to the empty string")
+		// The API requires duration_in_days on create and reads its empty value
+		// as "track the full month".
+		if payload.DurationInDays != "" {
+			t.Fatalf("duration_in_days = %q, want the empty string", payload.DurationInDays)
 		}
-		if *payload.DurationInDays != "" {
-			t.Fatalf("duration_in_days = %q, want the empty string", *payload.DurationInDays)
+		if payload.Threshold != 100 {
+			t.Fatalf("threshold = %d, want 100", payload.Threshold)
 		}
-		if payload.Threshold == nil || *payload.Threshold != 100 {
-			t.Fatalf("threshold = %v, want 100", payload.Threshold)
+		// An empty recipient list has to be absent. The API answers
+		// "user_tokens is empty" to an empty array and to a null alike.
+		if payload.RecipientChannels != nil {
+			t.Fatalf("recipient_channels = %v, want it left out", payload.RecipientChannels)
 		}
-		// The API rejects a null array, so unset lists become empty ones.
-		if payload.RecipientChannels == nil {
-			t.Fatal("recipient_channels is nil, want an empty array")
-		}
-		if payload.UserTokens == nil {
-			t.Fatal("user_tokens is nil, want an empty array")
+		if payload.UserTokens != nil {
+			t.Fatalf("user_tokens = %v, want it left out", payload.UserTokens)
 		}
 		if payload.PeriodToTrack != "" {
 			t.Fatalf("period_to_track = %q, want the empty string", payload.PeriodToTrack)
@@ -182,11 +184,11 @@ func TestBudgetAlertToCreate(t *testing.T) {
 	t.Run("set duration is sent as a string", func(t *testing.T) {
 		var diags diag.Diagnostics
 		model := &budgetAlertModel{
-			BudgetTokens:      testBudgetAlertList(t, "bdgt_1", "bdgt_2"),
+			BudgetTokens:      testBudgetAlertSet(t, "bdgt_1", "bdgt_2"),
 			Threshold:         types.Int64Value(80),
 			DurationInDays:    types.Int64Value(7),
-			RecipientChannels: testBudgetAlertList(t, "#costs"),
-			UserTokens:        types.ListNull(types.StringType),
+			RecipientChannels: testBudgetAlertSet(t, "#costs"),
+			UserTokens:        types.SetNull(types.StringType),
 			PeriodToTrack:     types.StringValue("end_of_the_month"),
 		}
 
@@ -195,11 +197,14 @@ func TestBudgetAlertToCreate(t *testing.T) {
 			t.Fatalf("unexpected diagnostics: %v", diags)
 		}
 
-		if *payload.DurationInDays != "7" {
-			t.Fatalf("duration_in_days = %q, want %q", *payload.DurationInDays, "7")
+		if payload.DurationInDays != "7" {
+			t.Fatalf("duration_in_days = %q, want %q", payload.DurationInDays, "7")
 		}
 		if got := len(payload.BudgetTokens); got != 2 {
 			t.Fatalf("budget_tokens length = %d, want 2", got)
+		}
+		if got := len(payload.RecipientChannels); got != 1 {
+			t.Fatalf("recipient_channels length = %d, want 1", got)
 		}
 		if payload.PeriodToTrack != "end_of_the_month" {
 			t.Fatalf("period_to_track = %q, want %q", payload.PeriodToTrack, "end_of_the_month")
@@ -207,16 +212,42 @@ func TestBudgetAlertToCreate(t *testing.T) {
 	})
 }
 
+// TestBudgetAlertToCreateJSON pins the wire format, which is the thing the API
+// actually validates.
+func TestBudgetAlertToCreateJSON(t *testing.T) {
+	ctx := context.Background()
+	var diags diag.Diagnostics
+
+	model := &budgetAlertModel{
+		BudgetTokens:      testBudgetAlertSet(t, "bdgt_1"),
+		Threshold:         types.Int64Value(100),
+		DurationInDays:    types.Int64Null(),
+		RecipientChannels: testBudgetAlertSet(t, "#costs"),
+		UserTokens:        types.SetNull(types.StringType),
+		PeriodToTrack:     types.StringNull(),
+	}
+
+	body, err := json.Marshal(model.toCreate(ctx, &diags))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := `{"budget_tokens":["bdgt_1"],"duration_in_days":"","recipient_channels":["#costs"],"threshold":100}`
+	if string(body) != want {
+		t.Fatalf("body = %s, want %s", body, want)
+	}
+}
+
 func TestBudgetAlertToUpdate(t *testing.T) {
 	ctx := context.Background()
 	var diags diag.Diagnostics
 
 	model := &budgetAlertModel{
-		BudgetTokens:      testBudgetAlertList(t, "bdgt_1"),
+		BudgetTokens:      testBudgetAlertSet(t, "bdgt_1"),
 		Threshold:         types.Int64Value(90),
 		DurationInDays:    types.Int64Value(14),
-		RecipientChannels: testBudgetAlertList(t, "#costs", "#ops"),
-		UserTokens:        types.ListNull(types.StringType),
+		RecipientChannels: testBudgetAlertSet(t, "#costs", "#ops"),
+		UserTokens:        types.SetNull(types.StringType),
 		PeriodToTrack:     types.StringValue("start_of_the_month"),
 	}
 
@@ -231,24 +262,77 @@ func TestBudgetAlertToUpdate(t *testing.T) {
 	if payload.Threshold != 90 {
 		t.Fatalf("threshold = %d, want 90", payload.Threshold)
 	}
-	if got := len(payload.RecipientChannels); got != 2 {
+	if payload.RecipientChannels == nil {
+		t.Fatal("recipient_channels is nil, want the two configured channels")
+	}
+	if got := len(*payload.RecipientChannels); got != 2 {
 		t.Fatalf("recipient_channels length = %d, want 2", got)
 	}
-	// An unset list clears the field rather than sending null.
-	if payload.UserTokens == nil {
-		t.Fatal("user_tokens is nil, want an empty array")
-	}
-	if got := len(payload.UserTokens); got != 0 {
-		t.Fatalf("user_tokens length = %d, want 0", got)
+	// An empty user_tokens has to be absent, not sent as an empty array.
+	if payload.UserTokens != nil {
+		t.Fatalf("user_tokens = %v, want it left out", payload.UserTokens)
 	}
 }
 
-func testBudgetAlertList(t *testing.T, values ...string) types.List {
+// TestBudgetAlertToUpdateJSON pins the update wire format. The reported apply
+// failure was an empty user_tokens reaching the API as "user_tokens": [].
+func TestBudgetAlertToUpdateJSON(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("empty recipients are left out", func(t *testing.T) {
+		var diags diag.Diagnostics
+		model := &budgetAlertModel{
+			BudgetTokens:      testBudgetAlertSet(t, "bdgt_1"),
+			Threshold:         types.Int64Value(90),
+			DurationInDays:    types.Int64Null(),
+			RecipientChannels: testBudgetAlertSet(t, "#costs"),
+			UserTokens:        testBudgetAlertSet(t),
+			PeriodToTrack:     types.StringValue("start_of_the_month"),
+		}
+
+		body, err := json.Marshal(model.toUpdate(ctx, &diags))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if strings.Contains(string(body), "user_tokens") {
+			t.Fatalf("body still carries an empty user_tokens: %s", body)
+		}
+		want := `{"budget_tokens":["bdgt_1"],"period_to_track":"start_of_the_month","recipient_channels":["#costs"],"threshold":90}`
+		if string(body) != want {
+			t.Fatalf("body = %s, want %s", body, want)
+		}
+	})
+
+	t.Run("an emptied channel list is sent so the API clears it", func(t *testing.T) {
+		var diags diag.Diagnostics
+		model := &budgetAlertModel{
+			BudgetTokens:      testBudgetAlertSet(t, "bdgt_1"),
+			Threshold:         types.Int64Value(90),
+			DurationInDays:    types.Int64Null(),
+			RecipientChannels: testBudgetAlertSet(t),
+			UserTokens:        testBudgetAlertSet(t, "usr_1"),
+			PeriodToTrack:     types.StringNull(),
+		}
+
+		body, err := json.Marshal(model.toUpdate(ctx, &diags))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		want := `{"budget_tokens":["bdgt_1"],"recipient_channels":[],"threshold":90,"user_tokens":["usr_1"]}`
+		if string(body) != want {
+			t.Fatalf("body = %s, want %s", body, want)
+		}
+	})
+}
+
+func testBudgetAlertSet(t *testing.T, values ...string) types.Set {
 	t.Helper()
 
-	list, diags := stringListFrom(values)
+	set, diags := budgetAlertStringSet(context.Background(), values)
 	if diags.HasError() {
-		t.Fatalf("unexpected diagnostics building a list: %v", diags)
+		t.Fatalf("unexpected diagnostics building a set: %v", diags)
 	}
-	return list
+	return set
 }

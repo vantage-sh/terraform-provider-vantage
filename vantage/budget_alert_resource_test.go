@@ -29,7 +29,10 @@ func TestAccVantageBudgetAlert_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
-					resource.TestCheckResourceAttrSet(resourceName, "period_to_track"),
+					resource.TestCheckResourceAttr(resourceName, "user_tokens.#", "1"),
+					// The API leaves period_to_track unset when the configuration
+					// does not choose one, despite what its description says.
+					resource.TestCheckNoResourceAttr(resourceName, "period_to_track"),
 				),
 			},
 			// Update the threshold. Everything the API fills in has to survive the
@@ -45,12 +48,15 @@ func TestAccVantageBudgetAlert_basic(t *testing.T) {
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("id"), knownvalue.NotNull()),
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("created_at"), knownvalue.NotNull()),
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("user_token"), knownvalue.NotNull()),
-						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("period_to_track"), knownvalue.NotNull()),
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("user_tokens"), knownvalue.NotNull()),
 						// Derived values hold because the attributes behind them
 						// do not move when only the threshold changes.
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("workspace_token"), knownvalue.NotNull()),
 						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("integration_provider"), knownvalue.NotNull()),
+						// The API leaves period_to_track unset here. Null is still a
+						// known value, which is the point: the plan states it instead
+						// of deferring it to apply.
+						plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("period_to_track"), knownvalue.Null()),
 					},
 				},
 				Check: resource.ComposeTestCheckFunc(
@@ -177,6 +183,10 @@ func testAccVantageBudgetAlertBudgets(title string) string {
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
 
+# The API refuses an alert that reaches nobody, so every alert below names a
+# user. Users avoid depending on a connected Slack or Teams integration.
+data "vantage_users" "test" {}
+
 resource "vantage_cost_report" "test_budget_alert_report" {
   workspace_token = data.vantage_workspaces.test.workspaces[0].token
   title           = "Budget Alert Test Report %[1]s"
@@ -197,6 +207,7 @@ func testAccVantageBudgetAlertConfig_basic(title string, threshold int) string {
 resource "vantage_budget_alert" "test" {
   budget_tokens = [vantage_budget.test_budget_alert.token]
   threshold     = %[1]d
+  user_tokens   = [data.vantage_users.test.users[0].token]
 }
 `, threshold)
 }
@@ -206,6 +217,7 @@ func testAccVantageBudgetAlertConfig_fullMonth(title string) string {
 resource "vantage_budget_alert" "test" {
   budget_tokens = [vantage_budget.test_budget_alert.token]
   threshold     = 100
+  user_tokens   = [data.vantage_users.test.users[0].token]
 }
 `
 }
@@ -217,6 +229,7 @@ resource "vantage_budget_alert" "test" {
   threshold        = 100
   period_to_track  = "start_of_the_month"
   duration_in_days = %[1]d
+  user_tokens      = [data.vantage_users.test.users[0].token]
 }
 `, durationInDays)
 }
@@ -237,6 +250,7 @@ resource "vantage_budget" "test_budget_alert_second" {
 resource "vantage_budget_alert" "test" {
   budget_tokens = %[2]s
   threshold     = 100
+  user_tokens   = [data.vantage_users.test.users[0].token]
 }
 `, title, budgetTokens)
 }

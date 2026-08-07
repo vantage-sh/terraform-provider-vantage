@@ -3,6 +3,8 @@ package vantage
 import (
 	"context"
 
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -19,6 +21,7 @@ var (
 	_ resource.Resource                = (*budgetAlertResource)(nil)
 	_ resource.ResourceWithConfigure   = (*budgetAlertResource)(nil)
 	_ resource.ResourceWithImportState = (*budgetAlertResource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*budgetAlertResource)(nil)
 )
 
 func NewBudgetAlertResource() resource.Resource {
@@ -70,37 +73,27 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 		},
 	}
 
-	// The API derives these two. The workspace comes from the budgets, and the
-	// integration comes from the channels the alert posts to. Each keeps its
-	// prior value while the attribute behind it holds still.
-	s.Attributes["workspace_token"] = schema.StringAttribute{
-		Computed:            true,
-		Description:         attrs["workspace_token"].GetDescription(),
-		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription(),
-		PlanModifiers: []planmodifier.String{
-			planmodifiers.StringDerivedFrom(path.Root("budget_tokens")),
-		},
-	}
-	s.Attributes["integration_provider"] = schema.StringAttribute{
-		Computed:            true,
-		Description:         attrs["integration_provider"].GetDescription(),
-		MarkdownDescription: attrs["integration_provider"].GetMarkdownDescription(),
-		PlanModifiers: []planmodifier.String{
-			planmodifiers.StringDerivedFrom(path.Root("recipient_channels")),
-		},
+	// The API returns these tokens in its own order, so they are sets rather
+	// than the generated lists. A list would make Terraform compare positions
+	// and reject the applied value as inconsistent with the plan.
+	s.Attributes["budget_tokens"] = schema.SetAttribute{
+		ElementType:         types.StringType,
+		Required:            true,
+		Description:         attrs["budget_tokens"].GetDescription(),
+		MarkdownDescription: attrs["budget_tokens"].GetMarkdownDescription(),
 	}
 
-	// An empty list stays empty while the configuration sets no recipients. A
-	// list that holds values is still cleared when it leaves the configuration.
+	// An empty set stays empty while the configuration names no recipients. A
+	// set that holds values is still cleared when it leaves the configuration.
 	for _, name := range []string{"recipient_channels", "user_tokens"} {
-		s.Attributes[name] = schema.ListAttribute{
+		s.Attributes[name] = schema.SetAttribute{
 			ElementType:         types.StringType,
 			Optional:            true,
 			Computed:            true,
 			Description:         attrs[name].GetDescription(),
 			MarkdownDescription: attrs[name].GetMarkdownDescription(),
-			PlanModifiers: []planmodifier.List{
-				planmodifiers.ListUseStateWhenEmpty(),
+			PlanModifiers: []planmodifier.Set{
+				planmodifiers.UseStateWhenEmpty(),
 			},
 		}
 	}
@@ -130,6 +123,69 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 	resp.Schema = s
 }
 
+// budgetAlertDerivedAttributes lists the computed attributes the API derives
+// from another attribute of the same alert, each paired with its source.
+var budgetAlertDerivedAttributes = []struct {
+	attribute string
+	source    string
+}{
+	// The workspace of an alert is the workspace of the budgets it watches.
+	{attribute: "workspace_token", source: "budget_tokens"},
+	// The integration is the one behind the channels the alert posts to.
+	{attribute: "integration_provider", source: "recipient_channels"},
+}
+
+// ModifyPlan keeps a derived value in the plan while the attribute it comes
+// from is unchanged. Without this, an unrelated edit plans them as "known after
+// apply" and hides the change the practitioner asked for.
+//
+// This runs here rather than in an attribute plan modifier because attribute
+// modifiers run in schema order. integration_provider is modified before
+// recipient_channels, so it would read a source that is still unknown.
+func (r *budgetAlertResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A create has no prior value to keep, and a destroy has no plan to fill.
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	for _, derived := range budgetAlertDerivedAttributes {
+		attribute := path.Root(derived.attribute)
+		source := path.Root(derived.source)
+
+		var planned types.String
+		resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, attribute, &planned)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Something already decided this value.
+		if !planned.IsUnknown() {
+			continue
+		}
+
+		var plannedSource, priorSource types.Set
+		resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, source, &plannedSource)...)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, source, &priorSource)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// The source is still being decided, or it moved. Either way the API
+		// settles this value.
+		if plannedSource.IsUnknown() || !plannedSource.Equal(priorSource) {
+			continue
+		}
+
+		var prior types.String
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, attribute, &prior)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, attribute, prior)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+}
+
 func (r *budgetAlertResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data *budgetAlertModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -142,8 +198,8 @@ func (r *budgetAlertResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	params := budgetalertsv2.NewCreateBudgetAlertParams().WithCreateBudgetAlert(input)
-	out, err := r.client.V2.BudgetAlerts.CreateBudgetAlert(params, r.client.Auth)
+	params := budgetalertsv2.NewCreateBudgetAlertParams()
+	out, err := r.client.V2.BudgetAlerts.CreateBudgetAlert(params, r.client.Auth, withBudgetAlertBody(input))
 	if err != nil {
 		if e, ok := err.(*budgetalertsv2.CreateBudgetAlertBadRequest); ok {
 			handleBadRequest("Create Budget Alert", &resp.Diagnostics, e.GetPayload())
@@ -198,10 +254,9 @@ func (r *budgetAlertResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	params := budgetalertsv2.NewUpdateBudgetAlertParams().
-		WithBudgetAlertToken(data.Token.ValueString()).
-		WithUpdateBudgetAlert(input)
+		WithBudgetAlertToken(data.Token.ValueString())
 
-	out, err := r.client.V2.BudgetAlerts.UpdateBudgetAlert(params, r.client.Auth)
+	out, err := r.client.V2.BudgetAlerts.UpdateBudgetAlert(params, r.client.Auth, withBudgetAlertBody(input))
 	if err != nil {
 		handleError("Update Budget Alert", &resp.Diagnostics, err)
 		return
@@ -230,4 +285,25 @@ func (r *budgetAlertResource) Delete(ctx context.Context, req resource.DeleteReq
 
 func (r *budgetAlertResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("token"), req, resp)
+}
+
+// withBudgetAlertBody sends the given value as the request body, in place of the
+// generated model.
+//
+// The generated create and update models tag every array without omitempty, so
+// they can only send an empty array or a null. The API rejects both for
+// user_tokens and needs the key to be absent, so the body is written from a type
+// that can leave a field out. Everything else about the call stays generated.
+func withBudgetAlertBody(body any) budgetalertsv2.ClientOption {
+	return func(op *runtime.ClientOperation) {
+		params := op.Params
+		op.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, reg strfmt.Registry) error {
+			if params != nil {
+				if err := params.WriteToRequest(req, reg); err != nil {
+					return err
+				}
+			}
+			return req.SetBodyParam(body)
+		})
+	}
 }

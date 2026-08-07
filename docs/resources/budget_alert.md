@@ -35,15 +35,15 @@ resource "vantage_budget_alert" "demo_first_week_alert" {
 
 ### Required
 
-- `budget_tokens` (List of String) The tokens of the Budget that has the alert.
+- `budget_tokens` (Set of String) The tokens of the Budget that has the alert.
 - `threshold` (Number) The threshold amount that must be met for the alert to fire.
 
 ### Optional
 
 - `duration_in_days` (Number) The number of days from the start or end of the month to trigger the alert if the threshold is reached. Omit to track the full month. Changing this to or from an omitted value replaces the alert.
 - `period_to_track` (String) The period tracked on the alert. Used with duration_in_days to determine the time window of the alert. Defaults to start_of_the_month if not passed. Possible values: start_of_the_month, end_of_the_month.
-- `recipient_channels` (List of String) The channels receiving the alerts. Requires an integration provider to be connected.
-- `user_tokens` (List of String) The tokens of the users that receive the alert.
+- `recipient_channels` (Set of String) The channels receiving the alerts. Requires an integration provider to be connected.
+- `user_tokens` (Set of String) The tokens of the users that receive the alert.
 
 ### Read-Only
 
