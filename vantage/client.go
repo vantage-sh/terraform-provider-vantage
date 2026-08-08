@@ -2,7 +2,9 @@ package vantage
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -127,12 +129,46 @@ func ptrStringOrEmpty(s *string) types.String {
 }
 
 func handleError(action string, d *diag.Diagnostics, err error) {
+	// The generated client reports a status it does not model by wrapping the
+	// raw response in a runtime.APIError. That value has no exported fields, so
+	// on its own it prints as "{}" and hides what the API said.
+	var apiErr *runtime.APIError
+	if errors.As(err, &apiErr) {
+		message := fmt.Sprintf("The API returned status %d.", apiErr.Code)
+		if body := apiErrorBody(apiErr); body != "" {
+			message += "\n\n" + body
+		}
+		d.AddError("Unable to "+action, message)
+		return
+	}
+
 	d.AddError(
 		fmt.Sprintf("Unable to %s", action),
 		"An unexpected error occurred while attempting to contact the API. "+
 			"Please retry the operation or report this issue to the provider developers.\n\n"+
 			"Connection Error: "+err.Error(),
 	)
+}
+
+// apiErrorBody returns the response body carried by a runtime.APIError, or the
+// empty string when the body cannot be read.
+func apiErrorBody(apiErr *runtime.APIError) string {
+	response, ok := apiErr.Response.(runtime.ClientResponse)
+	if !ok {
+		return ""
+	}
+
+	body := response.Body()
+	if body == nil {
+		return ""
+	}
+	defer body.Close()
+
+	content, err := io.ReadAll(body)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(content))
 }
 
 func handleBadRequest(action string, d *diag.Diagnostics, mErr *modelsv2.Errors) {
