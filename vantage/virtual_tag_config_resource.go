@@ -153,12 +153,15 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	if err := r.syncPreferred(ctx, data.Key.ValueString(), data.Preferred); err != nil {
 		handleError("Set Preferred Virtual Tag Config", &resp.Diagnostics, err)
 		return
 	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -216,6 +219,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	keyChanged := !plannedValueEqual(data.Key, state.Key)
 	preferredChanged := !plannedValueEqual(data.Preferred, state.Preferred)
 
 	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
@@ -246,6 +250,12 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
 		if resp.Diagnostics.HasError() {
 			return
+		}
+		if keyChanged && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
+			if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
+				handleError("Clear Previous Preferred Virtual Tag Config", &resp.Diagnostics, err)
+				return
+			}
 		}
 		if err := r.syncPreferred(ctx, data.Key.ValueString(), data.Preferred); err != nil {
 			handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
@@ -344,10 +354,11 @@ func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	if !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
-		falseVal := false
-		if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(falseVal)); err != nil {
-			handleError("Clear Preferred Virtual Tag Config", &resp.Diagnostics, err)
-			return
+		if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
+			resp.Diagnostics.AddWarning(
+				"Unable to Clear Preferred Virtual Tag Config",
+				"The virtual tag config will still be deleted, but its preferred tag setting could not be cleared.\n\nConnection Error: "+err.Error(),
+			)
 		}
 	}
 
