@@ -393,8 +393,11 @@ func (r VirtualTagConfigResource) syncPreferred(ctx context.Context, key string,
 		return nil
 	}
 
+	// Use tag_keys rather than tag_key: UpdateTag's TagKeys field has no
+	// omitempty, so TagKey-only payloads serialize as "tag_keys": null and
+	// the API rejects them with exactly_one_of.
 	params := accounttagsv2.NewUpdateTagParams().WithContext(ctx).WithUpdateTag(&modelsv2.UpdateTag{
-		TagKey:    key,
+		TagKeys:   []string{key},
 		Preferred: preferred.ValueBoolPointer(),
 	})
 	_, err := r.client.V2.Tags.UpdateTag(params, r.client.Auth)
