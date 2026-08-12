@@ -233,6 +233,7 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewReportNotificationResource,
 		NewAnomalyNotificationResource,
 		NewVirtualTagConfigResource,
+		NewTagResource,
 		NewBusinessMetricResource,
 		NewCanvasResource,
 		NewBudgetResource,
