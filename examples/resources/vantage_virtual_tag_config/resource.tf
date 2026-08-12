@@ -3,6 +3,7 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
   key            = "Demo Tag"
   backfill_until = "2024-01-01"
   overridable    = true
+  preferred      = true
   values = [
     {
       name   = "Demo Value 0"

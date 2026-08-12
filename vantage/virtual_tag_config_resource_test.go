@@ -801,3 +801,43 @@ func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable b
 		`, id, key, overridable, backfillUntil, rest,
 	)
 }
+
+func TestAccVantageVirtualTagConfig_preferred(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(12, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_virtual_tag_config.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageVirtualTagConfigPreferred(key, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "key", key),
+					resource.TestCheckResourceAttr(resourceName, "preferred", "true"),
+				),
+			},
+			{
+				Config: testAccVantageVirtualTagConfigPreferred(key, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "preferred", "false"),
+				),
+			},
+			{
+				Config:             testAccVantageVirtualTagConfigPreferred(key, false),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageVirtualTagConfigPreferred(key string, preferred bool) string {
+	return fmt.Sprintf(`
+resource "vantage_virtual_tag_config" "test" {
+  key         = %[1]q
+  overridable = false
+  preferred   = %[2]t
+}
+`, key, preferred)
+}

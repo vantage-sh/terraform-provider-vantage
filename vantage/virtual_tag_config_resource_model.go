@@ -13,7 +13,10 @@ import (
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
-type virtualTagConfigModel resource_virtual_tag_config.VirtualTagConfigModel
+type virtualTagConfigModel struct {
+	resource_virtual_tag_config.VirtualTagConfigModel
+	Preferred types.Bool `tfsdk:"preferred"`
+}
 
 type virtualTagConfigValueModel struct {
 	BusinessMetricToken types.String                                `tfsdk:"business_metric_token"`
@@ -446,12 +449,14 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 }
 
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
+	preferred := m.Preferred
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.Key = types.StringValue(payload.Key)
 	m.Overridable = types.BoolValue(payload.Overridable)
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)
 	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
+	m.Preferred = preferred
 
 	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(payload.CollapsedTagKeys))
 	for _, c := range payload.CollapsedTagKeys {
