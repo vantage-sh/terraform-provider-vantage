@@ -196,6 +196,8 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		} else if found {
 			state.Preferred = types.BoolValue(remotePreferred)
+		} else {
+			state.Preferred = types.BoolValue(false)
 		}
 	}
 
@@ -221,6 +223,10 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 
 	keyChanged := !plannedValueEqual(data.Key, state.Key)
 	preferredChanged := !plannedValueEqual(data.Preferred, state.Preferred)
+	preferredToSync := data.Preferred
+	if preferredToSync.IsNull() && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
+		preferredToSync = types.BoolValue(false)
+	}
 
 	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
 	if !changes.requiresParentUpdate {
@@ -253,11 +259,13 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		}
 		if keyChanged && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
 			if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
-				handleError("Clear Previous Preferred Virtual Tag Config", &resp.Diagnostics, err)
-				return
+				resp.Diagnostics.AddWarning(
+					"Unable to Clear Previous Preferred Virtual Tag Config",
+					"The virtual tag config key was updated, but its previous preferred tag setting could not be cleared. The new key will still be synchronized.\n\nConnection Error: "+err.Error(),
+				)
 			}
 		}
-		if err := r.syncPreferred(ctx, data.Key.ValueString(), data.Preferred); err != nil {
+		if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
 			handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
 			return
 		}
@@ -267,7 +275,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 
 	if len(changes.creates) == 0 && len(changes.updates) == 0 && len(changes.deletes) == 0 {
 		if preferredChanged {
-			if err := r.syncPreferred(ctx, data.Key.ValueString(), data.Preferred); err != nil {
+			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
 				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
 				return
 			}
@@ -301,6 +309,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		}
 	}
 	fail := func(title string, err error) {
+		data.Preferred = state.Preferred
 		refreshState()
 		handleError(title, &resp.Diagnostics, err)
 	}
@@ -338,7 +347,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	if preferredChanged {
-		if err := r.syncPreferred(ctx, data.Key.ValueString(), data.Preferred); err != nil {
+		if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
 			fail("Update Preferred Virtual Tag Config", err)
 			return
 		}

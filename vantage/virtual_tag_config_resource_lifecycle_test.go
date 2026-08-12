@@ -64,7 +64,7 @@ func writeVirtualTagConfigResponse(t *testing.T, w http.ResponseWriter, status i
 	}
 }
 
-func TestVirtualTagConfigUpdateClearsPreferredForPreviousKey(t *testing.T) {
+func TestVirtualTagConfigUpdateSyncsNewPreferredWhenPreviousClearFails(t *testing.T) {
 	ctx := context.Background()
 	var updates []modelsv2.UpdateTag
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -77,6 +77,10 @@ func TestVirtualTagConfigUpdateClearsPreferredForPreviousKey(t *testing.T) {
 				t.Errorf("decoding tag update: %v", err)
 			}
 			updates = append(updates, update)
+			if update.TagKey == "old-key" {
+				http.Error(w, "tag update failed", http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(&modelsv2.Tags{Tags: []*modelsv2.Tag{}})
 		default:
@@ -107,6 +111,9 @@ func TestVirtualTagConfigUpdateClearsPreferredForPreviousKey(t *testing.T) {
 	}
 	if updates[1].TagKey != "new-key" || updates[1].Preferred == nil || !*updates[1].Preferred {
 		t.Errorf("new key update = %#v, want preferred true", updates[1])
+	}
+	if len(resp.Diagnostics) == 0 {
+		t.Fatal("expected a warning for the failed previous preferred cleanup")
 	}
 }
 
@@ -152,6 +159,11 @@ func TestVirtualTagConfigCreatePreservesStateWhenPreferredSyncFails(t *testing.T
 			writeVirtualTagConfigResponse(t, w, http.StatusCreated, "key")
 		case req.Method == http.MethodPut && req.URL.Path == "/v2/tags":
 			http.Error(w, "tag update failed", http.StatusInternalServerError)
+		case req.Method == http.MethodGet && req.URL.Path == "/v2/virtual_tag_configs/vtag_1":
+			writeVirtualTagConfigResponse(t, w, http.StatusOK, "key")
+		case req.Method == http.MethodGet && req.URL.Path == "/v2/tags":
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(&modelsv2.Tags{Tags: []*modelsv2.Tag{}})
 		default:
 			http.NotFound(w, req)
 		}
@@ -180,5 +192,56 @@ func TestVirtualTagConfigCreatePreservesStateWhenPreferredSyncFails(t *testing.T
 	}
 	if state.Token.ValueString() != "vtag_1" {
 		t.Fatalf("state token = %q, want vtag_1", state.Token.ValueString())
+	}
+
+	readResp := frameworkresource.ReadResponse{State: resp.State}
+	resource.Read(ctx, frameworkresource.ReadRequest{State: resp.State}, &readResp)
+	if readResp.Diagnostics.HasError() {
+		t.Fatalf("unexpected read diagnostics: %v", readResp.Diagnostics)
+	}
+	if diags := readResp.State.Get(ctx, &state); diags.HasError() {
+		t.Fatalf("reading refreshed state: %v", diags)
+	}
+	if state.Preferred.IsNull() || state.Preferred.IsUnknown() || state.Preferred.ValueBool() {
+		t.Fatalf("refreshed preferred = %s, want false", state.Preferred)
+	}
+}
+
+func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
+	ctx := context.Background()
+	var update modelsv2.UpdateTag
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch {
+		case req.Method == http.MethodPut && req.URL.Path == "/v2/virtual_tag_configs/vtag_1":
+			writeVirtualTagConfigResponse(t, w, http.StatusOK, "key")
+		case req.Method == http.MethodPut && req.URL.Path == "/v2/tags":
+			if err := json.NewDecoder(req.Body).Decode(&update); err != nil {
+				t.Errorf("decoding tag update: %v", err)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(&modelsv2.Tags{Tags: []*modelsv2.Tag{}})
+		default:
+			http.NotFound(w, req)
+		}
+	}))
+	defer srv.Close()
+
+	schema := virtualTagConfigTestSchema(ctx)
+	planModel := virtualTagConfigTestModel(ctx, "key", true)
+	planModel.Preferred = types.BoolNull()
+	plan := tfsdk.Plan{Schema: schema}
+	if diags := plan.Set(ctx, planModel); diags.HasError() {
+		t.Fatalf("setting test plan: %v", diags)
+	}
+	state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "key", true))
+	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
+
+	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
+	resource.Update(ctx, frameworkresource.UpdateRequest{Plan: plan, State: state}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("unexpected update diagnostics: %v", resp.Diagnostics)
+	}
+	if update.TagKey != "key" || update.Preferred == nil || *update.Preferred {
+		t.Fatalf("tag update = %#v, want preferred false", update)
 	}
 }
