@@ -77,7 +77,7 @@ func TestVirtualTagConfigUpdateSyncsNewPreferredWhenPreviousClearFails(t *testin
 				t.Errorf("decoding tag update: %v", err)
 			}
 			updates = append(updates, update)
-			if update.TagKey == "old-key" {
+			if len(update.TagKeys) == 1 && update.TagKeys[0] == "old-key" {
 				http.Error(w, "tag update failed", http.StatusInternalServerError)
 				return
 			}
@@ -106,10 +106,10 @@ func TestVirtualTagConfigUpdateSyncsNewPreferredWhenPreviousClearFails(t *testin
 	if len(updates) != 2 {
 		t.Fatalf("got %d tag updates, want 2", len(updates))
 	}
-	if updates[0].TagKey != "old-key" || updates[0].Preferred == nil || *updates[0].Preferred {
+	if len(updates[0].TagKeys) != 1 || updates[0].TagKeys[0] != "old-key" || updates[0].Preferred == nil || *updates[0].Preferred {
 		t.Errorf("previous key update = %#v, want preferred false", updates[0])
 	}
-	if updates[1].TagKey != "new-key" || updates[1].Preferred == nil || !*updates[1].Preferred {
+	if len(updates[1].TagKeys) != 1 || updates[1].TagKeys[0] != "new-key" || updates[1].Preferred == nil || !*updates[1].Preferred {
 		t.Errorf("new key update = %#v, want preferred true", updates[1])
 	}
 	if len(resp.Diagnostics) == 0 {
@@ -241,7 +241,7 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("unexpected update diagnostics: %v", resp.Diagnostics)
 	}
-	if update.TagKey != "key" || update.Preferred == nil || *update.Preferred {
+	if len(update.TagKeys) != 1 || update.TagKeys[0] != "key" || update.Preferred == nil || *update.Preferred {
 		t.Fatalf("tag update = %#v, want preferred false", update)
 	}
 }
