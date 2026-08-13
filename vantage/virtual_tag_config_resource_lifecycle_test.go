@@ -9,6 +9,7 @@ import (
 
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
@@ -52,6 +53,10 @@ func writeVirtualTagConfigResponse(t *testing.T, w http.ResponseWriter, status i
 }
 
 func writeVirtualTagConfigResponseWithSettings(t *testing.T, w http.ResponseWriter, status int, key string, hidden, preferred bool) {
+	writeVirtualTagConfigResponseWithAttributes(t, w, status, key, hidden, preferred, false)
+}
+
+func writeVirtualTagConfigResponseWithAttributes(t *testing.T, w http.ResponseWriter, status int, key string, hidden, preferred, overridable bool) {
 	t.Helper()
 	createdBy := "usr_1"
 	w.Header().Set("Content-Type", "application/json")
@@ -62,7 +67,7 @@ func writeVirtualTagConfigResponseWithSettings(t *testing.T, w http.ResponseWrit
 		CreatedByToken:   &createdBy,
 		Hidden:           hidden,
 		Key:              key,
-		Overridable:      false,
+		Overridable:      overridable,
 		Preferred:        preferred,
 		Token:            "vtag_1",
 		Values:           []*modelsv2.VirtualTagConfigValue{},
@@ -72,7 +77,8 @@ func writeVirtualTagConfigResponseWithSettings(t *testing.T, w http.ResponseWrit
 }
 
 func TestVirtualTagConfigSettingsSchema(t *testing.T) {
-	schema := virtualTagConfigTestSchema(context.Background())
+	ctx := context.Background()
+	schema := virtualTagConfigTestSchema(ctx)
 
 	hidden := schema.Attributes["hidden"].(resourceschema.BoolAttribute)
 	if !hidden.Computed || hidden.Optional {
@@ -80,8 +86,13 @@ func TestVirtualTagConfigSettingsSchema(t *testing.T) {
 	}
 
 	preferred := schema.Attributes["preferred"].(resourceschema.BoolAttribute)
-	if !preferred.Optional || !preferred.Computed {
-		t.Fatalf("preferred schema = %#v, want optional and computed", preferred)
+	if !preferred.Optional || !preferred.Computed || preferred.Default == nil {
+		t.Fatalf("preferred schema = %#v, want optional, computed, and default false", preferred)
+	}
+	var defaultResp defaults.BoolResponse
+	preferred.Default.DefaultBool(ctx, defaults.BoolRequest{}, &defaultResp)
+	if defaultResp.Diagnostics.HasError() || defaultResp.PlanValue.IsNull() || defaultResp.PlanValue.IsUnknown() || defaultResp.PlanValue.ValueBool() {
+		t.Fatalf("preferred default = %s, want false", defaultResp.PlanValue)
 	}
 }
 
@@ -119,7 +130,15 @@ func TestVirtualTagConfigUpdateSyncsNewPreferredWhenPreviousClearFails(t *testin
 	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
 
 	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
-	resource.Update(ctx, frameworkresource.UpdateRequest{Plan: plan, State: state}, &resp)
+	resource.Update(
+		ctx,
+		frameworkresource.UpdateRequest{
+			Config: tfsdk.Config{Raw: plan.Raw, Schema: schema},
+			Plan:   plan,
+			State:  state,
+		},
+		&resp,
+	)
 
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("unexpected update diagnostics: %v", resp.Diagnostics)
@@ -135,6 +154,100 @@ func TestVirtualTagConfigUpdateSyncsNewPreferredWhenPreviousClearFails(t *testin
 	}
 	if len(resp.Diagnostics) == 0 {
 		t.Fatal("expected a warning for the failed previous preferred cleanup")
+	}
+}
+
+func TestVirtualTagConfigParentUpdateSkipsUnchangedPreferredSync(t *testing.T) {
+	ctx := context.Background()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == http.MethodPut && req.URL.Path == "/v2/virtual_tag_configs/vtag_1" {
+			writeVirtualTagConfigResponseWithAttributes(t, w, http.StatusOK, "key", false, true, true)
+			return
+		}
+		http.NotFound(w, req)
+	}))
+	defer srv.Close()
+
+	schema := virtualTagConfigTestSchema(ctx)
+	planModel := virtualTagConfigTestModel(ctx, "key", true)
+	planModel.Overridable = types.BoolValue(true)
+	plan := tfsdk.Plan{Schema: schema}
+	if diags := plan.Set(ctx, planModel); diags.HasError() {
+		t.Fatalf("setting test plan: %v", diags)
+	}
+	state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "key", true))
+	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
+
+	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
+	resource.Update(
+		ctx,
+		frameworkresource.UpdateRequest{
+			Config: tfsdk.Config{Raw: plan.Raw, Schema: schema},
+			Plan:   plan,
+			State:  state,
+		},
+		&resp,
+	)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("unexpected update diagnostics: %v", resp.Diagnostics)
+	}
+	var updatedState virtualTagConfigModel
+	if diags := resp.State.Get(ctx, &updatedState); diags.HasError() {
+		t.Fatalf("reading updated state: %v", diags)
+	}
+	if updatedState.Overridable.IsNull() || updatedState.Overridable.IsUnknown() || !updatedState.Overridable.ValueBool() {
+		t.Fatalf("updated state overridable = %s, want true", updatedState.Overridable)
+	}
+}
+
+func TestVirtualTagConfigParentUpdatePreservesStateWhenPreferredSyncFails(t *testing.T) {
+	ctx := context.Background()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch {
+		case req.Method == http.MethodPut && req.URL.Path == "/v2/virtual_tag_configs/vtag_1":
+			writeVirtualTagConfigResponseWithAttributes(t, w, http.StatusOK, "key", false, false, true)
+		case req.Method == http.MethodPut && req.URL.Path == "/v2/tags":
+			http.Error(w, "tag update failed", http.StatusInternalServerError)
+		default:
+			http.NotFound(w, req)
+		}
+	}))
+	defer srv.Close()
+
+	schema := virtualTagConfigTestSchema(ctx)
+	planModel := virtualTagConfigTestModel(ctx, "key", true)
+	planModel.Overridable = types.BoolValue(true)
+	plan := tfsdk.Plan{Schema: schema}
+	if diags := plan.Set(ctx, planModel); diags.HasError() {
+		t.Fatalf("setting test plan: %v", diags)
+	}
+	state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "key", false))
+	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
+
+	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
+	resource.Update(
+		ctx,
+		frameworkresource.UpdateRequest{
+			Config: tfsdk.Config{Raw: plan.Raw, Schema: schema},
+			Plan:   plan,
+			State:  state,
+		},
+		&resp,
+	)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("expected preferred sync error")
+	}
+	var updatedState virtualTagConfigModel
+	if diags := resp.State.Get(ctx, &updatedState); diags.HasError() {
+		t.Fatalf("reading updated state: %v", diags)
+	}
+	if updatedState.Overridable.IsNull() || updatedState.Overridable.IsUnknown() || !updatedState.Overridable.ValueBool() {
+		t.Fatalf("updated state overridable = %s, want true", updatedState.Overridable)
+	}
+	if updatedState.Preferred.IsNull() || updatedState.Preferred.IsUnknown() || updatedState.Preferred.ValueBool() {
+		t.Fatalf("updated state preferred = %s, want false", updatedState.Preferred)
 	}
 }
 
@@ -251,8 +364,7 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 	defer srv.Close()
 
 	schema := virtualTagConfigTestSchema(ctx)
-	planModel := virtualTagConfigTestModel(ctx, "key", true)
-	planModel.Preferred = types.BoolUnknown()
+	planModel := virtualTagConfigTestModel(ctx, "key", false)
 	planModel.Values = types.ListValueMust(resource_virtual_tag_config.ValuesValue{}.Type(ctx), nil)
 	plan := tfsdk.Plan{Schema: schema}
 	if diags := plan.Set(ctx, planModel); diags.HasError() {
@@ -264,7 +376,14 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
 
 	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
-	resource.Update(ctx, frameworkresource.UpdateRequest{Plan: plan, State: state}, &resp)
+	resource.Update(
+		ctx,
+		frameworkresource.UpdateRequest{
+			Plan:  plan,
+			State: state,
+		},
+		&resp,
+	)
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("unexpected update diagnostics: %v", resp.Diagnostics)
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -120,6 +121,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 	resp.Schema.Attributes["preferred"] = schema.BoolAttribute{
 		Optional:            true,
 		Computed:            true,
+		Default:             booldefault.StaticBool(false),
 		MarkdownDescription: "Whether this virtual tag key is marked as preferred in the Vantage UI.",
 	}
 }
@@ -216,12 +218,6 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	keyChanged := !plannedValueEqual(data.Key, state.Key)
-	if (data.Preferred.IsNull() || data.Preferred.IsUnknown()) &&
-		!state.Preferred.IsNull() &&
-		!state.Preferred.IsUnknown() &&
-		state.Preferred.ValueBool() {
-		data.Preferred = types.BoolValue(false)
-	}
 	preferredChanged := !plannedValueEqual(data.Preferred, state.Preferred)
 	preferredToSync := data.Preferred
 
@@ -254,8 +250,9 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if !preferredToSync.IsNull() && !preferredToSync.IsUnknown() {
-			data.Preferred = preferredToSync
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
 		if keyChanged && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
 			if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
@@ -265,11 +262,14 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 				)
 			}
 		}
-		if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
-			handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
-			return
+		if preferredChanged || (keyChanged && !preferredToSync.IsNull() && !preferredToSync.IsUnknown() && preferredToSync.ValueBool()) {
+			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
+				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
+				return
+			}
+			data.Preferred = preferredToSync
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		}
-		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
 
