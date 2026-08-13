@@ -252,12 +252,15 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 
 	schema := virtualTagConfigTestSchema(ctx)
 	planModel := virtualTagConfigTestModel(ctx, "key", true)
-	planModel.Preferred = types.BoolNull()
+	planModel.Preferred = types.BoolUnknown()
+	planModel.Values = types.ListValueMust(resource_virtual_tag_config.ValuesValue{}.Type(ctx), nil)
 	plan := tfsdk.Plan{Schema: schema}
 	if diags := plan.Set(ctx, planModel); diags.HasError() {
 		t.Fatalf("setting test plan: %v", diags)
 	}
-	state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "key", true))
+	stateModel := virtualTagConfigTestModel(ctx, "key", true)
+	stateModel.Values = types.ListValueMust(resource_virtual_tag_config.ValuesValue{}.Type(ctx), nil)
+	state := virtualTagConfigTestState(t, ctx, schema, stateModel)
 	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
 
 	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
@@ -267,6 +270,13 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 	}
 	if len(update.TagKeys) != 1 || update.TagKeys[0] != "key" || update.Preferred == nil || *update.Preferred {
 		t.Fatalf("tag update = %#v, want preferred false", update)
+	}
+	var updatedState virtualTagConfigModel
+	if diags := resp.State.Get(ctx, &updatedState); diags.HasError() {
+		t.Fatalf("reading updated state: %v", diags)
+	}
+	if updatedState.Preferred.IsNull() || updatedState.Preferred.IsUnknown() || updatedState.Preferred.ValueBool() {
+		t.Fatalf("updated state preferred = %s, want false", updatedState.Preferred)
 	}
 }
 

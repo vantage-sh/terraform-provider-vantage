@@ -823,6 +823,12 @@ func TestAccVantageVirtualTagConfig_preferred(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
+				Config: testAccVantageVirtualTagConfigPreferredOmitted(key),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "preferred", "false"),
+				),
+			},
+			{
 				Config: testAccVantageVirtualTagConfigPreferred(key, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "preferred", "false"),
@@ -845,4 +851,13 @@ resource "vantage_virtual_tag_config" "test" {
   preferred   = %[2]t
 }
 `, key, preferred)
+}
+
+func testAccVantageVirtualTagConfigPreferredOmitted(key string) string {
+	return fmt.Sprintf(`
+resource "vantage_virtual_tag_config" "test" {
+  key         = %[1]q
+  overridable = false
+}
+`, key)
 }

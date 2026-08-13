@@ -216,11 +216,14 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	keyChanged := !plannedValueEqual(data.Key, state.Key)
+	if (data.Preferred.IsNull() || data.Preferred.IsUnknown()) &&
+		!state.Preferred.IsNull() &&
+		!state.Preferred.IsUnknown() &&
+		state.Preferred.ValueBool() {
+		data.Preferred = types.BoolValue(false)
+	}
 	preferredChanged := !plannedValueEqual(data.Preferred, state.Preferred)
 	preferredToSync := data.Preferred
-	if preferredToSync.IsNull() && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
-		preferredToSync = types.BoolValue(false)
-	}
 
 	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
 	if !changes.requiresParentUpdate {
