@@ -119,6 +119,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 
 	resp.Schema.Attributes["preferred"] = schema.BoolAttribute{
 		Optional:            true,
+		Computed:            true,
 		MarkdownDescription: "Whether this virtual tag key is marked as preferred in the Vantage UI.",
 	}
 }
@@ -130,6 +131,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	preferredToSync := data.Preferred
 	model := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -153,12 +155,15 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	if !preferredToSync.IsNull() && !preferredToSync.IsUnknown() {
+		data.Preferred = preferredToSync
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if err := r.syncPreferred(ctx, data.Key.ValueString(), data.Preferred); err != nil {
+	if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
 		handleError("Set Preferred Virtual Tag Config", &resp.Diagnostics, err)
 		return
 	}
@@ -188,17 +193,6 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
-	}
-
-	if !state.Preferred.IsNull() && !state.Preferred.IsUnknown() {
-		if remotePreferred, found, err := r.findPreferred(ctx, state.Key.ValueString()); err != nil {
-			handleError("Read Preferred Virtual Tag Config", &resp.Diagnostics, err)
-			return
-		} else if found {
-			state.Preferred = types.BoolValue(remotePreferred)
-		} else {
-			state.Preferred = types.BoolValue(false)
-		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -256,6 +250,9 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
 		if resp.Diagnostics.HasError() {
 			return
+		}
+		if !preferredToSync.IsNull() && !preferredToSync.IsUnknown() {
+			data.Preferred = preferredToSync
 		}
 		if keyChanged && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
 			if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
@@ -402,21 +399,4 @@ func (r VirtualTagConfigResource) syncPreferred(ctx context.Context, key string,
 	})
 	_, err := r.client.V2.Tags.UpdateTag(params, r.client.Auth)
 	return err
-}
-
-func (r VirtualTagConfigResource) findPreferred(ctx context.Context, key string) (bool, bool, error) {
-	search := key
-	limit := int32(1000)
-	params := accounttagsv2.NewGetTagsParams().WithContext(ctx).WithSearchQuery(&search).WithLimit(&limit)
-	out, err := r.client.V2.Tags.GetTags(params, r.client.Auth)
-	if err != nil {
-		return false, false, err
-	}
-
-	for _, tag := range out.Payload.Tags {
-		if tag != nil && tag.TagKey == key {
-			return tag.Preferred, true, nil
-		}
-	}
-	return false, false, nil
 }

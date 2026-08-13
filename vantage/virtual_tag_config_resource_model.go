@@ -15,7 +15,6 @@ import (
 
 type virtualTagConfigModel struct {
 	resource_virtual_tag_config.VirtualTagConfigModel
-	Preferred types.Bool `tfsdk:"preferred"`
 }
 
 type virtualTagConfigValueModel struct {
@@ -449,14 +448,14 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 }
 
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
-	preferred := m.Preferred
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.Key = types.StringValue(payload.Key)
+	m.Hidden = types.BoolValue(payload.Hidden)
 	m.Overridable = types.BoolValue(payload.Overridable)
+	m.Preferred = types.BoolValue(payload.Preferred)
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)
 	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
-	m.Preferred = preferred
 
 	tfCollapsedTagKeys := make([]resource_virtual_tag_config.CollapsedTagKeysValue, 0, len(payload.CollapsedTagKeys))
 	for _, c := range payload.CollapsedTagKeys {

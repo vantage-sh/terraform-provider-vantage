@@ -62,6 +62,11 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the Creator of the VirtualTagConfig.",
 				MarkdownDescription: "The token of the Creator of the VirtualTagConfig.",
 			},
+			"hidden": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether the VirtualTagConfig key is hidden from the Vantage UI.",
+				MarkdownDescription: "Whether the VirtualTagConfig key is hidden from the Vantage UI.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The id of the VirtualTagConfig.",
@@ -76,6 +81,11 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 				Required:            true,
 				Description:         "Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.",
 				MarkdownDescription: "Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.",
+			},
+			"preferred": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether the VirtualTagConfig key is marked as preferred in the Vantage UI.",
+				MarkdownDescription: "Whether the VirtualTagConfig key is marked as preferred in the Vantage UI.",
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -265,9 +275,11 @@ type VirtualTagConfigModel struct {
 	BackfillUntil    types.String `tfsdk:"backfill_until"`
 	CollapsedTagKeys types.List   `tfsdk:"collapsed_tag_keys"`
 	CreatedByToken   types.String `tfsdk:"created_by_token"`
+	Hidden           types.Bool   `tfsdk:"hidden"`
 	Id               types.String `tfsdk:"id"`
 	Key              types.String `tfsdk:"key"`
 	Overridable      types.Bool   `tfsdk:"overridable"`
+	Preferred        types.Bool   `tfsdk:"preferred"`
 	Token            types.String `tfsdk:"token"`
 	Values           types.List   `tfsdk:"values"`
 }

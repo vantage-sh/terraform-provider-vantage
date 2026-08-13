@@ -27,13 +27,14 @@ func virtualTagConfigTestModel(ctx context.Context, key string, preferred bool) 
 			BackfillUntil:    types.StringValue("2026-01-01"),
 			CollapsedTagKeys: types.ListNull(resource_virtual_tag_config.CollapsedTagKeysValue{}.Type(ctx)),
 			CreatedByToken:   types.StringValue("usr_1"),
+			Hidden:           types.BoolValue(false),
 			Id:               types.StringValue("vtag_1"),
 			Key:              types.StringValue(key),
 			Overridable:      types.BoolValue(false),
+			Preferred:        types.BoolValue(preferred),
 			Token:            types.StringValue("vtag_1"),
 			Values:           types.ListNull(resource_virtual_tag_config.ValuesValue{}.Type(ctx)),
 		},
-		Preferred: types.BoolValue(preferred),
 	}
 }
 
@@ -47,6 +48,10 @@ func virtualTagConfigTestState(t *testing.T, ctx context.Context, schema resourc
 }
 
 func writeVirtualTagConfigResponse(t *testing.T, w http.ResponseWriter, status int, key string) {
+	writeVirtualTagConfigResponseWithSettings(t, w, status, key, false, false)
+}
+
+func writeVirtualTagConfigResponseWithSettings(t *testing.T, w http.ResponseWriter, status int, key string, hidden, preferred bool) {
 	t.Helper()
 	createdBy := "usr_1"
 	w.Header().Set("Content-Type", "application/json")
@@ -55,12 +60,28 @@ func writeVirtualTagConfigResponse(t *testing.T, w http.ResponseWriter, status i
 		BackfillUntil:    "2026-01-01",
 		CollapsedTagKeys: []*modelsv2.VirtualTagConfigCollapsedTagKey{},
 		CreatedByToken:   &createdBy,
+		Hidden:           hidden,
 		Key:              key,
 		Overridable:      false,
+		Preferred:        preferred,
 		Token:            "vtag_1",
 		Values:           []*modelsv2.VirtualTagConfigValue{},
 	}); err != nil {
 		t.Errorf("encoding virtual tag config response: %v", err)
+	}
+}
+
+func TestVirtualTagConfigSettingsSchema(t *testing.T) {
+	schema := virtualTagConfigTestSchema(context.Background())
+
+	hidden := schema.Attributes["hidden"].(resourceschema.BoolAttribute)
+	if !hidden.Computed || hidden.Optional {
+		t.Fatalf("hidden schema = %#v, want computed only", hidden)
+	}
+
+	preferred := schema.Attributes["preferred"].(resourceschema.BoolAttribute)
+	if !preferred.Optional || !preferred.Computed {
+		t.Fatalf("preferred schema = %#v, want optional and computed", preferred)
 	}
 }
 
@@ -193,6 +214,9 @@ func TestVirtualTagConfigCreatePreservesStateWhenPreferredSyncFails(t *testing.T
 	if state.Token.ValueString() != "vtag_1" {
 		t.Fatalf("state token = %q, want vtag_1", state.Token.ValueString())
 	}
+	if state.Preferred.IsNull() || state.Preferred.IsUnknown() || !state.Preferred.ValueBool() {
+		t.Fatalf("state preferred = %s, want true", state.Preferred)
+	}
 
 	readResp := frameworkresource.ReadResponse{State: resp.State}
 	resource.Read(ctx, frameworkresource.ReadRequest{State: resp.State}, &readResp)
@@ -243,5 +267,38 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 	}
 	if len(update.TagKeys) != 1 || update.TagKeys[0] != "key" || update.Preferred == nil || *update.Preferred {
 		t.Fatalf("tag update = %#v, want preferred false", update)
+	}
+}
+
+func TestVirtualTagConfigReadUsesVirtualTagConfigSettings(t *testing.T) {
+	ctx := context.Background()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == http.MethodGet && req.URL.Path == "/v2/virtual_tag_configs/vtag_1" {
+			writeVirtualTagConfigResponseWithSettings(t, w, http.StatusOK, "key", true, true)
+			return
+		}
+		http.NotFound(w, req)
+	}))
+	defer srv.Close()
+
+	schema := virtualTagConfigTestSchema(ctx)
+	state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "key", false))
+	resp := frameworkresource.ReadResponse{State: state}
+
+	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
+	resource.Read(ctx, frameworkresource.ReadRequest{State: state}, &resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("unexpected read diagnostics: %v", resp.Diagnostics)
+	}
+	var refreshed virtualTagConfigModel
+	if diags := resp.State.Get(ctx, &refreshed); diags.HasError() {
+		t.Fatalf("reading refreshed state: %v", diags)
+	}
+	if refreshed.Hidden.IsNull() || refreshed.Hidden.IsUnknown() || !refreshed.Hidden.ValueBool() {
+		t.Fatalf("refreshed hidden = %s, want true", refreshed.Hidden)
+	}
+	if refreshed.Preferred.IsNull() || refreshed.Preferred.IsUnknown() || !refreshed.Preferred.ValueBool() {
+		t.Fatalf("refreshed preferred = %s, want true", refreshed.Preferred)
 	}
 }

@@ -27,9 +27,11 @@ Read-Only:
 - `backfill_until` (String) The earliest month VirtualTagConfig should be backfilled to.
 - `collapsed_tag_keys` (Attributes List) Tag keys to collapse values for. (see [below for nested schema](#nestedatt--virtual_tag_configs--collapsed_tag_keys))
 - `created_by_token` (String) The token of the Creator of the VirtualTagConfig.
+- `hidden` (Boolean) Whether the VirtualTagConfig key is hidden from the Vantage UI.
 - `id` (String) The id of the VirtualTagConfig.
 - `key` (String) The key of the VirtualTagConfig.
 - `overridable` (Boolean) Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.
+- `preferred` (Boolean) Whether the VirtualTagConfig key is marked as preferred in the Vantage UI.
 - `token` (String) The token of the VirtualTagConfig.
 - `values` (Attributes List) Values for the VirtualTagConfig, with match precedence determined by their relative order in the list. (see [below for nested schema](#nestedatt--virtual_tag_configs--values))
 
