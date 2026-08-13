@@ -818,6 +818,11 @@ func TestAccVantageVirtualTagConfig_preferred(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccVantageVirtualTagConfigPreferred(key, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "preferred", "false"),
