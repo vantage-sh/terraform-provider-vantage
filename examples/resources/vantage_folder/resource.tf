@@ -1,6 +1,9 @@
 resource "vantage_folder" "demo_folder" {
   title = "Demo Folder"
 
+  # Optional: Create a folder for provider resources instead of cost reports
+  # type = "ProviderResourceFolder"
+
   # Include either the parent_folder_token or workspace_token
   # If both are included, the API will use the parent_folder_token
 

@@ -4,12 +4,14 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
@@ -31,6 +33,7 @@ func NewFolderResource() resource.Resource {
 
 type FolderResourceModel struct {
 	Title             types.String `tfsdk:"title"`
+	Type              types.String `tfsdk:"type"`
 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
 	Token             types.String `tfsdk:"token"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
@@ -47,6 +50,21 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"title": schema.StringAttribute{
 				MarkdownDescription: "Title of the folder",
 				Required:            true,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: "The type of the folder. The API defaults to `CostFolder`. Changing this value forces replacement.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						modelsv2.CreateFolderTypeCostFolder,
+						modelsv2.CreateFolderTypeProviderResourceFolder,
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"parent_folder_token": schema.StringAttribute{
 				MarkdownDescription: "Token of the folder's parent folder",
@@ -101,9 +119,15 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
+	var folderType *string
+	if !data.Type.IsNull() && !data.Type.IsUnknown() {
+		folderType = data.Type.ValueStringPointer()
+	}
+
 	params := foldersv2.NewCreateFolderParams()
 	rf := &modelsv2.CreateFolder{
 		Title:             data.Title.ValueStringPointer(),
+		Type:              folderType,
 		ParentFolderToken: data.ParentFolderToken.ValueString(),
 		WorkspaceToken:    data.WorkspaceToken.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
@@ -117,6 +141,7 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Title = types.StringPointerValue(out.Payload.Title)
+	data.Type = types.StringValue(out.Payload.Type)
 	data.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
@@ -154,6 +179,7 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.Title = types.StringPointerValue(out.Payload.Title)
+	state.Type = types.StringValue(out.Payload.Type)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
@@ -200,6 +226,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	data.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
 	data.Title = types.StringPointerValue(out.Payload.Title)
+	data.Type = types.StringValue(out.Payload.Type)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
