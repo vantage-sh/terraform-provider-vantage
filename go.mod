@@ -11,6 +11,9 @@ require (
 	github.com/vantage-sh/vantage-go v0.1.10
 )
 
+// Temporary until period_cadence ships in a tagged vantage-go release.
+replace github.com/vantage-sh/vantage-go => ./.deps/vantage-go
+
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/Kunde21/markdownfmt/v3 v3.1.0 // indirect

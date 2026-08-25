@@ -3,11 +3,13 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
@@ -46,6 +48,38 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+	s.Attributes["period_cadence"] = schema.SingleNestedAttribute{
+		Optional:            true,
+		Computed:            true,
+		Description:         "The interval cadence for budget periods. Requires the flexible_budget_periods feature.",
+		MarkdownDescription: "The interval cadence for budget periods. Requires the flexible_budget_periods feature.",
+		Attributes: map[string]schema.Attribute{
+			"starts_at": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD). Set to null to clear.",
+				MarkdownDescription: "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD). Set to null to clear.",
+				PlanModifiers: []planmodifier.String{
+					nullableStringPlanModifier{},
+				},
+			},
+			"interval_count": schema.Int64Attribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The number of interval units per budget period.",
+				MarkdownDescription: "The number of interval units per budget period.",
+			},
+			"interval_unit": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The unit for budget period intervals. One of: day, week, month, year.",
+				MarkdownDescription: "The unit for budget period intervals. One of: day, week, month, year.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("day", "week", "month", "year"),
+				},
+			},
 		},
 	}
 	resp.Schema = s
@@ -176,7 +210,7 @@ func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		data.Periods = plannedPeriods
 	}
 
-	// Save updated data into Terraform state
+	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
