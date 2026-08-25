@@ -52,56 +52,51 @@ func periodCadenceFromPayload(src *modelsv2.PeriodCadence) (types.Object, diag.D
 
 	startsAt := types.StringValue("")
 	if src.StartsAt != nil {
-		startsAt = types.StringValue(src.StartsAt.String())
-	}
-
-	intervalCount := types.Int64Null()
-	if src.IntervalCount != nil {
-		intervalCount = types.Int64Value(*src.IntervalCount)
+		startsAt = types.StringValue(*src.StartsAt)
 	}
 
 	return types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
 		"starts_at":      startsAt,
-		"interval_count": intervalCount,
+		"interval_count": types.Int64Value(int64(src.IntervalCount)),
 		"interval_unit":  types.StringValue(src.IntervalUnit),
 	})
 }
 
-func toPeriodCadenceModel(ctx context.Context, diags *diag.Diagnostics, src types.Object) *modelsv2.PeriodCadence {
+func periodCadenceValues(ctx context.Context, diags *diag.Diagnostics, src types.Object) (*strfmt.Date, int32, string, bool) {
 	if src.IsNull() || src.IsUnknown() {
-		return nil
+		return nil, 0, "", false
 	}
 
 	var cadence periodCadenceModel
 	if d := src.As(ctx, &cadence, basetypes.ObjectAsOptions{}); d.HasError() {
 		diags.Append(d...)
-		return nil
+		return nil, 0, "", false
 	}
 
-	dst := &modelsv2.PeriodCadence{}
-
+	var startsAt *strfmt.Date
 	if cadence.StartsAt.IsNull() || cadence.StartsAt.IsUnknown() || cadence.StartsAt.ValueString() == "" {
-		dst.StartsAt = nil
+		startsAt = nil
 	} else {
-		startsAt, err := time.Parse("2006-01-02", cadence.StartsAt.ValueString())
+		parsedStartsAt, err := time.Parse("2006-01-02", cadence.StartsAt.ValueString())
 		if err != nil {
 			diags.AddError("parsing error", fmt.Sprintf("failed to parse period_cadence.starts_at: %s", err))
-			return nil
+			return nil, 0, "", false
 		}
-		sa := strfmt.Date(startsAt)
-		dst.StartsAt = &sa
+		date := strfmt.Date(parsedStartsAt)
+		startsAt = &date
 	}
 
+	var intervalCount int32
 	if !cadence.IntervalCount.IsNull() && !cadence.IntervalCount.IsUnknown() {
-		count := cadence.IntervalCount.ValueInt64()
-		dst.IntervalCount = &count
+		intervalCount = int32(cadence.IntervalCount.ValueInt64())
 	}
 
+	var intervalUnit string
 	if !cadence.IntervalUnit.IsNull() && !cadence.IntervalUnit.IsUnknown() {
-		dst.IntervalUnit = cadence.IntervalUnit.ValueString()
+		intervalUnit = cadence.IntervalUnit.ValueString()
 	}
 
-	return dst
+	return startsAt, intervalCount, intervalUnit, true
 }
 
 // toCreateModel and toUpdateModel can be further refactored.
@@ -118,9 +113,16 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	dst.PeriodCadence = toPeriodCadenceModel(ctx, diags, src.PeriodCadence)
+	startsAt, intervalCount, intervalUnit, hasCadence := periodCadenceValues(ctx, diags, src.PeriodCadence)
 	if diags.HasError() {
 		return nil
+	}
+	if hasCadence {
+		dst.PeriodCadence = &modelsv2.CreateBudgetPeriodCadence{
+			StartsAt:      startsAt,
+			IntervalCount: intervalCount,
+			IntervalUnit:  intervalUnit,
+		}
 	}
 
 	if !src.Periods.IsNull() && !src.Periods.IsUnknown() && len(src.Periods.Elements()) > 0 {
@@ -176,9 +178,16 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	dst.PeriodCadence = toPeriodCadenceModel(ctx, diags, src.PeriodCadence)
+	startsAt, intervalCount, intervalUnit, hasCadence := periodCadenceValues(ctx, diags, src.PeriodCadence)
 	if diags.HasError() {
 		return nil
+	}
+	if hasCadence {
+		dst.PeriodCadence = &modelsv2.UpdateBudgetPeriodCadence{
+			StartsAt:      startsAt,
+			IntervalCount: intervalCount,
+			IntervalUnit:  intervalUnit,
+		}
 	}
 
 	if !src.Periods.IsNull() && !src.Periods.IsUnknown() && len(src.Periods.Elements()) > 0 {
