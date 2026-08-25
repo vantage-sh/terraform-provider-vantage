@@ -73,6 +73,12 @@ func periodCadenceValues(ctx context.Context, diags *diag.Diagnostics, src types
 		return nil, 0, "", false
 	}
 
+	// Nested optional+computed fields are unknown until apply. Do not send the
+	// object with interval_count=0 / interval_unit="" placeholders.
+	if cadence.IntervalCount.IsUnknown() || cadence.IntervalUnit.IsUnknown() {
+		return nil, 0, "", false
+	}
+
 	var startsAt *strfmt.Date
 	if cadence.StartsAt.IsNull() || cadence.StartsAt.IsUnknown() || cadence.StartsAt.ValueString() == "" {
 		startsAt = nil

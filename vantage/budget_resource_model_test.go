@@ -70,6 +70,27 @@ func TestBudgetPeriodCadenceUpdateClearsStartsAt(t *testing.T) {
 	}
 }
 
+func TestBudgetPeriodCadenceSkipsUnknownNestedFields(t *testing.T) {
+	t.Parallel()
+
+	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+		"starts_at":      types.StringValue("2024-01-22"),
+		"interval_count": types.Int64Unknown(),
+		"interval_unit":  types.StringUnknown(),
+	})
+	if diagnostics.HasError() {
+		t.Fatalf("building cadence value: %v", diagnostics)
+	}
+
+	model := toCreateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name:          types.StringValue("Test Budget"),
+		PeriodCadence: cadence,
+	})
+	if model.PeriodCadence != nil {
+		t.Fatalf("expected no period cadence while nested fields are unknown, got %+v", model.PeriodCadence)
+	}
+}
+
 func TestBudgetPeriodCadenceResponseMapping(t *testing.T) {
 	t.Parallel()
 

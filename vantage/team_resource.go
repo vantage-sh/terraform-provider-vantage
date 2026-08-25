@@ -394,6 +394,35 @@ func (m nullableStringPlanModifier) PlanModifyString(_ context.Context, req plan
 	}
 }
 
+// nestedNullableStringPlanModifier is nullableStringPlanModifier for a nested
+// attribute. It only plans a clear when the parent object is present in config.
+// If the whole block is omitted, Optional+Computed values stay in state so
+// API-derived nested fields (e.g. period_cadence.starts_at from periods) do not
+// drift to "".
+type nestedNullableStringPlanModifier struct{}
+
+func (m nestedNullableStringPlanModifier) Description(_ context.Context) string {
+	return "Sets the nested value to empty when removed from a configured parent object, allowing the API to clear the field."
+}
+
+func (m nestedNullableStringPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m nestedNullableStringPlanModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	var parent types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath(), &parent)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if parent.IsNull() || parent.IsUnknown() {
+		return
+	}
+	if req.ConfigValue.IsNull() && !req.StateValue.IsNull() && req.StateValue.ValueString() != "" {
+		resp.PlanValue = types.StringValue("")
+	}
+}
+
 // nullableStringPointer returns a *string suitable for nullable API fields that
 // serialize nil as JSON null (no omitempty). Empty string is treated as nil.
 func nullableStringPointer(s types.String) *string {

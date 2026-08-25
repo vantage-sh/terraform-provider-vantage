@@ -62,7 +62,7 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Description:         "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD). Set to null to clear.",
 				MarkdownDescription: "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD). Set to null to clear.",
 				PlanModifiers: []planmodifier.String{
-					nullableStringPlanModifier{},
+					nestedNullableStringPlanModifier{},
 				},
 			},
 			"interval_count": schema.Int64Attribute{
