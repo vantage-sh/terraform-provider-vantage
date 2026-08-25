@@ -172,7 +172,7 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 	return dst
 }
 
-func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel) *modelsv2.UpdateBudget {
+func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel, configCadence types.Object) *modelsv2.UpdateBudget {
 	dst := &modelsv2.UpdateBudget{
 		Name:            src.Name.ValueString(),
 		CostReportToken: src.CostReportToken.ValueString(),
@@ -184,15 +184,20 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		dst.ChildBudgetTokens = childBudgetTokens
 	}
 
-	startsAt, intervalCount, intervalUnit, hasCadence := periodCadenceValues(ctx, diags, src.PeriodCadence)
-	if diags.HasError() {
-		return nil
-	}
-	if hasCadence {
-		dst.PeriodCadence = &modelsv2.UpdateBudgetPeriodCadence{
-			StartsAt:      startsAt,
-			IntervalCount: intervalCount,
-			IntervalUnit:  intervalUnit,
+	// Only write period_cadence when it is in config. The attribute is
+	// Optional+Computed, so the plan can carry API-derived cadence from periods
+	// even when the user never set the block.
+	if !configCadence.IsNull() && !configCadence.IsUnknown() {
+		startsAt, intervalCount, intervalUnit, hasCadence := periodCadenceValues(ctx, diags, src.PeriodCadence)
+		if diags.HasError() {
+			return nil
+		}
+		if hasCadence {
+			dst.PeriodCadence = &modelsv2.UpdateBudgetPeriodCadence{
+				StartsAt:      startsAt,
+				IntervalCount: intervalCount,
+				IntervalUnit:  intervalUnit,
+			}
 		}
 	}
 

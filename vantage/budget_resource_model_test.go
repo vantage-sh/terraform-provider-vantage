@@ -58,7 +58,7 @@ func TestBudgetPeriodCadenceUpdateClearsStartsAt(t *testing.T) {
 	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
 		Name:          types.StringValue("Test Budget"),
 		PeriodCadence: cadence,
-	})
+	}, cadence)
 
 	payload, err := json.Marshal(model)
 	if err != nil {
@@ -88,6 +88,27 @@ func TestBudgetPeriodCadenceSkipsUnknownNestedFields(t *testing.T) {
 	})
 	if model.PeriodCadence != nil {
 		t.Fatalf("expected no period cadence while nested fields are unknown, got %+v", model.PeriodCadence)
+	}
+}
+
+func TestBudgetPeriodCadenceUpdateOmitsDerivedCadence(t *testing.T) {
+	t.Parallel()
+
+	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+		"starts_at":      types.StringValue("2024-01-01"),
+		"interval_count": types.Int64Value(1),
+		"interval_unit":  types.StringValue("month"),
+	})
+	if diagnostics.HasError() {
+		t.Fatalf("building cadence value: %v", diagnostics)
+	}
+
+	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name:          types.StringValue("Test Budget"),
+		PeriodCadence: cadence,
+	}, types.ObjectNull(periodCadenceAttrTypes))
+	if model.PeriodCadence != nil {
+		t.Fatalf("expected derived period cadence to be omitted from update, got %+v", model.PeriodCadence)
 	}
 }
 

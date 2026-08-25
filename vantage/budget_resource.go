@@ -175,9 +175,11 @@ func (r *budgetResource) ImportState(ctx context.Context, req resource.ImportSta
 
 func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data budgetModel
+	var config budgetModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -186,7 +188,7 @@ func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Save the planned periods value to preserve empty lists
 	plannedPeriods := data.Periods
 
-	params := budgetsv2.NewUpdateBudgetParams().WithUpdateBudget(toUpdateModel(ctx, &resp.Diagnostics, data)).WithBudgetToken(data.Token.ValueString())
+	params := budgetsv2.NewUpdateBudgetParams().WithUpdateBudget(toUpdateModel(ctx, &resp.Diagnostics, data, config.PeriodCadence)).WithBudgetToken(data.Token.ValueString())
 	out, err := r.client.V2.Budgets.UpdateBudget(params, r.client.Auth)
 
 	if err != nil {
