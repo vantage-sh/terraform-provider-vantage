@@ -91,8 +91,8 @@ func TestBudgetAlertOmitsUnsetRecipientLists(t *testing.T) {
 
 // The API treats a present-but-null recipient field as "drop the existing
 // recipients", and the generated client cannot omit the key. Recipient lists
-// must therefore keep prior state instead of planning as unknown.
-func TestBudgetAlertRecipientListsUseStateForUnknown(t *testing.T) {
+// must therefore carry a plan modifier rather than planning as unknown.
+func TestBudgetAlertRecipientListsPreservePriorValues(t *testing.T) {
 	t.Parallel()
 
 	s := (&budgetAlertResource{}).schema(context.Background())
@@ -103,7 +103,7 @@ func TestBudgetAlertRecipientListsUseStateForUnknown(t *testing.T) {
 			t.Fatalf("%s is not a ListAttribute", name)
 		}
 		if len(attr.PlanModifiers) == 0 {
-			t.Errorf("%s has no plan modifiers, want UseStateForUnknown", name)
+			t.Errorf("%s has no plan modifiers, so an omitted list would plan as unknown and clear the recipients", name)
 		}
 	}
 }

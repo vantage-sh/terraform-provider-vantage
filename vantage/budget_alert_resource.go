@@ -8,12 +8,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget_alert"
 	budgetalertsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budget_alerts"
 )
@@ -99,10 +99,20 @@ func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 	}
 
 	// The API derives each recipient field from the others, so all three are
-	// Optional+Computed. Without this an unrelated update plans the omitted
-	// lists as unknown, and the update payload would send them as null, which
-	// the API reads as an instruction to drop the existing recipients.
-	for _, name := range []string{"user_tokens", "recipient_emails", "recipient_channels"} {
+	// Optional+Computed. An unrelated update must keep the omitted lists at
+	// their prior values, because the payload cannot omit a field and the API
+	// reads a null recipient key as an instruction to drop the recipients. When
+	// a sibling does change the API recomputes the rest, so the prior value has
+	// to be given up in that case.
+	recipients := []string{"user_tokens", "recipient_emails", "recipient_channels"}
+	for _, name := range recipients {
+		siblings := make([]path.Path, 0, len(recipients)-1)
+		for _, sibling := range recipients {
+			if sibling != name {
+				siblings = append(siblings, path.Root(sibling))
+			}
+		}
+
 		s.Attributes[name] = schema.ListAttribute{
 			ElementType:         types.StringType,
 			Optional:            true,
@@ -110,7 +120,7 @@ func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 			Description:         attrs[name].GetDescription(),
 			MarkdownDescription: attrs[name].GetMarkdownDescription(),
 			PlanModifiers: []planmodifier.List{
-				listplanmodifier.UseStateForUnknown(),
+				planmodifiers.ListUseStateUnlessSiblingsChange(siblings...),
 			},
 		}
 	}
