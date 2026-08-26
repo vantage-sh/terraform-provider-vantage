@@ -3,8 +3,8 @@ package vantage
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -12,16 +12,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget_alert"
 	budgetalertsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budget_alerts"
 )
 
 var (
-	_ resource.Resource                     = (*budgetAlertResource)(nil)
-	_ resource.ResourceWithConfigure        = (*budgetAlertResource)(nil)
-	_ resource.ResourceWithImportState      = (*budgetAlertResource)(nil)
-	_ resource.ResourceWithConfigValidators = (*budgetAlertResource)(nil)
+	_ resource.Resource                = (*budgetAlertResource)(nil)
+	_ resource.ResourceWithConfigure   = (*budgetAlertResource)(nil)
+	_ resource.ResourceWithImportState = (*budgetAlertResource)(nil)
 )
 
 func NewBudgetAlertResource() resource.Resource {
@@ -43,14 +43,21 @@ func (r *budgetAlertResource) Metadata(ctx context.Context, req resource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_budget_alert"
 }
 
-// The API requires at least one recipient across these three fields.
-func (r *budgetAlertResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
-	return []resource.ConfigValidator{
-		resourcevalidator.AtLeastOneOf(
-			path.MatchRoot("user_tokens"),
-			path.MatchRoot("recipient_emails"),
-			path.MatchRoot("recipient_channels"),
-		),
+// The API requires at least one recipient, but only at create time. A config
+// validator would also run on update, where the recipient fields are allowed
+// to be absent because they then resolve from prior state.
+func validateBudgetAlertRecipients(ctx context.Context, config tfsdk.Config, diags *diag.Diagnostics) {
+	var cfg budgetAlertModel
+	diags.Append(config.Get(ctx, &cfg)...)
+	if diags.HasError() {
+		return
+	}
+
+	if cfg.UserTokens.IsNull() && cfg.RecipientEmails.IsNull() && cfg.RecipientChannels.IsNull() {
+		diags.AddError(
+			"Missing Budget Alert Recipients",
+			"At least one of user_tokens, recipient_emails, or recipient_channels must be set when creating a budget alert.",
+		)
 	}
 }
 
@@ -112,6 +119,11 @@ func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 }
 
 func (r *budgetAlertResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	validateBudgetAlertRecipients(ctx, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	var data *budgetAlertModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {

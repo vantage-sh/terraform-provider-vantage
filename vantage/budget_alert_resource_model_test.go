@@ -5,8 +5,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
@@ -102,6 +105,30 @@ func TestBudgetAlertRecipientListsUseStateForUnknown(t *testing.T) {
 		if len(attr.PlanModifiers) == 0 {
 			t.Errorf("%s has no plan modifiers, want UseStateForUnknown", name)
 		}
+	}
+}
+
+// Recipients are required on create, but an update may omit them because they
+// resolve from prior state, so the check must not be a config validator.
+func TestBudgetAlertRecipientValidationIsCreateOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := (&budgetAlertResource{}).schema(ctx)
+
+	emptyConfig := tfsdk.Config{
+		Schema: s,
+		Raw:    tftypes.NewValue(s.Type().TerraformType(ctx), nil),
+	}
+
+	var diags diag.Diagnostics
+	validateBudgetAlertRecipients(ctx, emptyConfig, &diags)
+	if !diags.HasError() {
+		t.Error("a config with no recipients should fail on create")
+	}
+
+	if _, ok := interface{}((&budgetAlertResource{})).(resource.ResourceWithConfigValidators); ok {
+		t.Error("recipient validation must not run as a config validator, since updates may omit recipients")
 	}
 }
 
