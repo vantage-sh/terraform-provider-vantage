@@ -70,7 +70,10 @@ func TestBudgetPeriodCadenceUpdateClearsStartsAt(t *testing.T) {
 	}
 }
 
-func TestBudgetPeriodCadenceSkipsUnknownNestedFields(t *testing.T) {
+// A block that sets only some fields must still send them. The interval fields
+// carry omitempty, so leaving them at zero omits them from the request instead
+// of overwriting the cadence with placeholders.
+func TestBudgetPeriodCadenceSendsPartialConfig(t *testing.T) {
 	t.Parallel()
 
 	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
@@ -86,8 +89,21 @@ func TestBudgetPeriodCadenceSkipsUnknownNestedFields(t *testing.T) {
 		Name:          types.StringValue("Test Budget"),
 		PeriodCadence: cadence,
 	})
-	if model.PeriodCadence != nil {
-		t.Fatalf("expected no period cadence while nested fields are unknown, got %+v", model.PeriodCadence)
+	if model.PeriodCadence == nil {
+		t.Fatal("expected the configured period cadence to be sent")
+	}
+	if got := model.PeriodCadence.StartsAt.String(); got != "2024-01-22" {
+		t.Errorf("starts_at = %q, want %q", got, "2024-01-22")
+	}
+
+	encoded, err := json.Marshal(model.PeriodCadence)
+	if err != nil {
+		t.Fatalf("marshalling cadence: %v", err)
+	}
+	for _, field := range []string{"interval_count", "interval_unit"} {
+		if strings.Contains(string(encoded), field) {
+			t.Errorf("request contains %s, want it omitted: %s", field, encoded)
+		}
 	}
 }
 

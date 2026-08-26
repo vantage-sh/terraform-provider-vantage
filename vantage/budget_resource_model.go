@@ -73,12 +73,6 @@ func periodCadenceValues(ctx context.Context, diags *diag.Diagnostics, src types
 		return nil, 0, "", false
 	}
 
-	// Nested optional+computed fields are unknown until apply. Do not send the
-	// object with interval_count=0 / interval_unit="" placeholders.
-	if cadence.IntervalCount.IsUnknown() || cadence.IntervalUnit.IsUnknown() {
-		return nil, 0, "", false
-	}
-
 	var startsAt *strfmt.Date
 	if cadence.StartsAt.IsNull() || cadence.StartsAt.IsUnknown() || cadence.StartsAt.ValueString() == "" {
 		startsAt = nil
@@ -92,6 +86,9 @@ func periodCadenceValues(ctx context.Context, diags *diag.Diagnostics, src types
 		startsAt = &date
 	}
 
+	// The interval fields are optional to the API and carry omitempty, so a
+	// zero value is left out of the request rather than sent as a placeholder.
+	// A block that sets only some fields therefore still sends what it sets.
 	var intervalCount int32
 	if !cadence.IntervalCount.IsNull() && !cadence.IntervalCount.IsUnknown() {
 		intervalCount = int32(cadence.IntervalCount.ValueInt64())

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -108,30 +109,29 @@ func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 		},
 	}
 
-	// The API derives each recipient field from the others, so all three are
-	// Optional+Computed. An unrelated update must keep the omitted lists at
-	// their prior values, because the payload cannot omit a field and the API
-	// reads a null recipient key as an instruction to drop the recipients. When
-	// a sibling does change the API recomputes the rest, so the prior value has
-	// to be given up in that case.
-	recipients := []string{"user_tokens", "recipient_emails", "recipient_channels"}
-	for _, name := range recipients {
-		siblings := make([]path.Path, 0, len(recipients)-1)
-		for _, sibling := range recipients {
-			if sibling != name {
-				siblings = append(siblings, path.Root(sibling))
-			}
-		}
+	// All three recipient fields are Optional+Computed, and an update must keep
+	// the omitted ones at their prior values: the payload cannot omit a field,
+	// and the API reads a null recipient key as an instruction to drop those
+	// recipients.
+	//
+	// user_tokens and recipient_emails are derived from each other, so a change
+	// to one means the API recomputes the other and its prior value has to be
+	// given up. recipient_channels is independent of both, so it keeps its prior
+	// value regardless of what the others do.
+	recipientModifiers := map[string][]planmodifier.List{
+		"user_tokens":        {planmodifiers.ListUseStateUnlessSiblingsChange(path.Root("recipient_emails"))},
+		"recipient_emails":   {planmodifiers.ListUseStateUnlessSiblingsChange(path.Root("user_tokens"))},
+		"recipient_channels": {listplanmodifier.UseStateForUnknown()},
+	}
 
+	for name, modifiers := range recipientModifiers {
 		s.Attributes[name] = schema.ListAttribute{
 			ElementType:         types.StringType,
 			Optional:            true,
 			Computed:            true,
 			Description:         attrs[name].GetDescription(),
 			MarkdownDescription: attrs[name].GetMarkdownDescription(),
-			PlanModifiers: []planmodifier.List{
-				planmodifiers.ListUseStateUnlessSiblingsChange(siblings...),
-			},
+			PlanModifiers:       modifiers,
 		}
 	}
 
