@@ -45,6 +45,12 @@ func objectOf(derived, sibling tftypes.Value) tftypes.Value {
 func runModifier(t *testing.T, configSibling, stateSibling tftypes.Value, stateDerived []string) types.List {
 	t.Helper()
 
+	return runModifierWithPlanValue(t, configSibling, stateSibling, stateDerived, types.ListUnknown(types.StringType))
+}
+
+func runModifierWithPlanValue(t *testing.T, configSibling, stateSibling tftypes.Value, stateDerived []string, planValue types.List) types.List {
+	t.Helper()
+
 	ctx := context.Background()
 	state, diags := types.ListValueFrom(ctx, types.StringType, stateDerived)
 	if diags.HasError() {
@@ -59,7 +65,7 @@ func runModifier(t *testing.T, configSibling, stateSibling tftypes.Value, stateD
 		State:       tfsdk.State{Schema: testListSchema, Raw: objectOf(listOf(stateDerived...), stateSibling)},
 		Plan:        tfsdk.Plan{Schema: testListSchema, Raw: objectOf(listOf(nil...), configSibling)},
 	}
-	resp := &planmodifier.ListResponse{PlanValue: types.ListUnknown(types.StringType)}
+	resp := &planmodifier.ListResponse{PlanValue: planValue}
 
 	ListUseStateUnlessSiblingsChange(path.Root("sibling")).PlanModifyList(ctx, req, resp)
 	if resp.Diagnostics.HasError() {
@@ -92,6 +98,23 @@ func TestListUseStateUnlessSiblingsChange_yieldsWhenSiblingChanges(t *testing.T)
 
 	if !plan.IsUnknown() {
 		t.Errorf("plan is %v, want unknown so the API can recompute it", plan)
+	}
+}
+
+// The framework normally marks the value unknown before modifiers run, but the
+// outcome must not depend on that having happened.
+func TestListUseStateUnlessSiblingsChange_forcesUnknownOverKnownPlanValue(t *testing.T) {
+	t.Parallel()
+
+	stale, diags := types.ListValueFrom(context.Background(), types.StringType, []string{"derived-value"})
+	if diags.HasError() {
+		t.Fatalf("building plan list: %v", diags)
+	}
+
+	plan := runModifierWithPlanValue(t, listOf("a", "b"), listOf("a"), []string{"derived-value"}, stale)
+
+	if !plan.IsUnknown() {
+		t.Errorf("plan is %v, want unknown so the stale value is not promised", plan)
 	}
 }
 

@@ -47,9 +47,6 @@ func (m listUseStateUnlessSiblingsChangeModifier) PlanModifyList(ctx context.Con
 	if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
 		return
 	}
-	if !resp.PlanValue.IsUnknown() {
-		return
-	}
 
 	for _, sibling := range m.siblings {
 		var config, state types.List
@@ -66,8 +63,11 @@ func (m listUseStateUnlessSiblingsChangeModifier) PlanModifyList(ctx context.Con
 			continue
 		}
 		// The sibling is changing, so the API will derive a new value here.
-		// Leave the plan unknown rather than promising the stale one.
+		// Set unknown rather than relying on the framework having already done
+		// so, otherwise a stale value could be promised and then contradicted
+		// by the applied result.
 		if !config.Equal(state) {
+			resp.PlanValue = types.ListUnknown(req.StateValue.ElementType(ctx))
 			return
 		}
 	}
