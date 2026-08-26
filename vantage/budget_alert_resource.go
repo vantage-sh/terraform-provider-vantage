@@ -3,21 +3,25 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget_alert"
 	budgetalertsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budget_alerts"
 )
 
 var (
-	_ resource.Resource                = (*budgetAlertResource)(nil)
-	_ resource.ResourceWithConfigure   = (*budgetAlertResource)(nil)
-	_ resource.ResourceWithImportState = (*budgetAlertResource)(nil)
+	_ resource.Resource                     = (*budgetAlertResource)(nil)
+	_ resource.ResourceWithConfigure        = (*budgetAlertResource)(nil)
+	_ resource.ResourceWithImportState      = (*budgetAlertResource)(nil)
+	_ resource.ResourceWithConfigValidators = (*budgetAlertResource)(nil)
 )
 
 func NewBudgetAlertResource() resource.Resource {
@@ -39,7 +43,22 @@ func (r *budgetAlertResource) Metadata(ctx context.Context, req resource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_budget_alert"
 }
 
+// The API requires at least one recipient across these three fields.
+func (r *budgetAlertResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("user_tokens"),
+			path.MatchRoot("recipient_emails"),
+			path.MatchRoot("recipient_channels"),
+		),
+	}
+}
+
 func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = r.schema(ctx)
+}
+
+func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 	s := resource_budget_alert.BudgetAlertResourceSchema(ctx)
 	attrs := s.GetAttributes()
 
@@ -52,20 +71,13 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 		},
 	}
 
-	// The update payload omits duration_in_days when it is empty, so an existing
-	// alert can only be switched to the full month by recreating it.
-	s.Attributes["duration_in_days"] = schema.StringAttribute{
-		Required:            true,
-		Description:         attrs["duration_in_days"].GetDescription(),
-		MarkdownDescription: attrs["duration_in_days"].GetMarkdownDescription(),
+	s.Attributes["workspace_token"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		Description:         "The token of the Workspace to add the BudgetAlert to. Required if the API token is associated with multiple Workspaces.",
+		MarkdownDescription: "The token of the Workspace to add the BudgetAlert to. Required if the API token is associated with multiple Workspaces.",
 		PlanModifiers: []planmodifier.String{
-			stringplanmodifier.RequiresReplaceIf(
-				func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-					resp.RequiresReplace = req.ConfigValue.ValueString() == "" && req.StateValue.ValueString() != ""
-				},
-				"Recreates the alert when duration_in_days is cleared to cover the full month.",
-				"Recreates the alert when `duration_in_days` is cleared to cover the full month.",
-			),
+			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
 
@@ -79,7 +91,24 @@ func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaReq
 		},
 	}
 
-	resp.Schema = s
+	// The API derives each recipient field from the others, so all three are
+	// Optional+Computed. Without this an unrelated update plans the omitted
+	// lists as unknown, and the update payload would send them as null, which
+	// the API reads as an instruction to drop the existing recipients.
+	for _, name := range []string{"user_tokens", "recipient_emails", "recipient_channels"} {
+		s.Attributes[name] = schema.ListAttribute{
+			ElementType:         types.StringType,
+			Optional:            true,
+			Computed:            true,
+			Description:         attrs[name].GetDescription(),
+			MarkdownDescription: attrs[name].GetMarkdownDescription(),
+			PlanModifiers: []planmodifier.List{
+				listplanmodifier.UseStateForUnknown(),
+			},
+		}
+	}
+
+	return s
 }
 
 func (r *budgetAlertResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

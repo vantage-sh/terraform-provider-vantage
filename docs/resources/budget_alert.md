@@ -14,8 +14,9 @@ description: |-
 
 ```terraform
 resource "vantage_budget_alert" "demo_budget_alert" {
-  budget_tokens = [vantage_budget.demo_budget.token]
-  threshold     = 90
+  workspace_token = "wrkspc_47c3254c790e9351"
+  budget_tokens   = [vantage_budget.demo_budget.token]
+  threshold       = 90
 
   # Days from the start or end of the month to evaluate. Use "" for the full month.
   duration_in_days = "7"
@@ -41,6 +42,7 @@ resource "vantage_budget_alert" "demo_budget_alert" {
 - `recipient_channels` (List of String) The channels receiving the alerts. Requires an integration provider to be connected.
 - `recipient_emails` (List of String) Email addresses that receive the alert. Must be organization users or addresses on a verified domain.
 - `user_tokens` (List of String) The tokens of the users that receive the alert.
+- `workspace_token` (String) The token of the Workspace to add the BudgetAlert to. Required if the API token is associated with multiple Workspaces.
 
 ### Read-Only
 
@@ -49,4 +51,3 @@ resource "vantage_budget_alert" "demo_budget_alert" {
 - `integration_provider` (String) The provider used for sending alerts. This must be configured in the console. Possible values are: slack, microsoft_graph.
 - `token` (String) The token of the budget alert
 - `user_token` (String) The token for the User who created this BudgetAlert.
-- `workspace_token` (String) The token for the Workspace the ResourceReport is a part of.

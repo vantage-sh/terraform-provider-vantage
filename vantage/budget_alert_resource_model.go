@@ -32,6 +32,17 @@ func stringListOrEmpty(ctx context.Context, list types.List, diags *diag.Diagnos
 	return values
 }
 
+// stringListOrNil converts a Terraform list into a slice, returning nil for
+// unset or empty lists so omitted recipient fields stay omitted rather than
+// being sent as empty arrays.
+func stringListOrNil(ctx context.Context, list types.List, diags *diag.Diagnostics) []string {
+	values := terraformListToStrings(ctx, list, diags)
+	if len(values) == 0 {
+		return nil
+	}
+	return values
+}
+
 func (m *budgetAlertModel) applyPayload(ctx context.Context, payload *modelsv2.BudgetAlert) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -73,13 +84,17 @@ func (m *budgetAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics
 		BudgetTokens:      stringListOrEmpty(ctx, m.BudgetTokens, diags),
 		DurationInDays:    &durationInDays,
 		Threshold:         &threshold,
-		RecipientChannels: stringListOrEmpty(ctx, m.RecipientChannels, diags),
-		RecipientEmails:   stringListOrEmpty(ctx, m.RecipientEmails, diags),
-		UserTokens:        stringListOrEmpty(ctx, m.UserTokens, diags),
+		RecipientChannels: stringListOrNil(ctx, m.RecipientChannels, diags),
+		RecipientEmails:   stringListOrNil(ctx, m.RecipientEmails, diags),
+		UserTokens:        stringListOrNil(ctx, m.UserTokens, diags),
 	}
 
 	if !m.PeriodToTrack.IsNull() && !m.PeriodToTrack.IsUnknown() {
 		payload.PeriodToTrack = m.PeriodToTrack.ValueString()
+	}
+
+	if !m.WorkspaceToken.IsNull() && !m.WorkspaceToken.IsUnknown() {
+		payload.WorkspaceToken = m.WorkspaceToken.ValueString()
 	}
 
 	return payload
@@ -90,13 +105,17 @@ func (m *budgetAlertModel) toUpdate(ctx context.Context, diags *diag.Diagnostics
 		BudgetTokens:      stringListOrEmpty(ctx, m.BudgetTokens, diags),
 		DurationInDays:    m.DurationInDays.ValueString(),
 		Threshold:         int32(m.Threshold.ValueInt64()),
-		RecipientChannels: stringListOrEmpty(ctx, m.RecipientChannels, diags),
-		RecipientEmails:   stringListOrEmpty(ctx, m.RecipientEmails, diags),
-		UserTokens:        stringListOrEmpty(ctx, m.UserTokens, diags),
+		RecipientChannels: stringListOrNil(ctx, m.RecipientChannels, diags),
+		RecipientEmails:   stringListOrNil(ctx, m.RecipientEmails, diags),
+		UserTokens:        stringListOrNil(ctx, m.UserTokens, diags),
 	}
 
 	if !m.PeriodToTrack.IsNull() && !m.PeriodToTrack.IsUnknown() {
 		payload.PeriodToTrack = m.PeriodToTrack.ValueString()
+	}
+
+	if !m.WorkspaceToken.IsNull() && !m.WorkspaceToken.IsUnknown() {
+		payload.WorkspaceToken = m.WorkspaceToken.ValueString()
 	}
 
 	return payload

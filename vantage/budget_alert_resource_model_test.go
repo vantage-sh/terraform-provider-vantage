@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -29,6 +30,7 @@ func TestBudgetAlertCreateMapping(t *testing.T) {
 		RecipientEmails: stringList(t, "finops@example.com"),
 		PeriodToTrack:   types.StringValue("end_of_the_month"),
 		UserTokens:      types.ListNull(types.StringType),
+		WorkspaceToken:  types.StringValue("wrkspc_123"),
 	}
 
 	payload := model.toCreate(context.Background(), &diag.Diagnostics{})
@@ -45,8 +47,61 @@ func TestBudgetAlertCreateMapping(t *testing.T) {
 	if got := payload.PeriodToTrack; got != "end_of_the_month" {
 		t.Errorf("period_to_track = %q, want end_of_the_month", got)
 	}
-	if payload.UserTokens == nil {
-		t.Error("user_tokens = nil, want empty array")
+	if got := payload.BudgetTokens; len(got) != 1 || got[0] != "bdgt_123" {
+		t.Errorf("budget_tokens = %v, want [bdgt_123]", got)
+	}
+	if got := payload.WorkspaceToken; got != "wrkspc_123" {
+		t.Errorf("workspace_token = %q, want wrkspc_123", got)
+	}
+}
+
+// Unset recipient lists are omitted so create/update can target a single
+// recipient field without sending empty arrays for the others.
+func TestBudgetAlertOmitsUnsetRecipientLists(t *testing.T) {
+	t.Parallel()
+
+	model := budgetAlertModel{
+		BudgetTokens:      stringList(t, "bdgt_123"),
+		DurationInDays:    types.StringValue("7"),
+		Threshold:         types.Int64Value(80),
+		RecipientEmails:   stringList(t, "finops@example.com"),
+		UserTokens:        types.ListNull(types.StringType),
+		RecipientChannels: stringList(t),
+	}
+
+	created := model.toCreate(context.Background(), &diag.Diagnostics{})
+	if created.UserTokens != nil {
+		t.Errorf("create user_tokens = %v, want nil", created.UserTokens)
+	}
+	if created.RecipientChannels != nil {
+		t.Errorf("create recipient_channels = %v, want nil for an empty list", created.RecipientChannels)
+	}
+
+	updated := model.toUpdate(context.Background(), &diag.Diagnostics{})
+	if updated.UserTokens != nil {
+		t.Errorf("update user_tokens = %v, want nil", updated.UserTokens)
+	}
+	if updated.RecipientChannels != nil {
+		t.Errorf("update recipient_channels = %v, want nil for an empty list", updated.RecipientChannels)
+	}
+}
+
+// The API treats a present-but-null recipient field as "drop the existing
+// recipients", and the generated client cannot omit the key. Recipient lists
+// must therefore keep prior state instead of planning as unknown.
+func TestBudgetAlertRecipientListsUseStateForUnknown(t *testing.T) {
+	t.Parallel()
+
+	s := (&budgetAlertResource{}).schema(context.Background())
+
+	for _, name := range []string{"user_tokens", "recipient_emails", "recipient_channels"} {
+		attr, ok := s.Attributes[name].(schema.ListAttribute)
+		if !ok {
+			t.Fatalf("%s is not a ListAttribute", name)
+		}
+		if len(attr.PlanModifiers) == 0 {
+			t.Errorf("%s has no plan modifiers, want UseStateForUnknown", name)
+		}
 	}
 }
 
@@ -84,8 +139,8 @@ func TestBudgetAlertUpdateSendsRecipientEmails(t *testing.T) {
 	if got := payload.RecipientEmails; len(got) != 2 {
 		t.Errorf("recipient_emails = %v, want 2 addresses", got)
 	}
-	if payload.RecipientChannels == nil {
-		t.Error("recipient_channels = nil, want empty array")
+	if got := payload.UserTokens; len(got) != 1 || got[0] != "usr_123" {
+		t.Errorf("user_tokens = %v, want [usr_123]", got)
 	}
 	if got := payload.Threshold; got != 90 {
 		t.Errorf("threshold = %d, want 90", got)
