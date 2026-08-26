@@ -16,6 +16,12 @@ import (
 func stringList(t *testing.T, values ...string) types.List {
 	t.Helper()
 
+	// A nil slice would build a null list, which is a different thing entirely
+	// from the empty list callers expect when passing no values.
+	if values == nil {
+		values = []string{}
+	}
+
 	list, diagnostics := types.ListValueFrom(context.Background(), types.StringType, values)
 	if diagnostics.HasError() {
 		t.Fatalf("building string list: %v", diagnostics)
@@ -69,7 +75,7 @@ func TestBudgetAlertOmitsUnsetRecipientLists(t *testing.T) {
 		Threshold:         types.Int64Value(80),
 		RecipientEmails:   stringList(t, "finops@example.com"),
 		UserTokens:        types.ListNull(types.StringType),
-		RecipientChannels: stringList(t),
+		RecipientChannels: types.ListUnknown(types.StringType),
 	}
 
 	created := model.toCreate(context.Background(), &diag.Diagnostics{})
@@ -77,7 +83,7 @@ func TestBudgetAlertOmitsUnsetRecipientLists(t *testing.T) {
 		t.Errorf("create user_tokens = %v, want nil", created.UserTokens)
 	}
 	if created.RecipientChannels != nil {
-		t.Errorf("create recipient_channels = %v, want nil for an empty list", created.RecipientChannels)
+		t.Errorf("create recipient_channels = %v, want nil", created.RecipientChannels)
 	}
 
 	updated := model.toUpdate(context.Background(), &diag.Diagnostics{})
@@ -85,7 +91,38 @@ func TestBudgetAlertOmitsUnsetRecipientLists(t *testing.T) {
 		t.Errorf("update user_tokens = %v, want nil", updated.UserTokens)
 	}
 	if updated.RecipientChannels != nil {
-		t.Errorf("update recipient_channels = %v, want nil for an empty list", updated.RecipientChannels)
+		t.Errorf("update recipient_channels = %v, want nil", updated.RecipientChannels)
+	}
+}
+
+// An explicitly empty list is the only way to clear a recipient field, so it has
+// to reach the API as an empty array rather than collapsing to null, which the
+// API reads as "leave this field alone".
+func TestBudgetAlertClearsRecipientListsWithEmptyArray(t *testing.T) {
+	t.Parallel()
+
+	model := budgetAlertModel{
+		BudgetTokens:      stringList(t, "bdgt_123"),
+		DurationInDays:    types.StringValue("7"),
+		Threshold:         types.Int64Value(80),
+		RecipientEmails:   stringList(t, "finops@example.com"),
+		RecipientChannels: stringList(t),
+		UserTokens:        stringList(t),
+	}
+
+	updated := model.toUpdate(context.Background(), &diag.Diagnostics{})
+
+	for name, got := range map[string][]string{
+		"recipient_channels": updated.RecipientChannels,
+		"user_tokens":        updated.UserTokens,
+	} {
+		if got == nil {
+			t.Errorf("update %s = nil, want an empty array so the field is cleared", name)
+			continue
+		}
+		if len(got) != 0 {
+			t.Errorf("update %s = %v, want empty", name, got)
+		}
 	}
 }
 

@@ -32,13 +32,18 @@ func stringListOrEmpty(ctx context.Context, list types.List, diags *diag.Diagnos
 	return values
 }
 
-// stringListOrNil converts a Terraform list into a slice, returning nil for
-// unset or empty lists so omitted recipient fields stay omitted rather than
-// being sent as empty arrays.
+// stringListOrNil distinguishes an unset recipient list from an empty one. A
+// list that is absent from config becomes nil, which reaches the API as null and
+// leaves the field untouched. An explicitly empty list must survive as an empty
+// array, which the API applies as a clear.
 func stringListOrNil(ctx context.Context, list types.List, diags *diag.Diagnostics) []string {
-	values := terraformListToStrings(ctx, list, diags)
-	if len(values) == 0 {
+	if list.IsNull() || list.IsUnknown() {
 		return nil
+	}
+
+	values := terraformListToStrings(ctx, list, diags)
+	if values == nil {
+		return []string{}
 	}
 	return values
 }
