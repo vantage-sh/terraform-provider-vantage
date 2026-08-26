@@ -53,12 +53,22 @@ func validateBudgetAlertRecipients(ctx context.Context, config tfsdk.Config, dia
 		return
 	}
 
-	if cfg.UserTokens.IsNull() && cfg.RecipientEmails.IsNull() && cfg.RecipientChannels.IsNull() {
-		diags.AddError(
-			"Missing Budget Alert Recipients",
-			"At least one of user_tokens, recipient_emails, or recipient_channels must be set when creating a budget alert.",
-		)
+	for _, list := range []types.List{cfg.UserTokens, cfg.RecipientEmails, cfg.RecipientChannels} {
+		// The value comes from elsewhere in the config and cannot be judged yet.
+		if list.IsUnknown() {
+			return
+		}
+		// An empty list is no better than an absent one here: the payload sends
+		// it as null and the API rejects the create.
+		if !list.IsNull() && len(list.Elements()) > 0 {
+			return
+		}
 	}
+
+	diags.AddError(
+		"Missing Budget Alert Recipients",
+		"At least one of user_tokens, recipient_emails, or recipient_channels must be set to a non-empty list when creating a budget alert.",
+	)
 }
 
 func (r *budgetAlertResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

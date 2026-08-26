@@ -132,6 +132,54 @@ func TestBudgetAlertRecipientValidationIsCreateOnly(t *testing.T) {
 	}
 }
 
+// budgetAlertConfigWithUserTokens builds a config whose only populated
+// recipient field is user_tokens.
+func budgetAlertConfigWithUserTokens(t *testing.T, userTokens tftypes.Value) tfsdk.Config {
+	t.Helper()
+
+	ctx := context.Background()
+	s := (&budgetAlertResource{}).schema(ctx)
+	objType := s.Type().TerraformType(ctx).(tftypes.Object)
+
+	values := make(map[string]tftypes.Value, len(objType.AttributeTypes))
+	for name, attrType := range objType.AttributeTypes {
+		values[name] = tftypes.NewValue(attrType, nil)
+	}
+	values["user_tokens"] = userTokens
+
+	return tfsdk.Config{Schema: s, Raw: tftypes.NewValue(objType, values)}
+}
+
+func TestBudgetAlertRecipientValidationRejectsEmptyLists(t *testing.T) {
+	t.Parallel()
+
+	listType := tftypes.List{ElementType: tftypes.String}
+	ctx := context.Background()
+
+	cases := map[string]struct {
+		userTokens tftypes.Value
+		wantError  bool
+	}{
+		// An empty list is sent as null, which the API rejects, so it must be
+		// caught at plan time rather than surfacing as a server error.
+		"empty list":     {tftypes.NewValue(listType, []tftypes.Value{}), true},
+		"populated list": {tftypes.NewValue(listType, []tftypes.Value{tftypes.NewValue(tftypes.String, "usr_1")}), false},
+		// Resolved from elsewhere in the config, so it cannot be judged yet.
+		"unknown list": {tftypes.NewValue(listType, tftypes.UnknownValue), false},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			validateBudgetAlertRecipients(ctx, budgetAlertConfigWithUserTokens(t, tc.userTokens), &diags)
+
+			if got := diags.HasError(); got != tc.wantError {
+				t.Errorf("validation error = %v, want %v (%v)", got, tc.wantError, diags)
+			}
+		})
+	}
+}
+
 func TestBudgetAlertCreateOmitsUnknownPeriodToTrack(t *testing.T) {
 	t.Parallel()
 
