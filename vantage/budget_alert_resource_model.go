@@ -48,6 +48,13 @@ func stringListOrNil(ctx context.Context, list types.List, diags *diag.Diagnosti
 	return values
 }
 
+func stringListValueOrEmpty(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
+	if values == nil {
+		values = []string{}
+	}
+	return types.ListValueFrom(ctx, types.StringType, values)
+}
+
 func (m *budgetAlertModel) applyPayload(ctx context.Context, payload *modelsv2.BudgetAlert) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -70,7 +77,7 @@ func (m *budgetAlertModel) applyPayload(ctx context.Context, payload *modelsv2.B
 		{&m.RecipientEmails, payload.RecipientEmails},
 		{&m.UserTokens, payload.UserTokens},
 	} {
-		value, d := types.ListValueFrom(ctx, types.StringType, list.src)
+		value, d := stringListValueOrEmpty(ctx, list.src)
 		if d.HasError() {
 			diags.Append(d...)
 			return diags
@@ -108,7 +115,7 @@ func (m *budgetAlertModel) toCreate(ctx context.Context, diags *diag.Diagnostics
 func (m *budgetAlertModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) *modelsv2.UpdateBudgetAlert {
 	payload := &modelsv2.UpdateBudgetAlert{
 		BudgetTokens:      stringListOrEmpty(ctx, m.BudgetTokens, diags),
-		DurationInDays:    m.DurationInDays.ValueString(),
+		DurationInDays:    m.DurationInDays.ValueStringPointer(),
 		Threshold:         int32(m.Threshold.ValueInt64()),
 		RecipientChannels: stringListOrNil(ctx, m.RecipientChannels, diags),
 		RecipientEmails:   stringListOrNil(ctx, m.RecipientEmails, diags),

@@ -43,11 +43,11 @@ func TestBudgetPeriodCadenceCreateMapping(t *testing.T) {
 	}
 }
 
-func TestBudgetPeriodCadenceUpdateClearsStartsAt(t *testing.T) {
+func TestBudgetConfigRequiresCadenceStart(t *testing.T) {
 	t.Parallel()
 
 	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
-		"starts_at":      types.StringValue(""),
+		"starts_at":      types.StringNull(),
 		"interval_count": types.Int64Value(1),
 		"interval_unit":  types.StringValue("month"),
 	})
@@ -55,18 +55,62 @@ func TestBudgetPeriodCadenceUpdateClearsStartsAt(t *testing.T) {
 		t.Fatalf("building cadence value: %v", diagnostics)
 	}
 
-	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
-		Name:          types.StringValue("Test Budget"),
+	validateBudgetConfig(budgetModel{
 		PeriodCadence: cadence,
-	}, cadence)
+	}, &diagnostics)
 
-	payload, err := json.Marshal(model)
-	if err != nil {
-		t.Fatalf("marshaling update model: %v", err)
+	if !diagnostics.HasError() {
+		t.Fatal("expected a configured cadence without starts_at to fail validation")
+	}
+}
+
+func TestBudgetConfigRejectsCadenceForCompoundBudget(t *testing.T) {
+	t.Parallel()
+
+	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+		"starts_at":      types.StringValue("2024-01-22"),
+		"interval_count": types.Int64Value(1),
+		"interval_unit":  types.StringValue("month"),
+	})
+	if diagnostics.HasError() {
+		t.Fatalf("building cadence value: %v", diagnostics)
 	}
 
-	if !strings.Contains(string(payload), `"starts_at":null`) {
-		t.Errorf("payload = %s, want starts_at:null", payload)
+	children, listDiagnostics := types.ListValueFrom(
+		context.Background(),
+		types.StringType,
+		[]string{"bdgt_child"},
+	)
+	if listDiagnostics.HasError() {
+		t.Fatalf("building child budget list: %v", listDiagnostics)
+	}
+
+	validateBudgetConfig(budgetModel{
+		PeriodCadence:     cadence,
+		ChildBudgetTokens: children,
+	}, &diagnostics)
+
+	if !diagnostics.HasError() {
+		t.Fatal("expected period_cadence with child_budget_tokens to fail validation")
+	}
+}
+
+func TestBudgetConfigDefersUnknownCadenceStart(t *testing.T) {
+	t.Parallel()
+
+	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+		"starts_at":      types.StringUnknown(),
+		"interval_count": types.Int64Value(1),
+		"interval_unit":  types.StringValue("month"),
+	})
+	if diagnostics.HasError() {
+		t.Fatalf("building cadence value: %v", diagnostics)
+	}
+
+	validateBudgetConfig(budgetModel{PeriodCadence: cadence}, &diagnostics)
+
+	if diagnostics.HasError() {
+		t.Fatalf("unknown starts_at should defer validation: %v", diagnostics)
 	}
 }
 

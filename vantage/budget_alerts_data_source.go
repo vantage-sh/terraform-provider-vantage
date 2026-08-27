@@ -64,6 +64,21 @@ func (d *budgetAlertsDataSource) Schema(ctx context.Context, req datasource.Sche
 	// Drop the generated CustomType so budgetAlertDataSourceModel can round-trip
 	// through State.Set without AttributeTypes drift.
 	alertsAttr := s.Attributes["budget_alerts"].(schema.ListNestedAttribute)
+	durationAttr := alertsAttr.NestedObject.Attributes["duration_in_days"].(schema.Int64Attribute)
+	durationAttr.Description = "The API's nullable integer duration. A null value means the full month; the vantage_budget_alert resource writes the same state as an empty string."
+	durationAttr.MarkdownDescription = "The API's nullable integer duration. A null value means the full month; the `vantage_budget_alert` resource writes the same state as `\"\"`."
+	alertsAttr.NestedObject.Attributes["duration_in_days"] = durationAttr
+
+	userTokensAttr := alertsAttr.NestedObject.Attributes["user_tokens"].(schema.ListAttribute)
+	userTokensAttr.Description = "The organization-user subset of recipients. Freeform verified-domain addresses are excluded; recipient_emails contains the complete address list."
+	userTokensAttr.MarkdownDescription = userTokensAttr.Description
+	alertsAttr.NestedObject.Attributes["user_tokens"] = userTokensAttr
+
+	recipientEmailsAttr := alertsAttr.NestedObject.Attributes["recipient_emails"].(schema.ListAttribute)
+	recipientEmailsAttr.Description = "The complete recipient address list, including organization users and freeform addresses on verified domains."
+	recipientEmailsAttr.MarkdownDescription = recipientEmailsAttr.Description
+	alertsAttr.NestedObject.Attributes["recipient_emails"] = recipientEmailsAttr
+
 	alertsAttr.NestedObject = schema.NestedAttributeObject{
 		Attributes: alertsAttr.NestedObject.Attributes,
 	}
@@ -108,7 +123,7 @@ func (d *budgetAlertsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			{&alert.RecipientEmails, payload.RecipientEmails},
 			{&alert.UserTokens, payload.UserTokens},
 		} {
-			value, diag := types.ListValueFrom(ctx, types.StringType, list.src)
+			value, diag := stringListValueOrEmpty(ctx, list.src)
 			resp.Diagnostics.Append(diag...)
 			if resp.Diagnostics.HasError() {
 				return

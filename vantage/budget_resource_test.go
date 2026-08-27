@@ -142,6 +142,7 @@ func TestAccVantageBudget_withPeriodCadence(t *testing.T) {
 
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	resourceName := "vantage_budget.test_cadence"
+	var originalToken string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
@@ -156,27 +157,40 @@ func TestAccVantageBudget_withPeriodCadence(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_unit", "week"),
 					resource.TestCheckResourceAttr(resourceName, "periods.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "periods.0.amount", "100"),
-					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						originalToken = value
+						if value == "" {
+							return fmt.Errorf("token is empty")
+						}
+						return nil
+					}),
 				),
 			},
 			{
-				Config: testAccVantageBudgetConfig_withPeriodCadence(rTitle, "", 1, "month"),
+				// Core treats cadence as immutable once periods exist, so a
+				// configured cadence change must replace the Budget.
+				Config: testAccVantageBudgetConfig_withPeriodCadence(rTitle, "2024-02-01", 1, "month"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", rTitle),
-					resource.TestCheckResourceAttr(resourceName, "period_cadence.starts_at", ""),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.starts_at", "2024-02-01"),
 					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_count", "1"),
 					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_unit", "month"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						if value == originalToken {
+							return fmt.Errorf("token did not change after cadence replacement")
+						}
+						return nil
+					}),
 				),
 			},
 			{
-				Config:             testAccVantageBudgetConfig_withPeriodCadence(rTitle, "", 1, "month"),
+				Config:             testAccVantageBudgetConfig_withPeriodCadence(rTitle, "2024-02-01", 1, "month"),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
 }
-
 
 func testAccVantageBudgetConfig_basic(budgetTitle string, childBudgetTitle string) string {
 	return fmt.Sprintf(`
@@ -336,4 +350,3 @@ resource "vantage_budget" "test_cadence" {
 }
 `, budgetTitle, startsAtLine, intervalCount, intervalUnit)
 }
-

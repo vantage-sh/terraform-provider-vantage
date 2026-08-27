@@ -46,7 +46,7 @@ func (m *scenarioModelModel) applyPayload(ctx context.Context, src *modelsv2.Sce
 	m.UpdatedAt = types.StringValue(src.UpdatedAt)
 	m.CreatedByToken = types.StringPointerValue(src.CreatedByToken)
 	m.WorkspaceToken = types.StringPointerValue(src.WorkspaceToken)
-	// Keep cleared optional strings as "" so nullableStringPlanModifier stays stable.
+	// Keep cleared optional strings as "" so planmodifiers.NullableString stays stable.
 	m.CloudProvider = nullableStringFromAPI(src.Provider)
 	m.Service = nullableStringFromAPI(src.Service)
 

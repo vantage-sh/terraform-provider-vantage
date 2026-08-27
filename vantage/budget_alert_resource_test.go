@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -92,7 +93,92 @@ func TestAccVantageBudgetAlert_withRecipientEmails(t *testing.T) {
 				),
 			},
 			{
-				Config:             testAccVantageBudgetAlertConfig_recipientEmails(rTitle, `[data.vantage_users.test.users[0].email, data.vantage_users.test.users[1].email]`),
+				Config: testAccVantageBudgetAlertConfig_recipientEmails(rTitle, `[data.vantage_users.test.users[1].email, data.vantage_users.test.users[0].email]`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						resourceName, "recipient_emails.0",
+						"data.vantage_users.test", "users.1.email",
+					),
+					resource.TestCheckResourceAttrPair(
+						resourceName, "recipient_emails.1",
+						"data.vantage_users.test", "users.0.email",
+					),
+				),
+			},
+			{
+				Config:             testAccVantageBudgetAlertConfig_recipientEmails(rTitle, `[data.vantage_users.test.users[1].email, data.vantage_users.test.users[0].email]`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccVantageBudgetAlert_switchesRecipientSource(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_budget_alert.test_switch"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBudgetAlertConfig_switchRecipient(rTitle, "user_tokens", 0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						resourceName, "user_tokens.0",
+						"data.vantage_users.test", "users.0.token",
+					),
+					resource.TestCheckResourceAttrPair(
+						resourceName, "recipient_emails.0",
+						"data.vantage_users.test", "users.0.email",
+					),
+				),
+			},
+			{
+				Config: testAccVantageBudgetAlertConfig_switchRecipient(rTitle, "recipient_emails", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						resourceName, "recipient_emails.0",
+						"data.vantage_users.test", "users.1.email",
+					),
+					resource.TestCheckResourceAttrPair(
+						resourceName, "user_tokens.0",
+						"data.vantage_users.test", "users.1.token",
+					),
+				),
+			},
+			{
+				Config:             testAccVantageBudgetAlertConfig_switchRecipient(rTitle, "recipient_emails", 1),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccVantageBudgetAlert_clearsRecipientChannels(t *testing.T) {
+	if os.Getenv("VANTAGE_BUDGET_ALERT_CHANNEL_ACC") == "" {
+		t.Skip("set VANTAGE_BUDGET_ALERT_CHANNEL_ACC=1 when the acceptance workspace has a notification integration")
+	}
+
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_budget_alert.test_channels"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBudgetAlertConfig_channels(rTitle, `["#terraform-provider-test"]`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "recipient_channels.#", "1"),
+			},
+			{
+				Config: testAccVantageBudgetAlertConfig_channels(rTitle, `[]`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "recipient_channels.#", "0"),
+			},
+			{
+				Config:             testAccVantageBudgetAlertConfig_channels(rTitle, `[]`),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
@@ -217,6 +303,34 @@ resource "vantage_budget_alert" "test_emails" {
   recipient_emails = %[1]s
 }
 `, recipientEmails)
+}
+
+func testAccVantageBudgetAlertConfig_switchRecipient(budgetTitle, recipientType string, userIndex int) string {
+	return testAccVantageBudgetAlertBudget(budgetTitle) + fmt.Sprintf(`
+resource "vantage_budget_alert" "test_switch" {
+  workspace_token  = data.vantage_workspaces.test.workspaces[0].token
+  budget_tokens    = [vantage_budget.test_budget_alert.token]
+  threshold        = 100
+  duration_in_days = "7"
+  %[1]s            = [data.vantage_users.test.users[%[2]d].%[3]s]
+}
+`, recipientType, userIndex, map[string]string{
+		"user_tokens":      "token",
+		"recipient_emails": "email",
+	}[recipientType])
+}
+
+func testAccVantageBudgetAlertConfig_channels(budgetTitle, recipientChannels string) string {
+	return testAccVantageBudgetAlertBudget(budgetTitle) + fmt.Sprintf(`
+resource "vantage_budget_alert" "test_channels" {
+  workspace_token   = data.vantage_workspaces.test.workspaces[0].token
+  budget_tokens     = [vantage_budget.test_budget_alert.token]
+  threshold         = 100
+  duration_in_days  = "7"
+  recipient_emails  = [data.vantage_users.test.users[0].email]
+  recipient_channels = %[1]s
+}
+`, recipientChannels)
 }
 
 func testAccVantageBudgetAlertsDataSourceConfig(budgetTitle string) string {

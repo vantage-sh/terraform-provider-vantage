@@ -2,6 +2,8 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -123,6 +125,15 @@ func TestBudgetAlertClearsRecipientListsWithEmptyArray(t *testing.T) {
 		if len(got) != 0 {
 			t.Errorf("update %s = %v, want empty", name, got)
 		}
+	}
+
+	encoded, err := json.Marshal(updated)
+	if err != nil {
+		t.Fatalf("marshalling update: %v", err)
+	}
+	if got := string(encoded); !strings.Contains(got, `"recipient_channels":[]`) ||
+		!strings.Contains(got, `"user_tokens":[]`) {
+		t.Errorf("update JSON = %s, want explicit empty recipient arrays", got)
 	}
 }
 
@@ -254,6 +265,9 @@ func TestBudgetAlertUpdateSendsRecipientEmails(t *testing.T) {
 	if got := payload.UserTokens; len(got) != 1 || got[0] != "usr_123" {
 		t.Errorf("user_tokens = %v, want [usr_123]", got)
 	}
+	if payload.DurationInDays == nil || *payload.DurationInDays != "14" {
+		t.Errorf("duration_in_days = %v, want pointer to 14", payload.DurationInDays)
+	}
 	if got := payload.Threshold; got != 90 {
 		t.Errorf("threshold = %d, want 90", got)
 	}
@@ -296,6 +310,34 @@ func TestBudgetAlertResponseMapping(t *testing.T) {
 	}
 	if got := len(model.RecipientEmails.Elements()); got != 1 {
 		t.Errorf("recipient_emails length = %d, want 1", got)
+	}
+}
+
+func TestBudgetAlertResponseNormalizesNilLists(t *testing.T) {
+	t.Parallel()
+
+	model := budgetAlertModel{}
+	diagnostics := model.applyPayload(context.Background(), &modelsv2.BudgetAlert{
+		Token:        "bdgtalrt_123",
+		Threshold:    80,
+		BudgetTokens: []string{"bdgt_123"},
+	})
+	if diagnostics.HasError() {
+		t.Fatalf("applying payload: %v", diagnostics)
+	}
+
+	for name, list := range map[string]types.List{
+		"recipient_channels": model.RecipientChannels,
+		"recipient_emails":   model.RecipientEmails,
+		"user_tokens":        model.UserTokens,
+	} {
+		if list.IsNull() || list.IsUnknown() {
+			t.Errorf("%s = %v, want a known empty list", name, list)
+			continue
+		}
+		if len(list.Elements()) != 0 {
+			t.Errorf("%s has %d elements, want 0", name, len(list.Elements()))
+		}
 	}
 }
 

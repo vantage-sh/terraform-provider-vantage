@@ -108,6 +108,11 @@ func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 			stringvalidator.OneOf("start_of_the_month", "end_of_the_month"),
 		},
 	}
+	s.Attributes["duration_in_days"] = schema.StringAttribute{
+		Required:            true,
+		Description:         "The number of days from the start or end of the month to trigger the alert if the threshold is reached. Use an empty string for the full month. This write attribute is a string because the API uses an empty-string sentinel; the budget_alerts data source returns the API's nullable integer response.",
+		MarkdownDescription: "The number of days from the start or end of the month to trigger the alert if the threshold is reached. Use `\"\"` for the full month. This write attribute is a string because the API uses an empty-string sentinel; the `vantage_budget_alerts` data source returns the API's nullable integer response.",
+	}
 
 	// All three recipient fields are Optional+Computed, and an update must keep
 	// the omitted ones at their prior values: the payload cannot omit a field,
@@ -125,12 +130,21 @@ func (r *budgetAlertResource) schema(ctx context.Context) schema.Schema {
 	}
 
 	for name, modifiers := range recipientModifiers {
+		description := attrs[name].GetDescription()
+		switch name {
+		case "user_tokens":
+			description = "The tokens of organization users that receive the alert. The API also exposes their addresses in recipient_emails; freeform verified-domain addresses appear only in recipient_emails."
+		case "recipient_emails":
+			description = "The complete list of email addresses that receive the alert, including addresses derived from user_tokens and freeform addresses on verified domains."
+		}
+		description += " At least one recipient list must resolve to a non-empty value when the alert is created."
+
 		s.Attributes[name] = schema.ListAttribute{
 			ElementType:         types.StringType,
 			Optional:            true,
 			Computed:            true,
-			Description:         attrs[name].GetDescription(),
-			MarkdownDescription: attrs[name].GetMarkdownDescription(),
+			Description:         description,
+			MarkdownDescription: description,
 			PlanModifiers:       modifiers,
 		}
 	}
@@ -216,6 +230,10 @@ func (r *budgetAlertResource) Update(ctx context.Context, req resource.UpdateReq
 
 	out, err := r.client.V2.BudgetAlerts.UpdateBudgetAlert(params, r.client.Auth)
 	if err != nil {
+		if e, ok := err.(*budgetalertsv2.UpdateBudgetAlertBadRequest); ok {
+			handleBadRequest("Update Budget Alert", &resp.Diagnostics, e.GetPayload())
+			return
+		}
 		handleError("Update Budget Alert", &resp.Diagnostics, err)
 		return
 	}

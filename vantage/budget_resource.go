@@ -4,21 +4,25 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
 )
 
 var (
-	_ resource.Resource                = (*budgetResource)(nil)
-	_ resource.ResourceWithConfigure   = (*budgetResource)(nil)
-	_ resource.ResourceWithImportState = (*budgetResource)(nil)
+	_ resource.Resource                   = (*budgetResource)(nil)
+	_ resource.ResourceWithConfigure      = (*budgetResource)(nil)
+	_ resource.ResourceWithImportState    = (*budgetResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*budgetResource)(nil)
 )
 
 func NewBudgetResource() resource.Resource {
@@ -53,17 +57,17 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	s.Attributes["period_cadence"] = schema.SingleNestedAttribute{
 		Optional:            true,
 		Computed:            true,
-		Description:         "The interval cadence for budget periods. Requires the flexible_budget_periods feature.",
-		MarkdownDescription: "The interval cadence for budget periods. Requires the flexible_budget_periods feature.",
+		Description:         "The interval cadence for standard Budget periods. Requires the flexible_budget_periods feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
+		MarkdownDescription: "The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
+		PlanModifiers: []planmodifier.Object{
+			objectplanmodifier.RequiresReplaceIfConfigured(),
+		},
 		Attributes: map[string]schema.Attribute{
 			"starts_at": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD). Set to null to clear.",
-				MarkdownDescription: "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD). Set to null to clear.",
-				PlanModifiers: []planmodifier.String{
-					nestedNullableStringPlanModifier{},
-				},
+				Description:         "The required anchor date for configured budget period intervals. ISO 8601 date (YYYY-MM-DD).",
+				MarkdownDescription: "The required anchor date for configured budget period intervals. ISO 8601 date (`YYYY-MM-DD`).",
 			},
 			"interval_count": schema.Int64Attribute{
 				Optional:            true,
@@ -83,6 +87,49 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		},
 	}
 	resp.Schema = s
+}
+
+func (r *budgetResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config budgetModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	validateBudgetConfig(config, &resp.Diagnostics)
+}
+
+func validateBudgetConfig(config budgetModel, diagnostics *diag.Diagnostics) {
+	if config.PeriodCadence.IsNull() || config.PeriodCadence.IsUnknown() {
+		return
+	}
+
+	startsAt, ok := config.PeriodCadence.Attributes()["starts_at"].(types.String)
+	if !ok {
+		diagnostics.AddAttributeError(
+			path.Root("period_cadence").AtName("starts_at"),
+			"Invalid Budget Period Cadence",
+			"period_cadence.starts_at must be a string.",
+		)
+		return
+	}
+	if !startsAt.IsUnknown() && (startsAt.IsNull() || startsAt.ValueString() == "") {
+		diagnostics.AddAttributeError(
+			path.Root("period_cadence").AtName("starts_at"),
+			"Missing Budget Period Cadence Start",
+			"period_cadence.starts_at must be set to a non-empty ISO 8601 date when period_cadence is configured.",
+		)
+	}
+
+	if !config.ChildBudgetTokens.IsNull() &&
+		!config.ChildBudgetTokens.IsUnknown() &&
+		len(config.ChildBudgetTokens.Elements()) > 0 {
+		diagnostics.AddAttributeError(
+			path.Root("period_cadence"),
+			"Period Cadence Is Not Supported for Compound Budgets",
+			"period_cadence cannot be configured together with child_budget_tokens. Period cadence is only supported for standard Budgets.",
+		)
+	}
 }
 
 func (r *budgetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

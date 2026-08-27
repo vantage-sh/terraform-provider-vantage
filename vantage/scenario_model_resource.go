@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_scenario_model"
 	scenariomodelsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/scenario_models"
 )
@@ -57,7 +58,7 @@ func (r *scenarioModelResource) Schema(ctx context.Context, _ resource.SchemaReq
 		Description:         "The cloud provider filter for the ScenarioModel.",
 		MarkdownDescription: "The cloud provider filter for the ScenarioModel.",
 		PlanModifiers: []planmodifier.String{
-			nullableStringPlanModifier{},
+			planmodifiers.NullableString(),
 		},
 	}
 	s.Attributes["service"] = schema.StringAttribute{
@@ -66,7 +67,7 @@ func (r *scenarioModelResource) Schema(ctx context.Context, _ resource.SchemaReq
 		Description:         attrs["service"].GetDescription(),
 		MarkdownDescription: attrs["service"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
-			nullableStringPlanModifier{},
+			planmodifiers.NullableString(),
 		},
 	}
 	s.Attributes["workspace_token"] = schema.StringAttribute{

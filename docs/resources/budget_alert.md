@@ -33,15 +33,15 @@ resource "vantage_budget_alert" "demo_budget_alert" {
 ### Required
 
 - `budget_tokens` (List of String) The tokens of the Budget that has the alert.
-- `duration_in_days` (String) The number of days from the start or end of the month to trigger the alert if the threshold is reached.  For the full month, pass an empty value.
+- `duration_in_days` (String) The number of days from the start or end of the month to trigger the alert if the threshold is reached. Use `""` for the full month. This write attribute is a string because the API uses an empty-string sentinel; the `vantage_budget_alerts` data source returns the API's nullable integer response.
 - `threshold` (Number) The threshold amount that must be met for the alert to fire.
 
 ### Optional
 
 - `period_to_track` (String) The period tracked on the alert. Used with duration_in_days to determine the time window of the alert. Defaults to start_of_the_month if not passed. Possible values: start_of_the_month, end_of_the_month.
-- `recipient_channels` (List of String) The channels receiving the alerts. Requires an integration provider to be connected.
-- `recipient_emails` (List of String) Email addresses that receive the alert. Must be organization users or addresses on a verified domain.
-- `user_tokens` (List of String) The tokens of the users that receive the alert.
+- `recipient_channels` (List of String) The channels receiving the alerts. Requires an integration provider to be connected. At least one recipient list must resolve to a non-empty value when the alert is created.
+- `recipient_emails` (List of String) The complete list of email addresses that receive the alert, including addresses derived from user_tokens and freeform addresses on verified domains. At least one recipient list must resolve to a non-empty value when the alert is created.
+- `user_tokens` (List of String) The tokens of organization users that receive the alert. The API also exposes their addresses in recipient_emails; freeform verified-domain addresses appear only in recipient_emails. At least one recipient list must resolve to a non-empty value when the alert is created.
 - `workspace_token` (String) The token of the Workspace to add the BudgetAlert to. Required if the API token is associated with multiple Workspaces.
 
 ### Read-Only
