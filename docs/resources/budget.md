@@ -14,13 +14,20 @@ description: |-
 
 ```terraform
 resource "vantage_budget" "demo_budget" {
-  name = "Demo Budget"
+  name              = "Demo Budget"
   cost_report_token = vantage_cost_report.demo_report.token
+
+  period_cadence = {
+    starts_at      = "2024-01-22"
+    interval_count = 2
+    interval_unit  = "week"
+  }
+
   periods = [
     {
-      start_at = "2023-12-01"
-      end_at = "2024-01-01"
-      amount = 1000
+      start_at = "2024-01-22"
+      end_at   = "2024-02-04"
+      amount   = 100
     }
   ]
 }
@@ -37,6 +44,7 @@ resource "vantage_budget" "demo_budget" {
 
 - `child_budget_tokens` (List of String) The tokens of any child Budgets when creating a hierarchical Budget.
 - `cost_report_token` (String) The CostReport token. Ignored for hierarchical Budgets.
+- `period_cadence` (Attributes) The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence. (see [below for nested schema](#nestedatt--period_cadence))
 - `periods` (Attributes List) The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. Ignored for hierarchical Budgets. (see [below for nested schema](#nestedatt--periods))
 - `workspace_token` (String) The token of the Workspace to add the Budget to.
 
@@ -49,6 +57,16 @@ resource "vantage_budget" "demo_budget" {
 - `performance` (Attributes List) The historical performance of the Budget. (see [below for nested schema](#nestedatt--performance))
 - `token` (String) The token of the budget
 - `user_token` (String) The token for the User who created this Budget.
+
+<a id="nestedatt--period_cadence"></a>
+### Nested Schema for `period_cadence`
+
+Optional:
+
+- `interval_count` (Number) The number of interval units per budget period.
+- `interval_unit` (String) The unit for budget period intervals. One of: day, week, month, year.
+- `starts_at` (String) The required anchor date for configured budget period intervals. ISO 8601 date (`YYYY-MM-DD`).
+
 
 <a id="nestedatt--periods"></a>
 ### Nested Schema for `periods`
