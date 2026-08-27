@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -74,6 +75,9 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Computed:            true,
 				Description:         "The number of interval units per budget period.",
 				MarkdownDescription: "The number of interval units per budget period.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"interval_unit": schema.StringAttribute{
 				Optional:            true,
@@ -82,6 +86,9 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				MarkdownDescription: "The unit for budget period intervals. One of: day, week, month, year.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("day", "week", "month", "year"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
