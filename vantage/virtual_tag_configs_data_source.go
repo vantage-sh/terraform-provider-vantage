@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_virtual_tag_configs"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
 	vtagv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
 
@@ -22,7 +23,7 @@ type virtualTagConfigsDataSource struct {
 }
 
 type virtualTagConfigsDataSourceModel struct {
-	VirtualTagConfigs []virtualTagConfigModel `tfsdk:"virtual_tag_configs"`
+	VirtualTagConfigs []resource_virtual_tag_config.VirtualTagConfigModel `tfsdk:"virtual_tag_configs"`
 }
 
 func (d *virtualTagConfigsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -62,7 +63,7 @@ func (d *virtualTagConfigsDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	vtags := make([]virtualTagConfigModel, 0, len(apiRes.Payload.VirtualTagConfigs))
+	vtags := make([]resource_virtual_tag_config.VirtualTagConfigModel, 0, len(apiRes.Payload.VirtualTagConfigs))
 	for _, element := range apiRes.Payload.VirtualTagConfigs {
 		model := virtualTagConfigModel{}
 		diag := model.applyPayload(ctx, element)
@@ -70,7 +71,7 @@ func (d *virtualTagConfigsDataSource) Read(ctx context.Context, req datasource.R
 			resp.Diagnostics.Append(diag...)
 			return
 		}
-		vtags = append(vtags, model)
+		vtags = append(vtags, model.VirtualTagConfigModel)
 	}
 
 	data.VirtualTagConfigs = vtags

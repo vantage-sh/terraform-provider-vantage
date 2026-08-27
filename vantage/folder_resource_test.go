@@ -7,6 +7,7 @@ import (
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
 func TestAccVantageFolder_basic(t *testing.T) {
@@ -45,6 +46,52 @@ resource "vantage_folder" "test" {
   workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
 }
 `, folderTitle)
+}
+
+func TestAccVantageFolder_providerResourceFolder(t *testing.T) {
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	rUpdatedTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_folder.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageFolderConfig_providerResourceFolder(rTitle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rTitle),
+					resource.TestCheckResourceAttr(resourceName, "type", modelsv2.CreateFolderTypeProviderResourceFolder),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
+				),
+			},
+			{
+				Config: testAccVantageFolderConfig_providerResourceFolder(rUpdatedTitle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "title", rUpdatedTitle),
+					resource.TestCheckResourceAttr(resourceName, "type", modelsv2.CreateFolderTypeProviderResourceFolder),
+				),
+			},
+			{
+				Config:             testAccVantageFolderConfig_providerResourceFolder(rUpdatedTitle),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageFolderConfig_providerResourceFolder(folderTitle string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_folder" "test" {
+  title           = %[1]q
+  type            = %[2]q
+  workspace_token = element(data.vantage_workspaces.test.workspaces, 0).token
+}
+`, folderTitle, modelsv2.CreateFolderTypeProviderResourceFolder)
 }
 
 func TestAccVantageFolder_withSavedFilterTokens(t *testing.T) {

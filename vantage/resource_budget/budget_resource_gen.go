@@ -146,6 +146,7 @@ type BudgetModel struct {
 	Id                types.String `tfsdk:"id"`
 	Name              types.String `tfsdk:"name"`
 	Performance       types.List   `tfsdk:"performance"`
+	PeriodCadence     types.Object `tfsdk:"period_cadence"`
 	Periods           types.List   `tfsdk:"periods"`
 	Token             types.String `tfsdk:"token"`
 	UserToken         types.String `tfsdk:"user_token"`

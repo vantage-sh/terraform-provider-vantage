@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/vantage-sh/vantage-go v0.1.9
+	github.com/vantage-sh/vantage-go v0.1.11-0.20260827181516-9c13a354cf69
 )
 
 require (

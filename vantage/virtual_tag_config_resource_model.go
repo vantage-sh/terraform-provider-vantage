@@ -13,7 +13,9 @@ import (
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
-type virtualTagConfigModel resource_virtual_tag_config.VirtualTagConfigModel
+type virtualTagConfigModel struct {
+	resource_virtual_tag_config.VirtualTagConfigModel
+}
 
 type virtualTagConfigValueModel struct {
 	BusinessMetricToken types.String                                `tfsdk:"business_metric_token"`
@@ -449,7 +451,9 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.Key = types.StringValue(payload.Key)
+	m.Hidden = types.BoolValue(payload.Hidden)
 	m.Overridable = types.BoolValue(payload.Overridable)
+	m.Preferred = types.BoolValue(payload.Preferred)
 	m.BackfillUntil = types.StringValue(payload.BackfillUntil)
 	m.CreatedByToken = types.StringPointerValue(payload.CreatedByToken)
 

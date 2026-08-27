@@ -61,6 +61,11 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The token of the Creator of the VirtualTagConfig.",
 							MarkdownDescription: "The token of the Creator of the VirtualTagConfig.",
 						},
+						"hidden": schema.BoolAttribute{
+							Computed:            true,
+							Description:         "Whether the VirtualTagConfig key is hidden from the Vantage UI.",
+							MarkdownDescription: "Whether the VirtualTagConfig key is hidden from the Vantage UI.",
+						},
 						"id": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The id of the VirtualTagConfig.",
@@ -75,6 +80,11 @@ func VirtualTagConfigsDataSourceSchema(ctx context.Context) schema.Schema {
 							Computed:            true,
 							Description:         "Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.",
 							MarkdownDescription: "Whether the VirtualTagConfig can override a provider-supplied tag on a matching Cost.",
+						},
+						"preferred": schema.BoolAttribute{
+							Computed:            true,
+							Description:         "Whether the VirtualTagConfig key is marked as preferred in the Vantage UI.",
+							MarkdownDescription: "Whether the VirtualTagConfig key is marked as preferred in the Vantage UI.",
 						},
 						"token": schema.StringAttribute{
 							Computed:            true,
@@ -339,6 +349,24 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	hiddenAttribute, ok := attributes["hidden"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`hidden is missing from object`)
+
+		return nil, diags
+	}
+
+	hiddenVal, ok := hiddenAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`hidden expected to be basetypes.BoolValue, was: %T`, hiddenAttribute))
+	}
+
 	idAttribute, ok := attributes["id"]
 
 	if !ok {
@@ -393,6 +421,24 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 			fmt.Sprintf(`overridable expected to be basetypes.BoolValue, was: %T`, overridableAttribute))
 	}
 
+	preferredAttribute, ok := attributes["preferred"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`preferred is missing from object`)
+
+		return nil, diags
+	}
+
+	preferredVal, ok := preferredAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`preferred expected to be basetypes.BoolValue, was: %T`, preferredAttribute))
+	}
+
 	tokenAttribute, ok := attributes["token"]
 
 	if !ok {
@@ -437,9 +483,11 @@ func (t VirtualTagConfigsType) ValueFromObject(ctx context.Context, in basetypes
 		BackfillUntil:    backfillUntilVal,
 		CollapsedTagKeys: collapsedTagKeysVal,
 		CreatedByToken:   createdByTokenVal,
+		Hidden:           hiddenVal,
 		Id:               idVal,
 		Key:              keyVal,
 		Overridable:      overridableVal,
+		Preferred:        preferredVal,
 		Token:            tokenVal,
 		Values:           valuesVal,
 		state:            attr.ValueStateKnown,
@@ -563,6 +611,24 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 			fmt.Sprintf(`created_by_token expected to be basetypes.StringValue, was: %T`, createdByTokenAttribute))
 	}
 
+	hiddenAttribute, ok := attributes["hidden"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`hidden is missing from object`)
+
+		return NewVirtualTagConfigsValueUnknown(), diags
+	}
+
+	hiddenVal, ok := hiddenAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`hidden expected to be basetypes.BoolValue, was: %T`, hiddenAttribute))
+	}
+
 	idAttribute, ok := attributes["id"]
 
 	if !ok {
@@ -617,6 +683,24 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 			fmt.Sprintf(`overridable expected to be basetypes.BoolValue, was: %T`, overridableAttribute))
 	}
 
+	preferredAttribute, ok := attributes["preferred"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`preferred is missing from object`)
+
+		return NewVirtualTagConfigsValueUnknown(), diags
+	}
+
+	preferredVal, ok := preferredAttribute.(basetypes.BoolValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`preferred expected to be basetypes.BoolValue, was: %T`, preferredAttribute))
+	}
+
 	tokenAttribute, ok := attributes["token"]
 
 	if !ok {
@@ -661,9 +745,11 @@ func NewVirtualTagConfigsValue(attributeTypes map[string]attr.Type, attributes m
 		BackfillUntil:    backfillUntilVal,
 		CollapsedTagKeys: collapsedTagKeysVal,
 		CreatedByToken:   createdByTokenVal,
+		Hidden:           hiddenVal,
 		Id:               idVal,
 		Key:              keyVal,
 		Overridable:      overridableVal,
+		Preferred:        preferredVal,
 		Token:            tokenVal,
 		Values:           valuesVal,
 		state:            attr.ValueStateKnown,
@@ -741,16 +827,18 @@ type VirtualTagConfigsValue struct {
 	BackfillUntil    basetypes.StringValue `tfsdk:"backfill_until"`
 	CollapsedTagKeys basetypes.ListValue   `tfsdk:"collapsed_tag_keys"`
 	CreatedByToken   basetypes.StringValue `tfsdk:"created_by_token"`
+	Hidden           basetypes.BoolValue   `tfsdk:"hidden"`
 	Id               basetypes.StringValue `tfsdk:"id"`
 	Key              basetypes.StringValue `tfsdk:"key"`
 	Overridable      basetypes.BoolValue   `tfsdk:"overridable"`
+	Preferred        basetypes.BoolValue   `tfsdk:"preferred"`
 	Token            basetypes.StringValue `tfsdk:"token"`
 	Values           basetypes.ListValue   `tfsdk:"values"`
 	state            attr.ValueState
 }
 
 func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 8)
+	attrTypes := make(map[string]tftypes.Type, 10)
 
 	var val tftypes.Value
 	var err error
@@ -760,9 +848,11 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 		ElemType: CollapsedTagKeysValue{}.Type(ctx),
 	}.TerraformType(ctx)
 	attrTypes["created_by_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["hidden"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["key"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["overridable"] = basetypes.BoolType{}.TerraformType(ctx)
+	attrTypes["preferred"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["values"] = basetypes.ListType{
 		ElemType: ValuesValue{}.Type(ctx),
@@ -772,7 +862,7 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 8)
+		vals := make(map[string]tftypes.Value, 10)
 
 		val, err = v.BackfillUntil.ToTerraformValue(ctx)
 
@@ -798,6 +888,14 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 
 		vals["created_by_token"] = val
 
+		val, err = v.Hidden.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["hidden"] = val
+
 		val, err = v.Id.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -821,6 +919,14 @@ func (v VirtualTagConfigsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 		}
 
 		vals["overridable"] = val
+
+		val, err = v.Preferred.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["preferred"] = val
 
 		val, err = v.Token.ToTerraformValue(ctx)
 
@@ -931,9 +1037,11 @@ func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			ElemType: CollapsedTagKeysValue{}.Type(ctx),
 		},
 		"created_by_token": basetypes.StringType{},
+		"hidden":           basetypes.BoolType{},
 		"id":               basetypes.StringType{},
 		"key":              basetypes.StringType{},
 		"overridable":      basetypes.BoolType{},
+		"preferred":        basetypes.BoolType{},
 		"token":            basetypes.StringType{},
 		"values": basetypes.ListType{
 			ElemType: ValuesValue{}.Type(ctx),
@@ -954,9 +1062,11 @@ func (v VirtualTagConfigsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"backfill_until":     v.BackfillUntil,
 			"collapsed_tag_keys": collapsedTagKeys,
 			"created_by_token":   v.CreatedByToken,
+			"hidden":             v.Hidden,
 			"id":                 v.Id,
 			"key":                v.Key,
 			"overridable":        v.Overridable,
+			"preferred":          v.Preferred,
 			"token":              v.Token,
 			"values":             values,
 		})
@@ -991,6 +1101,10 @@ func (v VirtualTagConfigsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Hidden.Equal(other.Hidden) {
+		return false
+	}
+
 	if !v.Id.Equal(other.Id) {
 		return false
 	}
@@ -1000,6 +1114,10 @@ func (v VirtualTagConfigsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.Overridable.Equal(other.Overridable) {
+		return false
+	}
+
+	if !v.Preferred.Equal(other.Preferred) {
 		return false
 	}
 
@@ -1029,9 +1147,11 @@ func (v VirtualTagConfigsValue) AttributeTypes(ctx context.Context) map[string]a
 			ElemType: CollapsedTagKeysValue{}.Type(ctx),
 		},
 		"created_by_token": basetypes.StringType{},
+		"hidden":           basetypes.BoolType{},
 		"id":               basetypes.StringType{},
 		"key":              basetypes.StringType{},
 		"overridable":      basetypes.BoolType{},
+		"preferred":        basetypes.BoolType{},
 		"token":            basetypes.StringType{},
 		"values": basetypes.ListType{
 			ElemType: ValuesValue{}.Type(ctx),

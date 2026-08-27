@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -133,6 +134,112 @@ func TestAccVantageBudget_multipleChildBudgets(t *testing.T) {
 	})
 }
 
+func TestAccVantageBudget_withPeriodCadence(t *testing.T) {
+	// period_cadence requires API support (FIN-4289) and flexible_budget_periods on the account.
+	if os.Getenv("VANTAGE_BUDGET_PERIOD_CADENCE_ACC") == "" {
+		t.Skip("set VANTAGE_BUDGET_PERIOD_CADENCE_ACC=1 once staging/local API exposes period_cadence and flexible_budget_periods is enabled")
+	}
+
+	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_budget.test_cadence"
+	var originalToken string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBudgetConfig_withPeriodCadence(rTitle, "2024-01-22", 2, "week"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", rTitle),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.starts_at", "2024-01-22"),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_count", "2"),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_unit", "week"),
+					resource.TestCheckResourceAttr(resourceName, "periods.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "periods.0.amount", "100"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						originalToken = value
+						if value == "" {
+							return fmt.Errorf("token is empty")
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				// Core treats cadence as immutable once periods exist, so a
+				// configured cadence change must replace the Budget.
+				Config: testAccVantageBudgetConfig_withPeriodCadence(rTitle, "2024-02-01", 1, "month"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", rTitle),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.starts_at", "2024-02-01"),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_count", "1"),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_unit", "month"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						if value == originalToken {
+							return fmt.Errorf("token did not change after cadence replacement")
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config:             testAccVantageBudgetConfig_withPeriodCadence(rTitle, "2024-02-01", 1, "month"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccVantageBudget_withPartialPeriodCadence(t *testing.T) {
+	if os.Getenv("VANTAGE_BUDGET_PERIOD_CADENCE_ACC") == "" {
+		t.Skip("set VANTAGE_BUDGET_PERIOD_CADENCE_ACC=1 once staging/local API exposes period_cadence and flexible_budget_periods is enabled")
+	}
+
+	title := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_budget.test_partial_cadence"
+	var originalToken string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageBudgetConfig_withPartialPeriodCadence(title),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.starts_at", "2024-01-22"),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_count", "1"),
+					resource.TestCheckResourceAttr(resourceName, "period_cadence.interval_unit", "month"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						originalToken = value
+						return nil
+					}),
+				),
+			},
+			{
+				// Omitted derived cadence fields must retain state during an
+				// unrelated update instead of forcing replacement.
+				Config: testAccVantageBudgetConfig_withPartialPeriodCadence(title + " updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", title+" updated"),
+					resource.TestCheckResourceAttrWith(resourceName, "token", func(value string) error {
+						if value != originalToken {
+							return fmt.Errorf("token changed during unrelated update: got %q, want %q", value, originalToken)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config:             testAccVantageBudgetConfig_withPartialPeriodCadence(title + " updated"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageBudgetConfig_basic(budgetTitle string, childBudgetTitle string) string {
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
@@ -255,4 +362,68 @@ resource "vantage_budget" "parent" {
   ]
 }
 `, parentTitle)
+}
+
+func testAccVantageBudgetConfig_withPeriodCadence(budgetTitle, startsAt string, intervalCount int, intervalUnit string) string {
+	startsAtLine := ""
+	if startsAt != "" {
+		startsAtLine = fmt.Sprintf("    starts_at      = %q\n", startsAt)
+	}
+
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "test_budget_cadence_report" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Budget Cadence Test Report"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_budget" "test_cadence" {
+  name              = %[1]q
+  workspace_token   = data.vantage_workspaces.test.workspaces[0].token
+  cost_report_token = vantage_cost_report.test_budget_cadence_report.token
+
+  period_cadence = {
+%[2]s    interval_count = %[3]d
+    interval_unit  = %[4]q
+  }
+
+  periods = [{
+    start_at = "2024-01-22"
+    end_at   = "2024-02-04"
+    amount   = 100
+  }]
+}
+`, budgetTitle, startsAtLine, intervalCount, intervalUnit)
+}
+
+func testAccVantageBudgetConfig_withPartialPeriodCadence(budgetTitle string) string {
+	return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+
+resource "vantage_cost_report" "test_partial_cadence_report" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title           = "Partial Budget Cadence Test Report"
+  filter          = "costs.provider = 'aws'"
+  date_interval   = "last_month"
+}
+
+resource "vantage_budget" "test_partial_cadence" {
+  name              = %[1]q
+  workspace_token   = data.vantage_workspaces.test.workspaces[0].token
+  cost_report_token = vantage_cost_report.test_partial_cadence_report.token
+
+  period_cadence = {
+    starts_at = "2024-01-22"
+  }
+
+  periods = [{
+    start_at = "2024-01-22"
+    end_at   = "2024-02-21"
+    amount   = 100
+  }]
+}
+`, budgetTitle)
 }

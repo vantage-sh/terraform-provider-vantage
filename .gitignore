@@ -12,3 +12,5 @@ tmp-swagger.json
 **/bin
 
 
+
+.deps/

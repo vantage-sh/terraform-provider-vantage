@@ -42,6 +42,26 @@ resources:
             description: The token of the billing rule
         aliases:
           billing_rule_token: token
+  budget_alert:
+    create:
+      path: /budget_alerts
+      method: POST
+    read:
+      path: /budget_alerts/{budget_alert_token}
+      method: GET
+    update:
+      path: /budget_alerts/{budget_alert_token}
+      method: PUT
+    delete:
+      path: /budget_alerts/{budget_alert_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the budget alert
+        aliases:
+          budget_alert_token: token
   budget:
     create:
       path: /budgets
@@ -429,6 +449,15 @@ data_sources:
   billing_rules:
     read:
       path: /billing_rules
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  budget_alerts:
+    read:
+      path: /budget_alerts
       method: GET
     schema:
       ignores:

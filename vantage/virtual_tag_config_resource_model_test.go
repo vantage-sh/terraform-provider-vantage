@@ -160,7 +160,9 @@ func TestVirtualTagConfig_ApplyPayload_NilNestedListsAreKnownEmpty(t *testing.T)
 	payload := &modelsv2.VirtualTagConfig{
 		Token:          "vtag_test",
 		Key:            "test-key",
+		Hidden:         true,
 		Overridable:    true,
+		Preferred:      true,
 		BackfillUntil:  "2025-01-01",
 		CreatedByToken: &createdBy,
 		CollapsedTagKeys: []*modelsv2.VirtualTagConfigCollapsedTagKey{
@@ -184,6 +186,12 @@ func TestVirtualTagConfig_ApplyPayload_NilNestedListsAreKnownEmpty(t *testing.T)
 	m := &virtualTagConfigModel{}
 	if diags := m.applyPayload(ctx, payload); diags.HasError() {
 		t.Fatalf("applyPayload returned errors: %v", diags)
+	}
+	if m.Hidden.IsNull() || m.Hidden.IsUnknown() || !m.Hidden.ValueBool() {
+		t.Errorf("Hidden = %s; want true", m.Hidden)
+	}
+	if m.Preferred.IsNull() || m.Preferred.IsUnknown() || !m.Preferred.ValueBool() {
+		t.Errorf("Preferred = %s; want true", m.Preferred)
 	}
 
 	if m.CollapsedTagKeys.IsNull() {

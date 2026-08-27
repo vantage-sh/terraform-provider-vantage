@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_report_forecast"
 	reportforecastsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_forecasts"
 )
@@ -64,7 +65,7 @@ func (r *reportForecastResource) Schema(ctx context.Context, _ resource.SchemaRe
 		Description:         attrs["business_metric_token"].GetDescription(),
 		MarkdownDescription: attrs["business_metric_token"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
-			nullableStringPlanModifier{},
+			planmodifiers.NullableString(),
 		},
 	}
 
