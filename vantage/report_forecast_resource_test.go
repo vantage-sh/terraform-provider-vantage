@@ -60,16 +60,22 @@ func TestAccVantageReportForecast_clearBusinessMetric(t *testing.T) {
 	modelTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	metricTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	resourceName := "vantage_report_forecast.test_clear"
-	now := time.Now()
-	historicalYear := fmt.Sprintf("%d", now.Year())
-	forecastYear := fmt.Sprintf("%d", now.Year()+1)
+	now := time.Now().UTC()
+	historicalDates := []string{
+		now.AddDate(0, 0, -7).Format(time.DateOnly),
+		now.AddDate(0, 0, -6).Format(time.DateOnly),
+	}
+	forecastDates := []string{
+		now.Format(time.DateOnly),
+		now.AddDate(0, 0, 1).Format(time.DateOnly),
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccScenarioModelsPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccVantageReportForecastConfig_withBusinessMetric(rTitle, modelTitle, metricTitle, historicalYear, forecastYear),
+				Config: testAccVantageReportForecastConfig_withBusinessMetric(rTitle, modelTitle, metricTitle, historicalDates, forecastDates),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", rTitle),
 					resource.TestCheckResourceAttrSet(resourceName, "business_metric_token"),
@@ -144,7 +150,7 @@ resource "vantage_report_forecast" %q {
 `, modelTitle, resourceLabel, title, setAsDefaultLine)
 }
 
-func testAccVantageReportForecastConfig_withBusinessMetric(title, modelTitle, metricTitle, historicalYear, forecastYear string) string {
+func testAccVantageReportForecastConfig_withBusinessMetric(title, modelTitle, metricTitle string, historicalDates, forecastDates []string) string {
 	return fmt.Sprintf(`
 data "vantage_workspaces" "test" {}
 
@@ -170,13 +176,13 @@ resource "vantage_business_metric" "test" {
   title = %[2]q
 
   values = [
-    { date = "%[4]s-01-01", amount = "100.50" },
-    { date = "%[4]s-02-01", amount = "200.75" },
+    { date = %[4]q, amount = "100.50" },
+    { date = %[5]q, amount = "200.75" },
   ]
 
   forecasted_values = [
-    { date = "%[5]s-01-01", amount = "300.25" },
-    { date = "%[5]s-02-01", amount = "400.50" },
+    { date = %[6]q, amount = "300.25" },
+    { date = %[7]q, amount = "400.50" },
   ]
 }
 
@@ -186,7 +192,7 @@ resource "vantage_report_forecast" "test_clear" {
   scenario_model_tokens = [vantage_scenario_model.test.token]
   business_metric_token = vantage_business_metric.test.token
 }
-`, modelTitle, metricTitle, title, historicalYear, forecastYear)
+`, modelTitle, metricTitle, title, historicalDates[0], historicalDates[1], forecastDates[0], forecastDates[1])
 }
 
 func testAccVantageReportForecastsDataSourceConfig(title, modelTitle string) string {
