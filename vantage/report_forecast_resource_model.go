@@ -19,7 +19,7 @@ func (m *reportForecastModel) applyPayload(ctx context.Context, src *modelsv2.Re
 	m.CreatedAt = types.StringValue(src.CreatedAt)
 	m.UpdatedAt = types.StringValue(src.UpdatedAt)
 	m.CreatedByToken = types.StringPointerValue(src.CreatedByToken)
-	// Keep cleared optional strings as "" so nullableStringPlanModifier stays stable.
+	// Keep cleared optional strings as "" so planmodifiers.NullableString stays stable.
 	m.BusinessMetricToken = nullableStringFromAPI(src.BusinessMetricToken)
 	m.IsDefault = types.BoolValue(src.IsDefault)
 

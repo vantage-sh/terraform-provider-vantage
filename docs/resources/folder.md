@@ -16,6 +16,9 @@ Manages a Folder.
 resource "vantage_folder" "demo_folder" {
   title = "Demo Folder"
 
+  # Optional: Create a folder for provider resources instead of cost reports
+  # type = "ProviderResourceFolder"
+
   # Include either the parent_folder_token or workspace_token
   # If both are included, the API will use the parent_folder_token
 
@@ -39,6 +42,7 @@ resource "vantage_folder" "demo_folder" {
 
 - `parent_folder_token` (String) Token of the folder's parent folder
 - `saved_filter_tokens` (List of String) Tokens of the SavedFilters to apply to any Cost Report contained within the Folder.
+- `type` (String) The type of the folder. The API defaults to `CostFolder`. Changing this value forces replacement.
 - `workspace_token` (String) Workspace token to add the cost report to.
 
 ### Read-Only

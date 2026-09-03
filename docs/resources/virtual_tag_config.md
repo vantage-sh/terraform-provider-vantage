@@ -18,6 +18,7 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
   key            = "Demo Tag"
   backfill_until = "2024-01-01"
   overridable    = true
+  preferred      = true
   values = [
     {
       name   = "Demo Value 0"
@@ -62,11 +63,13 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
 
 - `backfill_until` (String) The earliest month the VirtualTagConfig should be backfilled to.
 - `collapsed_tag_keys` (Attributes List) Tag keys to collapse values for. (see [below for nested schema](#nestedatt--collapsed_tag_keys))
+- `preferred` (Boolean) Whether this virtual tag key is marked as preferred in the Vantage UI.
 - `values` (Attributes List) Values for the VirtualTagConfig, with match precedence determined by order in the list. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
 
 - `created_by_token` (String) The token of the Creator of the VirtualTagConfig.
+- `hidden` (Boolean) Whether the VirtualTagConfig key is hidden from the Vantage UI.
 - `id` (String) The id of the VirtualTagConfig.
 - `token` (String) The token of the VirtualTagConfig.
 

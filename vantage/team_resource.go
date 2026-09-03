@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_team"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	teamsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/teams"
@@ -40,7 +41,7 @@ func (r TeamResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 		Description:         "The token of the dashboard to use as the default for the Team.",
 		MarkdownDescription: "The token of the dashboard to use as the default for the Team.",
 		PlanModifiers: []planmodifier.String{
-			nullableStringPlanModifier{},
+			planmodifiers.NullableString(),
 		},
 	}
 	s.Attributes["token"] = schema.StringAttribute{
@@ -371,29 +372,6 @@ func (r *TeamResource) Configure(_ context.Context, req resource.ConfigureReques
 	r.client = req.ProviderData.(*Client)
 }
 
-// nullableStringPlanModifier handles Optional+Computed string attributes that
-// support clearing via null. When the user removes the attribute from config,
-// Terraform normally preserves the prior state value. This modifier detects that
-// case and plans the value as empty string, which signals the provider to send
-// null to the API to clear the field.
-type nullableStringPlanModifier struct{}
-
-func (m nullableStringPlanModifier) Description(_ context.Context) string {
-	return "Sets the value to empty when removed from configuration, allowing the API to clear the field."
-}
-
-func (m nullableStringPlanModifier) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (m nullableStringPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
-	// If the attribute is not in config (null) and was previously set, plan it as
-	// empty string so the provider sends null to the API to clear the field.
-	if req.ConfigValue.IsNull() && !req.StateValue.IsNull() && req.StateValue.ValueString() != "" {
-		resp.PlanValue = types.StringValue("")
-	}
-}
-
 // nullableStringPointer returns a *string suitable for nullable API fields that
 // serialize nil as JSON null (no omitempty). Empty string is treated as nil.
 func nullableStringPointer(s types.String) *string {
@@ -404,7 +382,7 @@ func nullableStringPointer(s types.String) *string {
 }
 
 // nullableStringFromAPI maps a nullable API string into Terraform state using ""
-// when the API returns null, matching nullableStringPlanModifier clear semantics.
+// when the API returns null, matching planmodifiers.NullableString clear semantics.
 func nullableStringFromAPI(v *string) types.String {
 	if v == nil {
 		return types.StringValue("")

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_budgets"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
 )
@@ -34,7 +35,41 @@ func (d *budgetsDataSource) Metadata(ctx context.Context, req datasource.Metadat
 }
 
 func (d *budgetsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = datasource_budgets.BudgetsDataSourceSchema(ctx)
+	s := datasource_budgets.BudgetsDataSourceSchema(ctx)
+	budgetsAttr := s.Attributes["budgets"].(schema.ListNestedAttribute)
+	attrs := make(map[string]schema.Attribute, len(budgetsAttr.NestedObject.Attributes)+1)
+	for k, v := range budgetsAttr.NestedObject.Attributes {
+		attrs[k] = v
+	}
+	attrs["period_cadence"] = schema.SingleNestedAttribute{
+		Computed:            true,
+		Description:         "The interval cadence for budget periods.",
+		MarkdownDescription: "The interval cadence for budget periods.",
+		Attributes: map[string]schema.Attribute{
+			"starts_at": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD).",
+				MarkdownDescription: "The anchor date for budget period intervals. ISO 8601 date (YYYY-MM-DD).",
+			},
+			"interval_count": schema.Int64Attribute{
+				Computed:            true,
+				Description:         "The number of interval units per budget period.",
+				MarkdownDescription: "The number of interval units per budget period.",
+			},
+			"interval_unit": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The unit for budget period intervals. One of: day, week, month, year.",
+				MarkdownDescription: "The unit for budget period intervals. One of: day, week, month, year.",
+			},
+		},
+	}
+	// Drop the generated CustomType so the shared budgetModel (with period_cadence)
+	// can round-trip through State.Set without AttributeTypes drift.
+	budgetsAttr.NestedObject = schema.NestedAttributeObject{
+		Attributes: attrs,
+	}
+	s.Attributes["budgets"] = budgetsAttr
+	resp.Schema = s
 }
 
 func (d *budgetsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

@@ -6,11 +6,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
+	accounttagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/tags"
 	tagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
 
@@ -115,6 +117,13 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 			},
 		},
 	}
+
+	resp.Schema.Attributes["preferred"] = schema.BoolAttribute{
+		Optional:            true,
+		Computed:            true,
+		Default:             booldefault.StaticBool(false),
+		MarkdownDescription: "Whether this virtual tag key is marked as preferred in the Vantage UI.",
+	}
 }
 
 func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -124,6 +133,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	preferredToSync := data.Preferred
 	model := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -147,7 +157,18 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	if !preferredToSync.IsNull() && !preferredToSync.IsUnknown() {
+		data.Preferred = preferredToSync
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
+		handleError("Set Preferred Virtual Tag Config", &resp.Diagnostics, err)
+		return
+	}
 }
 
 func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -196,6 +217,10 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	keyChanged := !plannedValueEqual(data.Key, state.Key)
+	preferredChanged := !plannedValueEqual(data.Preferred, state.Preferred)
+	preferredToSync := data.Preferred
+
 	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
 	if !changes.requiresParentUpdate {
 		planValues := data.valuesFromTf(ctx, &resp.Diagnostics)
@@ -226,6 +251,36 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 			return
 		}
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if keyChanged && !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
+			if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
+				resp.Diagnostics.AddWarning(
+					"Unable to Clear Previous Preferred Virtual Tag Config",
+					"The virtual tag config key was updated, but its previous preferred tag setting could not be cleared. The new key will still be synchronized.\n\nConnection Error: "+err.Error(),
+				)
+			}
+		}
+		if preferredChanged || (keyChanged && !preferredToSync.IsNull() && !preferredToSync.IsUnknown() && preferredToSync.ValueBool()) {
+			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
+				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
+				return
+			}
+			data.Preferred = preferredToSync
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		}
+		return
+	}
+
+	if len(changes.creates) == 0 && len(changes.updates) == 0 && len(changes.deletes) == 0 {
+		if preferredChanged {
+			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
+				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
+				return
+			}
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
 
@@ -254,6 +309,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		}
 	}
 	fail := func(title string, err error) {
+		data.Preferred = state.Preferred
 		refreshState()
 		handleError(title, &resp.Diagnostics, err)
 	}
@@ -289,6 +345,13 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 			return
 		}
 	}
+
+	if preferredChanged {
+		if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
+			fail("Update Preferred Virtual Tag Config", err)
+			return
+		}
+	}
 	refreshState()
 }
 
@@ -297,6 +360,15 @@ func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.Delet
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if !state.Preferred.IsNull() && !state.Preferred.IsUnknown() && state.Preferred.ValueBool() {
+		if err := r.syncPreferred(ctx, state.Key.ValueString(), types.BoolValue(false)); err != nil {
+			resp.Diagnostics.AddWarning(
+				"Unable to Clear Preferred Virtual Tag Config",
+				"The virtual tag config will still be deleted, but its preferred tag setting could not be cleared.\n\nConnection Error: "+err.Error(),
+			)
+		}
 	}
 
 	params := tagsv2.NewDeleteVirtualTagConfigParams()
@@ -314,4 +386,20 @@ func (r *VirtualTagConfigResource) Configure(_ context.Context, req resource.Con
 	}
 
 	r.client = req.ProviderData.(*Client)
+}
+
+func (r VirtualTagConfigResource) syncPreferred(ctx context.Context, key string, preferred types.Bool) error {
+	if preferred.IsNull() || preferred.IsUnknown() {
+		return nil
+	}
+
+	// Use tag_keys rather than tag_key: UpdateTag's TagKeys field has no
+	// omitempty, so TagKey-only payloads serialize as "tag_keys": null and
+	// the API rejects them with exactly_one_of.
+	params := accounttagsv2.NewUpdateTagParams().WithContext(ctx).WithUpdateTag(&modelsv2.UpdateTag{
+		TagKeys:   []string{key},
+		Preferred: preferred.ValueBoolPointer(),
+	})
+	_, err := r.client.V2.Tags.UpdateTag(params, r.client.Auth)
+	return err
 }
