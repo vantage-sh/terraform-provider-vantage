@@ -802,6 +802,69 @@ func testAccVantageVirtualTagConfig_basicTf(id string, key string, overridable b
 	)
 }
 
+func TestAccVantageVirtualTagConfig_preferredWithValues(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(12, sdkacctest.CharSetAlphaNum)
+	resourceName := "vantage_virtual_tag_config.test"
+	values := `
+		values = [
+			{
+				name   = "hosting"
+				filter = "costs.provider = 'aws'"
+			},
+			{
+				name   = "webservices"
+				filter = "costs.provider = 'gcp'"
+			}
+		]`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageVirtualTagConfigPreferredWithValues(key, false, values),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "preferred", "false"),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "2"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.0.token"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: testAccVantageVirtualTagConfigPreferredWithValues(key, true, values),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "preferred", "true"),
+					resource.TestCheckResourceAttr(resourceName, "key", key),
+					resource.TestCheckResourceAttr(resourceName, "values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.name", "hosting"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.0.token"),
+					resource.TestCheckResourceAttr(resourceName, "values.1.name", "webservices"),
+					resource.TestCheckResourceAttrSet(resourceName, "values.1.token"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_by_token"),
+					resource.TestCheckResourceAttr(resourceName, "hidden", "false"),
+				),
+			},
+			{
+				Config:             testAccVantageVirtualTagConfigPreferredWithValues(key, true, values),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageVirtualTagConfigPreferredWithValues(key string, preferred bool, values string) string {
+	return fmt.Sprintf(`
+resource "vantage_virtual_tag_config" "test" {
+  key         = %[1]q
+  overridable = false
+  preferred   = %[2]t
+  %[3]s
+}
+`, key, preferred, values)
+}
+
 func TestAccVantageVirtualTagConfig_preferred(t *testing.T) {
 	key := sdkacctest.RandStringFromCharSet(12, sdkacctest.CharSetAlphaNum)
 	resourceName := "vantage_virtual_tag_config.test"

@@ -273,12 +273,27 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	refreshState := func() {
+		params := tagsv2.NewGetVirtualTagConfigParams().WithToken(data.Token.ValueString())
+		out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
+		if err != nil {
+			handleError("Refresh Virtual Tag Config Resource", &resp.Diagnostics, err)
+			return
+		}
+		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
+		if !resp.Diagnostics.HasError() {
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		}
+	}
+
 	if len(changes.creates) == 0 && len(changes.updates) == 0 && len(changes.deletes) == 0 {
 		if preferredChanged {
 			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
 				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
 				return
 			}
+			refreshState()
+			return
 		}
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
@@ -294,19 +309,6 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	}
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	refreshState := func() {
-		params := tagsv2.NewGetVirtualTagConfigParams().WithToken(data.Token.ValueString())
-		out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
-		if err != nil {
-			handleError("Refresh Virtual Tag Config Resource", &resp.Diagnostics, err)
-			return
-		}
-		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
-		if !resp.Diagnostics.HasError() {
-			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-		}
 	}
 	fail := func(title string, err error) {
 		data.Preferred = state.Preferred

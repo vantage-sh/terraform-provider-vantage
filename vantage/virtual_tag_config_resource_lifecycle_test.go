@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
@@ -351,6 +352,8 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 		switch {
 		case req.Method == http.MethodPut && req.URL.Path == "/v2/virtual_tag_configs/vtag_1":
 			writeVirtualTagConfigResponse(t, w, http.StatusOK, "key")
+		case req.Method == http.MethodGet && req.URL.Path == "/v2/virtual_tag_configs/vtag_1":
+			writeVirtualTagConfigResponse(t, w, http.StatusOK, "key")
 		case req.Method == http.MethodPut && req.URL.Path == "/v2/tags":
 			if err := json.NewDecoder(req.Body).Decode(&update); err != nil {
 				t.Errorf("decoding tag update: %v", err)
@@ -429,5 +432,162 @@ func TestVirtualTagConfigReadUsesVirtualTagConfigSettings(t *testing.T) {
 	}
 	if refreshed.Preferred.IsNull() || refreshed.Preferred.IsUnknown() || !refreshed.Preferred.ValueBool() {
 		t.Fatalf("refreshed preferred = %s, want true", refreshed.Preferred)
+	}
+}
+
+func virtualTagConfigTestValuesList(t *testing.T, ctx context.Context, unknownComputed bool) types.List {
+	t.Helper()
+	costMetricType := resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx)
+	dateRangesType := resource_virtual_tag_config.DateRangesValue{}.Type(ctx)
+	labelTransformsType := resource_virtual_tag_config.LabelTransformsValue{}.Type(ctx)
+	percentagesType := resource_virtual_tag_config.PercentagesValue{}.Type(ctx)
+
+	attrs := map[string]attr.Value{
+		"name":   types.StringValue("hosting"),
+		"filter": types.StringValue("costs.provider = 'aws'"),
+	}
+	if unknownComputed {
+		attrs["business_metric_token"] = types.StringUnknown()
+		attrs["cost_metric"] = types.ObjectUnknown(costMetricType)
+		attrs["date_ranges"] = types.ListUnknown(dateRangesType)
+		attrs["display_name"] = types.StringUnknown()
+		attrs["label_key"] = types.StringUnknown()
+		attrs["label_transforms"] = types.ListUnknown(labelTransformsType)
+		attrs["label_values"] = types.ListUnknown(types.StringType)
+		attrs["percentages"] = types.ListUnknown(percentagesType)
+		attrs["token"] = types.StringUnknown()
+	} else {
+		attrs["business_metric_token"] = types.StringNull()
+		attrs["cost_metric"] = types.ObjectNull(costMetricType)
+		attrs["date_ranges"] = types.ListValueMust(dateRangesType, []attr.Value{})
+		attrs["display_name"] = types.StringNull()
+		attrs["label_key"] = types.StringNull()
+		attrs["label_transforms"] = types.ListValueMust(labelTransformsType, []attr.Value{})
+		attrs["label_values"] = types.ListValueMust(types.StringType, []attr.Value{})
+		attrs["percentages"] = types.ListValueMust(percentagesType, []attr.Value{})
+		attrs["token"] = types.StringValue("vtag_val_1")
+	}
+
+	value := resource_virtual_tag_config.NewValuesValueMust(
+		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
+		attrs,
+	)
+	list, diags := types.ListValueFrom(ctx, resource_virtual_tag_config.ValuesValue{}.Type(ctx), []resource_virtual_tag_config.ValuesValue{value})
+	if diags.HasError() {
+		t.Fatalf("building values list: %v", diags)
+	}
+	return list
+}
+
+func TestVirtualTagConfigPreferredOnlyUpdateRefreshesUnknownComputed(t *testing.T) {
+	ctx := context.Background()
+	gotGet := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch {
+		case req.Method == http.MethodPut && req.URL.Path == "/v2/tags":
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(&modelsv2.Tags{Tags: []*modelsv2.Tag{}})
+		case req.Method == http.MethodGet && req.URL.Path == "/v2/virtual_tag_configs/vtag_1":
+			gotGet = true
+			name := "hosting"
+			filter := "costs.provider = 'aws'"
+			createdBy := "usr_1"
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(&modelsv2.VirtualTagConfig{
+				BackfillUntil:    "2026-01-01",
+				CollapsedTagKeys: []*modelsv2.VirtualTagConfigCollapsedTagKey{},
+				CreatedByToken:   &createdBy,
+				Hidden:           false,
+				Key:              "key",
+				Overridable:      false,
+				Preferred:        true,
+				Token:            "vtag_1",
+				Values: []*modelsv2.VirtualTagConfigValue{
+					{
+						Token:  "vtag_val_1",
+						Name:   &name,
+						Filter: &filter,
+					},
+				},
+			}); err != nil {
+				t.Errorf("encoding virtual tag config response: %v", err)
+			}
+		default:
+			http.NotFound(w, req)
+		}
+	}))
+	defer srv.Close()
+
+	schema := virtualTagConfigTestSchema(ctx)
+	planModel := virtualTagConfigTestModel(ctx, "key", true)
+	planModel.Id = types.StringUnknown()
+	planModel.Hidden = types.BoolUnknown()
+	planModel.CreatedByToken = types.StringUnknown()
+	planModel.CollapsedTagKeys = types.ListUnknown(resource_virtual_tag_config.CollapsedTagKeysValue{}.Type(ctx))
+	planModel.Values = virtualTagConfigTestValuesList(t, ctx, true)
+
+	plan := tfsdk.Plan{Schema: schema}
+	if diags := plan.Set(ctx, planModel); diags.HasError() {
+		t.Fatalf("setting test plan: %v", diags)
+	}
+
+	stateModel := virtualTagConfigTestModel(ctx, "key", false)
+	stateModel.Values = virtualTagConfigTestValuesList(t, ctx, false)
+	state := virtualTagConfigTestState(t, ctx, schema, stateModel)
+	resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
+
+	resource := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
+	resource.Update(
+		ctx,
+		frameworkresource.UpdateRequest{
+			Config: tfsdk.Config{Raw: plan.Raw, Schema: schema},
+			Plan:   plan,
+			State:  state,
+		},
+		&resp,
+	)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("unexpected update diagnostics: %v", resp.Diagnostics)
+	}
+	if !gotGet {
+		t.Fatal("expected GET /v2/virtual_tag_configs/vtag_1 after preferred-only update")
+	}
+
+	var updatedState virtualTagConfigModel
+	if diags := resp.State.Get(ctx, &updatedState); diags.HasError() {
+		t.Fatalf("reading updated state: %v", diags)
+	}
+	for _, field := range []struct {
+		name  string
+		value attr.Value
+	}{
+		{"id", updatedState.Id},
+		{"hidden", updatedState.Hidden},
+		{"created_by_token", updatedState.CreatedByToken},
+		{"collapsed_tag_keys", updatedState.CollapsedTagKeys},
+		{"preferred", updatedState.Preferred},
+		{"values", updatedState.Values},
+	} {
+		if field.value.IsUnknown() {
+			t.Errorf("%s is still unknown after apply", field.name)
+		}
+	}
+	if updatedState.Id.ValueString() != "vtag_1" {
+		t.Errorf("id = %q, want vtag_1", updatedState.Id.ValueString())
+	}
+	if updatedState.Preferred.IsNull() || !updatedState.Preferred.ValueBool() {
+		t.Errorf("preferred = %s, want true from GET payload", updatedState.Preferred)
+	}
+	if updatedState.Values.IsNull() || len(updatedState.Values.Elements()) != 1 {
+		t.Fatalf("values = %s, want 1 known element", updatedState.Values)
+	}
+	valueObj, ok := updatedState.Values.Elements()[0].(attr.Value)
+	if !ok {
+		t.Fatalf("values[0] is %T", updatedState.Values.Elements()[0])
+	}
+	if valueObj.IsUnknown() {
+		t.Fatal("values[0] is still unknown after apply")
 	}
 }
