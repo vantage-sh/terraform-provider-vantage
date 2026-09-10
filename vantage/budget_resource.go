@@ -63,6 +63,11 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		PlanModifiers: []planmodifier.Object{
 			objectplanmodifier.RequiresReplaceIfConfigured(),
 		},
+		CustomType: resource_budget.PeriodCadenceType{
+			ObjectType: types.ObjectType{
+				AttrTypes: resource_budget.PeriodCadenceValue{}.AttributeTypes(ctx),
+			},
+		},
 		Attributes: map[string]schema.Attribute{
 			"starts_at": schema.StringAttribute{
 				Optional:            true,
@@ -111,15 +116,7 @@ func validateBudgetConfig(config budgetModel, diagnostics *diag.Diagnostics) {
 		return
 	}
 
-	startsAt, ok := config.PeriodCadence.Attributes()["starts_at"].(types.String)
-	if !ok {
-		diagnostics.AddAttributeError(
-			path.Root("period_cadence").AtName("starts_at"),
-			"Invalid Budget Period Cadence",
-			"period_cadence.starts_at must be a string.",
-		)
-		return
-	}
+	startsAt := config.PeriodCadence.StartsAt
 	if !startsAt.IsUnknown() && (startsAt.IsNull() || startsAt.ValueString() == "") {
 		diagnostics.AddAttributeError(
 			path.Root("period_cadence").AtName("starts_at"),
