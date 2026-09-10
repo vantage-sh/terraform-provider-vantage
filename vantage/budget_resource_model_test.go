@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	resource_budget "github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
@@ -181,7 +180,7 @@ func TestBudgetPeriodCadenceUpdateOmitsDerivedCadence(t *testing.T) {
 	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
 		Name:          types.StringValue("Test Budget"),
 		PeriodCadence: cadence,
-	}, resource_budget.NewPeriodCadenceValueNull())
+	}, types.ObjectNull(periodCadenceAttrTypes))
 	if model.PeriodCadence != nil {
 		t.Fatalf("expected derived period cadence to be omitted from update, got %+v", model.PeriodCadence)
 	}
@@ -200,13 +199,14 @@ func TestBudgetPeriodCadenceResponseMapping(t *testing.T) {
 		t.Fatalf("mapping cadence payload: %v", diagnostics)
 	}
 
-	if got := value.StartsAt.ValueString(); got != startsAt {
+	attributes := value.Attributes()
+	if got := attributes["starts_at"].(types.String).ValueString(); got != startsAt {
 		t.Errorf("starts_at = %q, want %q", got, startsAt)
 	}
-	if got := value.IntervalCount.ValueInt64(); got != 2 {
+	if got := attributes["interval_count"].(types.Int64).ValueInt64(); got != 2 {
 		t.Errorf("interval_count = %d, want 2", got)
 	}
-	if got := value.IntervalUnit.ValueString(); got != "week" {
+	if got := attributes["interval_unit"].(types.String).ValueString(); got != "week" {
 		t.Errorf("interval_unit = %q, want %q", got, "week")
 	}
 }
@@ -235,7 +235,7 @@ func TestBudgetTypeAndUnitUpdateMapping(t *testing.T) {
 		Name: types.StringValue("Test Budget"),
 		Type: types.StringValue("usage"),
 		Unit: types.StringValue("GB-Hours"),
-	}, resource_budget.NewPeriodCadenceValueNull())
+	}, types.ObjectNull(periodCadenceAttrTypes))
 
 	if got := model.Type; got != "usage" {
 		t.Errorf("type = %q, want %q", got, "usage")
@@ -272,6 +272,6 @@ func TestBudgetTypeAndUnitResponseMapping(t *testing.T) {
 	}
 }
 
-func testBudgetPeriodCadenceValue(attributes map[string]attr.Value) (resource_budget.PeriodCadenceValue, diag.Diagnostics) {
-	return resource_budget.NewPeriodCadenceValue(periodCadenceAttrTypes, attributes)
+func testBudgetPeriodCadenceValue(attributes map[string]attr.Value) (types.Object, diag.Diagnostics) {
+	return types.ObjectValue(periodCadenceAttrTypes, attributes)
 }
