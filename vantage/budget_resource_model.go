@@ -201,7 +201,7 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 	if !src.Type.IsNull() && !src.Type.IsUnknown() {
 		dst.Type = src.Type.ValueString()
 	}
-	if !src.Unit.IsNull() && !src.Unit.IsUnknown() {
+	if dst.Type == "usage" && !src.Unit.IsNull() && !src.Unit.IsUnknown() {
 		dst.Unit = src.Unit.ValueStringPointer()
 	}
 

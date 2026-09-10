@@ -248,6 +248,23 @@ func TestBudgetTypeAndUnitUpdateMapping(t *testing.T) {
 	}
 }
 
+func TestBudgetTypeChangeToCostOmitsStaleUsageUnit(t *testing.T) {
+	t.Parallel()
+
+	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name: types.StringValue("Test Budget"),
+		Type: types.StringValue("cost"),
+		Unit: types.StringValue("GB-Hours"),
+	}, types.ObjectNull(periodCadenceAttrTypes))
+
+	if got := model.Type; got != "cost" {
+		t.Errorf("type = %q, want %q", got, "cost")
+	}
+	if model.Unit != nil {
+		t.Fatalf("expected stale usage unit to be omitted, got %q", *model.Unit)
+	}
+}
+
 func TestBudgetTypeAndUnitResponseMapping(t *testing.T) {
 	t.Parallel()
 
