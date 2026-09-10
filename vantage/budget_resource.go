@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
@@ -60,11 +59,6 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		Computed:            true,
 		Description:         "The interval cadence for standard Budget periods. Requires the flexible_budget_periods feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
 		MarkdownDescription: "The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
-		CustomType: resource_budget.PeriodCadenceType{
-			ObjectType: types.ObjectType{
-				AttrTypes: resource_budget.PeriodCadenceValue{}.AttributeTypes(ctx),
-			},
-		},
 		PlanModifiers: []planmodifier.Object{
 			objectplanmodifier.RequiresReplaceIfConfigured(),
 		},
