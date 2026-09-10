@@ -473,6 +473,8 @@ data_sources:
         - limit
         - links
         - page
+        - q
+        - workspace_token
   business_metrics:
     read:
       path: /business_metrics

@@ -60,6 +60,11 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		Computed:            true,
 		Description:         "The interval cadence for standard Budget periods. Requires the flexible_budget_periods feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
 		MarkdownDescription: "The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
+		CustomType: resource_budget.PeriodCadenceType{
+			ObjectType: types.ObjectType{
+				AttrTypes: resource_budget.PeriodCadenceValue{}.AttributeTypes(ctx),
+			},
+		},
 		PlanModifiers: []planmodifier.Object{
 			objectplanmodifier.RequiresReplaceIfConfigured(),
 		},
@@ -143,15 +148,7 @@ func validateBudgetConfig(config budgetModel, diagnostics *diag.Diagnostics) {
 		return
 	}
 
-	startsAt, ok := config.PeriodCadence.Attributes()["starts_at"].(types.String)
-	if !ok {
-		diagnostics.AddAttributeError(
-			path.Root("period_cadence").AtName("starts_at"),
-			"Invalid Budget Period Cadence",
-			"period_cadence.starts_at must be a string.",
-		)
-		return
-	}
+	startsAt := config.PeriodCadence.StartsAt
 	if !startsAt.IsUnknown() && (startsAt.IsNull() || startsAt.ValueString() == "") {
 		diagnostics.AddAttributeError(
 			path.Root("period_cadence").AtName("starts_at"),

@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	resource_budget "github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
@@ -19,24 +18,8 @@ import (
 // let the budget, budget performance and budget period models
 // defined in the resource_budget package be the common models for
 // both the data source and the resource
+type budgetModel resource_budget.BudgetModel
 type budgetPerformanceModel resource_budget.PerformanceValue
-type budgetModel struct {
-	BudgetAlertTokens types.List   `tfsdk:"budget_alert_tokens"`
-	ChildBudgetTokens types.List   `tfsdk:"child_budget_tokens"`
-	CostReportToken   types.String `tfsdk:"cost_report_token"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	CreatedByToken    types.String `tfsdk:"created_by_token"`
-	Id                types.String `tfsdk:"id"`
-	Name              types.String `tfsdk:"name"`
-	Performance       types.List   `tfsdk:"performance"`
-	PeriodCadence     types.Object `tfsdk:"period_cadence"`
-	Periods           types.List   `tfsdk:"periods"`
-	Token             types.String `tfsdk:"token"`
-	Type              types.String `tfsdk:"type"`
-	Unit              types.String `tfsdk:"unit"`
-	UserToken         types.String `tfsdk:"user_token"`
-	WorkspaceToken    types.String `tfsdk:"workspace_token"`
-}
 type budgetPeriodResourceModel struct {
 	Amount  types.Float64 `tfsdk:"amount"`
 	EndAt   types.String  `tfsdk:"end_at"`
@@ -55,15 +38,9 @@ var periodCadenceAttrTypes = map[string]attr.Type{
 	"interval_unit":  types.StringType,
 }
 
-type periodCadenceModel struct {
-	StartsAt      types.String `tfsdk:"starts_at"`
-	IntervalCount types.Int64  `tfsdk:"interval_count"`
-	IntervalUnit  types.String `tfsdk:"interval_unit"`
-}
-
-func periodCadenceFromPayload(src *modelsv2.PeriodCadence) (types.Object, diag.Diagnostics) {
+func periodCadenceFromPayload(src *modelsv2.PeriodCadence) (resource_budget.PeriodCadenceValue, diag.Diagnostics) {
 	if src == nil {
-		return types.ObjectNull(periodCadenceAttrTypes), nil
+		return resource_budget.NewPeriodCadenceValueNull(), nil
 	}
 
 	startsAt := types.StringValue("")
@@ -71,29 +48,23 @@ func periodCadenceFromPayload(src *modelsv2.PeriodCadence) (types.Object, diag.D
 		startsAt = types.StringValue(*src.StartsAt)
 	}
 
-	return types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	return resource_budget.NewPeriodCadenceValue(periodCadenceAttrTypes, map[string]attr.Value{
 		"starts_at":      startsAt,
 		"interval_count": types.Int64Value(int64(src.IntervalCount)),
 		"interval_unit":  types.StringValue(src.IntervalUnit),
 	})
 }
 
-func periodCadenceValues(ctx context.Context, diags *diag.Diagnostics, src types.Object) (*strfmt.Date, int32, string, bool) {
+func periodCadenceValues(_ context.Context, diags *diag.Diagnostics, src resource_budget.PeriodCadenceValue) (*strfmt.Date, int32, string, bool) {
 	if src.IsNull() || src.IsUnknown() {
 		return nil, 0, "", false
 	}
 
-	var cadence periodCadenceModel
-	if d := src.As(ctx, &cadence, basetypes.ObjectAsOptions{}); d.HasError() {
-		diags.Append(d...)
-		return nil, 0, "", false
-	}
-
 	var startsAt *strfmt.Date
-	if cadence.StartsAt.IsNull() || cadence.StartsAt.IsUnknown() || cadence.StartsAt.ValueString() == "" {
+	if src.StartsAt.IsNull() || src.StartsAt.IsUnknown() || src.StartsAt.ValueString() == "" {
 		startsAt = nil
 	} else {
-		parsedStartsAt, err := time.Parse("2006-01-02", cadence.StartsAt.ValueString())
+		parsedStartsAt, err := time.Parse("2006-01-02", src.StartsAt.ValueString())
 		if err != nil {
 			diags.AddError("parsing error", fmt.Sprintf("failed to parse period_cadence.starts_at: %s", err))
 			return nil, 0, "", false
@@ -106,13 +77,13 @@ func periodCadenceValues(ctx context.Context, diags *diag.Diagnostics, src types
 	// zero value is left out of the request rather than sent as a placeholder.
 	// A block that sets only some fields therefore still sends what it sets.
 	var intervalCount int32
-	if !cadence.IntervalCount.IsNull() && !cadence.IntervalCount.IsUnknown() {
-		intervalCount = int32(cadence.IntervalCount.ValueInt64())
+	if !src.IntervalCount.IsNull() && !src.IntervalCount.IsUnknown() {
+		intervalCount = int32(src.IntervalCount.ValueInt64())
 	}
 
 	var intervalUnit string
-	if !cadence.IntervalUnit.IsNull() && !cadence.IntervalUnit.IsUnknown() {
-		intervalUnit = cadence.IntervalUnit.ValueString()
+	if !src.IntervalUnit.IsNull() && !src.IntervalUnit.IsUnknown() {
+		intervalUnit = src.IntervalUnit.ValueString()
 	}
 
 	return startsAt, intervalCount, intervalUnit, true
@@ -192,7 +163,7 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 	return dst
 }
 
-func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel, configCadence types.Object) *modelsv2.UpdateBudget {
+func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel, configCadence resource_budget.PeriodCadenceValue) *modelsv2.UpdateBudget {
 	dst := &modelsv2.UpdateBudget{
 		Name:            src.Name.ValueString(),
 		CostReportToken: src.CostReportToken.ValueString(),

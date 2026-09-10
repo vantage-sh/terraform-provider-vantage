@@ -173,26 +173,12 @@ func BudgetsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
-			"q": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Search budgets by name.",
-				MarkdownDescription: "Search budgets by name.",
-			},
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The workspace token of the budgets to return.",
-				MarkdownDescription: "The workspace token of the budgets to return.",
-			},
 		},
 	}
 }
 
 type BudgetsModel struct {
-	Budgets        types.List   `tfsdk:"budgets"`
-	Q              types.String `tfsdk:"q"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
+	Budgets types.List `tfsdk:"budgets"`
 }
 
 var _ basetypes.ObjectTypable = BudgetsType{}
