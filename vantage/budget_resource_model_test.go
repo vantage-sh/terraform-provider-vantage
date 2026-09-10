@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
@@ -181,7 +180,7 @@ func TestBudgetPeriodCadenceUpdateOmitsDerivedCadence(t *testing.T) {
 	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
 		Name:          types.StringValue("Test Budget"),
 		PeriodCadence: cadence,
-	}, resource_budget.NewPeriodCadenceValueNull())
+	}, types.ObjectNull(periodCadenceAttrTypes))
 	if model.PeriodCadence != nil {
 		t.Fatalf("expected derived period cadence to be omitted from update, got %+v", model.PeriodCadence)
 	}
@@ -200,11 +199,7 @@ func TestBudgetPeriodCadenceResponseMapping(t *testing.T) {
 		t.Fatalf("mapping cadence payload: %v", diagnostics)
 	}
 
-	objectValue, diagnostics := value.ToObjectValue(context.Background())
-	if diagnostics.HasError() {
-		t.Fatalf("converting cadence payload: %v", diagnostics)
-	}
-	attributes := objectValue.Attributes()
+	attributes := value.Attributes()
 	if got := attributes["starts_at"].(types.String).ValueString(); got != startsAt {
 		t.Errorf("starts_at = %q, want %q", got, startsAt)
 	}
@@ -240,7 +235,7 @@ func TestBudgetTypeAndUnitUpdateMapping(t *testing.T) {
 		Name: types.StringValue("Test Budget"),
 		Type: types.StringValue("usage"),
 		Unit: types.StringValue("GB-Hours"),
-	}, resource_budget.NewPeriodCadenceValueNull())
+	}, types.ObjectNull(periodCadenceAttrTypes))
 
 	if got := model.Type; got != "usage" {
 		t.Errorf("type = %q, want %q", got, "usage")
@@ -260,7 +255,7 @@ func TestBudgetTypeChangeToCostOmitsStaleUsageUnit(t *testing.T) {
 		Name: types.StringValue("Test Budget"),
 		Type: types.StringValue("cost"),
 		Unit: types.StringValue("GB-Hours"),
-	}, resource_budget.NewPeriodCadenceValueNull())
+	}, types.ObjectNull(periodCadenceAttrTypes))
 
 	if got := model.Type; got != "cost" {
 		t.Errorf("type = %q, want %q", got, "cost")
@@ -294,16 +289,6 @@ func TestBudgetTypeAndUnitResponseMapping(t *testing.T) {
 	}
 }
 
-func testBudgetPeriodCadenceValue(attributes map[string]attr.Value) (resource_budget.PeriodCadenceValue, diag.Diagnostics) {
-	if _, ok := attributes["starts_at"]; !ok {
-		attributes["starts_at"] = types.StringUnknown()
-	}
-	if _, ok := attributes["interval_count"]; !ok {
-		attributes["interval_count"] = types.Int64Unknown()
-	}
-	if _, ok := attributes["interval_unit"]; !ok {
-		attributes["interval_unit"] = types.StringUnknown()
-	}
-
-	return resource_budget.NewPeriodCadenceValue(periodCadenceAttrTypes, attributes)
+func testBudgetPeriodCadenceValue(attributes map[string]attr.Value) (types.Object, diag.Diagnostics) {
+	return types.ObjectValue(periodCadenceAttrTypes, attributes)
 }

@@ -3,12 +3,17 @@ package vantage
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
@@ -50,6 +55,44 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
+	s.Attributes["period_cadence"] = schema.SingleNestedAttribute{
+		Optional:            true,
+		Computed:            true,
+		Description:         "The interval cadence for standard Budget periods. Requires the flexible_budget_periods feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
+		MarkdownDescription: "The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence.",
+		PlanModifiers: []planmodifier.Object{
+			objectplanmodifier.RequiresReplaceIfConfigured(),
+		},
+		Attributes: map[string]schema.Attribute{
+			"starts_at": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The required anchor date for configured budget period intervals. ISO 8601 date (YYYY-MM-DD).",
+				MarkdownDescription: "The required anchor date for configured budget period intervals. ISO 8601 date (`YYYY-MM-DD`).",
+			},
+			"interval_count": schema.Int64Attribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The number of interval units per budget period.",
+				MarkdownDescription: "The number of interval units per budget period.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+			"interval_unit": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The unit for budget period intervals. One of: day, week, month, year.",
+				MarkdownDescription: "The unit for budget period intervals. One of: day, week, month, year.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("day", "week", "month", "year"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
+	}
 	typeAttr := attrs["type"].(schema.StringAttribute)
 	typeAttr.PlanModifiers = append(typeAttr.PlanModifiers, stringplanmodifier.UseStateForUnknown())
 	s.Attributes["type"] = typeAttr
@@ -86,7 +129,15 @@ func validateBudgetConfig(config budgetModel, diagnostics *diag.Diagnostics) {
 		return
 	}
 
-	startsAt := config.PeriodCadence.StartsAt
+	startsAt, ok := config.PeriodCadence.Attributes()["starts_at"].(types.String)
+	if !ok {
+		diagnostics.AddAttributeError(
+			path.Root("period_cadence").AtName("starts_at"),
+			"Invalid Budget Period Cadence",
+			"period_cadence.starts_at must be a string.",
+		)
+		return
+	}
 	if !startsAt.IsUnknown() && (startsAt.IsNull() || startsAt.ValueString() == "") {
 		diagnostics.AddAttributeError(
 			path.Root("period_cadence").AtName("starts_at"),

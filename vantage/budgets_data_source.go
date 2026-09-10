@@ -5,9 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_budgets"
-	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_budget"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
 )
 
@@ -47,11 +45,6 @@ func (d *budgetsDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 		Computed:            true,
 		Description:         "The interval cadence for budget periods.",
 		MarkdownDescription: "The interval cadence for budget periods.",
-		CustomType: resource_budget.PeriodCadenceType{
-			ObjectType: types.ObjectType{
-				AttrTypes: resource_budget.PeriodCadenceValue{}.AttributeTypes(ctx),
-			},
-		},
 		Attributes: map[string]schema.Attribute{
 			"starts_at": schema.StringAttribute{
 				Computed:            true,
@@ -70,8 +63,8 @@ func (d *budgetsDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			},
 		},
 	}
-	// Use the resource cadence type so the shared budgetModel can round-trip
-	// through State.Set without AttributeTypes drift.
+	// Drop the generated CustomType so the shared budgetModel (with period_cadence)
+	// can round-trip through State.Set without AttributeTypes drift.
 	budgetsAttr.NestedObject = schema.NestedAttributeObject{
 		Attributes: attrs,
 	}
