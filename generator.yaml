@@ -474,6 +474,7 @@ data_sources:
         - limit
         - links
         - page
+        - budgets.period_cadence
         - period_cadence
         - q
         - workspace_token
