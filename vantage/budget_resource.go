@@ -23,6 +23,7 @@ var (
 	_ resource.Resource                   = (*budgetResource)(nil)
 	_ resource.ResourceWithConfigure      = (*budgetResource)(nil)
 	_ resource.ResourceWithImportState    = (*budgetResource)(nil)
+	_ resource.ResourceWithModifyPlan     = (*budgetResource)(nil)
 	_ resource.ResourceWithValidateConfig = (*budgetResource)(nil)
 )
 
@@ -101,6 +102,31 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	unitAttr.PlanModifiers = append(unitAttr.PlanModifiers, stringplanmodifier.UseStateForUnknown())
 	s.Attributes["unit"] = unitAttr
 	resp.Schema = s
+}
+
+func (r *budgetResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	var plan, config *budgetModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan == nil || config == nil {
+		return
+	}
+
+	if shouldClearBudgetUnit(config) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("unit"), types.StringNull())...)
+	}
+}
+
+func shouldClearBudgetUnit(config *budgetModel) bool {
+	return config != nil &&
+		config.Unit.IsNull() &&
+		!config.Type.IsNull() &&
+		!config.Type.IsUnknown() &&
+		config.Type.ValueString() != "usage"
 }
 
 func (r *budgetResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {

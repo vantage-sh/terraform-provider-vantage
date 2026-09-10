@@ -128,6 +128,39 @@ func TestBudgetConfigRejectsUnitWithoutUsageType(t *testing.T) {
 	}
 }
 
+func TestShouldClearBudgetUnitForExplicitNonUsageType(t *testing.T) {
+	t.Parallel()
+
+	if !shouldClearBudgetUnit(&budgetModel{
+		Type: types.StringValue("cost"),
+		Unit: types.StringNull(),
+	}) {
+		t.Fatal("expected omitted unit to be cleared when type is explicitly non-usage")
+	}
+}
+
+func TestShouldNotClearBudgetUnitForUsageType(t *testing.T) {
+	t.Parallel()
+
+	if shouldClearBudgetUnit(&budgetModel{
+		Type: types.StringValue("usage"),
+		Unit: types.StringNull(),
+	}) {
+		t.Fatal("expected usage budgets to keep the existing planned unit behavior")
+	}
+}
+
+func TestShouldNotClearBudgetUnitWhenTypeIsUnconfigured(t *testing.T) {
+	t.Parallel()
+
+	if shouldClearBudgetUnit(&budgetModel{
+		Type: types.StringNull(),
+		Unit: types.StringNull(),
+	}) {
+		t.Fatal("expected unconfigured type to leave the planned unit unchanged")
+	}
+}
+
 // A block that sets only some fields must still send them. The interval fields
 // carry omitempty, so leaving them at zero omits them from the request instead
 // of overwriting the cadence with placeholders.
