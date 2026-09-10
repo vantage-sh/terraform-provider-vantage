@@ -101,12 +101,18 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		Validators: []validator.String{
 			stringvalidator.OneOf("cost", "usage"),
 		},
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	}
 	s.Attributes["unit"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
 		Description:         "The usage unit for usage Budgets. Only valid when type is usage.",
 		MarkdownDescription: "The usage unit for usage Budgets. Only valid when `type` is `usage`.",
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	}
 	resp.Schema = s
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_budgets"
 	budgetsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/budgets"
 )
@@ -21,7 +22,9 @@ type budgetsDataSource struct {
 }
 
 type budgetsDataSourceModel struct {
-	Budgets []budgetModel `tfsdk:"budgets"`
+	Budgets        []budgetModel `tfsdk:"budgets"`
+	Q              types.String  `tfsdk:"q"`
+	WorkspaceToken types.String  `tfsdk:"workspace_token"`
 }
 
 func (d *budgetsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -82,7 +85,7 @@ func (d *budgetsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	params := budgetsv2.NewGetBudgetsParams()
+	params := getBudgetsParams(data)
 	out, err := d.client.V2.Budgets.GetBudgets(params, d.client.Auth)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -106,4 +109,15 @@ func (d *budgetsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func getBudgetsParams(data budgetsDataSourceModel) *budgetsv2.GetBudgetsParams {
+	params := budgetsv2.NewGetBudgetsParams()
+	if !data.Q.IsNull() && !data.Q.IsUnknown() {
+		params = params.WithQ(data.Q.ValueStringPointer())
+	}
+	if !data.WorkspaceToken.IsNull() && !data.WorkspaceToken.IsUnknown() {
+		params = params.WithWorkspaceToken(data.WorkspaceToken.ValueStringPointer())
+	}
+	return params
 }
