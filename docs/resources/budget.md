@@ -44,7 +44,7 @@ resource "vantage_budget" "demo_budget" {
 
 - `child_budget_tokens` (List of String) The tokens of any child Budgets when creating a hierarchical Budget. Child budgets must share the same current period dates.
 - `cost_report_token` (String) The CostReport token. Ignored for hierarchical Budgets.
-- `period_cadence` (Attributes) The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence. (see [below for nested schema](#nestedatt--period_cadence))
+- `period_cadence` (Attributes) The interval cadence for budget periods. (see [below for nested schema](#nestedatt--period_cadence))
 - `periods` (Attributes List) The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. Ignored for hierarchical Budgets. (see [below for nested schema](#nestedatt--periods))
 - `type` (String) The type of Budget. One of: cost, usage.
 - `unit` (String) The usage unit for usage Budgets.
@@ -63,11 +63,14 @@ resource "vantage_budget" "demo_budget" {
 <a id="nestedatt--period_cadence"></a>
 ### Nested Schema for `period_cadence`
 
+Required:
+
+- `starts_at` (String) The anchor date for budget period intervals. Send null to clear.
+
 Optional:
 
 - `interval_count` (Number) The number of interval units per budget period.
 - `interval_unit` (String) The unit for budget period intervals. One of: day, week, month, year.
-- `starts_at` (String) The required anchor date for configured budget period intervals. ISO 8601 date (`YYYY-MM-DD`).
 
 
 <a id="nestedatt--periods"></a>
