@@ -144,6 +144,16 @@ func BudgetsDataSourceSchema(ctx context.Context) schema.Schema {
 						"token": schema.StringAttribute{
 							Computed: true,
 						},
+						"type": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The type of Budget. One of: cost, usage.",
+							MarkdownDescription: "The type of Budget. One of: cost, usage.",
+						},
+						"unit": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The usage unit for usage Budgets.",
+							MarkdownDescription: "The usage unit for usage Budgets.",
+						},
 						"user_token": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The token for the User who created this Budget.",
@@ -408,6 +418,42 @@ func (t BudgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
 	}
 
+	typeAttribute, ok := attributes["type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`type is missing from object`)
+
+		return nil, diags
+	}
+
+	typeVal, ok := typeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`type expected to be basetypes.StringValue, was: %T`, typeAttribute))
+	}
+
+	unitAttribute, ok := attributes["unit"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`unit is missing from object`)
+
+		return nil, diags
+	}
+
+	unitVal, ok := unitAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`unit expected to be basetypes.StringValue, was: %T`, unitAttribute))
+	}
+
 	userTokenAttribute, ok := attributes["user_token"]
 
 	if !ok {
@@ -460,6 +506,8 @@ func (t BudgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 		PeriodCadence:     periodCadenceVal,
 		Periods:           periodsVal,
 		Token:             tokenVal,
+		BudgetsType:       typeVal,
+		Unit:              unitVal,
 		UserToken:         userTokenVal,
 		WorkspaceToken:    workspaceTokenVal,
 		state:             attr.ValueStateKnown,
@@ -727,6 +775,42 @@ func NewBudgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
 	}
 
+	typeAttribute, ok := attributes["type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`type is missing from object`)
+
+		return NewBudgetsValueUnknown(), diags
+	}
+
+	typeVal, ok := typeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`type expected to be basetypes.StringValue, was: %T`, typeAttribute))
+	}
+
+	unitAttribute, ok := attributes["unit"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`unit is missing from object`)
+
+		return NewBudgetsValueUnknown(), diags
+	}
+
+	unitVal, ok := unitAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`unit expected to be basetypes.StringValue, was: %T`, unitAttribute))
+	}
+
 	userTokenAttribute, ok := attributes["user_token"]
 
 	if !ok {
@@ -779,6 +863,8 @@ func NewBudgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 		PeriodCadence:     periodCadenceVal,
 		Periods:           periodsVal,
 		Token:             tokenVal,
+		BudgetsType:       typeVal,
+		Unit:              unitVal,
 		UserToken:         userTokenVal,
 		WorkspaceToken:    workspaceTokenVal,
 		state:             attr.ValueStateKnown,
@@ -864,13 +950,15 @@ type BudgetsValue struct {
 	PeriodCadence     basetypes.ObjectValue `tfsdk:"period_cadence"`
 	Periods           basetypes.ListValue   `tfsdk:"periods"`
 	Token             basetypes.StringValue `tfsdk:"token"`
+	BudgetsType       basetypes.StringValue `tfsdk:"type"`
+	Unit              basetypes.StringValue `tfsdk:"unit"`
 	UserToken         basetypes.StringValue `tfsdk:"user_token"`
 	WorkspaceToken    basetypes.StringValue `tfsdk:"workspace_token"`
 	state             attr.ValueState
 }
 
 func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 13)
+	attrTypes := make(map[string]tftypes.Type, 15)
 
 	var val tftypes.Value
 	var err error
@@ -896,6 +984,8 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		ElemType: PeriodsValue{}.Type(ctx),
 	}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["unit"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["user_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["workspace_token"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -903,7 +993,7 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 13)
+		vals := make(map[string]tftypes.Value, 15)
 
 		val, err = v.BudgetAlertTokens.ToTerraformValue(ctx)
 
@@ -992,6 +1082,22 @@ func (v BudgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		}
 
 		vals["token"] = val
+
+		val, err = v.BudgetsType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["type"] = val
+
+		val, err = v.Unit.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["unit"] = val
 
 		val, err = v.UserToken.ToTerraformValue(ctx)
 
@@ -1152,6 +1258,8 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 				ElemType: PeriodsValue{}.Type(ctx),
 			},
 			"token":           basetypes.StringType{},
+			"type":            basetypes.StringType{},
+			"unit":            basetypes.StringType{},
 			"user_token":      basetypes.StringType{},
 			"workspace_token": basetypes.StringType{},
 		}), diags
@@ -1192,6 +1300,8 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 				ElemType: PeriodsValue{}.Type(ctx),
 			},
 			"token":           basetypes.StringType{},
+			"type":            basetypes.StringType{},
+			"unit":            basetypes.StringType{},
 			"user_token":      basetypes.StringType{},
 			"workspace_token": basetypes.StringType{},
 		}), diags
@@ -1219,6 +1329,8 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			ElemType: PeriodsValue{}.Type(ctx),
 		},
 		"token":           basetypes.StringType{},
+		"type":            basetypes.StringType{},
+		"unit":            basetypes.StringType{},
 		"user_token":      basetypes.StringType{},
 		"workspace_token": basetypes.StringType{},
 	}
@@ -1245,6 +1357,8 @@ func (v BudgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"period_cadence":      periodCadence,
 			"periods":             periods,
 			"token":               v.Token,
+			"type":                v.BudgetsType,
+			"unit":                v.Unit,
 			"user_token":          v.UserToken,
 			"workspace_token":     v.WorkspaceToken,
 		})
@@ -1311,6 +1425,14 @@ func (v BudgetsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.BudgetsType.Equal(other.BudgetsType) {
+		return false
+	}
+
+	if !v.Unit.Equal(other.Unit) {
+		return false
+	}
+
 	if !v.UserToken.Equal(other.UserToken) {
 		return false
 	}
@@ -1353,6 +1475,8 @@ func (v BudgetsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 			ElemType: PeriodsValue{}.Type(ctx),
 		},
 		"token":           basetypes.StringType{},
+		"type":            basetypes.StringType{},
+		"unit":            basetypes.StringType{},
 		"user_token":      basetypes.StringType{},
 		"workspace_token": basetypes.StringType{},
 	}

@@ -162,6 +162,24 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the budget",
 				MarkdownDescription: "The token of the budget",
 			},
+			"type": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The type of Budget. One of: cost, usage.",
+				MarkdownDescription: "The type of Budget. One of: cost, usage.",
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						"cost",
+						"usage",
+					),
+				},
+			},
+			"unit": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The usage unit for usage Budgets.",
+				MarkdownDescription: "The usage unit for usage Budgets.",
+			},
 			"user_token": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The token for the User who created this Budget.",
@@ -189,6 +207,8 @@ type BudgetModel struct {
 	PeriodCadence     PeriodCadenceValue `tfsdk:"period_cadence"`
 	Periods           types.List         `tfsdk:"periods"`
 	Token             types.String       `tfsdk:"token"`
+	Type              types.String       `tfsdk:"type"`
+	Unit              types.String       `tfsdk:"unit"`
 	UserToken         types.String       `tfsdk:"user_token"`
 	WorkspaceToken    types.String       `tfsdk:"workspace_token"`
 }

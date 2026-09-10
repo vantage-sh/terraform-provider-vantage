@@ -115,6 +115,20 @@ func TestBudgetConfigDefersUnknownCadenceStart(t *testing.T) {
 	}
 }
 
+func TestBudgetConfigRejectsUnitWithoutUsageType(t *testing.T) {
+	t.Parallel()
+
+	var diagnostics diag.Diagnostics
+	validateBudgetConfig(budgetModel{
+		Type: types.StringValue("cost"),
+		Unit: types.StringValue("GB-Hours"),
+	}, &diagnostics)
+
+	if !diagnostics.HasError() {
+		t.Fatal("expected unit with cost budget type to fail validation")
+	}
+}
+
 // A block that sets only some fields must still send them. The interval fields
 // carry omitempty, so leaving them at zero omits them from the request instead
 // of overwriting the cadence with placeholders.
@@ -194,6 +208,67 @@ func TestBudgetPeriodCadenceResponseMapping(t *testing.T) {
 	}
 	if got := value.IntervalUnit.ValueString(); got != "week" {
 		t.Errorf("interval_unit = %q, want %q", got, "week")
+	}
+}
+
+func TestBudgetTypeAndUnitCreateMapping(t *testing.T) {
+	t.Parallel()
+
+	model := toCreateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name: types.StringValue("Test Budget"),
+		Type: types.StringValue("usage"),
+		Unit: types.StringValue("GB-Hours"),
+	})
+
+	if got := model.Type; got != "usage" {
+		t.Errorf("type = %q, want %q", got, "usage")
+	}
+	if got := model.Unit; got != "GB-Hours" {
+		t.Errorf("unit = %q, want %q", got, "GB-Hours")
+	}
+}
+
+func TestBudgetTypeAndUnitUpdateMapping(t *testing.T) {
+	t.Parallel()
+
+	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name: types.StringValue("Test Budget"),
+		Type: types.StringValue("usage"),
+		Unit: types.StringValue("GB-Hours"),
+	}, resource_budget.NewPeriodCadenceValueNull())
+
+	if got := model.Type; got != "usage" {
+		t.Errorf("type = %q, want %q", got, "usage")
+	}
+	if model.Unit == nil {
+		t.Fatal("expected unit to be sent")
+	}
+	if got := *model.Unit; got != "GB-Hours" {
+		t.Errorf("unit = %q, want %q", got, "GB-Hours")
+	}
+}
+
+func TestBudgetTypeAndUnitResponseMapping(t *testing.T) {
+	t.Parallel()
+
+	unit := "GB-Hours"
+	var model budgetModel
+	diagnostics := applyBudgetPayload(context.Background(), false, &modelsv2.Budget{
+		Token:          "bdgt_test",
+		CreatedAt:      "2026-01-01T00:00:00Z",
+		WorkspaceToken: "wrkspc_test",
+		Type:           "usage",
+		Unit:           &unit,
+	}, &model)
+
+	if diagnostics.HasError() {
+		t.Fatalf("mapping budget payload: %v", diagnostics)
+	}
+	if got := model.Type.ValueString(); got != "usage" {
+		t.Errorf("type = %q, want %q", got, "usage")
+	}
+	if got := model.Unit.ValueString(); got != unit {
+		t.Errorf("unit = %q, want %q", got, unit)
 	}
 }
 

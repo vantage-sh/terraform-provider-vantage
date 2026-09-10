@@ -40,6 +40,8 @@ Read-Only:
 - `period_cadence` (Attributes) The interval cadence for budget periods. (see [below for nested schema](#nestedatt--budgets--period_cadence))
 - `periods` (Attributes List) The budget periods associated with the Budget. (see [below for nested schema](#nestedatt--budgets--periods))
 - `token` (String)
+- `type` (String) The type of Budget. One of: cost, usage.
+- `unit` (String) The usage unit for usage Budgets.
 - `user_token` (String) The token for the User who created this Budget.
 - `workspace_token` (String) The token for the Workspace the Budget is a part of.
 

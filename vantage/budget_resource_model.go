@@ -97,6 +97,13 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		WorkspaceToken:  src.WorkspaceToken.ValueString(),
 	}
 
+	if !src.Type.IsNull() && !src.Type.IsUnknown() {
+		dst.Type = src.Type.ValueString()
+	}
+	if !src.Unit.IsNull() && !src.Unit.IsUnknown() {
+		dst.Unit = src.Unit.ValueString()
+	}
+
 	if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
 		childBudgetTokens := []string{}
 		src.ChildBudgetTokens.ElementsAs(ctx, &childBudgetTokens, false)
@@ -160,6 +167,13 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 	dst := &modelsv2.UpdateBudget{
 		Name:            src.Name.ValueString(),
 		CostReportToken: src.CostReportToken.ValueString(),
+	}
+
+	if !src.Type.IsNull() && !src.Type.IsUnknown() {
+		dst.Type = src.Type.ValueString()
+	}
+	if !src.Unit.IsNull() && !src.Unit.IsUnknown() {
+		dst.Unit = src.Unit.ValueStringPointer()
 	}
 
 	if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
@@ -236,6 +250,8 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 	dst.UserToken = types.StringPointerValue(src.UserToken)
 	dst.WorkspaceToken = types.StringValue(src.WorkspaceToken)
 	dst.CostReportToken = types.StringPointerValue(src.CostReportToken)
+	dst.Type = types.StringValue(src.Type)
+	dst.Unit = types.StringPointerValue(src.Unit)
 
 	periodCadence, d := periodCadenceFromPayload(src.PeriodCadence)
 	if d.HasError() {

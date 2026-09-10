@@ -98,6 +98,21 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 		},
 	}
+	s.Attributes["type"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		Description:         "The type of Budget. One of: cost, usage. Defaults to cost when omitted.",
+		MarkdownDescription: "The type of Budget. One of: `cost`, `usage`. Defaults to `cost` when omitted.",
+		Validators: []validator.String{
+			stringvalidator.OneOf("cost", "usage"),
+		},
+	}
+	s.Attributes["unit"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		Description:         "The usage unit for usage Budgets. Only valid when type is usage.",
+		MarkdownDescription: "The usage unit for usage Budgets. Only valid when `type` is `usage`.",
+	}
 	resp.Schema = s
 }
 
@@ -112,6 +127,17 @@ func (r *budgetResource) ValidateConfig(ctx context.Context, req resource.Valida
 }
 
 func validateBudgetConfig(config budgetModel, diagnostics *diag.Diagnostics) {
+	if !config.Unit.IsNull() &&
+		!config.Unit.IsUnknown() &&
+		config.Unit.ValueString() != "" &&
+		(config.Type.IsNull() || (!config.Type.IsUnknown() && config.Type.ValueString() != "usage")) {
+		diagnostics.AddAttributeError(
+			path.Root("unit"),
+			"Usage Unit Requires Usage Budget Type",
+			"unit can only be configured when type is set to usage.",
+		)
+	}
+
 	if config.PeriodCadence.IsNull() || config.PeriodCadence.IsUnknown() {
 		return
 	}
