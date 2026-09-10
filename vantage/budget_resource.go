@@ -98,27 +98,13 @@ func (r *budgetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 		},
 	}
-	s.Attributes["type"] = schema.StringAttribute{
-		Optional:            true,
-		Computed:            true,
-		Description:         "The type of Budget. One of: cost, usage. Defaults to cost when omitted.",
-		MarkdownDescription: "The type of Budget. One of: `cost`, `usage`. Defaults to `cost` when omitted.",
-		Validators: []validator.String{
-			stringvalidator.OneOf("cost", "usage"),
-		},
-		PlanModifiers: []planmodifier.String{
-			stringplanmodifier.UseStateForUnknown(),
-		},
-	}
-	s.Attributes["unit"] = schema.StringAttribute{
-		Optional:            true,
-		Computed:            true,
-		Description:         "The usage unit for usage Budgets. Only valid when type is usage.",
-		MarkdownDescription: "The usage unit for usage Budgets. Only valid when `type` is `usage`.",
-		PlanModifiers: []planmodifier.String{
-			stringplanmodifier.UseStateForUnknown(),
-		},
-	}
+	typeAttr := attrs["type"].(schema.StringAttribute)
+	typeAttr.PlanModifiers = append(typeAttr.PlanModifiers, stringplanmodifier.UseStateForUnknown())
+	s.Attributes["type"] = typeAttr
+
+	unitAttr := attrs["unit"].(schema.StringAttribute)
+	unitAttr.PlanModifiers = append(unitAttr.PlanModifiers, stringplanmodifier.UseStateForUnknown())
+	s.Attributes["unit"] = unitAttr
 	resp.Schema = s
 }
 

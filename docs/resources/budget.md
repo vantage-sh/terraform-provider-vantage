@@ -46,8 +46,8 @@ resource "vantage_budget" "demo_budget" {
 - `cost_report_token` (String) The CostReport token. Ignored for hierarchical Budgets.
 - `period_cadence` (Attributes) The interval cadence for standard Budget periods. Requires the `flexible_budget_periods` feature. Changing a configured cadence replaces the Budget; removing the block stops managing it but does not clear the API cadence. (see [below for nested schema](#nestedatt--period_cadence))
 - `periods` (Attributes List) The periods for the Budget. The start_at and end_at must be iso8601 formatted e.g. YYYY-MM-DD. Ignored for hierarchical Budgets. (see [below for nested schema](#nestedatt--periods))
-- `type` (String) The type of Budget. One of: `cost`, `usage`. Defaults to `cost` when omitted.
-- `unit` (String) The usage unit for usage Budgets. Only valid when `type` is `usage`.
+- `type` (String) The type of Budget. One of: cost, usage.
+- `unit` (String) The usage unit for usage Budgets.
 - `workspace_token` (String) The token of the Workspace to add the Budget to.
 
 ### Read-Only
