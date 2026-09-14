@@ -15,7 +15,7 @@ import (
 func TestBudgetPeriodCadenceCreateMapping(t *testing.T) {
 	t.Parallel()
 
-	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	cadence, diagnostics := testBudgetPeriodCadenceValue(map[string]attr.Value{
 		"starts_at":      types.StringValue("2024-01-22"),
 		"interval_count": types.Int64Value(2),
 		"interval_unit":  types.StringValue("week"),
@@ -46,7 +46,7 @@ func TestBudgetPeriodCadenceCreateMapping(t *testing.T) {
 func TestBudgetConfigRequiresCadenceStart(t *testing.T) {
 	t.Parallel()
 
-	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	cadence, diagnostics := testBudgetPeriodCadenceValue(map[string]attr.Value{
 		"starts_at":      types.StringNull(),
 		"interval_count": types.Int64Value(1),
 		"interval_unit":  types.StringValue("month"),
@@ -67,7 +67,7 @@ func TestBudgetConfigRequiresCadenceStart(t *testing.T) {
 func TestBudgetConfigRejectsCadenceForCompoundBudget(t *testing.T) {
 	t.Parallel()
 
-	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	cadence, diagnostics := testBudgetPeriodCadenceValue(map[string]attr.Value{
 		"starts_at":      types.StringValue("2024-01-22"),
 		"interval_count": types.Int64Value(1),
 		"interval_unit":  types.StringValue("month"),
@@ -98,7 +98,7 @@ func TestBudgetConfigRejectsCadenceForCompoundBudget(t *testing.T) {
 func TestBudgetConfigDefersUnknownCadenceStart(t *testing.T) {
 	t.Parallel()
 
-	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	cadence, diagnostics := testBudgetPeriodCadenceValue(map[string]attr.Value{
 		"starts_at":      types.StringUnknown(),
 		"interval_count": types.Int64Value(1),
 		"interval_unit":  types.StringValue("month"),
@@ -114,13 +114,60 @@ func TestBudgetConfigDefersUnknownCadenceStart(t *testing.T) {
 	}
 }
 
+func TestBudgetConfigRejectsUnitWithoutUsageType(t *testing.T) {
+	t.Parallel()
+
+	var diagnostics diag.Diagnostics
+	validateBudgetConfig(budgetModel{
+		Type: types.StringValue("cost"),
+		Unit: types.StringValue("GB-Hours"),
+	}, &diagnostics)
+
+	if !diagnostics.HasError() {
+		t.Fatal("expected unit with cost budget type to fail validation")
+	}
+}
+
+func TestShouldClearBudgetUnitForExplicitNonUsageType(t *testing.T) {
+	t.Parallel()
+
+	if !shouldClearBudgetUnit(&budgetModel{
+		Type: types.StringValue("cost"),
+		Unit: types.StringNull(),
+	}) {
+		t.Fatal("expected omitted unit to be cleared when type is explicitly non-usage")
+	}
+}
+
+func TestShouldNotClearBudgetUnitForUsageType(t *testing.T) {
+	t.Parallel()
+
+	if shouldClearBudgetUnit(&budgetModel{
+		Type: types.StringValue("usage"),
+		Unit: types.StringNull(),
+	}) {
+		t.Fatal("expected usage budgets to keep the existing planned unit behavior")
+	}
+}
+
+func TestShouldNotClearBudgetUnitWhenTypeIsUnconfigured(t *testing.T) {
+	t.Parallel()
+
+	if shouldClearBudgetUnit(&budgetModel{
+		Type: types.StringNull(),
+		Unit: types.StringNull(),
+	}) {
+		t.Fatal("expected unconfigured type to leave the planned unit unchanged")
+	}
+}
+
 // A block that sets only some fields must still send them. The interval fields
 // carry omitempty, so leaving them at zero omits them from the request instead
 // of overwriting the cadence with placeholders.
 func TestBudgetPeriodCadenceSendsPartialConfig(t *testing.T) {
 	t.Parallel()
 
-	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	cadence, diagnostics := testBudgetPeriodCadenceValue(map[string]attr.Value{
 		"starts_at":      types.StringValue("2024-01-22"),
 		"interval_count": types.Int64Unknown(),
 		"interval_unit":  types.StringUnknown(),
@@ -154,7 +201,7 @@ func TestBudgetPeriodCadenceSendsPartialConfig(t *testing.T) {
 func TestBudgetPeriodCadenceUpdateOmitsDerivedCadence(t *testing.T) {
 	t.Parallel()
 
-	cadence, diagnostics := types.ObjectValue(periodCadenceAttrTypes, map[string]attr.Value{
+	cadence, diagnostics := testBudgetPeriodCadenceValue(map[string]attr.Value{
 		"starts_at":      types.StringValue("2024-01-01"),
 		"interval_count": types.Int64Value(1),
 		"interval_unit":  types.StringValue("month"),
@@ -195,4 +242,86 @@ func TestBudgetPeriodCadenceResponseMapping(t *testing.T) {
 	if got := attributes["interval_unit"].(types.String).ValueString(); got != "week" {
 		t.Errorf("interval_unit = %q, want %q", got, "week")
 	}
+}
+
+func TestBudgetTypeAndUnitCreateMapping(t *testing.T) {
+	t.Parallel()
+
+	model := toCreateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name: types.StringValue("Test Budget"),
+		Type: types.StringValue("usage"),
+		Unit: types.StringValue("GB-Hours"),
+	})
+
+	if got := model.Type; got != "usage" {
+		t.Errorf("type = %q, want %q", got, "usage")
+	}
+	if got := model.Unit; got != "GB-Hours" {
+		t.Errorf("unit = %q, want %q", got, "GB-Hours")
+	}
+}
+
+func TestBudgetTypeAndUnitUpdateMapping(t *testing.T) {
+	t.Parallel()
+
+	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name: types.StringValue("Test Budget"),
+		Type: types.StringValue("usage"),
+		Unit: types.StringValue("GB-Hours"),
+	}, types.ObjectNull(periodCadenceAttrTypes))
+
+	if got := model.Type; got != "usage" {
+		t.Errorf("type = %q, want %q", got, "usage")
+	}
+	if model.Unit == nil {
+		t.Fatal("expected unit to be sent")
+	}
+	if got := *model.Unit; got != "GB-Hours" {
+		t.Errorf("unit = %q, want %q", got, "GB-Hours")
+	}
+}
+
+func TestBudgetTypeChangeToCostOmitsStaleUsageUnit(t *testing.T) {
+	t.Parallel()
+
+	model := toUpdateModel(context.Background(), &diag.Diagnostics{}, budgetModel{
+		Name: types.StringValue("Test Budget"),
+		Type: types.StringValue("cost"),
+		Unit: types.StringValue("GB-Hours"),
+	}, types.ObjectNull(periodCadenceAttrTypes))
+
+	if got := model.Type; got != "cost" {
+		t.Errorf("type = %q, want %q", got, "cost")
+	}
+	if model.Unit != nil {
+		t.Fatalf("expected stale usage unit to be omitted, got %q", *model.Unit)
+	}
+}
+
+func TestBudgetTypeAndUnitResponseMapping(t *testing.T) {
+	t.Parallel()
+
+	unit := "GB-Hours"
+	var model budgetModel
+	diagnostics := applyBudgetPayload(context.Background(), false, &modelsv2.Budget{
+		Token:          "bdgt_test",
+		CreatedAt:      "2026-01-01T00:00:00Z",
+		WorkspaceToken: "wrkspc_test",
+		Type:           "usage",
+		Unit:           &unit,
+	}, &model)
+
+	if diagnostics.HasError() {
+		t.Fatalf("mapping budget payload: %v", diagnostics)
+	}
+	if got := model.Type.ValueString(); got != "usage" {
+		t.Errorf("type = %q, want %q", got, "usage")
+	}
+	if got := model.Unit.ValueString(); got != unit {
+		t.Errorf("unit = %q, want %q", got, unit)
+	}
+}
+
+func testBudgetPeriodCadenceValue(attributes map[string]attr.Value) (types.Object, diag.Diagnostics) {
+	return types.ObjectValue(periodCadenceAttrTypes, attributes)
 }

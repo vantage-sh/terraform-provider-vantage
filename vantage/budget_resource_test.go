@@ -1,10 +1,13 @@
 package vantage
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
@@ -238,6 +241,26 @@ func TestAccVantageBudget_withPartialPeriodCadence(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestBudgetTypeAndUnitPreserveComputedState(t *testing.T) {
+	t.Parallel()
+
+	var resp frameworkresource.SchemaResponse
+	(&budgetResource{}).Schema(context.Background(), frameworkresource.SchemaRequest{}, &resp)
+
+	for _, name := range []string{"type", "unit"} {
+		attr, ok := resp.Schema.GetAttributes()[name].(resourceschema.StringAttribute)
+		if !ok {
+			t.Fatalf("%s is not a string attribute", name)
+		}
+		if !attr.Optional || !attr.Computed {
+			t.Fatalf("%s must remain optional and computed", name)
+		}
+		if len(attr.PlanModifiers) == 0 {
+			t.Fatalf("%s must preserve computed API state when omitted", name)
+		}
+	}
 }
 
 func testAccVantageBudgetConfig_basic(budgetTitle string, childBudgetTitle string) string {

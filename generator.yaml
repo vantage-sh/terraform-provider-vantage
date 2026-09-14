@@ -78,6 +78,7 @@ resources:
     schema:
       ignores:
         - include_performance
+        - period_cadence
       attributes:
         overrides:
           token:
@@ -473,6 +474,10 @@ data_sources:
         - limit
         - links
         - page
+        - budgets.period_cadence
+        - period_cadence
+        - q
+        - workspace_token
   business_metrics:
     read:
       path: /business_metrics

@@ -19,8 +19,24 @@ import (
 // let the budget, budget performance and budget period models
 // defined in the resource_budget package be the common models for
 // both the data source and the resource
-type budgetModel resource_budget.BudgetModel
 type budgetPerformanceModel resource_budget.PerformanceValue
+type budgetModel struct {
+	BudgetAlertTokens types.List   `tfsdk:"budget_alert_tokens"`
+	ChildBudgetTokens types.List   `tfsdk:"child_budget_tokens"`
+	CostReportToken   types.String `tfsdk:"cost_report_token"`
+	CreatedAt         types.String `tfsdk:"created_at"`
+	CreatedByToken    types.String `tfsdk:"created_by_token"`
+	Id                types.String `tfsdk:"id"`
+	Name              types.String `tfsdk:"name"`
+	Performance       types.List   `tfsdk:"performance"`
+	PeriodCadence     types.Object `tfsdk:"period_cadence"`
+	Periods           types.List   `tfsdk:"periods"`
+	Token             types.String `tfsdk:"token"`
+	Type              types.String `tfsdk:"type"`
+	Unit              types.String `tfsdk:"unit"`
+	UserToken         types.String `tfsdk:"user_token"`
+	WorkspaceToken    types.String `tfsdk:"workspace_token"`
+}
 type budgetPeriodResourceModel struct {
 	Amount  types.Float64 `tfsdk:"amount"`
 	EndAt   types.String  `tfsdk:"end_at"`
@@ -110,6 +126,13 @@ func toCreateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 		WorkspaceToken:  src.WorkspaceToken.ValueString(),
 	}
 
+	if !src.Type.IsNull() && !src.Type.IsUnknown() {
+		dst.Type = src.Type.ValueString()
+	}
+	if !src.Unit.IsNull() && !src.Unit.IsUnknown() {
+		dst.Unit = src.Unit.ValueString()
+	}
+
 	if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
 		childBudgetTokens := []string{}
 		src.ChildBudgetTokens.ElementsAs(ctx, &childBudgetTokens, false)
@@ -173,6 +196,13 @@ func toUpdateModel(ctx context.Context, diags *diag.Diagnostics, src budgetModel
 	dst := &modelsv2.UpdateBudget{
 		Name:            src.Name.ValueString(),
 		CostReportToken: src.CostReportToken.ValueString(),
+	}
+
+	if !src.Type.IsNull() && !src.Type.IsUnknown() {
+		dst.Type = src.Type.ValueString()
+	}
+	if dst.Type == "usage" && !src.Unit.IsNull() && !src.Unit.IsUnknown() {
+		dst.Unit = src.Unit.ValueStringPointer()
 	}
 
 	if !src.ChildBudgetTokens.IsNull() && !src.ChildBudgetTokens.IsUnknown() {
@@ -249,6 +279,8 @@ func applyBudgetPayload(ctx context.Context, isDataSource bool, src *modelsv2.Bu
 	dst.UserToken = types.StringPointerValue(src.UserToken)
 	dst.WorkspaceToken = types.StringValue(src.WorkspaceToken)
 	dst.CostReportToken = types.StringPointerValue(src.CostReportToken)
+	dst.Type = types.StringValue(src.Type)
+	dst.Unit = types.StringPointerValue(src.Unit)
 
 	periodCadence, d := periodCadenceFromPayload(src.PeriodCadence)
 	if d.HasError() {

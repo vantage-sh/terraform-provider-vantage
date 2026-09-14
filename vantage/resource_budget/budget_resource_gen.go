@@ -5,8 +5,10 @@ package resource_budget
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -28,8 +30,8 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "The tokens of any child Budgets when creating a hierarchical Budget.",
-				MarkdownDescription: "The tokens of any child Budgets when creating a hierarchical Budget.",
+				Description:         "The tokens of any child Budgets when creating a hierarchical Budget. Child budgets must share the same current period dates.",
+				MarkdownDescription: "The tokens of any child Budgets when creating a hierarchical Budget. Child budgets must share the same current period dates.",
 			},
 			"cost_report_token": schema.StringAttribute{
 				Optional:            true,
@@ -122,6 +124,24 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The token of the budget",
 				MarkdownDescription: "The token of the budget",
 			},
+			"type": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The type of Budget. One of: cost, usage.",
+				MarkdownDescription: "The type of Budget. One of: cost, usage.",
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						"cost",
+						"usage",
+					),
+				},
+			},
+			"unit": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The usage unit for usage Budgets.",
+				MarkdownDescription: "The usage unit for usage Budgets.",
+			},
 			"user_token": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The token for the User who created this Budget.",
@@ -146,9 +166,10 @@ type BudgetModel struct {
 	Id                types.String `tfsdk:"id"`
 	Name              types.String `tfsdk:"name"`
 	Performance       types.List   `tfsdk:"performance"`
-	PeriodCadence     types.Object `tfsdk:"period_cadence"`
 	Periods           types.List   `tfsdk:"periods"`
 	Token             types.String `tfsdk:"token"`
+	Type              types.String `tfsdk:"type"`
+	Unit              types.String `tfsdk:"unit"`
 	UserToken         types.String `tfsdk:"user_token"`
 	WorkspaceToken    types.String `tfsdk:"workspace_token"`
 }
