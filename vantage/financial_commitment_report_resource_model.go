@@ -75,8 +75,8 @@ func (m *financialCommitmentReportModel) toCreateModel(ctx context.Context) *mod
 		if m.StartDate.ValueString() != "" {
 			startDate.UnmarshalText([]byte(m.StartDate.ValueString()))
 		}
-		dst.EndDate = endDate
-		dst.StartDate = startDate
+		dst.EndDate = &endDate
+		dst.StartDate = &startDate
 	}
 	return dst
 }
@@ -108,8 +108,8 @@ func (m *financialCommitmentReportModel) toUpdateModel(ctx context.Context) *mod
 		if m.StartDate.ValueString() != "" {
 			startDate.UnmarshalText([]byte(m.StartDate.ValueString()))
 		}
-		dst.EndDate = endDate
-		dst.StartDate = startDate
+		dst.EndDate = &endDate
+		dst.StartDate = &startDate
 	}
 	return dst
 }

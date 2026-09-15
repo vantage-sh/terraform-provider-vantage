@@ -75,8 +75,8 @@ func (r *kubernetesEfficiencyReportModel) toCreateModel(ctx context.Context) *mo
 		if r.StartDate.ValueString() != "" {
 			startDate.UnmarshalText([]byte(r.StartDate.ValueString()))
 		}
-		dst.EndDate = endDate
-		dst.StartDate = startDate
+		dst.EndDate = &endDate
+		dst.StartDate = &startDate
 	}
 	return dst
 }
@@ -106,8 +106,8 @@ func (r *kubernetesEfficiencyReportModel) toUpdateModel(ctx context.Context) *mo
 		if r.StartDate.ValueString() != "" {
 			startDate.UnmarshalText([]byte(r.StartDate.ValueString()))
 		}
-		dst.EndDate = endDate
-		dst.StartDate = startDate
+		dst.EndDate = &endDate
+		dst.StartDate = &startDate
 	}
 	return dst
 }
