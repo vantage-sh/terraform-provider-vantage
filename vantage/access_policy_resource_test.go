@@ -20,13 +20,13 @@ func TestAccVantageAccessPolicy_basic(t *testing.T) {
 				Config: testAccVantageAccessPolicyConfig_basic(
 					"tf-acc-access-policy",
 					"Initial access policy",
-					"(vantage.provider = 'aws')",
+					"vantage.provider = 'aws'",
 				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", "tf-acc-access-policy"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Initial access policy"),
 					resource.TestCheckResourceAttr(resourceName, "policy.api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "policy.filter", "(vantage.provider = 'aws')"),
+					resource.TestCheckResourceAttr(resourceName, "policy.filter", "vantage.provider = 'aws'"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					func(s *terraform.State) error {
@@ -47,19 +47,19 @@ func TestAccVantageAccessPolicy_basic(t *testing.T) {
 				Config: testAccVantageAccessPolicyConfig_basic(
 					"tf-acc-access-policy-updated",
 					"Updated access policy",
-					"(vantage.provider = 'gcp')",
+					"vantage.provider = 'gcp'",
 				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "title", "tf-acc-access-policy-updated"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Updated access policy"),
-					resource.TestCheckResourceAttr(resourceName, "policy.filter", "(vantage.provider = 'gcp')"),
+					resource.TestCheckResourceAttr(resourceName, "policy.filter", "vantage.provider = 'gcp'"),
 				),
 			},
 			{
 				Config: testAccVantageAccessPolicyConfig_basic(
 					"tf-acc-access-policy-updated",
 					"Updated access policy",
-					"(vantage.provider = 'gcp')",
+					"vantage.provider = 'gcp'",
 				),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,

@@ -5,6 +5,7 @@ resource "vantage_access_policy" "demo_access_policy" {
 
   policy = {
     api_version = "v1"
-    filter      = "(vantage.provider = 'aws' AND vantage.region = 'us-east-1')"
+    filter      = "vantage.provider = 'aws' AND vantage.region = 'us-east-1'"
   }
 }
+

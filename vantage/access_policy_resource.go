@@ -124,6 +124,8 @@ func (r AccessPolicyResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	plannedPolicy := data.Policy
+
 	params := accesspoliciesv2.NewCreateAccessPolicyParams().WithCreateAccessPolicy(body)
 	out, err := r.client.V2.AccessPolicies.CreateAccessPolicy(params, r.client.Auth)
 	if err != nil {
@@ -135,6 +137,9 @@ func (r AccessPolicyResource) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// API normalizes VQL (e.g. strips redundant outer parentheses). Keep the
+	// configured policy so apply matches the plan, same as saved_filter.
+	data.Policy = plannedPolicy
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -180,6 +185,8 @@ func (r AccessPolicyResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
+	plannedPolicy := data.Policy
+
 	params := accesspoliciesv2.NewUpdateAccessPolicyParams().
 		WithAccessPolicyToken(data.Token.ValueString()).
 		WithUpdateAccessPolicy(body)
@@ -193,6 +200,7 @@ func (r AccessPolicyResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.Policy = plannedPolicy
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
