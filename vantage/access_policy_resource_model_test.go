@@ -110,3 +110,56 @@ func TestAccessPolicyModel_teamTokensDefaultEmpty(t *testing.T) {
 		t.Fatalf("expected empty team tokens, got %#v", create.TeamTokens)
 	}
 }
+
+func TestAccessPolicyModel_toUpdateClearsNullDescription(t *testing.T) {
+	ctx := context.Background()
+	policy, d := types.ObjectValue(accessPolicyPolicyAttrTypes, map[string]attr.Value{
+		"api_version": types.StringValue("v1"),
+		"filter":      types.StringValue("vantage.provider = 'aws'"),
+	})
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+
+	m := &accessPolicyModel{
+		Title:       types.StringValue("Clear description"),
+		Description: types.StringNull(),
+		Policy:      policy,
+		TeamTokens:  types.ListNull(types.StringType),
+	}
+
+	var diags diag.Diagnostics
+	update := m.toUpdate(ctx, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if update.Description == nil {
+		t.Fatal("expected description pointer so omitempty still sends an empty string")
+	}
+	if *update.Description != "" {
+		t.Fatalf("expected empty description to clear API value, got %#v", *update.Description)
+	}
+}
+
+func TestAccessPolicyModel_applyPayloadNullsBlankDescription(t *testing.T) {
+	ctx := context.Background()
+	m := &accessPolicyModel{}
+	blank := ""
+	diags := m.applyPayload(ctx, &modelsv2.AccessPolicy{
+		Token:       "accss_plcy_blank",
+		Title:       "Blank description",
+		Description: &blank,
+		Policy: &modelsv2.AccessPolicyDocument{
+			APIVersion: modelsv2.AccessPolicyDocumentAPIVersionV1,
+			Policy: &modelsv2.AccessPolicyRules{
+				Filter: "vantage.provider = 'aws'",
+			},
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if !m.Description.IsNull() {
+		t.Fatalf("expected blank API description to map to null, got %#v", m.Description)
+	}
+}

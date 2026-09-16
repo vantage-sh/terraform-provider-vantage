@@ -68,6 +68,77 @@ func TestAccVantageAccessPolicy_basic(t *testing.T) {
 	})
 }
 
+func TestAccVantageAccessPolicy_parenthesizedFilterNoDrift(t *testing.T) {
+	resourceName := "vantage_access_policy.test"
+	filter := "(vantage.provider = 'aws')"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageAccessPolicyConfig_basic(
+					"tf-acc-access-policy-parens",
+					"Parenthesized filter",
+					filter,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "policy.filter", filter),
+				),
+			},
+			{
+				// Refresh + plan must keep the configured filter even if the API
+				// stores a de-parenthesized canonical form.
+				Config: testAccVantageAccessPolicyConfig_basic(
+					"tf-acc-access-policy-parens",
+					"Parenthesized filter",
+					filter,
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccVantageAccessPolicy_clearDescription(t *testing.T) {
+	resourceName := "vantage_access_policy.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageAccessPolicyConfig_basic(
+					"tf-acc-access-policy-desc",
+					"Has a description",
+					"vantage.provider = 'aws'",
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "Has a description"),
+				),
+			},
+			{
+				Config: testAccVantageAccessPolicyConfig_noDescription(
+					"tf-acc-access-policy-desc",
+					"vantage.provider = 'aws'",
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "description"),
+				),
+			},
+			{
+				Config: testAccVantageAccessPolicyConfig_noDescription(
+					"tf-acc-access-policy-desc",
+					"vantage.provider = 'aws'",
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageAccessPolicyConfig_basic(title, description, filter string) string {
 	return fmt.Sprintf(`
 resource "vantage_team" "test" {
@@ -85,4 +156,22 @@ resource "vantage_access_policy" "test" {
   }
 }
 `, title, description, filter)
+}
+
+func testAccVantageAccessPolicyConfig_noDescription(title, filter string) string {
+	return fmt.Sprintf(`
+resource "vantage_team" "test" {
+  name = "tf-acc-access-policy-team"
+}
+
+resource "vantage_access_policy" "test" {
+  title       = %[1]q
+  team_tokens = [vantage_team.test.token]
+
+  policy = {
+    api_version = "v1"
+    filter      = %[2]q
+  }
+}
+`, title, filter)
 }

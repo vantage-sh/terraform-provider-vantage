@@ -161,9 +161,17 @@ func (r AccessPolicyResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	// Preserve configured policy across refresh so API VQL normalization
+	// (e.g. stripping outer parentheses) does not cause perpetual drift.
+	// On import, policy is null and we take the API value instead.
+	existingPolicy := state.Policy
+
 	resp.Diagnostics.Append(state.applyPayload(ctx, payload)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+	if !existingPolicy.IsNull() && !existingPolicy.IsUnknown() {
+		state.Policy = existingPolicy
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -233,7 +241,12 @@ func (m *accessPolicyModel) applyPayload(ctx context.Context, payload *modelsv2.
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 	m.Title = types.StringValue(payload.Title)
-	m.Description = types.StringPointerValue(payload.Description)
+	// Treat blank API descriptions as null so omitting description in config converges.
+	if payload.Description == nil || *payload.Description == "" {
+		m.Description = types.StringNull()
+	} else {
+		m.Description = types.StringValue(*payload.Description)
+	}
 
 	policy, d := accessPolicyPolicyFromPayload(payload.Policy)
 	diags.Append(d...)
@@ -289,8 +302,12 @@ func (m *accessPolicyModel) toUpdate(ctx context.Context, diags *diag.Diagnostic
 		return nil
 	}
 
-	if !m.Description.IsNull() && !m.Description.IsUnknown() {
-		body.Description = m.Description.ValueStringPointer()
+	// Always send description on update so removing it from config clears the
+	// API value. The generated client omits nil (`omitempty`), so use "" instead
+	// of a nil pointer when the attribute is null.
+	if !m.Description.IsUnknown() {
+		desc := m.Description.ValueString()
+		body.Description = &desc
 	}
 
 	return body
