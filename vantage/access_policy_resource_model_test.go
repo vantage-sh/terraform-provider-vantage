@@ -2,6 +2,8 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -138,6 +140,48 @@ func TestAccessPolicyModel_toUpdateClearsNullDescription(t *testing.T) {
 	}
 	if *update.Description != "" {
 		t.Fatalf("expected empty description to clear API value, got %#v", *update.Description)
+	}
+}
+
+func TestAccessPolicyModel_toUpdateSerializesEmptyTeamTokens(t *testing.T) {
+	ctx := context.Background()
+	policy, d := types.ObjectValue(accessPolicyPolicyAttrTypes, map[string]attr.Value{
+		"api_version": types.StringValue("v1"),
+		"filter":      types.StringValue("vantage.provider = 'aws'"),
+	})
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+
+	emptyTeams, d := types.ListValueFrom(ctx, types.StringType, []string{})
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+
+	m := &accessPolicyModel{
+		Title:      types.StringValue("Clear teams"),
+		Policy:     policy,
+		TeamTokens: emptyTeams,
+	}
+
+	var diags diag.Diagnostics
+	update := m.toUpdate(ctx, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if update.TeamTokens == nil {
+		t.Fatal("expected non-nil empty team_tokens slice")
+	}
+	if len(update.TeamTokens) != 0 {
+		t.Fatalf("expected empty team_tokens, got %#v", update.TeamTokens)
+	}
+
+	encoded, err := json.Marshal(update)
+	if err != nil {
+		t.Fatalf("marshal update: %v", err)
+	}
+	if got := string(encoded); !strings.Contains(got, `"team_tokens":[]`) {
+		t.Fatalf("update JSON = %s, want explicit empty team_tokens array", got)
 	}
 }
 

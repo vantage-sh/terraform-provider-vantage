@@ -139,6 +139,46 @@ func TestAccVantageAccessPolicy_clearDescription(t *testing.T) {
 	})
 }
 
+func TestAccVantageAccessPolicy_clearTeamTokens(t *testing.T) {
+	resourceName := "vantage_access_policy.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageAccessPolicyConfig_basic(
+					"tf-acc-access-policy-teams",
+					"Has teams",
+					"vantage.provider = 'aws'",
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "team_tokens.#", "1"),
+				),
+			},
+			{
+				Config: testAccVantageAccessPolicyConfig_emptyTeamTokens(
+					"tf-acc-access-policy-teams",
+					"Has teams",
+					"vantage.provider = 'aws'",
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "team_tokens.#", "0"),
+				),
+			},
+			{
+				Config: testAccVantageAccessPolicyConfig_emptyTeamTokens(
+					"tf-acc-access-policy-teams",
+					"Has teams",
+					"vantage.provider = 'aws'",
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccVantageAccessPolicyConfig_basic(title, description, filter string) string {
 	return fmt.Sprintf(`
 resource "vantage_team" "test" {
@@ -174,4 +214,23 @@ resource "vantage_access_policy" "test" {
   }
 }
 `, title, filter)
+}
+
+func testAccVantageAccessPolicyConfig_emptyTeamTokens(title, description, filter string) string {
+	return fmt.Sprintf(`
+resource "vantage_team" "test" {
+  name = "tf-acc-access-policy-team"
+}
+
+resource "vantage_access_policy" "test" {
+  title       = %[1]q
+  description = %[2]q
+  team_tokens = []
+
+  policy = {
+    api_version = "v1"
+    filter      = %[3]q
+  }
+}
+`, title, description, filter)
 }

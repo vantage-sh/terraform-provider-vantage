@@ -3,6 +3,8 @@ package vantage
 import (
 	"context"
 
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -195,10 +197,21 @@ func (r AccessPolicyResource) Update(ctx context.Context, req resource.UpdateReq
 
 	plannedPolicy := data.Policy
 
+	// Generated UpdateAccessPolicy uses `team_tokens,omitempty`, which drops empty
+	// slices. Bypass that with a body that always serializes team_tokens so
+	// `team_tokens = []` can clear assignments.
 	params := accesspoliciesv2.NewUpdateAccessPolicyParams().
-		WithAccessPolicyToken(data.Token.ValueString()).
-		WithUpdateAccessPolicy(body)
-	out, err := r.client.V2.AccessPolicies.UpdateAccessPolicy(params, r.client.Auth)
+		WithAccessPolicyToken(data.Token.ValueString())
+	out, err := r.client.V2.AccessPolicies.UpdateAccessPolicy(
+		params,
+		r.client.Auth,
+		func(op *runtime.ClientOperation) {
+			op.Params = &accessPolicyUpdateParams{
+				token: data.Token.ValueString(),
+				body:  *body,
+			}
+		},
+	)
 	if err != nil {
 		handleError("Update Access Policy Resource", &resp.Diagnostics, err)
 		return
@@ -287,13 +300,34 @@ func (m *accessPolicyModel) toCreate(ctx context.Context, diags *diag.Diagnostic
 	return body
 }
 
-func (m *accessPolicyModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) *modelsv2.UpdateAccessPolicy {
+// accessPolicyUpdateBody mirrors modelsv2.UpdateAccessPolicy but keeps
+// team_tokens present when empty so clearing assignments reaches the API.
+type accessPolicyUpdateBody struct {
+	Description *string                            `json:"description,omitempty"`
+	Policy      *modelsv2.UpdateAccessPolicyPolicy `json:"policy,omitempty"`
+	TeamTokens  []string                           `json:"team_tokens"`
+	Title       string                             `json:"title,omitempty"`
+}
+
+type accessPolicyUpdateParams struct {
+	token string
+	body  accessPolicyUpdateBody
+}
+
+func (p *accessPolicyUpdateParams) WriteToRequest(r runtime.ClientRequest, _ strfmt.Registry) error {
+	if err := r.SetPathParam("access_policy_token", p.token); err != nil {
+		return err
+	}
+	return r.SetBodyParam(p.body)
+}
+
+func (m *accessPolicyModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) *accessPolicyUpdateBody {
 	policy := m.policyForUpdate(ctx, diags)
 	if diags.HasError() {
 		return nil
 	}
 
-	body := &modelsv2.UpdateAccessPolicy{
+	body := &accessPolicyUpdateBody{
 		Title:      m.Title.ValueString(),
 		Policy:     policy,
 		TeamTokens: m.teamTokens(ctx, diags),
