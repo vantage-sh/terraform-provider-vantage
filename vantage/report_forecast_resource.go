@@ -2,6 +2,8 @@ package vantage
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_report_forecast"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
+	businessmetricsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/business_metrics"
 	reportforecastsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_forecasts"
 )
 
@@ -86,8 +90,7 @@ func (r *reportForecastResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	params := reportforecastsv2.NewCreateReportForecastParams().WithCreateReportForecast(model)
-	out, err := r.client.V2.ReportForecasts.CreateReportForecast(params, r.client.Auth)
+	out, err := r.createReportForecast(ctx, model, data.BusinessMetricToken)
 	if err != nil {
 		if e, ok := err.(*reportforecastsv2.CreateReportForecastUnprocessableEntity); ok {
 			handleBadRequest("Create Report Forecast", &resp.Diagnostics, e.GetPayload())
@@ -114,6 +117,82 @@ func (r *reportForecastResource) Create(ctx context.Context, req resource.Create
 	preserveReportForecastPlanCollections(&data, plannedTokens, plannedSetAsDefault)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+const (
+	reportForecastBusinessMetricWaitTimeout  = 2 * time.Minute
+	reportForecastBusinessMetricPollInterval = 2 * time.Second
+)
+
+func (r *reportForecastResource) createReportForecast(
+	ctx context.Context,
+	model *modelsv2.CreateReportForecast,
+	businessMetricToken types.String,
+) (*reportforecastsv2.CreateReportForecastCreated, error) {
+	params := reportforecastsv2.NewCreateReportForecastParams().
+		WithCreateReportForecast(model)
+	out, err := r.client.V2.ReportForecasts.CreateReportForecast(params, r.client.Auth)
+	if !shouldRetryReportForecastCreate(err, businessMetricToken) {
+		return out, err
+	}
+
+	if !r.waitForBusinessMetricValues(ctx, businessMetricToken.ValueString()) {
+		return out, err
+	}
+
+	return r.client.V2.ReportForecasts.CreateReportForecast(params, r.client.Auth)
+}
+
+func shouldRetryReportForecastCreate(err error, businessMetricToken types.String) bool {
+	if err == nil || businessMetricToken.IsNull() || businessMetricToken.IsUnknown() ||
+		businessMetricToken.ValueString() == "" {
+		return false
+	}
+
+	unprocessable, ok := err.(*reportforecastsv2.CreateReportForecastUnprocessableEntity)
+	if !ok || unprocessable.GetPayload() == nil {
+		return false
+	}
+
+	return strings.Contains(
+		strings.Join(unprocessable.GetPayload().Errors, "\n"),
+		"Selected business metric must have historical and forecasted values for this forecast",
+	)
+}
+
+func (r *reportForecastResource) waitForBusinessMetricValues(ctx context.Context, token string) bool {
+	waitCtx, cancel := context.WithTimeout(ctx, reportForecastBusinessMetricWaitTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(reportForecastBusinessMetricPollInterval)
+	defer ticker.Stop()
+
+	for {
+		if r.businessMetricValuesReady(waitCtx, token) {
+			return true
+		}
+
+		select {
+		case <-waitCtx.Done():
+			return false
+		case <-ticker.C:
+		}
+	}
+}
+
+func (r *reportForecastResource) businessMetricValuesReady(ctx context.Context, token string) bool {
+	historicalParams := businessmetricsv2.NewGetBusinessMetricValuesParamsWithContext(ctx).
+		WithBusinessMetricToken(token)
+	historical, err := r.client.V2.BusinessMetrics.GetBusinessMetricValues(historicalParams, r.client.Auth)
+	if err != nil || historical.Payload == nil || len(historical.Payload.Values) == 0 {
+		return false
+	}
+
+	forecastedParams := businessmetricsv2.NewGetBusinessMetricForecastedValuesParamsWithContext(ctx).
+		WithBusinessMetricToken(token)
+	forecasted, err := r.client.V2.BusinessMetrics.GetBusinessMetricForecastedValues(forecastedParams, r.client.Auth)
+
+	return err == nil && forecasted.Payload != nil && len(forecasted.Payload.Values) > 0
 }
 
 func (r *reportForecastResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

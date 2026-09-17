@@ -5,9 +5,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
+	reportforecastsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/report_forecasts"
 )
+
+func TestShouldRetryReportForecastCreate(t *testing.T) {
+	retryableError := reportforecastsv2.NewCreateReportForecastUnprocessableEntity()
+	retryableError.Payload = &modelsv2.Errors{
+		Errors: []string{"Selected business metric must have historical and forecasted values for this forecast"},
+	}
+
+	if !shouldRetryReportForecastCreate(retryableError, types.StringValue("bmetr_test")) {
+		t.Fatal("expected async business metric validation error to be retryable")
+	}
+	if shouldRetryReportForecastCreate(retryableError, types.StringNull()) {
+		t.Fatal("expected missing business metric token not to be retryable")
+	}
+}
 
 func TestAccVantageReportForecast_basic(t *testing.T) {
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
