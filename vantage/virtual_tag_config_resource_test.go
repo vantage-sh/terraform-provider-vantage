@@ -496,6 +496,7 @@ func TestAccVantageVirtualTagConfig_withLabelTransforms(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "values.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "values.0.business_metric_token"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_key", "label"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.type", "split"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.label_transforms.0.delimiter", "&&&"),
@@ -577,6 +578,7 @@ resource "vantage_virtual_tag_config" "test" {
     {
       filter                = "costs.provider = 'aws'"
       business_metric_token = vantage_business_metric.test.token
+      label_key             = "label"
       %[4]s
     }
   ]
