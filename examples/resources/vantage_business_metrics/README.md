@@ -25,3 +25,9 @@ The example demonstrates:
 4. Using empty label_filter arrays (which is the recommended practice)
 
 This configuration ensures that Terraform properly manages the dependencies between resources and that the business metric is only created after all referenced cost reports exist.
+
+### Business Metric from GCP BigQuery
+
+See `gcp_bigquery.tf` for a business metric imported from a BigQuery SQL query.
+
+A change to `gcp_bigquery_metric_fields` replaces the resource. The Vantage API does not update that block in place.

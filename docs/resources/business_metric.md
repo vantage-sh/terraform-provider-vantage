@@ -25,6 +25,7 @@ description: |-
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
 - `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
 - `forecasted_values` (Attributes List) The dates, amounts, and (optional) labels for forecasted BusinessMetric values. (see [below for nested schema](#nestedatt--forecasted_values))
+- `gcp_bigquery_metric_fields` (Attributes) GCP BigQuery metric configuration fields. Changing this block replaces the business metric. (see [below for nested schema](#nestedatt--gcp_bigquery_metric_fields))
 - `snowflake_metric_fields` (Attributes) Snowflake metric configuration fields. (see [below for nested schema](#nestedatt--snowflake_metric_fields))
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 
@@ -95,6 +96,16 @@ Required:
 Optional:
 
 - `label` (String)
+
+
+<a id="nestedatt--gcp_bigquery_metric_fields"></a>
+### Nested Schema for `gcp_bigquery_metric_fields`
+
+Optional:
+
+- `integration_token` (String) Integration token for the GCP integration from which you would like to fetch metrics.
+- `query_project_id` (String) GCP project in which the BigQuery job should run.
+- `sql_query` (String) BigQuery SQL query returning date, value, and optional label columns.
 
 
 <a id="nestedatt--snowflake_metric_fields"></a>

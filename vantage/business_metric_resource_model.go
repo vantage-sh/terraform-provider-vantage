@@ -24,6 +24,7 @@ type BusinessMetricPayloadApplier interface {
 	SetIntegrationToken(integrationToken types.String)
 	SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue)
 	SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue)
+	SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue)
 	SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue)
 }
 
@@ -163,6 +164,10 @@ func (m *businessMetricResourceModel) SetDatadogMetricFields(datadogMetricFields
 	m.DatadogMetricFields = datadogMetricFields
 }
 
+func (m *businessMetricResourceModel) SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue) {
+	m.GcpBigqueryMetricFields = gcpBigqueryMetricFields
+}
+
 func (m *businessMetricResourceModel) SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue) {
 	m.SnowflakeMetricFields = snowflakeMetricFields
 }
@@ -294,6 +299,34 @@ func (m *businessMetricDataSourceValue) SetDatadogMetricFields(datadogMetricFiel
 	m.DatadogMetricFields = objVal
 }
 
+func (m *businessMetricDataSourceValue) SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue) {
+	attrTypes := datasource_business_metrics.GcpBigqueryMetricFieldsValue{}.AttributeTypes(context.Background())
+
+	if gcpBigqueryMetricFields.IsNull() {
+		m.GcpBigqueryMetricFields = types.ObjectNull(attrTypes)
+		return
+	}
+
+	queryProjectID := gcpBigqueryMetricFields.QueryProjectId
+	if queryProjectID.IsNull() || queryProjectID.IsUnknown() {
+		queryProjectID = types.StringValue("")
+	}
+
+	sqlQuery := gcpBigqueryMetricFields.SqlQuery
+	if sqlQuery.IsNull() || sqlQuery.IsUnknown() {
+		sqlQuery = types.StringValue("")
+	}
+
+	objVal, _ := types.ObjectValue(
+		attrTypes,
+		map[string]attr.Value{
+			"query_project_id": queryProjectID,
+			"sql_query":        sqlQuery,
+		},
+	)
+	m.GcpBigqueryMetricFields = objVal
+}
+
 func (m *businessMetricDataSourceValue) SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue) {
 	attrTypes := datasource_business_metrics.SnowflakeMetricFieldsValue{}.AttributeTypes(context.Background())
 
@@ -335,6 +368,12 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 		return d
 	}
 	m.SetDatadogMetricFields(tfDatadogMetricFields)
+
+	tfGcpBigqueryMetricFields, d := gcpBigqueryMetricFieldsFromApiModel(ctx, payload.GcpBigqueryMetricFields, payload.IntegrationToken)
+	if d.HasError() {
+		return d
+	}
+	m.SetGcpBigqueryMetricFields(tfGcpBigqueryMetricFields)
 
 	tfSnowflakeMetricFields, d := snowflakeMetricFieldsFromApiModel(ctx, payload.SnowflakeMetricFields, payload.IntegrationToken)
 	if d.HasError() {
@@ -497,6 +536,14 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 			Query:            m.DatadogMetricFields.Query.ValueString(),
 		}
 		model.DatadogMetricFields = datadogMetricFields
+	}
+
+	if !m.GcpBigqueryMetricFields.IsNull() && !m.GcpBigqueryMetricFields.IsUnknown() {
+		model.GcpBigqueryMetricFields = &modelsv2.CreateBusinessMetricGcpBigqueryMetricFields{
+			IntegrationToken: m.GcpBigqueryMetricFields.IntegrationToken.ValueString(),
+			QueryProjectID:   m.GcpBigqueryMetricFields.QueryProjectId.ValueString(),
+			SQLQuery:         m.GcpBigqueryMetricFields.SqlQuery.ValueString(),
+		}
 	}
 
 	if !m.SnowflakeMetricFields.IsNull() && !m.SnowflakeMetricFields.IsUnknown() {
@@ -908,6 +955,25 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 		map[string]attr.Value{
 			"query":             types.StringValue(apiFields.Query),
 			"integration_token": types.StringPointerValue(integrationToken),
+		},
+	)
+	diags.Append(d...)
+
+	return tfValue, diags
+}
+
+func gcpBigqueryMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.GcpBigqueryMetricFields, integrationToken *string) (resource_business_metric.GcpBigqueryMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if apiFields == nil {
+		return resource_business_metric.NewGcpBigqueryMetricFieldsValueNull(), diags
+	}
+
+	tfValue, d := resource_business_metric.NewGcpBigqueryMetricFieldsValue(
+		resource_business_metric.GcpBigqueryMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token": types.StringPointerValue(integrationToken),
+			"query_project_id":  types.StringValue(apiFields.QueryProjectID),
+			"sql_query":         types.StringValue(apiFields.SQLQuery),
 		},
 	)
 	diags.Append(d...)

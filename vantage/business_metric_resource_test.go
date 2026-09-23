@@ -9,12 +9,17 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
 func TestCostReportAttachmentLabelForAPI(t *testing.T) {
@@ -1245,6 +1250,74 @@ func TestBusinessMetricSnowflakeFieldsPayload(t *testing.T) {
 	})
 }
 
+func TestBusinessMetricGcpBigqueryFieldsPayload(t *testing.T) {
+	ctx := context.Background()
+	gcpFields, diags := resource_business_metric.NewGcpBigqueryMetricFieldsValue(
+		resource_business_metric.GcpBigqueryMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token": types.StringValue("accss_crdntl_gcp"),
+			"query_project_id":  types.StringValue("my-query-project"),
+			"sql_query":         types.StringValue("SELECT date, value FROM metrics"),
+		},
+	)
+	if diags.HasError() {
+		t.Fatalf("failed to build gcp bigquery fields: %v", diags)
+	}
+
+	model := &businessMetricResourceModel{
+		Title:                   types.StringValue("BigQuery Revenue"),
+		Token:                   types.StringValue("bmetr_test"),
+		GcpBigqueryMetricFields: gcpFields,
+	}
+
+	var d diag.Diagnostics
+	payload := model.toCreate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if payload.GcpBigqueryMetricFields == nil {
+		t.Fatal("expected gcp_bigquery_metric_fields on create payload")
+	}
+	if payload.GcpBigqueryMetricFields.IntegrationToken != "accss_crdntl_gcp" {
+		t.Fatalf("unexpected integration token: %q", payload.GcpBigqueryMetricFields.IntegrationToken)
+	}
+	if payload.GcpBigqueryMetricFields.QueryProjectID != "my-query-project" {
+		t.Fatalf("unexpected query project id: %q", payload.GcpBigqueryMetricFields.QueryProjectID)
+	}
+	if payload.GcpBigqueryMetricFields.SQLQuery != "SELECT date, value FROM metrics" {
+		t.Fatalf("unexpected sql query: %q", payload.GcpBigqueryMetricFields.SQLQuery)
+	}
+}
+
+func TestBusinessMetricGcpBigqueryFieldsFromAPI(t *testing.T) {
+	ctx := context.Background()
+	integrationToken := "accss_crdntl_gcp"
+	importType := "gcp_bigquery_metrics"
+	model := &businessMetricResourceModel{}
+	diags := model.applyPayload(ctx, &modelsv2.BusinessMetric{
+		Title:            "BigQuery Revenue",
+		Token:            "bsnss_mtrc_1234",
+		ImportType:       &importType,
+		IntegrationToken: &integrationToken,
+		GcpBigqueryMetricFields: &modelsv2.GcpBigqueryMetricFields{
+			QueryProjectID: "my-query-project",
+			SQLQuery:       "SELECT date, value FROM metrics",
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if model.GcpBigqueryMetricFields.IntegrationToken.ValueString() != integrationToken {
+		t.Fatalf("unexpected integration token: %q", model.GcpBigqueryMetricFields.IntegrationToken.ValueString())
+	}
+	if model.GcpBigqueryMetricFields.QueryProjectId.ValueString() != "my-query-project" {
+		t.Fatalf("unexpected query project id: %q", model.GcpBigqueryMetricFields.QueryProjectId.ValueString())
+	}
+	if model.GcpBigqueryMetricFields.SqlQuery.ValueString() != "SELECT date, value FROM metrics" {
+		t.Fatalf("unexpected sql query: %q", model.GcpBigqueryMetricFields.SqlQuery.ValueString())
+	}
+}
+
 func TestBusinessMetricLabelFiltersPayload(t *testing.T) {
 	ctx := context.Background()
 	attrTypes := resourceCostReportTokenAttrTypes(ctx)
@@ -1325,4 +1398,104 @@ func TestLabelFiltersToAPIEmptyMap(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBusinessMetricGcpBigqueryFieldsPlan(t *testing.T) {
+	ctx := context.Background()
+	schemaResp := &fwresource.SchemaResponse{}
+	NewBusinessMetricResource().Schema(ctx, fwresource.SchemaRequest{}, schemaResp)
+	objType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	gcpType := objType.AttributeTypes["gcp_bigquery_metric_fields"].(tftypes.Object)
+
+	buildObject := func(values map[string]tftypes.Value) tftypes.Value {
+		attrs := map[string]tftypes.Value{}
+		for name, typ := range objType.AttributeTypes {
+			if v, ok := values[name]; ok {
+				attrs[name] = v
+			} else {
+				attrs[name] = tftypes.NewValue(typ, nil)
+			}
+		}
+		return tftypes.NewValue(objType, attrs)
+	}
+	gcpValue := func(sqlQuery string) tftypes.Value {
+		return tftypes.NewValue(gcpType, map[string]tftypes.Value{
+			"integration_token": tftypes.NewValue(tftypes.String, "accss_crdntl_123"),
+			"query_project_id":  tftypes.NewValue(tftypes.String, "my-project"),
+			"sql_query":         tftypes.NewValue(tftypes.String, sqlQuery),
+		})
+	}
+	dynamicValue := func(t *testing.T, v tftypes.Value) *tfprotov6.DynamicValue {
+		dv, err := tfprotov6.NewDynamicValue(objType, v)
+		if err != nil {
+			t.Fatalf("failed to build dynamic value: %v", err)
+		}
+		return &dv
+	}
+	plan := func(t *testing.T, prior, config tftypes.Value) *tfprotov6.PlanResourceChangeResponse {
+		server, err := providerserver.NewProtocol6WithError(New())()
+		if err != nil {
+			t.Fatalf("failed to create provider server: %v", err)
+		}
+		resp, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
+			TypeName:         "vantage_business_metric",
+			PriorState:       dynamicValue(t, prior),
+			ProposedNewState: dynamicValue(t, config),
+			Config:           dynamicValue(t, config),
+		})
+		if err != nil {
+			t.Fatalf("PlanResourceChange returned error: %v", err)
+		}
+		for _, d := range resp.Diagnostics {
+			if d.Severity == tfprotov6.DiagnosticSeverityError {
+				t.Fatalf("unexpected plan error: %s: %s", d.Summary, d.Detail)
+			}
+		}
+		return resp
+	}
+	requiresReplaceGcp := func(resp *tfprotov6.PlanResourceChangeResponse) bool {
+		for _, p := range resp.RequiresReplace {
+			if steps := p.Steps(); len(steps) > 0 && steps[0] == tftypes.AttributeName("gcp_bigquery_metric_fields") {
+				return true
+			}
+		}
+		return false
+	}
+	existing := func(title string, gcp tftypes.Value) map[string]tftypes.Value {
+		return map[string]tftypes.Value{
+			"title":                      tftypes.NewValue(tftypes.String, title),
+			"gcp_bigquery_metric_fields": gcp,
+		}
+	}
+	withIDs := func(values map[string]tftypes.Value) map[string]tftypes.Value {
+		values["id"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		values["token"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		return values
+	}
+
+	t.Run("create without block", func(t *testing.T) {
+		plan(t, tftypes.NewValue(objType, nil), buildObject(map[string]tftypes.Value{
+			"title": tftypes.NewValue(tftypes.String, "no gcp"),
+		}))
+	})
+
+	t.Run("changed block requires replace", func(t *testing.T) {
+		resp := plan(t,
+			buildObject(withIDs(existing("gcp", gcpValue("SELECT 1")))),
+			buildObject(existing("gcp", gcpValue("SELECT 2"))),
+		)
+		if !requiresReplaceGcp(resp) {
+			t.Fatalf("expected gcp_bigquery_metric_fields change to require replace, got %v", resp.RequiresReplace)
+		}
+	})
+
+	t.Run("unchanged block does not require replace", func(t *testing.T) {
+		resp := plan(t,
+			buildObject(withIDs(existing("gcp", gcpValue("SELECT 1")))),
+			buildObject(existing("gcp renamed", gcpValue("SELECT 1"))),
+		)
+		if requiresReplaceGcp(resp) {
+			t.Fatalf("expected no replace, got %v", resp.RequiresReplace)
+		}
+	})
 }

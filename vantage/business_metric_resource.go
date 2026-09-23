@@ -56,6 +56,20 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
 	applyCostReportTokenMetadataDefaults(s.Attributes)
+	// The update API does not accept gcp_bigquery_metric_fields. A change replaces the resource.
+	// The modifiers go on the nested attributes: an object plan modifier makes the framework call the
+	// generated ValueFromObject on unknown plan values, which fails when the block is omitted.
+	if gcpAttr, ok := s.Attributes["gcp_bigquery_metric_fields"].(schema.SingleNestedAttribute); ok {
+		for name, nested := range gcpAttr.Attributes {
+			if strAttr, ok := nested.(schema.StringAttribute); ok {
+				strAttr.PlanModifiers = append(strAttr.PlanModifiers, stringplanmodifier.RequiresReplaceIfConfigured())
+				gcpAttr.Attributes[name] = strAttr
+			}
+		}
+		gcpAttr.Description = gcpAttr.Description + " Changing this block replaces the business metric."
+		gcpAttr.MarkdownDescription = gcpAttr.MarkdownDescription + " Changing this block replaces the business metric."
+		s.Attributes["gcp_bigquery_metric_fields"] = gcpAttr
+	}
 
 	resp.Schema = s
 }
