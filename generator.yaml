@@ -627,3 +627,23 @@ data_sources:
         - links
         - page
         - q
+  enrichment_sources:
+    read:
+      path: /enrichment_sources
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+  enrichment_source:
+    read:
+      path: /enrichment_sources/{enrichment_source_token}
+      method: GET
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the enrichment source
+        aliases:
+          enrichment_source_token: token

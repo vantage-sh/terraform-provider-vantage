@@ -217,6 +217,8 @@ func (p *vantageProvider) DataSources(_ context.Context) []func() datasource.Dat
 		NewIntegrationByNameDataSource,
 		NewWorkspaceDataSource,
 		NewFolderDataSource,
+		NewEnrichmentSourcesDataSource,
+		NewEnrichmentSourceDataSource,
 	}
 }
 
