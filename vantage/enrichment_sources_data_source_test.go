@@ -1,8 +1,6 @@
 package vantage
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -25,19 +23,21 @@ func TestAccEnrichmentSourcesDataSource_basic(t *testing.T) {
 }
 
 func TestAccEnrichmentSourceDataSource_basic(t *testing.T) {
-	token := os.Getenv("ENRICHMENT_SOURCE_TOKEN")
-	if token == "" {
-		t.Skip("Skipping test: ENRICHMENT_SOURCE_TOKEN not set")
-	}
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEnrichmentSourceDataSourceConfig(token),
+				// List all enrichment sources, then look up the first entry by token
+				// via the singular data source. This avoids depending on a
+				// separately-managed fixture token.
+				Config: testAccEnrichmentSourceDataSourceConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vantage_enrichment_source.test", "token", token),
+					resource.TestCheckResourceAttrSet("data.vantage_enrichment_source.test", "token"),
+					resource.TestCheckResourceAttrPair(
+						"data.vantage_enrichment_source.test", "token",
+						"data.vantage_enrichment_sources.test", "enrichment_sources.0.token",
+					),
 					resource.TestCheckResourceAttrSet("data.vantage_enrichment_source.test", "title"),
 					resource.TestCheckResourceAttrSet("data.vantage_enrichment_source.test", "type"),
 					resource.TestCheckResourceAttrSet("data.vantage_enrichment_source.test", "integration_token"),
@@ -55,10 +55,12 @@ data "vantage_enrichment_sources" "test" {}
 `
 }
 
-func testAccEnrichmentSourceDataSourceConfig(token string) string {
-	return fmt.Sprintf(`
+func testAccEnrichmentSourceDataSourceConfig() string {
+	return `
+data "vantage_enrichment_sources" "test" {}
+
 data "vantage_enrichment_source" "test" {
-  token = %q
+  token = data.vantage_enrichment_sources.test.enrichment_sources[0].token
 }
-`, token)
+`
 }
