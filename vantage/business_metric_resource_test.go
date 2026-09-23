@@ -9,7 +9,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
@@ -1394,4 +1398,104 @@ func TestLabelFiltersToAPIEmptyMap(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBusinessMetricGcpBigqueryFieldsPlan(t *testing.T) {
+	ctx := context.Background()
+	schemaResp := &fwresource.SchemaResponse{}
+	NewBusinessMetricResource().Schema(ctx, fwresource.SchemaRequest{}, schemaResp)
+	objType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	gcpType := objType.AttributeTypes["gcp_bigquery_metric_fields"].(tftypes.Object)
+
+	buildObject := func(values map[string]tftypes.Value) tftypes.Value {
+		attrs := map[string]tftypes.Value{}
+		for name, typ := range objType.AttributeTypes {
+			if v, ok := values[name]; ok {
+				attrs[name] = v
+			} else {
+				attrs[name] = tftypes.NewValue(typ, nil)
+			}
+		}
+		return tftypes.NewValue(objType, attrs)
+	}
+	gcpValue := func(sqlQuery string) tftypes.Value {
+		return tftypes.NewValue(gcpType, map[string]tftypes.Value{
+			"integration_token": tftypes.NewValue(tftypes.String, "accss_crdntl_123"),
+			"query_project_id":  tftypes.NewValue(tftypes.String, "my-project"),
+			"sql_query":         tftypes.NewValue(tftypes.String, sqlQuery),
+		})
+	}
+	dynamicValue := func(t *testing.T, v tftypes.Value) *tfprotov6.DynamicValue {
+		dv, err := tfprotov6.NewDynamicValue(objType, v)
+		if err != nil {
+			t.Fatalf("failed to build dynamic value: %v", err)
+		}
+		return &dv
+	}
+	plan := func(t *testing.T, prior, config tftypes.Value) *tfprotov6.PlanResourceChangeResponse {
+		server, err := providerserver.NewProtocol6WithError(New())()
+		if err != nil {
+			t.Fatalf("failed to create provider server: %v", err)
+		}
+		resp, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
+			TypeName:         "vantage_business_metric",
+			PriorState:       dynamicValue(t, prior),
+			ProposedNewState: dynamicValue(t, config),
+			Config:           dynamicValue(t, config),
+		})
+		if err != nil {
+			t.Fatalf("PlanResourceChange returned error: %v", err)
+		}
+		for _, d := range resp.Diagnostics {
+			if d.Severity == tfprotov6.DiagnosticSeverityError {
+				t.Fatalf("unexpected plan error: %s: %s", d.Summary, d.Detail)
+			}
+		}
+		return resp
+	}
+	requiresReplaceGcp := func(resp *tfprotov6.PlanResourceChangeResponse) bool {
+		for _, p := range resp.RequiresReplace {
+			if steps := p.Steps(); len(steps) > 0 && steps[0] == tftypes.AttributeName("gcp_bigquery_metric_fields") {
+				return true
+			}
+		}
+		return false
+	}
+	existing := func(title string, gcp tftypes.Value) map[string]tftypes.Value {
+		return map[string]tftypes.Value{
+			"title":                      tftypes.NewValue(tftypes.String, title),
+			"gcp_bigquery_metric_fields": gcp,
+		}
+	}
+	withIDs := func(values map[string]tftypes.Value) map[string]tftypes.Value {
+		values["id"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		values["token"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		return values
+	}
+
+	t.Run("create without block", func(t *testing.T) {
+		plan(t, tftypes.NewValue(objType, nil), buildObject(map[string]tftypes.Value{
+			"title": tftypes.NewValue(tftypes.String, "no gcp"),
+		}))
+	})
+
+	t.Run("changed block requires replace", func(t *testing.T) {
+		resp := plan(t,
+			buildObject(withIDs(existing("gcp", gcpValue("SELECT 1")))),
+			buildObject(existing("gcp", gcpValue("SELECT 2"))),
+		)
+		if !requiresReplaceGcp(resp) {
+			t.Fatalf("expected gcp_bigquery_metric_fields change to require replace, got %v", resp.RequiresReplace)
+		}
+	})
+
+	t.Run("unchanged block does not require replace", func(t *testing.T) {
+		resp := plan(t,
+			buildObject(withIDs(existing("gcp", gcpValue("SELECT 1")))),
+			buildObject(existing("gcp renamed", gcpValue("SELECT 1"))),
+		)
+		if requiresReplaceGcp(resp) {
+			t.Fatalf("expected no replace, got %v", resp.RequiresReplace)
+		}
+	})
 }
