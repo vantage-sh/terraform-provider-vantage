@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/acctest"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 )
 
 func TestCostReportAttachmentLabelForAPI(t *testing.T) {
@@ -1243,6 +1244,74 @@ func TestBusinessMetricSnowflakeFieldsPayload(t *testing.T) {
 			t.Fatalf("unexpected sql query: %q", payload.SnowflakeMetricFields.SQLQuery)
 		}
 	})
+}
+
+func TestBusinessMetricGcpBigqueryFieldsPayload(t *testing.T) {
+	ctx := context.Background()
+	gcpFields, diags := resource_business_metric.NewGcpBigqueryMetricFieldsValue(
+		resource_business_metric.GcpBigqueryMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token": types.StringValue("accss_crdntl_gcp"),
+			"query_project_id":  types.StringValue("my-query-project"),
+			"sql_query":         types.StringValue("SELECT date, value FROM metrics"),
+		},
+	)
+	if diags.HasError() {
+		t.Fatalf("failed to build gcp bigquery fields: %v", diags)
+	}
+
+	model := &businessMetricResourceModel{
+		Title:                   types.StringValue("BigQuery Revenue"),
+		Token:                   types.StringValue("bmetr_test"),
+		GcpBigqueryMetricFields: gcpFields,
+	}
+
+	var d diag.Diagnostics
+	payload := model.toCreate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if payload.GcpBigqueryMetricFields == nil {
+		t.Fatal("expected gcp_bigquery_metric_fields on create payload")
+	}
+	if payload.GcpBigqueryMetricFields.IntegrationToken != "accss_crdntl_gcp" {
+		t.Fatalf("unexpected integration token: %q", payload.GcpBigqueryMetricFields.IntegrationToken)
+	}
+	if payload.GcpBigqueryMetricFields.QueryProjectID != "my-query-project" {
+		t.Fatalf("unexpected query project id: %q", payload.GcpBigqueryMetricFields.QueryProjectID)
+	}
+	if payload.GcpBigqueryMetricFields.SQLQuery != "SELECT date, value FROM metrics" {
+		t.Fatalf("unexpected sql query: %q", payload.GcpBigqueryMetricFields.SQLQuery)
+	}
+}
+
+func TestBusinessMetricGcpBigqueryFieldsFromAPI(t *testing.T) {
+	ctx := context.Background()
+	integrationToken := "accss_crdntl_gcp"
+	importType := "gcp_bigquery_metrics"
+	model := &businessMetricResourceModel{}
+	diags := model.applyPayload(ctx, &modelsv2.BusinessMetric{
+		Title:            "BigQuery Revenue",
+		Token:            "bsnss_mtrc_1234",
+		ImportType:       &importType,
+		IntegrationToken: &integrationToken,
+		GcpBigqueryMetricFields: &modelsv2.GcpBigqueryMetricFields{
+			QueryProjectID: "my-query-project",
+			SQLQuery:       "SELECT date, value FROM metrics",
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if model.GcpBigqueryMetricFields.IntegrationToken.ValueString() != integrationToken {
+		t.Fatalf("unexpected integration token: %q", model.GcpBigqueryMetricFields.IntegrationToken.ValueString())
+	}
+	if model.GcpBigqueryMetricFields.QueryProjectId.ValueString() != "my-query-project" {
+		t.Fatalf("unexpected query project id: %q", model.GcpBigqueryMetricFields.QueryProjectId.ValueString())
+	}
+	if model.GcpBigqueryMetricFields.SqlQuery.ValueString() != "SELECT date, value FROM metrics" {
+		t.Fatalf("unexpected sql query: %q", model.GcpBigqueryMetricFields.SqlQuery.ValueString())
+	}
 }
 
 func TestBusinessMetricLabelFiltersPayload(t *testing.T) {

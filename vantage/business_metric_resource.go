@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -56,6 +57,13 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
 	applyCostReportTokenMetadataDefaults(s.Attributes)
+	// The update API does not accept gcp_bigquery_metric_fields. A change replaces the resource.
+	if gcpAttr, ok := s.Attributes["gcp_bigquery_metric_fields"].(schema.SingleNestedAttribute); ok {
+		gcpAttr.PlanModifiers = append(gcpAttr.PlanModifiers, objectplanmodifier.RequiresReplace())
+		gcpAttr.Description = gcpAttr.Description + " Changing this block replaces the business metric."
+		gcpAttr.MarkdownDescription = gcpAttr.MarkdownDescription + " Changing this block replaces the business metric."
+		s.Attributes["gcp_bigquery_metric_fields"] = gcpAttr
+	}
 
 	resp.Schema = s
 }

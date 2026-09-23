@@ -221,6 +221,37 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The dates, amounts, and (optional) labels for forecasted BusinessMetric values.",
 				MarkdownDescription: "The dates, amounts, and (optional) labels for forecasted BusinessMetric values.",
 			},
+			"gcp_bigquery_metric_fields": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"integration_token": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "Integration token for the GCP integration from which you would like to fetch metrics.",
+						MarkdownDescription: "Integration token for the GCP integration from which you would like to fetch metrics.",
+					},
+					"query_project_id": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "GCP project in which the BigQuery job should run.",
+						MarkdownDescription: "GCP project in which the BigQuery job should run.",
+					},
+					"sql_query": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "BigQuery SQL query returning date, value, and optional label columns.",
+						MarkdownDescription: "BigQuery SQL query returning date, value, and optional label columns.",
+					},
+				},
+				CustomType: GcpBigqueryMetricFieldsType{
+					ObjectType: types.ObjectType{
+						AttrTypes: GcpBigqueryMetricFieldsValue{}.AttributeTypes(ctx),
+					},
+				},
+				Optional:            true,
+				Computed:            true,
+				Description:         "GCP BigQuery metric configuration fields.",
+				MarkdownDescription: "GCP BigQuery metric configuration fields.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The id of the business metric",
@@ -301,18 +332,19 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type BusinessMetricModel struct {
-	CloudwatchFields             CloudwatchFieldsValue      `tfsdk:"cloudwatch_fields"`
-	CostReportTokensWithMetadata types.List                 `tfsdk:"cost_report_tokens_with_metadata"`
-	CreatedByToken               types.String               `tfsdk:"created_by_token"`
-	DatadogMetricFields          DatadogMetricFieldsValue   `tfsdk:"datadog_metric_fields"`
-	ForecastedValues             types.List                 `tfsdk:"forecasted_values"`
-	Id                           types.String               `tfsdk:"id"`
-	ImportType                   types.String               `tfsdk:"import_type"`
-	IntegrationToken             types.String               `tfsdk:"integration_token"`
-	SnowflakeMetricFields        SnowflakeMetricFieldsValue `tfsdk:"snowflake_metric_fields"`
-	Title                        types.String               `tfsdk:"title"`
-	Token                        types.String               `tfsdk:"token"`
-	Values                       types.List                 `tfsdk:"values"`
+	CloudwatchFields             CloudwatchFieldsValue        `tfsdk:"cloudwatch_fields"`
+	CostReportTokensWithMetadata types.List                   `tfsdk:"cost_report_tokens_with_metadata"`
+	CreatedByToken               types.String                 `tfsdk:"created_by_token"`
+	DatadogMetricFields          DatadogMetricFieldsValue     `tfsdk:"datadog_metric_fields"`
+	ForecastedValues             types.List                   `tfsdk:"forecasted_values"`
+	GcpBigqueryMetricFields      GcpBigqueryMetricFieldsValue `tfsdk:"gcp_bigquery_metric_fields"`
+	Id                           types.String                 `tfsdk:"id"`
+	ImportType                   types.String                 `tfsdk:"import_type"`
+	IntegrationToken             types.String                 `tfsdk:"integration_token"`
+	SnowflakeMetricFields        SnowflakeMetricFieldsValue   `tfsdk:"snowflake_metric_fields"`
+	Title                        types.String                 `tfsdk:"title"`
+	Token                        types.String                 `tfsdk:"token"`
+	Values                       types.List                   `tfsdk:"values"`
 }
 
 var _ basetypes.ObjectTypable = CloudwatchFieldsType{}
@@ -2874,6 +2906,440 @@ func (v ForecastedValuesValue) AttributeTypes(ctx context.Context) map[string]at
 		"amount": basetypes.Float64Type{},
 		"date":   basetypes.StringType{},
 		"label":  basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = GcpBigqueryMetricFieldsType{}
+
+type GcpBigqueryMetricFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t GcpBigqueryMetricFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(GcpBigqueryMetricFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t GcpBigqueryMetricFieldsType) String() string {
+	return "GcpBigqueryMetricFieldsType"
+}
+
+func (t GcpBigqueryMetricFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return nil, diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
+	}
+
+	queryProjectIdAttribute, ok := attributes["query_project_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query_project_id is missing from object`)
+
+		return nil, diags
+	}
+
+	queryProjectIdVal, ok := queryProjectIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query_project_id expected to be basetypes.StringValue, was: %T`, queryProjectIdAttribute))
+	}
+
+	sqlQueryAttribute, ok := attributes["sql_query"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`sql_query is missing from object`)
+
+		return nil, diags
+	}
+
+	sqlQueryVal, ok := sqlQueryAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`sql_query expected to be basetypes.StringValue, was: %T`, sqlQueryAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return GcpBigqueryMetricFieldsValue{
+		IntegrationToken: integrationTokenVal,
+		QueryProjectId:   queryProjectIdVal,
+		SqlQuery:         sqlQueryVal,
+		state:            attr.ValueStateKnown,
+	}, diags
+}
+
+func NewGcpBigqueryMetricFieldsValueNull() GcpBigqueryMetricFieldsValue {
+	return GcpBigqueryMetricFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewGcpBigqueryMetricFieldsValueUnknown() GcpBigqueryMetricFieldsValue {
+	return GcpBigqueryMetricFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewGcpBigqueryMetricFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (GcpBigqueryMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing GcpBigqueryMetricFieldsValue Attribute Value",
+				"While creating a GcpBigqueryMetricFieldsValue value, a missing attribute value was detected. "+
+					"A GcpBigqueryMetricFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("GcpBigqueryMetricFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid GcpBigqueryMetricFieldsValue Attribute Type",
+				"While creating a GcpBigqueryMetricFieldsValue value, an invalid attribute value was detected. "+
+					"A GcpBigqueryMetricFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("GcpBigqueryMetricFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("GcpBigqueryMetricFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra GcpBigqueryMetricFieldsValue Attribute Value",
+				"While creating a GcpBigqueryMetricFieldsValue value, an extra attribute value was detected. "+
+					"A GcpBigqueryMetricFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra GcpBigqueryMetricFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewGcpBigqueryMetricFieldsValueUnknown(), diags
+	}
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return NewGcpBigqueryMetricFieldsValueUnknown(), diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
+	}
+
+	queryProjectIdAttribute, ok := attributes["query_project_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query_project_id is missing from object`)
+
+		return NewGcpBigqueryMetricFieldsValueUnknown(), diags
+	}
+
+	queryProjectIdVal, ok := queryProjectIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query_project_id expected to be basetypes.StringValue, was: %T`, queryProjectIdAttribute))
+	}
+
+	sqlQueryAttribute, ok := attributes["sql_query"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`sql_query is missing from object`)
+
+		return NewGcpBigqueryMetricFieldsValueUnknown(), diags
+	}
+
+	sqlQueryVal, ok := sqlQueryAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`sql_query expected to be basetypes.StringValue, was: %T`, sqlQueryAttribute))
+	}
+
+	if diags.HasError() {
+		return NewGcpBigqueryMetricFieldsValueUnknown(), diags
+	}
+
+	return GcpBigqueryMetricFieldsValue{
+		IntegrationToken: integrationTokenVal,
+		QueryProjectId:   queryProjectIdVal,
+		SqlQuery:         sqlQueryVal,
+		state:            attr.ValueStateKnown,
+	}, diags
+}
+
+func NewGcpBigqueryMetricFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) GcpBigqueryMetricFieldsValue {
+	object, diags := NewGcpBigqueryMetricFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewGcpBigqueryMetricFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t GcpBigqueryMetricFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewGcpBigqueryMetricFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewGcpBigqueryMetricFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewGcpBigqueryMetricFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewGcpBigqueryMetricFieldsValueMust(GcpBigqueryMetricFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t GcpBigqueryMetricFieldsType) ValueType(ctx context.Context) attr.Value {
+	return GcpBigqueryMetricFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = GcpBigqueryMetricFieldsValue{}
+
+type GcpBigqueryMetricFieldsValue struct {
+	IntegrationToken basetypes.StringValue `tfsdk:"integration_token"`
+	QueryProjectId   basetypes.StringValue `tfsdk:"query_project_id"`
+	SqlQuery         basetypes.StringValue `tfsdk:"sql_query"`
+	state            attr.ValueState
+}
+
+func (v GcpBigqueryMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 3)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["query_project_id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["sql_query"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 3)
+
+		val, err = v.IntegrationToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["integration_token"] = val
+
+		val, err = v.QueryProjectId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["query_project_id"] = val
+
+		val, err = v.SqlQuery.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["sql_query"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v GcpBigqueryMetricFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v GcpBigqueryMetricFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v GcpBigqueryMetricFieldsValue) String() string {
+	return "GcpBigqueryMetricFieldsValue"
+}
+
+func (v GcpBigqueryMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"query_project_id":  basetypes.StringType{},
+		"sql_query":         basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"integration_token": v.IntegrationToken,
+			"query_project_id":  v.QueryProjectId,
+			"sql_query":         v.SqlQuery,
+		})
+
+	return objVal, diags
+}
+
+func (v GcpBigqueryMetricFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(GcpBigqueryMetricFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.IntegrationToken.Equal(other.IntegrationToken) {
+		return false
+	}
+
+	if !v.QueryProjectId.Equal(other.QueryProjectId) {
+		return false
+	}
+
+	if !v.SqlQuery.Equal(other.SqlQuery) {
+		return false
+	}
+
+	return true
+}
+
+func (v GcpBigqueryMetricFieldsValue) Type(ctx context.Context) attr.Type {
+	return GcpBigqueryMetricFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v GcpBigqueryMetricFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"query_project_id":  basetypes.StringType{},
+		"sql_query":         basetypes.StringType{},
 	}
 }
 

@@ -28,6 +28,7 @@ Read-Only:
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--business_metrics--cost_report_tokens_with_metadata))
 - `created_by_token` (String) The token of the Creator of the BusinessMetric.
 - `datadog_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--datadog_metric_fields))
+- `gcp_bigquery_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--gcp_bigquery_metric_fields))
 - `id` (String) The id of the BusinessMetric.
 - `import_type` (String) The type of import for the BusinessMetric.
 - `integration_token` (String) The Integration token used to import the BusinessMetric.
@@ -76,6 +77,15 @@ Read-Only:
 Read-Only:
 
 - `query` (String) The query used to import Datadog metrics.
+
+
+<a id="nestedatt--business_metrics--gcp_bigquery_metric_fields"></a>
+### Nested Schema for `business_metrics.gcp_bigquery_metric_fields`
+
+Read-Only:
+
+- `query_project_id` (String) The GCP project in which the BigQuery job runs.
+- `sql_query` (String) The SQL query used to import GCP BigQuery metrics.
 
 
 <a id="nestedatt--business_metrics--snowflake_metric_fields"></a>
