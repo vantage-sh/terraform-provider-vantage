@@ -1289,6 +1289,66 @@ func TestBusinessMetricGcpBigqueryFieldsPayload(t *testing.T) {
 	}
 }
 
+func TestBusinessMetricClickhouseFieldsPayload(t *testing.T) {
+	ctx := context.Background()
+	clickhouseFields, diags := resource_business_metric.NewClickhouseMetricFieldsValue(
+		resource_business_metric.ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token": types.StringValue("accss_crdntl_clickhouse"),
+			"query_endpoint_id": types.StringValue("7c6a3a87-12fd-41f5-afdf-caa4697a2886"),
+		},
+	)
+	if diags.HasError() {
+		t.Fatalf("failed to build clickhouse fields: %v", diags)
+	}
+
+	model := &businessMetricResourceModel{
+		Title:                  types.StringValue("ClickHouse Revenue"),
+		Token:                  types.StringValue("bmetr_test"),
+		ClickhouseMetricFields: clickhouseFields,
+	}
+
+	var d diag.Diagnostics
+	payload := model.toCreate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if payload.ClickhouseMetricFields == nil {
+		t.Fatal("expected clickhouse_metric_fields on create payload")
+	}
+	if payload.ClickhouseMetricFields.IntegrationToken != "accss_crdntl_clickhouse" {
+		t.Fatalf("unexpected integration token: %q", payload.ClickhouseMetricFields.IntegrationToken)
+	}
+	if payload.ClickhouseMetricFields.QueryEndpointID != "7c6a3a87-12fd-41f5-afdf-caa4697a2886" {
+		t.Fatalf("unexpected query endpoint id: %q", payload.ClickhouseMetricFields.QueryEndpointID)
+	}
+}
+
+func TestBusinessMetricClickhouseFieldsFromAPI(t *testing.T) {
+	ctx := context.Background()
+	integrationToken := "accss_crdntl_clickhouse"
+	importType := "clickhouse_metrics"
+	model := &businessMetricResourceModel{}
+	diags := model.applyPayload(ctx, &modelsv2.BusinessMetric{
+		Title:            "ClickHouse Revenue",
+		Token:            "bsnss_mtrc_1234",
+		ImportType:       &importType,
+		IntegrationToken: &integrationToken,
+		ClickhouseMetricFields: &modelsv2.ClickhouseMetricFields{
+			QueryEndpointID: "7c6a3a87-12fd-41f5-afdf-caa4697a2886",
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if model.ClickhouseMetricFields.IntegrationToken.ValueString() != integrationToken {
+		t.Fatalf("unexpected integration token: %q", model.ClickhouseMetricFields.IntegrationToken.ValueString())
+	}
+	if model.ClickhouseMetricFields.QueryEndpointId.ValueString() != "7c6a3a87-12fd-41f5-afdf-caa4697a2886" {
+		t.Fatalf("unexpected query endpoint id: %q", model.ClickhouseMetricFields.QueryEndpointId.ValueString())
+	}
+}
+
 func TestBusinessMetricGcpBigqueryFieldsFromAPI(t *testing.T) {
 	ctx := context.Background()
 	integrationToken := "accss_crdntl_gcp"
@@ -1495,6 +1555,105 @@ func TestBusinessMetricGcpBigqueryFieldsPlan(t *testing.T) {
 			buildObject(existing("gcp renamed", gcpValue("SELECT 1"))),
 		)
 		if requiresReplaceGcp(resp) {
+			t.Fatalf("expected no replace, got %v", resp.RequiresReplace)
+		}
+	})
+}
+
+func TestBusinessMetricClickhouseFieldsPlan(t *testing.T) {
+	ctx := context.Background()
+	schemaResp := &fwresource.SchemaResponse{}
+	NewBusinessMetricResource().Schema(ctx, fwresource.SchemaRequest{}, schemaResp)
+	objType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	clickhouseType := objType.AttributeTypes["clickhouse_metric_fields"].(tftypes.Object)
+
+	buildObject := func(values map[string]tftypes.Value) tftypes.Value {
+		attrs := map[string]tftypes.Value{}
+		for name, typ := range objType.AttributeTypes {
+			if v, ok := values[name]; ok {
+				attrs[name] = v
+			} else {
+				attrs[name] = tftypes.NewValue(typ, nil)
+			}
+		}
+		return tftypes.NewValue(objType, attrs)
+	}
+	clickhouseValue := func(endpointID string) tftypes.Value {
+		return tftypes.NewValue(clickhouseType, map[string]tftypes.Value{
+			"integration_token": tftypes.NewValue(tftypes.String, "accss_crdntl_123"),
+			"query_endpoint_id": tftypes.NewValue(tftypes.String, endpointID),
+		})
+	}
+	dynamicValue := func(t *testing.T, v tftypes.Value) *tfprotov6.DynamicValue {
+		dv, err := tfprotov6.NewDynamicValue(objType, v)
+		if err != nil {
+			t.Fatalf("failed to build dynamic value: %v", err)
+		}
+		return &dv
+	}
+	plan := func(t *testing.T, prior, config tftypes.Value) *tfprotov6.PlanResourceChangeResponse {
+		server, err := providerserver.NewProtocol6WithError(New())()
+		if err != nil {
+			t.Fatalf("failed to create provider server: %v", err)
+		}
+		resp, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
+			TypeName:         "vantage_business_metric",
+			PriorState:       dynamicValue(t, prior),
+			ProposedNewState: dynamicValue(t, config),
+			Config:           dynamicValue(t, config),
+		})
+		if err != nil {
+			t.Fatalf("PlanResourceChange returned error: %v", err)
+		}
+		for _, d := range resp.Diagnostics {
+			if d.Severity == tfprotov6.DiagnosticSeverityError {
+				t.Fatalf("unexpected plan error: %s: %s", d.Summary, d.Detail)
+			}
+		}
+		return resp
+	}
+	requiresReplaceClickhouse := func(resp *tfprotov6.PlanResourceChangeResponse) bool {
+		for _, p := range resp.RequiresReplace {
+			if steps := p.Steps(); len(steps) > 0 && steps[0] == tftypes.AttributeName("clickhouse_metric_fields") {
+				return true
+			}
+		}
+		return false
+	}
+	existing := func(title string, clickhouse tftypes.Value) map[string]tftypes.Value {
+		return map[string]tftypes.Value{
+			"title":                    tftypes.NewValue(tftypes.String, title),
+			"clickhouse_metric_fields": clickhouse,
+		}
+	}
+	withIDs := func(values map[string]tftypes.Value) map[string]tftypes.Value {
+		values["id"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		values["token"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		return values
+	}
+
+	t.Run("create without block", func(t *testing.T) {
+		plan(t, tftypes.NewValue(objType, nil), buildObject(map[string]tftypes.Value{
+			"title": tftypes.NewValue(tftypes.String, "no clickhouse"),
+		}))
+	})
+
+	t.Run("changed block requires replace", func(t *testing.T) {
+		resp := plan(t,
+			buildObject(withIDs(existing("ch", clickhouseValue("7c6a3a87-12fd-41f5-afdf-caa4697a2886")))),
+			buildObject(existing("ch", clickhouseValue("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"))),
+		)
+		if !requiresReplaceClickhouse(resp) {
+			t.Fatalf("expected clickhouse_metric_fields change to require replace, got %v", resp.RequiresReplace)
+		}
+	})
+
+	t.Run("unchanged block does not require replace", func(t *testing.T) {
+		resp := plan(t,
+			buildObject(withIDs(existing("ch", clickhouseValue("7c6a3a87-12fd-41f5-afdf-caa4697a2886")))),
+			buildObject(existing("ch renamed", clickhouseValue("7c6a3a87-12fd-41f5-afdf-caa4697a2886"))),
+		)
+		if requiresReplaceClickhouse(resp) {
 			t.Fatalf("expected no replace, got %v", resp.RequiresReplace)
 		}
 	})

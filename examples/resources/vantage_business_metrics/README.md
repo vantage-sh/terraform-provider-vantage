@@ -31,3 +31,9 @@ This configuration ensures that Terraform properly manages the dependencies betw
 See `gcp_bigquery.tf` for a business metric imported from a BigQuery SQL query.
 
 A change to `gcp_bigquery_metric_fields` replaces the resource. The Vantage API does not update that block in place.
+
+### Business Metric from ClickHouse
+
+See `clickhouse.tf` for a business metric imported from a ClickHouse query endpoint.
+
+A change to `clickhouse_metric_fields` replaces the resource. The Vantage API does not update that block in place.
