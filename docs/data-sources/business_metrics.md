@@ -24,6 +24,7 @@ description: |-
 
 Read-Only:
 
+- `clickhouse_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--clickhouse_metric_fields))
 - `cloudwatch_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--cloudwatch_fields))
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--business_metrics--cost_report_tokens_with_metadata))
 - `created_by_token` (String) The token of the Creator of the BusinessMetric.
@@ -35,6 +36,14 @@ Read-Only:
 - `snowflake_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--snowflake_metric_fields))
 - `title` (String) The title of the BusinessMetric.
 - `token` (String) The token of the BusinessMetric.
+
+<a id="nestedatt--business_metrics--clickhouse_metric_fields"></a>
+### Nested Schema for `business_metrics.clickhouse_metric_fields`
+
+Read-Only:
+
+- `query_endpoint_id` (String) The UUID of the ClickHouse query endpoint used to import metrics.
+
 
 <a id="nestedatt--business_metrics--cloudwatch_fields"></a>
 ### Nested Schema for `business_metrics.cloudwatch_fields`

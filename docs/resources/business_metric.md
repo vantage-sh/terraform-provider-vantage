@@ -22,6 +22,7 @@ description: |-
 ### Optional
 
 - `cloudwatch_fields` (Attributes) Cloudwatch configuration fields. (see [below for nested schema](#nestedatt--cloudwatch_fields))
+- `clickhouse_metric_fields` (Attributes) ClickHouse metric configuration fields. Changing this block replaces the business metric. (see [below for nested schema](#nestedatt--clickhouse_metric_fields))
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
 - `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
 - `forecasted_values` (Attributes List) The dates, amounts, and (optional) labels for forecasted BusinessMetric values. (see [below for nested schema](#nestedatt--forecasted_values))
@@ -58,6 +59,15 @@ Optional:
 - `name` (String)
 - `value` (String)
 
+
+
+<a id="nestedatt--clickhouse_metric_fields"></a>
+### Nested Schema for `clickhouse_metric_fields`
+
+Optional:
+
+- `integration_token` (String) Integration token for the ClickHouse integration from which you would like to fetch metrics.
+- `query_endpoint_id` (String) UUID of the ClickHouse query endpoint used to fetch metrics.
 
 
 <a id="nestedatt--cost_report_tokens_with_metadata"></a>
