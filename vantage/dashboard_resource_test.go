@@ -222,18 +222,20 @@ func TestAccDashboard_withKpiWidget(t *testing.T) {
 								settings = {
 									display_type = "kpi"
 									kpi_calculation = "average"
-									kpi_type = "cost"
+									kpi_type = "usage"
+									kpi_usage_unit = "GB"
 								}
-								title = "Spend KPI (avg)"
+								title = "Usage KPI"
 								widgetable_token = vantage_cost_report.test-kpi-report.token
 							}
 						]`,
 					),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.title", "Spend KPI (avg)"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.title", "Usage KPI"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.settings.display_type", "kpi"),
 					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.settings.kpi_calculation", "average"),
-					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.settings.kpi_type", "cost"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.settings.kpi_type", "usage"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-kpi-widget", "widgets.0.settings.kpi_usage_unit", "GB"),
 				),
 			},
 			{
@@ -248,15 +250,49 @@ func TestAccDashboard_withKpiWidget(t *testing.T) {
 								settings = {
 									display_type = "kpi"
 									kpi_calculation = "average"
-									kpi_type = "cost"
+									kpi_type = "usage"
+									kpi_usage_unit = "GB"
 								}
-								title = "Spend KPI (avg)"
+								title = "Usage KPI"
 								widgetable_token = vantage_cost_report.test-kpi-report.token
 							}
 						]`,
 					),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccDashboardsDataSource_basic(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+					data "vantage_workspaces" "test" {}
+
+					resource "vantage_dashboard" "test" {
+						workspace_token = data.vantage_workspaces.test.workspaces[0].token
+						title           = "tf-dashboards-ds"
+						date_interval   = "this_month"
+					}
+
+					data "vantage_dashboards" "filtered" {
+						workspace_token = data.vantage_workspaces.test.workspaces[0].token
+						q               = vantage_dashboard.test.title
+					}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.vantage_dashboards.filtered", "dashboards.#"),
+					resource.TestCheckResourceAttr("data.vantage_dashboards.filtered", "q", "tf-dashboards-ds"),
+					resource.TestCheckResourceAttrPair(
+						"data.vantage_dashboards.filtered", "workspace_token",
+						"data.vantage_workspaces.test", "workspaces.0.token",
+					),
+				),
 			},
 		},
 	})
