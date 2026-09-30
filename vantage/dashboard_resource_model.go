@@ -47,17 +47,18 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
 
-	tfWidgets := make([]basetypes.ObjectValue, 0, len(payload.Widgets))
+	tfWidgets := make([]resource_dashboard.WidgetsValue, 0, len(payload.Widgets))
+	settingsAttrTypes := resource_dashboard.SettingsValue{}.AttributeTypes(ctx)
+	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
 	for _, widget := range payload.Widgets {
-		// Build settings object
 		var settingsObj basetypes.ObjectValue
-		settingsAttrTypes := map[string]attr.Type{
-			"display_type": types.StringType,
-		}
-		
+
 		if widget.Settings != nil {
 			settingsAttrs := map[string]attr.Value{
-				"display_type": types.StringValue(widget.Settings.DisplayType),
+				"display_type":    types.StringValue(widget.Settings.DisplayType),
+				"kpi_calculation": types.StringPointerValue(widget.Settings.KpiCalculation),
+				"kpi_type":        types.StringPointerValue(widget.Settings.KpiType),
+				"kpi_usage_unit":  types.StringPointerValue(widget.Settings.KpiUsageUnit),
 			}
 			settingsVal, diag := resource_dashboard.NewSettingsValue(settingsAttrTypes, settingsAttrs)
 			if diag.HasError() {
@@ -68,16 +69,9 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 				return diag
 			}
 		} else {
-			// Create null settings object when not provided
 			settingsObj = types.ObjectNull(settingsAttrTypes)
 		}
 
-		// Build widget using proper constructor with attribute types and values
-		widgetAttrTypes := map[string]attr.Type{
-			"settings": types.ObjectType{AttrTypes: settingsAttrTypes},
-			"title":            types.StringType,
-			"widgetable_token": types.StringType,
-		}
 		widgetAttrs := map[string]attr.Value{
 			"settings":         settingsObj,
 			"title":            types.StringValue(widget.Title),
@@ -89,16 +83,10 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 			return diag
 		}
 
-		tfValue, diag := tfWidget.ToObjectValue(ctx)
-		if diag.HasError() {
-			return diag
-		}
-
-		tfWidgets = append(tfWidgets, tfValue)
+		tfWidgets = append(tfWidgets, tfWidget)
 	}
 
-	attrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
-	widgets, diag := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: attrTypes}, tfWidgets)
+	widgets, diag := types.ListValueFrom(ctx, resource_dashboard.WidgetsValue{}.Type(ctx), tfWidgets)
 	if diag.HasError() {
 		return diag
 	}
@@ -145,9 +133,7 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 					return nil
 				}
 
-				widget.Settings = &modelsv2.CreateDashboardWidgetsItems0Settings{
-					DisplayType: tfSettingsTyped.DisplayType.ValueStringPointer(),
-				}
+				widget.Settings = createDashboardWidgetSettings(tfSettingsTyped)
 			}
 
 			widgets = append(widgets, widget)
@@ -208,9 +194,7 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 					return nil
 				}
 
-				widget.Settings = &modelsv2.UpdateDashboardWidgetsItems0Settings{
-					DisplayType: tfSettingsTyped.DisplayType.ValueStringPointer(),
-				}
+				widget.Settings = updateDashboardWidgetSettings(tfSettingsTyped)
 			}
 
 			widgets = append(widgets, widget)
@@ -238,4 +222,36 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 	}
 
 	return payload
+}
+
+func createDashboardWidgetSettings(s resource_dashboard.SettingsValue) *modelsv2.CreateDashboardWidgetsItems0Settings {
+	settings := &modelsv2.CreateDashboardWidgetsItems0Settings{
+		DisplayType: s.DisplayType.ValueStringPointer(),
+	}
+	if !s.KpiCalculation.IsNull() && !s.KpiCalculation.IsUnknown() {
+		settings.KpiCalculation = s.KpiCalculation.ValueString()
+	}
+	if !s.KpiType.IsNull() && !s.KpiType.IsUnknown() {
+		settings.KpiType = s.KpiType.ValueString()
+	}
+	if !s.KpiUsageUnit.IsNull() && !s.KpiUsageUnit.IsUnknown() {
+		settings.KpiUsageUnit = s.KpiUsageUnit.ValueString()
+	}
+	return settings
+}
+
+func updateDashboardWidgetSettings(s resource_dashboard.SettingsValue) *modelsv2.UpdateDashboardWidgetsItems0Settings {
+	settings := &modelsv2.UpdateDashboardWidgetsItems0Settings{
+		DisplayType: s.DisplayType.ValueStringPointer(),
+	}
+	if !s.KpiCalculation.IsNull() && !s.KpiCalculation.IsUnknown() {
+		settings.KpiCalculation = s.KpiCalculation.ValueString()
+	}
+	if !s.KpiType.IsNull() && !s.KpiType.IsUnknown() {
+		settings.KpiType = s.KpiType.ValueString()
+	}
+	if !s.KpiUsageUnit.IsNull() && !s.KpiUsageUnit.IsUnknown() {
+		settings.KpiUsageUnit = s.KpiUsageUnit.ValueString()
+	}
+	return settings
 }

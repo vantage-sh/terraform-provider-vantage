@@ -111,8 +111,41 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 										stringvalidator.OneOf(
 											"table",
 											"chart",
+											"kpi",
 										),
 									},
+								},
+								"kpi_calculation": schema.StringAttribute{
+									Optional:            true,
+									Computed:            true,
+									Description:         "The aggregation used when display_type is kpi.",
+									MarkdownDescription: "The aggregation used when display_type is kpi.",
+									Validators: []validator.String{
+										stringvalidator.OneOf(
+											"sum",
+											"average",
+										),
+									},
+								},
+								"kpi_type": schema.StringAttribute{
+									Optional:            true,
+									Computed:            true,
+									Description:         "The metric represented when display_type is kpi.",
+									MarkdownDescription: "The metric represented when display_type is kpi.",
+									Validators: []validator.String{
+										stringvalidator.OneOf(
+											"cost",
+											"usage",
+											"count",
+											"business_metric",
+										),
+									},
+								},
+								"kpi_usage_unit": schema.StringAttribute{
+									Optional:            true,
+									Computed:            true,
+									Description:         "The usage unit represented when kpi_type is usage.",
+									MarkdownDescription: "The usage unit represented when kpi_type is usage.",
 								},
 							},
 							CustomType: SettingsType{
@@ -145,8 +178,8 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				},
 				Optional:            true,
 				Computed:            true,
-				Description:         "The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, and FinancialCommitmentReport.",
-				MarkdownDescription: "The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, and FinancialCommitmentReport.",
+				Description:         "The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, FinancialCommitmentReport, RecommendationView, and KPI widgets.",
+				MarkdownDescription: "The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, FinancialCommitmentReport, RecommendationView, and KPI widgets.",
 			},
 			"workspace_token": schema.StringAttribute{
 				Optional:            true,
@@ -676,13 +709,70 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 			fmt.Sprintf(`display_type expected to be basetypes.StringValue, was: %T`, displayTypeAttribute))
 	}
 
+	kpiCalculationAttribute, ok := attributes["kpi_calculation"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_calculation is missing from object`)
+
+		return nil, diags
+	}
+
+	kpiCalculationVal, ok := kpiCalculationAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_calculation expected to be basetypes.StringValue, was: %T`, kpiCalculationAttribute))
+	}
+
+	kpiTypeAttribute, ok := attributes["kpi_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_type is missing from object`)
+
+		return nil, diags
+	}
+
+	kpiTypeVal, ok := kpiTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_type expected to be basetypes.StringValue, was: %T`, kpiTypeAttribute))
+	}
+
+	kpiUsageUnitAttribute, ok := attributes["kpi_usage_unit"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_usage_unit is missing from object`)
+
+		return nil, diags
+	}
+
+	kpiUsageUnitVal, ok := kpiUsageUnitAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_usage_unit expected to be basetypes.StringValue, was: %T`, kpiUsageUnitAttribute))
+	}
+
 	if diags.HasError() {
 		return nil, diags
 	}
 
 	return SettingsValue{
-		DisplayType: displayTypeVal,
-		state:       attr.ValueStateKnown,
+		DisplayType:    displayTypeVal,
+		KpiCalculation: kpiCalculationVal,
+		KpiType:        kpiTypeVal,
+		KpiUsageUnit:   kpiUsageUnitVal,
+		state:          attr.ValueStateKnown,
 	}, diags
 }
 
@@ -767,13 +857,70 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 			fmt.Sprintf(`display_type expected to be basetypes.StringValue, was: %T`, displayTypeAttribute))
 	}
 
+	kpiCalculationAttribute, ok := attributes["kpi_calculation"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_calculation is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	kpiCalculationVal, ok := kpiCalculationAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_calculation expected to be basetypes.StringValue, was: %T`, kpiCalculationAttribute))
+	}
+
+	kpiTypeAttribute, ok := attributes["kpi_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_type is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	kpiTypeVal, ok := kpiTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_type expected to be basetypes.StringValue, was: %T`, kpiTypeAttribute))
+	}
+
+	kpiUsageUnitAttribute, ok := attributes["kpi_usage_unit"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_usage_unit is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	kpiUsageUnitVal, ok := kpiUsageUnitAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_usage_unit expected to be basetypes.StringValue, was: %T`, kpiUsageUnitAttribute))
+	}
+
 	if diags.HasError() {
 		return NewSettingsValueUnknown(), diags
 	}
 
 	return SettingsValue{
-		DisplayType: displayTypeVal,
-		state:       attr.ValueStateKnown,
+		DisplayType:    displayTypeVal,
+		KpiCalculation: kpiCalculationVal,
+		KpiType:        kpiTypeVal,
+		KpiUsageUnit:   kpiUsageUnitVal,
+		state:          attr.ValueStateKnown,
 	}, diags
 }
 
@@ -845,23 +992,29 @@ func (t SettingsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = SettingsValue{}
 
 type SettingsValue struct {
-	DisplayType basetypes.StringValue `tfsdk:"display_type"`
-	state       attr.ValueState
+	DisplayType    basetypes.StringValue `tfsdk:"display_type"`
+	KpiCalculation basetypes.StringValue `tfsdk:"kpi_calculation"`
+	KpiType        basetypes.StringValue `tfsdk:"kpi_type"`
+	KpiUsageUnit   basetypes.StringValue `tfsdk:"kpi_usage_unit"`
+	state          attr.ValueState
 }
 
 func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 1)
+	attrTypes := make(map[string]tftypes.Type, 4)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["display_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["kpi_calculation"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["kpi_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["kpi_usage_unit"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 1)
+		vals := make(map[string]tftypes.Value, 4)
 
 		val, err = v.DisplayType.ToTerraformValue(ctx)
 
@@ -870,6 +1023,30 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 		}
 
 		vals["display_type"] = val
+
+		val, err = v.KpiCalculation.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["kpi_calculation"] = val
+
+		val, err = v.KpiType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["kpi_type"] = val
+
+		val, err = v.KpiUsageUnit.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["kpi_usage_unit"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -901,7 +1078,10 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 	var diags diag.Diagnostics
 
 	attributeTypes := map[string]attr.Type{
-		"display_type": basetypes.StringType{},
+		"display_type":    basetypes.StringType{},
+		"kpi_calculation": basetypes.StringType{},
+		"kpi_type":        basetypes.StringType{},
+		"kpi_usage_unit":  basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -915,7 +1095,10 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
-			"display_type": v.DisplayType,
+			"display_type":    v.DisplayType,
+			"kpi_calculation": v.KpiCalculation,
+			"kpi_type":        v.KpiType,
+			"kpi_usage_unit":  v.KpiUsageUnit,
 		})
 
 	return objVal, diags
@@ -940,6 +1123,18 @@ func (v SettingsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.KpiCalculation.Equal(other.KpiCalculation) {
+		return false
+	}
+
+	if !v.KpiType.Equal(other.KpiType) {
+		return false
+	}
+
+	if !v.KpiUsageUnit.Equal(other.KpiUsageUnit) {
+		return false
+	}
+
 	return true
 }
 
@@ -953,6 +1148,9 @@ func (v SettingsValue) Type(ctx context.Context) attr.Type {
 
 func (v SettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
-		"display_type": basetypes.StringType{},
+		"display_type":    basetypes.StringType{},
+		"kpi_calculation": basetypes.StringType{},
+		"kpi_type":        basetypes.StringType{},
+		"kpi_usage_unit":  basetypes.StringType{},
 	}
 }
