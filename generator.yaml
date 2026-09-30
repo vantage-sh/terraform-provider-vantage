@@ -99,9 +99,6 @@ resources:
       path: /business_metrics/{business_metric_token}
       method: DELETE
     schema:
-      # ClickHouse business metric fields are not implemented in this provider.
-      ignores:
-        - clickhouse_metric_fields
       attributes:
         overrides:
           token:
@@ -491,8 +488,6 @@ data_sources:
         - links
         - page
         - q
-        # Nested on each business metric. The generator applies this inside the list.
-        - business_metrics.clickhouse_metric_fields
   report_forecasts:
     read:
       path: /report_forecasts

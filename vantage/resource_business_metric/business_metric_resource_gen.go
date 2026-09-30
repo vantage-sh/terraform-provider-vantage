@@ -21,6 +21,31 @@ import (
 func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"clickhouse_metric_fields": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"integration_token": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "Integration token for the ClickHouse integration from which you would like to fetch metrics.",
+						MarkdownDescription: "Integration token for the ClickHouse integration from which you would like to fetch metrics.",
+					},
+					"query_endpoint_id": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						Description:         "UUID of the ClickHouse query endpoint used to fetch metrics.",
+						MarkdownDescription: "UUID of the ClickHouse query endpoint used to fetch metrics.",
+					},
+				},
+				CustomType: ClickhouseMetricFieldsType{
+					ObjectType: types.ObjectType{
+						AttrTypes: ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+					},
+				},
+				Optional:            true,
+				Computed:            true,
+				Description:         "ClickHouse metric configuration fields.",
+				MarkdownDescription: "ClickHouse metric configuration fields.",
+			},
 			"cloudwatch_fields": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"dimensions": schema.ListNestedAttribute{
@@ -332,6 +357,7 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type BusinessMetricModel struct {
+	ClickhouseMetricFields       ClickhouseMetricFieldsValue  `tfsdk:"clickhouse_metric_fields"`
 	CloudwatchFields             CloudwatchFieldsValue        `tfsdk:"cloudwatch_fields"`
 	CostReportTokensWithMetadata types.List                   `tfsdk:"cost_report_tokens_with_metadata"`
 	CreatedByToken               types.String                 `tfsdk:"created_by_token"`
@@ -345,6 +371,385 @@ type BusinessMetricModel struct {
 	Title                        types.String                 `tfsdk:"title"`
 	Token                        types.String                 `tfsdk:"token"`
 	Values                       types.List                   `tfsdk:"values"`
+}
+
+var _ basetypes.ObjectTypable = ClickhouseMetricFieldsType{}
+
+type ClickhouseMetricFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t ClickhouseMetricFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(ClickhouseMetricFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t ClickhouseMetricFieldsType) String() string {
+	return "ClickhouseMetricFieldsType"
+}
+
+func (t ClickhouseMetricFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return nil, diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
+	}
+
+	queryEndpointIdAttribute, ok := attributes["query_endpoint_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query_endpoint_id is missing from object`)
+
+		return nil, diags
+	}
+
+	queryEndpointIdVal, ok := queryEndpointIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query_endpoint_id expected to be basetypes.StringValue, was: %T`, queryEndpointIdAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return ClickhouseMetricFieldsValue{
+		IntegrationToken: integrationTokenVal,
+		QueryEndpointId:  queryEndpointIdVal,
+		state:            attr.ValueStateKnown,
+	}, diags
+}
+
+func NewClickhouseMetricFieldsValueNull() ClickhouseMetricFieldsValue {
+	return ClickhouseMetricFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewClickhouseMetricFieldsValueUnknown() ClickhouseMetricFieldsValue {
+	return ClickhouseMetricFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewClickhouseMetricFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (ClickhouseMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing ClickhouseMetricFieldsValue Attribute Value",
+				"While creating a ClickhouseMetricFieldsValue value, a missing attribute value was detected. "+
+					"A ClickhouseMetricFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("ClickhouseMetricFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid ClickhouseMetricFieldsValue Attribute Type",
+				"While creating a ClickhouseMetricFieldsValue value, an invalid attribute value was detected. "+
+					"A ClickhouseMetricFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("ClickhouseMetricFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("ClickhouseMetricFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra ClickhouseMetricFieldsValue Attribute Value",
+				"While creating a ClickhouseMetricFieldsValue value, an extra attribute value was detected. "+
+					"A ClickhouseMetricFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra ClickhouseMetricFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	integrationTokenAttribute, ok := attributes["integration_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`integration_token is missing from object`)
+
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	integrationTokenVal, ok := integrationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
+	}
+
+	queryEndpointIdAttribute, ok := attributes["query_endpoint_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query_endpoint_id is missing from object`)
+
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	queryEndpointIdVal, ok := queryEndpointIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query_endpoint_id expected to be basetypes.StringValue, was: %T`, queryEndpointIdAttribute))
+	}
+
+	if diags.HasError() {
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	return ClickhouseMetricFieldsValue{
+		IntegrationToken: integrationTokenVal,
+		QueryEndpointId:  queryEndpointIdVal,
+		state:            attr.ValueStateKnown,
+	}, diags
+}
+
+func NewClickhouseMetricFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) ClickhouseMetricFieldsValue {
+	object, diags := NewClickhouseMetricFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewClickhouseMetricFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t ClickhouseMetricFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewClickhouseMetricFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewClickhouseMetricFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewClickhouseMetricFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewClickhouseMetricFieldsValueMust(ClickhouseMetricFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t ClickhouseMetricFieldsType) ValueType(ctx context.Context) attr.Value {
+	return ClickhouseMetricFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = ClickhouseMetricFieldsValue{}
+
+type ClickhouseMetricFieldsValue struct {
+	IntegrationToken basetypes.StringValue `tfsdk:"integration_token"`
+	QueryEndpointId  basetypes.StringValue `tfsdk:"query_endpoint_id"`
+	state            attr.ValueState
+}
+
+func (v ClickhouseMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["query_endpoint_id"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.IntegrationToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["integration_token"] = val
+
+		val, err = v.QueryEndpointId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["query_endpoint_id"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v ClickhouseMetricFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v ClickhouseMetricFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v ClickhouseMetricFieldsValue) String() string {
+	return "ClickhouseMetricFieldsValue"
+}
+
+func (v ClickhouseMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"query_endpoint_id": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"integration_token": v.IntegrationToken,
+			"query_endpoint_id": v.QueryEndpointId,
+		})
+
+	return objVal, diags
+}
+
+func (v ClickhouseMetricFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(ClickhouseMetricFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.IntegrationToken.Equal(other.IntegrationToken) {
+		return false
+	}
+
+	if !v.QueryEndpointId.Equal(other.QueryEndpointId) {
+		return false
+	}
+
+	return true
+}
+
+func (v ClickhouseMetricFieldsValue) Type(ctx context.Context) attr.Type {
+	return ClickhouseMetricFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v ClickhouseMetricFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"integration_token": basetypes.StringType{},
+		"query_endpoint_id": basetypes.StringType{},
+	}
 }
 
 var _ basetypes.ObjectTypable = CloudwatchFieldsType{}

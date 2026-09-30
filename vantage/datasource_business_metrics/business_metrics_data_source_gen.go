@@ -21,6 +21,21 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 			"business_metrics": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"clickhouse_metric_fields": schema.SingleNestedAttribute{
+							Attributes: map[string]schema.Attribute{
+								"query_endpoint_id": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The UUID of the ClickHouse query endpoint used to import metrics.",
+									MarkdownDescription: "The UUID of the ClickHouse query endpoint used to import metrics.",
+								},
+							},
+							CustomType: ClickhouseMetricFieldsType{
+								ObjectType: types.ObjectType{
+									AttrTypes: ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+								},
+							},
+							Computed: true,
+						},
 						"cloudwatch_fields": schema.SingleNestedAttribute{
 							Attributes: map[string]schema.Attribute{
 								"dimensions": schema.ListNestedAttribute{
@@ -100,9 +115,12 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 										MarkdownDescription: "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 									},
-									"label_filters": schema.MapAttribute{
-										ElementType: types.ListType{
-											ElemType: types.StringType,
+									"label_filters": schema.SingleNestedAttribute{
+										Attributes: map[string]schema.Attribute{},
+										CustomType: LabelFiltersType{
+											ObjectType: types.ObjectType{
+												AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
+											},
 										},
 										Computed:            true,
 										Description:         "The ClickHouse BusinessMetric label filters applied within a CostReport. Each key is required and values within a key are alternatives.",
@@ -246,6 +264,24 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 
 	attributes := in.Attributes()
 
+	clickhouseMetricFieldsAttribute, ok := attributes["clickhouse_metric_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`clickhouse_metric_fields is missing from object`)
+
+		return nil, diags
+	}
+
+	clickhouseMetricFieldsVal, ok := clickhouseMetricFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`clickhouse_metric_fields expected to be basetypes.ObjectValue, was: %T`, clickhouseMetricFieldsAttribute))
+	}
+
 	cloudwatchFieldsAttribute, ok := attributes["cloudwatch_fields"]
 
 	if !ok {
@@ -449,6 +485,7 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 	}
 
 	return BusinessMetricsValue{
+		ClickhouseMetricFields:       clickhouseMetricFieldsVal,
 		CloudwatchFields:             cloudwatchFieldsVal,
 		CostReportTokensWithMetadata: costReportTokensWithMetadataVal,
 		CreatedByToken:               createdByTokenVal,
@@ -527,6 +564,24 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 		return NewBusinessMetricsValueUnknown(), diags
 	}
 
+	clickhouseMetricFieldsAttribute, ok := attributes["clickhouse_metric_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`clickhouse_metric_fields is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	clickhouseMetricFieldsVal, ok := clickhouseMetricFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`clickhouse_metric_fields expected to be basetypes.ObjectValue, was: %T`, clickhouseMetricFieldsAttribute))
+	}
+
 	cloudwatchFieldsAttribute, ok := attributes["cloudwatch_fields"]
 
 	if !ok {
@@ -730,6 +785,7 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 	}
 
 	return BusinessMetricsValue{
+		ClickhouseMetricFields:       clickhouseMetricFieldsVal,
 		CloudwatchFields:             cloudwatchFieldsVal,
 		CostReportTokensWithMetadata: costReportTokensWithMetadataVal,
 		CreatedByToken:               createdByTokenVal,
@@ -813,6 +869,7 @@ func (t BusinessMetricsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = BusinessMetricsValue{}
 
 type BusinessMetricsValue struct {
+	ClickhouseMetricFields       basetypes.ObjectValue `tfsdk:"clickhouse_metric_fields"`
 	CloudwatchFields             basetypes.ObjectValue `tfsdk:"cloudwatch_fields"`
 	CostReportTokensWithMetadata basetypes.ListValue   `tfsdk:"cost_report_tokens_with_metadata"`
 	CreatedByToken               basetypes.StringValue `tfsdk:"created_by_token"`
@@ -828,11 +885,14 @@ type BusinessMetricsValue struct {
 }
 
 func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 11)
+	attrTypes := make(map[string]tftypes.Type, 12)
 
 	var val tftypes.Value
 	var err error
 
+	attrTypes["clickhouse_metric_fields"] = basetypes.ObjectType{
+		AttrTypes: ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
 	attrTypes["cloudwatch_fields"] = basetypes.ObjectType{
 		AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
@@ -859,7 +919,15 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 11)
+		vals := make(map[string]tftypes.Value, 12)
+
+		val, err = v.ClickhouseMetricFields.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["clickhouse_metric_fields"] = val
 
 		val, err = v.CloudwatchFields.ToTerraformValue(ctx)
 
@@ -978,6 +1046,27 @@ func (v BusinessMetricsValue) String() string {
 func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var clickhouseMetricFields basetypes.ObjectValue
+
+	if v.ClickhouseMetricFields.IsNull() {
+		clickhouseMetricFields = types.ObjectNull(
+			ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.ClickhouseMetricFields.IsUnknown() {
+		clickhouseMetricFields = types.ObjectUnknown(
+			ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.ClickhouseMetricFields.IsNull() && !v.ClickhouseMetricFields.IsUnknown() {
+		clickhouseMetricFields = types.ObjectValueMust(
+			ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+			v.ClickhouseMetricFields.Attributes(),
+		)
+	}
+
 	var cloudwatchFields basetypes.ObjectValue
 
 	if v.CloudwatchFields.IsNull() {
@@ -1092,6 +1181,9 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 	}
 
 	attributeTypes := map[string]attr.Type{
+		"clickhouse_metric_fields": basetypes.ObjectType{
+			AttrTypes: ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+		},
 		"cloudwatch_fields": basetypes.ObjectType{
 			AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
 		},
@@ -1126,6 +1218,7 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
+			"clickhouse_metric_fields":         clickhouseMetricFields,
 			"cloudwatch_fields":                cloudwatchFields,
 			"cost_report_tokens_with_metadata": costReportTokensWithMetadata,
 			"created_by_token":                 v.CreatedByToken,
@@ -1155,6 +1248,10 @@ func (v BusinessMetricsValue) Equal(o attr.Value) bool {
 
 	if v.state != attr.ValueStateKnown {
 		return true
+	}
+
+	if !v.ClickhouseMetricFields.Equal(other.ClickhouseMetricFields) {
+		return false
 	}
 
 	if !v.CloudwatchFields.Equal(other.CloudwatchFields) {
@@ -1214,6 +1311,9 @@ func (v BusinessMetricsValue) Type(ctx context.Context) attr.Type {
 
 func (v BusinessMetricsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
+		"clickhouse_metric_fields": basetypes.ObjectType{
+			AttrTypes: ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+		},
 		"cloudwatch_fields": basetypes.ObjectType{
 			AttrTypes: CloudwatchFieldsValue{}.AttributeTypes(ctx),
 		},
@@ -1235,6 +1335,330 @@ func (v BusinessMetricsValue) AttributeTypes(ctx context.Context) map[string]att
 		},
 		"title": basetypes.StringType{},
 		"token": basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = ClickhouseMetricFieldsType{}
+
+type ClickhouseMetricFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t ClickhouseMetricFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(ClickhouseMetricFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t ClickhouseMetricFieldsType) String() string {
+	return "ClickhouseMetricFieldsType"
+}
+
+func (t ClickhouseMetricFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	queryEndpointIdAttribute, ok := attributes["query_endpoint_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query_endpoint_id is missing from object`)
+
+		return nil, diags
+	}
+
+	queryEndpointIdVal, ok := queryEndpointIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query_endpoint_id expected to be basetypes.StringValue, was: %T`, queryEndpointIdAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return ClickhouseMetricFieldsValue{
+		QueryEndpointId: queryEndpointIdVal,
+		state:           attr.ValueStateKnown,
+	}, diags
+}
+
+func NewClickhouseMetricFieldsValueNull() ClickhouseMetricFieldsValue {
+	return ClickhouseMetricFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewClickhouseMetricFieldsValueUnknown() ClickhouseMetricFieldsValue {
+	return ClickhouseMetricFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewClickhouseMetricFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (ClickhouseMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing ClickhouseMetricFieldsValue Attribute Value",
+				"While creating a ClickhouseMetricFieldsValue value, a missing attribute value was detected. "+
+					"A ClickhouseMetricFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("ClickhouseMetricFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid ClickhouseMetricFieldsValue Attribute Type",
+				"While creating a ClickhouseMetricFieldsValue value, an invalid attribute value was detected. "+
+					"A ClickhouseMetricFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("ClickhouseMetricFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("ClickhouseMetricFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra ClickhouseMetricFieldsValue Attribute Value",
+				"While creating a ClickhouseMetricFieldsValue value, an extra attribute value was detected. "+
+					"A ClickhouseMetricFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra ClickhouseMetricFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	queryEndpointIdAttribute, ok := attributes["query_endpoint_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`query_endpoint_id is missing from object`)
+
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	queryEndpointIdVal, ok := queryEndpointIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`query_endpoint_id expected to be basetypes.StringValue, was: %T`, queryEndpointIdAttribute))
+	}
+
+	if diags.HasError() {
+		return NewClickhouseMetricFieldsValueUnknown(), diags
+	}
+
+	return ClickhouseMetricFieldsValue{
+		QueryEndpointId: queryEndpointIdVal,
+		state:           attr.ValueStateKnown,
+	}, diags
+}
+
+func NewClickhouseMetricFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) ClickhouseMetricFieldsValue {
+	object, diags := NewClickhouseMetricFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewClickhouseMetricFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t ClickhouseMetricFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewClickhouseMetricFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewClickhouseMetricFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewClickhouseMetricFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewClickhouseMetricFieldsValueMust(ClickhouseMetricFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t ClickhouseMetricFieldsType) ValueType(ctx context.Context) attr.Value {
+	return ClickhouseMetricFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = ClickhouseMetricFieldsValue{}
+
+type ClickhouseMetricFieldsValue struct {
+	QueryEndpointId basetypes.StringValue `tfsdk:"query_endpoint_id"`
+	state           attr.ValueState
+}
+
+func (v ClickhouseMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 1)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["query_endpoint_id"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 1)
+
+		val, err = v.QueryEndpointId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["query_endpoint_id"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v ClickhouseMetricFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v ClickhouseMetricFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v ClickhouseMetricFieldsValue) String() string {
+	return "ClickhouseMetricFieldsValue"
+}
+
+func (v ClickhouseMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"query_endpoint_id": basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"query_endpoint_id": v.QueryEndpointId,
+		})
+
+	return objVal, diags
+}
+
+func (v ClickhouseMetricFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(ClickhouseMetricFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.QueryEndpointId.Equal(other.QueryEndpointId) {
+		return false
+	}
+
+	return true
+}
+
+func (v ClickhouseMetricFieldsValue) Type(ctx context.Context) attr.Type {
+	return ClickhouseMetricFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v ClickhouseMetricFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"query_endpoint_id": basetypes.StringType{},
 	}
 }
 
@@ -2358,12 +2782,12 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 		return nil, diags
 	}
 
-	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.ObjectValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
+			fmt.Sprintf(`label_filters expected to be basetypes.ObjectValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -2544,12 +2968,12 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 		return NewCostReportTokensWithMetadataValueUnknown(), diags
 	}
 
-	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.ObjectValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
+			fmt.Sprintf(`label_filters expected to be basetypes.ObjectValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -2657,7 +3081,7 @@ type CostReportTokensWithMetadataValue struct {
 	CostReportToken basetypes.StringValue `tfsdk:"cost_report_token"`
 	Label           basetypes.StringValue `tfsdk:"label"`
 	LabelFilter     basetypes.ListValue   `tfsdk:"label_filter"`
-	LabelFilters    basetypes.MapValue    `tfsdk:"label_filters"`
+	LabelFilters    basetypes.ObjectValue `tfsdk:"label_filters"`
 	UnitScale       basetypes.StringValue `tfsdk:"unit_scale"`
 	state           attr.ValueState
 }
@@ -2674,10 +3098,8 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 	attrTypes["label_filter"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
-	attrTypes["label_filters"] = basetypes.MapType{
-		ElemType: types.ListType{
-			ElemType: types.StringType,
-		},
+	attrTypes["label_filters"] = basetypes.ObjectType{
+		AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -2764,6 +3186,27 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var labelFilters basetypes.ObjectValue
+
+	if v.LabelFilters.IsNull() {
+		labelFilters = types.ObjectNull(
+			LabelFiltersValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.LabelFilters.IsUnknown() {
+		labelFilters = types.ObjectUnknown(
+			LabelFiltersValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.LabelFilters.IsNull() && !v.LabelFilters.IsUnknown() {
+		labelFilters = types.ObjectValueMust(
+			LabelFiltersValue{}.AttributeTypes(ctx),
+			v.LabelFilters.Attributes(),
+		)
+	}
+
 	var labelFilterVal basetypes.ListValue
 	switch {
 	case v.LabelFilter.IsUnknown():
@@ -2784,45 +3227,8 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 			"label_filter": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"label_filters": basetypes.MapType{
-				ElemType: types.ListType{
-					ElemType: types.StringType,
-				},
-			},
-			"unit_scale": basetypes.StringType{},
-		}), diags
-	}
-
-	var labelFiltersVal basetypes.MapValue
-	switch {
-	case v.LabelFilters.IsUnknown():
-		labelFiltersVal = types.MapUnknown(types.ListType{
-			ElemType: types.StringType,
-		})
-	case v.LabelFilters.IsNull():
-		labelFiltersVal = types.MapNull(types.ListType{
-			ElemType: types.StringType,
-		})
-	default:
-		var d diag.Diagnostics
-		labelFiltersVal, d = types.MapValue(types.ListType{
-			ElemType: types.StringType,
-		}, v.LabelFilters.Elements())
-		diags.Append(d...)
-	}
-
-	if diags.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"calculation_type":  basetypes.StringType{},
-			"cost_report_token": basetypes.StringType{},
-			"label":             basetypes.StringType{},
-			"label_filter": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"label_filters": basetypes.MapType{
-				ElemType: types.ListType{
-					ElemType: types.StringType,
-				},
+			"label_filters": basetypes.ObjectType{
+				AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 			},
 			"unit_scale": basetypes.StringType{},
 		}), diags
@@ -2835,10 +3241,8 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"label_filters": basetypes.MapType{
-			ElemType: types.ListType{
-				ElemType: types.StringType,
-			},
+		"label_filters": basetypes.ObjectType{
+			AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -2858,7 +3262,7 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 			"cost_report_token": v.CostReportToken,
 			"label":             v.Label,
 			"label_filter":      labelFilterVal,
-			"label_filters":     labelFiltersVal,
+			"label_filters":     labelFilters,
 			"unit_scale":        v.UnitScale,
 		})
 
@@ -2923,10 +3327,8 @@ func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) m
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"label_filters": basetypes.MapType{
-			ElemType: types.ListType{
-				ElemType: types.StringType,
-			},
+		"label_filters": basetypes.ObjectType{
+			AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
 		},
 		"unit_scale": basetypes.StringType{},
 	}

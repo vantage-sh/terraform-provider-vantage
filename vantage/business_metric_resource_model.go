@@ -24,6 +24,7 @@ type BusinessMetricPayloadApplier interface {
 	SetIntegrationToken(integrationToken types.String)
 	SetCloudwatchFields(cloudwatchFields resource_business_metric.CloudwatchFieldsValue)
 	SetDatadogMetricFields(datadogMetricFields resource_business_metric.DatadogMetricFieldsValue)
+	SetClickhouseMetricFields(clickhouseMetricFields resource_business_metric.ClickhouseMetricFieldsValue)
 	SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue)
 	SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue)
 }
@@ -164,6 +165,10 @@ func (m *businessMetricResourceModel) SetDatadogMetricFields(datadogMetricFields
 	m.DatadogMetricFields = datadogMetricFields
 }
 
+func (m *businessMetricResourceModel) SetClickhouseMetricFields(clickhouseMetricFields resource_business_metric.ClickhouseMetricFieldsValue) {
+	m.ClickhouseMetricFields = clickhouseMetricFields
+}
+
 func (m *businessMetricResourceModel) SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue) {
 	m.GcpBigqueryMetricFields = gcpBigqueryMetricFields
 }
@@ -299,6 +304,28 @@ func (m *businessMetricDataSourceValue) SetDatadogMetricFields(datadogMetricFiel
 	m.DatadogMetricFields = objVal
 }
 
+func (m *businessMetricDataSourceValue) SetClickhouseMetricFields(clickhouseMetricFields resource_business_metric.ClickhouseMetricFieldsValue) {
+	attrTypes := datasource_business_metrics.ClickhouseMetricFieldsValue{}.AttributeTypes(context.Background())
+
+	if clickhouseMetricFields.IsNull() {
+		m.ClickhouseMetricFields = types.ObjectNull(attrTypes)
+		return
+	}
+
+	queryEndpointID := clickhouseMetricFields.QueryEndpointId
+	if queryEndpointID.IsNull() || queryEndpointID.IsUnknown() {
+		queryEndpointID = types.StringValue("")
+	}
+
+	objVal, _ := types.ObjectValue(
+		attrTypes,
+		map[string]attr.Value{
+			"query_endpoint_id": queryEndpointID,
+		},
+	)
+	m.ClickhouseMetricFields = objVal
+}
+
 func (m *businessMetricDataSourceValue) SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue) {
 	attrTypes := datasource_business_metrics.GcpBigqueryMetricFieldsValue{}.AttributeTypes(context.Background())
 
@@ -368,6 +395,12 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 		return d
 	}
 	m.SetDatadogMetricFields(tfDatadogMetricFields)
+
+	tfClickhouseMetricFields, d := clickhouseMetricFieldsFromApiModel(ctx, payload.ClickhouseMetricFields, payload.IntegrationToken)
+	if d.HasError() {
+		return d
+	}
+	m.SetClickhouseMetricFields(tfClickhouseMetricFields)
 
 	tfGcpBigqueryMetricFields, d := gcpBigqueryMetricFieldsFromApiModel(ctx, payload.GcpBigqueryMetricFields, payload.IntegrationToken)
 	if d.HasError() {
@@ -536,6 +569,13 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 			Query:            m.DatadogMetricFields.Query.ValueString(),
 		}
 		model.DatadogMetricFields = datadogMetricFields
+	}
+
+	if !m.ClickhouseMetricFields.IsNull() && !m.ClickhouseMetricFields.IsUnknown() {
+		model.ClickhouseMetricFields = &modelsv2.CreateBusinessMetricClickhouseMetricFields{
+			IntegrationToken: m.ClickhouseMetricFields.IntegrationToken.ValueString(),
+			QueryEndpointID:  m.ClickhouseMetricFields.QueryEndpointId.ValueString(),
+		}
 	}
 
 	if !m.GcpBigqueryMetricFields.IsNull() && !m.GcpBigqueryMetricFields.IsUnknown() {
@@ -955,6 +995,24 @@ func datadogMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.Da
 		map[string]attr.Value{
 			"query":             types.StringValue(apiFields.Query),
 			"integration_token": types.StringPointerValue(integrationToken),
+		},
+	)
+	diags.Append(d...)
+
+	return tfValue, diags
+}
+
+func clickhouseMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.ClickhouseMetricFields, integrationToken *string) (resource_business_metric.ClickhouseMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if apiFields == nil {
+		return resource_business_metric.NewClickhouseMetricFieldsValueNull(), diags
+	}
+
+	tfValue, d := resource_business_metric.NewClickhouseMetricFieldsValue(
+		resource_business_metric.ClickhouseMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token": types.StringPointerValue(integrationToken),
+			"query_endpoint_id": types.StringValue(apiFields.QueryEndpointID),
 		},
 	)
 	diags.Append(d...)
