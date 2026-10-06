@@ -28,6 +28,24 @@ resource "vantage_dashboard" "demo_dashboard" {
       }
       title            = "Total Spend"
       widgetable_token = "rprt_a2846903070824f4"
+    },
+    {
+      title           = "Notes"
+      widgetable_type = "free_text"
+      content = jsonencode({
+        type = "doc"
+        content = [
+          {
+            type = "paragraph"
+            content = [
+              {
+                type = "text"
+                text = "Use free text widgets for dashboard context."
+              }
+            ]
+          }
+        ]
+      })
     }
   ]
   workspace_token = "wrkspc_47c3254c790e9351"

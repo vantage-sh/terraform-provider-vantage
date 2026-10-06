@@ -104,6 +104,12 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 			"widgets": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"content": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "JSON-encoded TipTap document for a free text widget. Example: {\"type\":\"doc\",\"content\":[...]}",
+							MarkdownDescription: "JSON-encoded TipTap document for a free text widget. Example: {\"type\":\"doc\",\"content\":[...]}",
+						},
 						"settings": schema.SingleNestedAttribute{
 							Attributes: map[string]schema.Attribute{
 								"display_type": schema.StringAttribute{
@@ -215,6 +221,17 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The token of the represented Resource.",
 							MarkdownDescription: "The token of the represented Resource.",
 						},
+						"widgetable_type": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							Description:         "The widget type. Use free_text for a free text widget.",
+							MarkdownDescription: "The widget type. Use free_text for a free text widget.",
+							Validators: []validator.String{
+								stringvalidator.OneOf(
+									"free_text",
+								),
+							},
+						},
 					},
 					CustomType: WidgetsType{
 						ObjectType: types.ObjectType{
@@ -275,6 +292,24 @@ func (t WidgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	var diags diag.Diagnostics
 
 	attributes := in.Attributes()
+
+	contentAttribute, ok := attributes["content"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`content is missing from object`)
+
+		return nil, diags
+	}
+
+	contentVal, ok := contentAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`content expected to be basetypes.StringValue, was: %T`, contentAttribute))
+	}
 
 	settingsAttribute, ok := attributes["settings"]
 
@@ -348,15 +383,35 @@ func (t WidgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 			fmt.Sprintf(`widgetable_token expected to be basetypes.StringValue, was: %T`, widgetableTokenAttribute))
 	}
 
+	widgetableTypeAttribute, ok := attributes["widgetable_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`widgetable_type is missing from object`)
+
+		return nil, diags
+	}
+
+	widgetableTypeVal, ok := widgetableTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`widgetable_type expected to be basetypes.StringValue, was: %T`, widgetableTypeAttribute))
+	}
+
 	if diags.HasError() {
 		return nil, diags
 	}
 
 	return WidgetsValue{
+		Content:         contentVal,
 		Settings:        settingsVal,
 		Title:           titleVal,
 		Token:           tokenVal,
 		WidgetableToken: widgetableTokenVal,
+		WidgetableType:  widgetableTypeVal,
 		state:           attr.ValueStateKnown,
 	}, diags
 }
@@ -424,6 +479,24 @@ func NewWidgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 		return NewWidgetsValueUnknown(), diags
 	}
 
+	contentAttribute, ok := attributes["content"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`content is missing from object`)
+
+		return NewWidgetsValueUnknown(), diags
+	}
+
+	contentVal, ok := contentAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`content expected to be basetypes.StringValue, was: %T`, contentAttribute))
+	}
+
 	settingsAttribute, ok := attributes["settings"]
 
 	if !ok {
@@ -496,15 +569,35 @@ func NewWidgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 			fmt.Sprintf(`widgetable_token expected to be basetypes.StringValue, was: %T`, widgetableTokenAttribute))
 	}
 
+	widgetableTypeAttribute, ok := attributes["widgetable_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`widgetable_type is missing from object`)
+
+		return NewWidgetsValueUnknown(), diags
+	}
+
+	widgetableTypeVal, ok := widgetableTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`widgetable_type expected to be basetypes.StringValue, was: %T`, widgetableTypeAttribute))
+	}
+
 	if diags.HasError() {
 		return NewWidgetsValueUnknown(), diags
 	}
 
 	return WidgetsValue{
+		Content:         contentVal,
 		Settings:        settingsVal,
 		Title:           titleVal,
 		Token:           tokenVal,
 		WidgetableToken: widgetableTokenVal,
+		WidgetableType:  widgetableTypeVal,
 		state:           attr.ValueStateKnown,
 	}, diags
 }
@@ -577,31 +670,43 @@ func (t WidgetsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = WidgetsValue{}
 
 type WidgetsValue struct {
+	Content         basetypes.StringValue `tfsdk:"content"`
 	Settings        basetypes.ObjectValue `tfsdk:"settings"`
 	Title           basetypes.StringValue `tfsdk:"title"`
 	Token           basetypes.StringValue `tfsdk:"token"`
 	WidgetableToken basetypes.StringValue `tfsdk:"widgetable_token"`
+	WidgetableType  basetypes.StringValue `tfsdk:"widgetable_type"`
 	state           attr.ValueState
 }
 
 func (v WidgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 4)
+	attrTypes := make(map[string]tftypes.Type, 6)
 
 	var val tftypes.Value
 	var err error
 
+	attrTypes["content"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["settings"] = basetypes.ObjectType{
 		AttrTypes: SettingsValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["widgetable_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["widgetable_type"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 4)
+		vals := make(map[string]tftypes.Value, 6)
+
+		val, err = v.Content.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["content"] = val
 
 		val, err = v.Settings.ToTerraformValue(ctx)
 
@@ -634,6 +739,14 @@ func (v WidgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		}
 
 		vals["widgetable_token"] = val
+
+		val, err = v.WidgetableType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["widgetable_type"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -686,12 +799,14 @@ func (v WidgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 	}
 
 	attributeTypes := map[string]attr.Type{
+		"content": basetypes.StringType{},
 		"settings": basetypes.ObjectType{
 			AttrTypes: SettingsValue{}.AttributeTypes(ctx),
 		},
 		"title":            basetypes.StringType{},
 		"token":            basetypes.StringType{},
 		"widgetable_token": basetypes.StringType{},
+		"widgetable_type":  basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -705,10 +820,12 @@ func (v WidgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
+			"content":          v.Content,
 			"settings":         settings,
 			"title":            v.Title,
 			"token":            v.Token,
 			"widgetable_token": v.WidgetableToken,
+			"widgetable_type":  v.WidgetableType,
 		})
 
 	return objVal, diags
@@ -729,6 +846,10 @@ func (v WidgetsValue) Equal(o attr.Value) bool {
 		return true
 	}
 
+	if !v.Content.Equal(other.Content) {
+		return false
+	}
+
 	if !v.Settings.Equal(other.Settings) {
 		return false
 	}
@@ -745,6 +866,10 @@ func (v WidgetsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.WidgetableType.Equal(other.WidgetableType) {
+		return false
+	}
+
 	return true
 }
 
@@ -758,12 +883,14 @@ func (v WidgetsValue) Type(ctx context.Context) attr.Type {
 
 func (v WidgetsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
+		"content": basetypes.StringType{},
 		"settings": basetypes.ObjectType{
 			AttrTypes: SettingsValue{}.AttributeTypes(ctx),
 		},
 		"title":            basetypes.StringType{},
 		"token":            basetypes.StringType{},
 		"widgetable_token": basetypes.StringType{},
+		"widgetable_type":  basetypes.StringType{},
 	}
 }
 

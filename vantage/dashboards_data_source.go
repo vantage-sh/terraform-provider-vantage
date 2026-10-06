@@ -151,10 +151,12 @@ func dashboardDataSourceWidgetsFromPayload(ctx context.Context, payload []*model
 		}
 
 		widgetVal, d := datasource_dashboards.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+			"content":          dashboardWidgetContentString(widget.Content),
 			"settings":         settingsObj,
 			"title":            types.StringValue(widget.Title),
 			"token":            types.StringValue(widget.Token),
 			"widgetable_token": stringValueOrNull(widget.WidgetableToken),
+			"widgetable_type":  stringValueOrNull(widget.WidgetableType),
 		})
 		diags.Append(d...)
 		if diags.HasError() {

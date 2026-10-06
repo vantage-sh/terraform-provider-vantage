@@ -371,6 +371,92 @@ func TestAccDashboard_withKpiWidget(t *testing.T) {
 	})
 }
 
+func TestAccDashboard_withFreeTextWidget(t *testing.T) {
+	now := time.Now()
+	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
+	endDate := beginningOfCurrentMonth.AddDate(0, 0, -1).Format("2006-01-02")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTf(
+						"test-free-text-widget",
+						startDate,
+						endDate,
+						`widgets = [
+							{
+								title           = "Notes"
+								widgetable_type = "free_text"
+								content = jsonencode({
+									type = "doc"
+									content = [
+										{
+											type = "paragraph"
+											content = [
+												{
+													type = "text"
+													text = "Hello from Terraform"
+												}
+											]
+										}
+									]
+								})
+							}
+						]`,
+					),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-free-text-widget", "widgets.#", "1"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-free-text-widget", "widgets.0.title", "Notes"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-free-text-widget", "widgets.0.widgetable_type", "free_text"),
+					resource.TestCheckResourceAttrSet("vantage_dashboard.test-free-text-widget", "widgets.0.content"),
+					resource.TestCheckNoResourceAttr("vantage_dashboard.test-free-text-widget", "widgets.0.widgetable_token"),
+				),
+			},
+			{
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTf(
+						"test-free-text-widget",
+						startDate,
+						endDate,
+						`widgets = [
+							{
+								title           = "Updated Notes"
+								widgetable_type = "free_text"
+								content = jsonencode({
+									type = "doc"
+									content = [
+										{
+											type = "paragraph"
+											content = [
+												{
+													type = "text"
+													text = "Updated from Terraform"
+												}
+											]
+										}
+									]
+								})
+							}
+						]`,
+					),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-free-text-widget", "widgets.0.title", "Updated Notes"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-free-text-widget", "widgets.0.widgetable_type", "free_text"),
+					resource.TestCheckResourceAttrSet("vantage_dashboard.test-free-text-widget", "widgets.0.content"),
+				),
+			},
+			{
+				ResourceName:      "vantage_dashboard.test-free-text-widget",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccDashboardsDataSource_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.PreCheck(t) },

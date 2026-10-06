@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -74,10 +75,12 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 		}
 
 		widgetAttrs := map[string]attr.Value{
+			"content":          dashboardWidgetContentString(widget.Content),
 			"settings":         settingsObj,
 			"title":            types.StringValue(widget.Title),
 			"token":            types.StringValue(widget.Token),
 			"widgetable_token": stringValueOrNull(widget.WidgetableToken),
+			"widgetable_type":  stringValueOrNull(widget.WidgetableType),
 		}
 
 		tfWidget, diag := resource_dashboard.NewWidgetsValue(widgetAttrTypes, widgetAttrs)
@@ -119,7 +122,12 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		for _, w := range tfWidgets {
 			widget := &modelsv2.CreateDashboardWidgetsItems0{
 				WidgetableToken: w.WidgetableToken.ValueString(),
+				WidgetableType:  w.WidgetableType.ValueString(),
 				Title:           w.Title.ValueString(),
+				Content:         createDashboardWidgetContent(w.Content, diags),
+			}
+			if diags.HasError() {
+				return nil
 			}
 
 			if !w.Settings.IsNull() && !w.Settings.IsUnknown() {
@@ -183,7 +191,12 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		for _, w := range tfWidgets {
 			widget := &modelsv2.UpdateDashboardWidgetsItems0{
 				WidgetableToken: w.WidgetableToken.ValueString(),
+				WidgetableType:  w.WidgetableType.ValueString(),
 				Title:           w.Title.ValueString(),
+				Content:         updateDashboardWidgetContent(w.Content, diags),
+			}
+			if diags.HasError() {
+				return nil
 			}
 
 			if !w.Settings.IsNull() && !w.Settings.IsUnknown() {
@@ -360,4 +373,68 @@ func stringValueOrNull(value string) types.String {
 		return types.StringNull()
 	}
 	return types.StringValue(value)
+}
+
+func dashboardWidgetContentString(content interface{}) types.String {
+	if content == nil {
+		return types.StringNull()
+	}
+
+	encoded, err := json.Marshal(content)
+	if err != nil {
+		return types.StringNull()
+	}
+	return types.StringValue(string(encoded))
+}
+
+type tipTapDocument struct {
+	Type    string        `json:"type"`
+	Content []interface{} `json:"content"`
+}
+
+func createDashboardWidgetContent(content types.String, diags *diag.Diagnostics) *modelsv2.CreateDashboardWidgetsItems0Content {
+	doc := parseTipTapDocument(content, diags)
+	if doc == nil {
+		return nil
+	}
+	docType := doc.Type
+	return &modelsv2.CreateDashboardWidgetsItems0Content{
+		Type:    &docType,
+		Content: doc.Content,
+	}
+}
+
+func updateDashboardWidgetContent(content types.String, diags *diag.Diagnostics) *modelsv2.UpdateDashboardWidgetsItems0Content {
+	doc := parseTipTapDocument(content, diags)
+	if doc == nil {
+		return nil
+	}
+	docType := doc.Type
+	return &modelsv2.UpdateDashboardWidgetsItems0Content{
+		Type:    &docType,
+		Content: doc.Content,
+	}
+}
+
+func parseTipTapDocument(content types.String, diags *diag.Diagnostics) *tipTapDocument {
+	if content.IsNull() || content.IsUnknown() || content.ValueString() == "" {
+		return nil
+	}
+
+	var doc tipTapDocument
+	if err := json.Unmarshal([]byte(content.ValueString()), &doc); err != nil {
+		diags.AddError(
+			"Invalid widget content",
+			"widgets.content must be a JSON-encoded TipTap document: "+err.Error(),
+		)
+		return nil
+	}
+	if doc.Type == "" {
+		diags.AddError(
+			"Invalid widget content",
+			`widgets.content must include a "type" field (usually "doc")`,
+		)
+		return nil
+	}
+	return &doc
 }

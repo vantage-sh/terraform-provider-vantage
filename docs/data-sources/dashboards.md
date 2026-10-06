@@ -47,10 +47,12 @@ Read-Only:
 
 Read-Only:
 
+- `content` (String) JSON-encoded TipTap document for a free text widget. Example: {"type":"doc","content":[...]}
 - `settings` (Attributes) (see [below for nested schema](#nestedatt--dashboards--widgets--settings))
 - `title` (String) The title of the Widget.
 - `token` (String) The token of the Dashboard Widget.
 - `widgetable_token` (String) The token of the represented Resource.
+- `widgetable_type` (String) The widget type. Present instead of widgetable_token for free text widgets.
 
 <a id="nestedatt--dashboards--widgets--settings"></a>
 ### Nested Schema for `dashboards.widgets.settings`
