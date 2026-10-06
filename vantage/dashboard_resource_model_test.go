@@ -1,6 +1,7 @@
 package vantage
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -507,5 +508,35 @@ func TestDashboardModel_toCreate_invalidFreeTextContent(t *testing.T) {
 	}
 	if payload != nil {
 		t.Fatalf("expected nil payload, got %#v", payload)
+	}
+}
+
+func TestDashboardWidgetContentString_preservesHTMLCharacters(t *testing.T) {
+	t.Parallel()
+
+	content := map[string]interface{}{
+		"type": "doc",
+		"content": []interface{}{
+			map[string]interface{}{
+				"type": "paragraph",
+				"content": []interface{}{
+					map[string]interface{}{
+						"type": "text",
+						"text": "Cost < $100 & > $10",
+					},
+				},
+			},
+		},
+	}
+
+	got := dashboardWidgetContentString(content)
+	if got.IsNull() {
+		t.Fatal("expected content string")
+	}
+	if want := `Cost < $100 & > $10`; !bytes.Contains([]byte(got.ValueString()), []byte(want)) {
+		t.Fatalf("content = %q, want substring %q (HTML chars must not be escaped)", got.ValueString(), want)
+	}
+	if bytes.Contains([]byte(got.ValueString()), []byte(`\u003c`)) {
+		t.Fatalf("content unexpectedly HTML-escaped: %q", got.ValueString())
 	}
 }

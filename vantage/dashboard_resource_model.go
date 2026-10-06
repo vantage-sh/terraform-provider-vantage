@@ -1,6 +1,7 @@
 package vantage
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
@@ -380,10 +381,16 @@ func dashboardWidgetContentString(content interface{}) types.String {
 		return types.StringNull()
 	}
 
-	encoded, err := json.Marshal(content)
-	if err != nil {
+	// Match Terraform jsonencode: do not HTML-escape <, >, or &. Go's default
+	// json.Marshal escapes those characters, which would cause perpetual plan
+	// diffs against configs that use jsonencode for TipTap content.
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(content); err != nil {
 		return types.StringNull()
 	}
+	encoded := bytes.TrimSpace(buf.Bytes())
 	return types.StringValue(string(encoded))
 }
 
