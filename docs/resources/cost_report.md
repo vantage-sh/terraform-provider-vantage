@@ -92,7 +92,7 @@ Optional:
 Optional:
 
 - `x_axis_dimension` (List of String) The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].
-- `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
+- `y_axis_dimension` (String) The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
 
 
 <a id="nestedatt--default_forecast"></a>

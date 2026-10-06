@@ -98,12 +98,26 @@ func FinancialCommitmentReportsDataSourceSchema(ctx context.Context) schema.Sche
 				},
 				Computed: true,
 			},
+			"q": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "Search financial commitment reports by title.",
+				MarkdownDescription: "Search financial commitment reports by title.",
+			},
+			"workspace_token": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The workspace token of the financial commitment reports to return.",
+				MarkdownDescription: "The workspace token of the financial commitment reports to return.",
+			},
 		},
 	}
 }
 
 type FinancialCommitmentReportsModel struct {
-	FinancialCommitmentReports types.List `tfsdk:"financial_commitment_reports"`
+	FinancialCommitmentReports types.List   `tfsdk:"financial_commitment_reports"`
+	Q                          types.String `tfsdk:"q"`
+	WorkspaceToken             types.String `tfsdk:"workspace_token"`
 }
 
 var _ basetypes.ObjectTypable = FinancialCommitmentReportsType{}

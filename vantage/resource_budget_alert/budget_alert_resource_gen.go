@@ -55,8 +55,8 @@ func BudgetAlertResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "Email addresses that receive the alert. Must be organization users or addresses on a verified domain.",
-				MarkdownDescription: "Email addresses that receive the alert. Must be organization users or addresses on a verified domain.",
+				Description:         "Email addresses that receive the alert. Must be organization users, on the account's SSO domain, or an approved third-party service address.",
+				MarkdownDescription: "Email addresses that receive the alert. Must be organization users, on the account's SSO domain, or an approved third-party service address.",
 			},
 			"threshold": schema.Int64Attribute{
 				Required:            true,
@@ -81,9 +81,10 @@ func BudgetAlertResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The tokens of the users that receive the alert.",
 			},
 			"workspace_token": schema.StringAttribute{
+				Optional:            true,
 				Computed:            true,
-				Description:         "The token for the Workspace the ResourceReport is a part of.",
-				MarkdownDescription: "The token for the Workspace the ResourceReport is a part of.",
+				Description:         "The token of the Workspace to add the BudgetAlert to. Required if the API token is associated with multiple Workspaces.",
+				MarkdownDescription: "The token of the Workspace to add the BudgetAlert to. Required if the API token is associated with multiple Workspaces.",
 			},
 		},
 	}

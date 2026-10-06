@@ -34,6 +34,13 @@ func AnomalyNotificationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The Slack/MS Teams channels that receive the notification.",
 				MarkdownDescription: "The Slack/MS Teams channels that receive the notification.",
 			},
+			"recipient_emails": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Email addresses that receive the notification. Must be organization users, on the account's SSO domain, or an approved third-party service address.",
+				MarkdownDescription: "Email addresses that receive the notification. Must be organization users, on the account's SSO domain, or an approved third-party service address.",
+			},
 			"threshold": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
@@ -66,6 +73,7 @@ type AnomalyNotificationModel struct {
 	CreatedAt         types.String `tfsdk:"created_at"`
 	Id                types.String `tfsdk:"id"`
 	RecipientChannels types.List   `tfsdk:"recipient_channels"`
+	RecipientEmails   types.List   `tfsdk:"recipient_emails"`
 	Threshold         types.Int64  `tfsdk:"threshold"`
 	Token             types.String `tfsdk:"token"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`

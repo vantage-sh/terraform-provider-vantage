@@ -161,6 +161,10 @@ resources:
     schema:
       ignores:
         - updated_at
+        # TipTap free-text content nests identically-named models and breaks
+        # tfplugingen-framework; ship grid first (VAN-2814), free text in VAN-2817.
+        - widgets.content
+        - widgets.widgetable_type
       attributes:
         overrides:
           token:
@@ -526,6 +530,8 @@ data_sources:
         - limit
         - links
         - page
+        - dashboards.widgets.content
+        - dashboards.widgets.widgetable_type
   managed_accounts:
     read:
       path: /managed_accounts

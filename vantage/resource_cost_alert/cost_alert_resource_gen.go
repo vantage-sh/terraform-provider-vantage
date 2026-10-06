@@ -21,8 +21,8 @@ func CostAlertResourceSchema(ctx context.Context) schema.Schema {
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				Description:         "The email recipients for the Cost Alert.",
-				MarkdownDescription: "The email recipients for the Cost Alert.",
+				Description:         "The email recipients for the Cost Alert. Accepts organization users, SSO-domain emails, and approved third-party service emails.",
+				MarkdownDescription: "The email recipients for the Cost Alert. Accepts organization users, SSO-domain emails, and approved third-party service emails.",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,

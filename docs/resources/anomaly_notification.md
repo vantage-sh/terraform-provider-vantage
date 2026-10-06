@@ -30,6 +30,7 @@ resource "vantage_anomaly_notification" "demo_anomaly_notification" {
 ### Optional
 
 - `recipient_channels` (List of String) The Slack/MS Teams channels that receive the notification.
+- `recipient_emails` (List of String) Email addresses that receive the notification. Must be organization users, on the account's SSO domain, or an approved third-party service address.
 - `threshold` (Number) The threshold amount that must be met for the notification to fire.
 - `user_tokens` (List of String) The tokens of the Users that receive the notification.
 

@@ -55,6 +55,7 @@ Read-Only:
 - `date_ranges` (Attributes List) Date ranges restricting when this value applies. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--date_ranges))
 - `display_name` (String) The display name for this allocation value.
 - `filter` (String) The filter VQL for the Value.
+- `label_filters` (Map of List of String) ClickHouse BusinessMetric row filters. Each key must match, and values within a key are alternatives.
 - `label_key` (String) The business metric label key used for this virtual tag value.
 - `label_transforms` (Attributes List) Label transforms applied to business metric labels. (see [below for nested schema](#nestedatt--virtual_tag_configs--values--label_transforms))
 - `label_values` (List of String) Optional business metric label values. An empty array includes every value for the label key.
