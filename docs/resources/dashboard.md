@@ -43,6 +43,24 @@ resource "vantage_dashboard" "demo_dashboard" {
       }
       title            = "Total Spend"
       widgetable_token = "rprt_a2846903070824f4"
+    },
+    {
+      title           = "Notes"
+      widgetable_type = "free_text"
+      content = jsonencode({
+        type = "doc"
+        content = [
+          {
+            type = "paragraph"
+            content = [
+              {
+                type = "text"
+                text = "Use free text widgets for dashboard context."
+              }
+            ]
+          }
+        ]
+      })
     }
   ]
   workspace_token = "wrkspc_47c3254c790e9351"
@@ -74,9 +92,11 @@ resource "vantage_dashboard" "demo_dashboard" {
 
 Optional:
 
+- `content` (String) JSON-encoded TipTap document for a free text widget. Example: {"type":"doc","content":[...]}
 - `settings` (Attributes) The display and grid layout settings for the DashboardWidget. (see [below for nested schema](#nestedatt--widgets--settings))
 - `title` (String) The title of the Widget (defaults to the Resource title, or Free Text for a free text widget).
 - `widgetable_token` (String) The token of the represented Resource.
+- `widgetable_type` (String) The widget type. Use free_text for a free text widget.
 
 Read-Only:
 

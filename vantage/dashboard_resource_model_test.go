@@ -1,6 +1,7 @@
 package vantage
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -162,10 +163,12 @@ func TestDashboardModel_toCreate_kpiSettings(t *testing.T) {
 
 	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
 	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+		"content":          types.StringNull(),
 		"settings":         settingsObj,
 		"title":            types.StringValue("Usage KPI"),
 		"token":            types.StringNull(),
 		"widgetable_token": types.StringValue("rprt_test"),
+		"widgetable_type":  types.StringNull(),
 	})
 	if d.HasError() {
 		t.Fatalf("NewWidgetsValue diagnostics: %v", d.Errors())
@@ -248,10 +251,12 @@ func TestDashboardModel_toCreate_gridSettings(t *testing.T) {
 
 	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
 	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+		"content":          types.StringNull(),
 		"settings":         settingsObj,
 		"title":            types.StringValue("Table Widget"),
 		"token":            types.StringNull(),
 		"widgetable_token": types.StringValue("rprt_test"),
+		"widgetable_type":  types.StringNull(),
 	})
 	if d.HasError() {
 		t.Fatalf("NewWidgetsValue diagnostics: %v", d.Errors())
@@ -313,10 +318,12 @@ func TestDashboardModel_toUpdate_kpiSettings(t *testing.T) {
 
 	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
 	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+		"content":          types.StringNull(),
 		"settings":         settingsObj,
 		"title":            types.StringValue("Spend KPI"),
 		"token":            types.StringNull(),
 		"widgetable_token": types.StringValue("rprt_test"),
+		"widgetable_type":  types.StringNull(),
 	})
 	if d.HasError() {
 		t.Fatalf("NewWidgetsValue diagnostics: %v", d.Errors())
@@ -355,5 +362,181 @@ func TestDashboardModel_toUpdate_kpiSettings(t *testing.T) {
 	}
 	if settings.Grid != nil {
 		t.Fatalf("grid = %#v, want nil", settings.Grid)
+	}
+}
+
+func TestDashboardModel_applyPayload_freeTextWidget(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	content := map[string]interface{}{
+		"type": "doc",
+		"content": []interface{}{
+			map[string]interface{}{
+				"type": "paragraph",
+				"content": []interface{}{
+					map[string]interface{}{"type": "text", "text": "Hello"},
+				},
+			},
+		},
+	}
+
+	model := &dashboardModel{}
+	diags := model.applyPayload(ctx, &modelsv2.Dashboard{
+		Title:          "free-text-dashboard",
+		Token:          "dshbrd_test",
+		WorkspaceToken: "wrkspc_test",
+		Widgets: []*modelsv2.DashboardWidget{
+			{
+				Title:          "Notes",
+				Token:          "dshbrd_wdgt_test",
+				WidgetableType: "free_text",
+				Content:        content,
+			},
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("applyPayload diagnostics: %v", diags.Errors())
+	}
+
+	var widgets []resource_dashboard.WidgetsValue
+	if d := model.Widgets.ElementsAs(ctx, &widgets, false); d.HasError() {
+		t.Fatalf("ElementsAs diagnostics: %v", d.Errors())
+	}
+	if len(widgets) != 1 {
+		t.Fatalf("expected 1 widget, got %d", len(widgets))
+	}
+	if got := widgets[0].WidgetableType.ValueString(); got != "free_text" {
+		t.Fatalf("widgetable_type = %q, want free_text", got)
+	}
+	if !widgets[0].WidgetableToken.IsNull() {
+		t.Fatalf("widgetable_token = %v, want null", widgets[0].WidgetableToken)
+	}
+	if widgets[0].Content.IsNull() || widgets[0].Content.ValueString() == "" {
+		t.Fatal("expected content")
+	}
+	if !widgets[0].Settings.IsNull() {
+		t.Fatalf("settings = %v, want null", widgets[0].Settings)
+	}
+}
+
+func TestDashboardModel_toCreate_freeTextWidget(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	contentJSON := `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hello"}]}]}`
+
+	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
+	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+		"content":          types.StringValue(contentJSON),
+		"settings":         types.ObjectNull(resource_dashboard.SettingsValue{}.AttributeTypes(ctx)),
+		"title":            types.StringValue("Notes"),
+		"token":            types.StringNull(),
+		"widgetable_token": types.StringNull(),
+		"widgetable_type":  types.StringValue("free_text"),
+	})
+	if d.HasError() {
+		t.Fatalf("NewWidgetsValue diagnostics: %v", d.Errors())
+	}
+
+	widgets, d := types.ListValueFrom(ctx, resource_dashboard.WidgetsValue{}.Type(ctx), []resource_dashboard.WidgetsValue{widgetVal})
+	if d.HasError() {
+		t.Fatalf("ListValueFrom diagnostics: %v", d.Errors())
+	}
+
+	model := &dashboardModel{
+		Title:          types.StringValue("free-text-dashboard"),
+		WorkspaceToken: types.StringValue("wrkspc_test"),
+		Widgets:        widgets,
+	}
+
+	var diags diag.Diagnostics
+	payload := model.toCreate(ctx, &diags)
+	if diags.HasError() {
+		t.Fatalf("toCreate diagnostics: %v", diags.Errors())
+	}
+	if len(payload.Widgets) != 1 {
+		t.Fatalf("expected 1 widget, got %d", len(payload.Widgets))
+	}
+	widget := payload.Widgets[0]
+	if got := widget.WidgetableType; got != "free_text" {
+		t.Fatalf("widgetable_type = %q, want free_text", got)
+	}
+	if got := widget.WidgetableToken; got != "" {
+		t.Fatalf("widgetable_token = %q, want empty", got)
+	}
+	if widget.Content == nil || widget.Content.Type == nil || *widget.Content.Type != "doc" {
+		t.Fatalf("content = %#v, want TipTap doc", widget.Content)
+	}
+	if widget.Settings != nil {
+		t.Fatalf("settings = %#v, want nil", widget.Settings)
+	}
+}
+
+func TestDashboardModel_toCreate_invalidFreeTextContent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
+	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+		"content":          types.StringValue(`{"content":[]}`),
+		"settings":         types.ObjectNull(resource_dashboard.SettingsValue{}.AttributeTypes(ctx)),
+		"title":            types.StringValue("Notes"),
+		"token":            types.StringNull(),
+		"widgetable_token": types.StringNull(),
+		"widgetable_type":  types.StringValue("free_text"),
+	})
+	if d.HasError() {
+		t.Fatalf("NewWidgetsValue diagnostics: %v", d.Errors())
+	}
+
+	widgets, d := types.ListValueFrom(ctx, resource_dashboard.WidgetsValue{}.Type(ctx), []resource_dashboard.WidgetsValue{widgetVal})
+	if d.HasError() {
+		t.Fatalf("ListValueFrom diagnostics: %v", d.Errors())
+	}
+
+	model := &dashboardModel{
+		Title:          types.StringValue("free-text-dashboard"),
+		WorkspaceToken: types.StringValue("wrkspc_test"),
+		Widgets:        widgets,
+	}
+
+	var diags diag.Diagnostics
+	payload := model.toCreate(ctx, &diags)
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics for invalid content")
+	}
+	if payload != nil {
+		t.Fatalf("expected nil payload, got %#v", payload)
+	}
+}
+
+func TestDashboardWidgetContentString_preservesHTMLCharacters(t *testing.T) {
+	t.Parallel()
+
+	content := map[string]interface{}{
+		"type": "doc",
+		"content": []interface{}{
+			map[string]interface{}{
+				"type": "paragraph",
+				"content": []interface{}{
+					map[string]interface{}{
+						"type": "text",
+						"text": "Cost < $100 & > $10",
+					},
+				},
+			},
+		},
+	}
+
+	got := dashboardWidgetContentString(content)
+	if got.IsNull() {
+		t.Fatal("expected content string")
+	}
+	if want := `Cost < $100 & > $10`; !bytes.Contains([]byte(got.ValueString()), []byte(want)) {
+		t.Fatalf("content = %q, want substring %q (HTML chars must not be escaped)", got.ValueString(), want)
+	}
+	if bytes.Contains([]byte(got.ValueString()), []byte(`\u003c`)) {
+		t.Fatalf("content unexpectedly HTML-escaped: %q", got.ValueString())
 	}
 }

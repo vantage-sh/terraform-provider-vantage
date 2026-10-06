@@ -154,3 +154,64 @@ func TestDashboardDataSourceValueFromPayload_gridSettings(t *testing.T) {
 		t.Fatalf("grid.h = %d, want 2", got)
 	}
 }
+
+func TestDashboardDataSourceValueFromPayload_freeTextWidget(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dateBin := "day"
+	dateInterval := "this_month"
+	content := map[string]interface{}{
+		"type": "doc",
+		"content": []interface{}{
+			map[string]interface{}{
+				"type": "paragraph",
+				"content": []interface{}{
+					map[string]interface{}{"type": "text", "text": "Hello"},
+				},
+			},
+		},
+	}
+
+	value, diags := dashboardDataSourceValueFromPayload(ctx, &modelsv2.Dashboard{
+		CreatedAt:         "2026-01-01T00:00:00Z",
+		DateBin:           &dateBin,
+		DateInterval:      &dateInterval,
+		SavedFilterTokens: []string{},
+		Title:             "free-text-dashboard",
+		Token:             "dshbrd_test",
+		UpdatedAt:         "2026-01-02T00:00:00Z",
+		WorkspaceToken:    "wrkspc_test",
+		Widgets: []*modelsv2.DashboardWidget{
+			{
+				Title:          "Notes",
+				Token:          "dshbrd_wdgt_test",
+				WidgetableType: "free_text",
+				Content:        content,
+			},
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("dashboardDataSourceValueFromPayload diagnostics: %v", diags.Errors())
+	}
+
+	var widgets []datasource_dashboards.WidgetsValue
+	if d := value.Widgets.ElementsAs(ctx, &widgets, false); d.HasError() {
+		t.Fatalf("ElementsAs diagnostics: %v", d.Errors())
+	}
+	if len(widgets) != 1 {
+		t.Fatalf("expected 1 widget, got %d", len(widgets))
+	}
+	if got := widgets[0].WidgetableType.ValueString(); got != "free_text" {
+		t.Fatalf("widgetable_type = %q, want free_text", got)
+	}
+	if !widgets[0].WidgetableToken.IsNull() {
+		t.Fatalf("widgetable_token = %v, want null", widgets[0].WidgetableToken)
+	}
+	if widgets[0].Content.IsNull() || widgets[0].Content.ValueString() == "" {
+		t.Fatal("expected content")
+	}
+	if !widgets[0].Settings.IsNull() {
+		t.Fatalf("settings = %v, want null", widgets[0].Settings)
+	}
+}
