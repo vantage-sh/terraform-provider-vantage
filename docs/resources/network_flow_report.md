@@ -22,13 +22,13 @@ description: |-
 
 ### Optional
 
-- `date_interval` (String) The date interval of the NetworkFlowReport. Dates are used only for the 'custom' interval. Defaults to 'last_7_days'.
-- `end_date` (String) The end date of a custom NetworkFlowReport. YYYY-MM-DD formatted.
+- `date_interval` (String) The date interval of the NetworkFlowReport. Unless 'custom' is used, this is incompatible with 'start_date' and 'end_date' parameters. Defaults to 'last_7_days'.
+- `end_date` (String) The end date of the NetworkFlowReport. YYYY-MM-DD formatted. Incompatible with 'date_interval' parameter.
 - `filter` (String) The filter query language to apply to the NetworkFlowReport. Additional documentation available at https://docs.vantage.sh/vql.
 - `flow_direction` (String) The flow direction of the NetworkFlowReport.
 - `flow_weight` (String) The dimension by which the logs in the report are sorted. Defaults to costs.
 - `groupings` (List of String) Grouping values for aggregating data on the NetworkFlowReport. Valid groupings: account_id, az_id, dstaddr, dsthostname, flow_direction, interface_id, instance_id, peer_resource_uuid, peer_account_id, peer_vpc_id, peer_region, peer_az_id, peer_subnet_id, peer_interface_id, peer_instance_id, region, resource_uuid, srcaddr, srchostname, subnet_id, traffic_category, traffic_path, vpc_id.
-- `start_date` (String) The start date of a custom NetworkFlowReport. YYYY-MM-DD formatted.
+- `start_date` (String) The start date of the NetworkFlowReport. YYYY-MM-DD formatted. Incompatible with 'date_interval' parameter.
 
 ### Read-Only
 

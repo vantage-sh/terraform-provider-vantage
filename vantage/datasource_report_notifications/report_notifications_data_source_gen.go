@@ -18,12 +18,6 @@ import (
 func ReportNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"q": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Search report notifications by title.",
-				MarkdownDescription: "Search report notifications by title.",
-			},
 			"report_notifications": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -53,12 +47,6 @@ func ReportNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The Slack or Microsoft Teams channels that receive the notification.",
 							MarkdownDescription: "The Slack or Microsoft Teams channels that receive the notification.",
 						},
-						"recipient_emails": schema.ListAttribute{
-							ElementType:         types.StringType,
-							Computed:            true,
-							Description:         "The email addresses that receive the notification, including organization users, SSO-domain addresses, and approved third-party addresses.",
-							MarkdownDescription: "The email addresses that receive the notification, including organization users, SSO-domain addresses, and approved third-party addresses.",
-						},
 						"title": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The title of the ReportNotification.",
@@ -70,8 +58,8 @@ func ReportNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 						"user_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
-							Description:         "The tokens of organization users that receive the notification. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
-							MarkdownDescription: "The tokens of organization users that receive the notification. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
+							Description:         "The Users that receive the notification.",
+							MarkdownDescription: "The Users that receive the notification.",
 						},
 					},
 					CustomType: ReportNotificationsType{
@@ -82,20 +70,12 @@ func ReportNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Filter by workspace token.",
-				MarkdownDescription: "Filter by workspace token.",
-			},
 		},
 	}
 }
 
 type ReportNotificationsModel struct {
-	Q                   types.String `tfsdk:"q"`
-	ReportNotifications types.List   `tfsdk:"report_notifications"`
-	WorkspaceToken      types.String `tfsdk:"workspace_token"`
+	ReportNotifications types.List `tfsdk:"report_notifications"`
 }
 
 var _ basetypes.ObjectTypable = ReportNotificationsType{}
@@ -213,24 +193,6 @@ func (t ReportNotificationsType) ValueFromObject(ctx context.Context, in basetyp
 			fmt.Sprintf(`recipient_channels expected to be basetypes.ListValue, was: %T`, recipientChannelsAttribute))
 	}
 
-	recipientEmailsAttribute, ok := attributes["recipient_emails"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`recipient_emails is missing from object`)
-
-		return nil, diags
-	}
-
-	recipientEmailsVal, ok := recipientEmailsAttribute.(basetypes.ListValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`recipient_emails expected to be basetypes.ListValue, was: %T`, recipientEmailsAttribute))
-	}
-
 	titleAttribute, ok := attributes["title"]
 
 	if !ok {
@@ -295,7 +257,6 @@ func (t ReportNotificationsType) ValueFromObject(ctx context.Context, in basetyp
 		Frequency:         frequencyVal,
 		Id:                idVal,
 		RecipientChannels: recipientChannelsVal,
-		RecipientEmails:   recipientEmailsVal,
 		Title:             titleVal,
 		Token:             tokenVal,
 		UserTokens:        userTokensVal,
@@ -456,24 +417,6 @@ func NewReportNotificationsValue(attributeTypes map[string]attr.Type, attributes
 			fmt.Sprintf(`recipient_channels expected to be basetypes.ListValue, was: %T`, recipientChannelsAttribute))
 	}
 
-	recipientEmailsAttribute, ok := attributes["recipient_emails"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`recipient_emails is missing from object`)
-
-		return NewReportNotificationsValueUnknown(), diags
-	}
-
-	recipientEmailsVal, ok := recipientEmailsAttribute.(basetypes.ListValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`recipient_emails expected to be basetypes.ListValue, was: %T`, recipientEmailsAttribute))
-	}
-
 	titleAttribute, ok := attributes["title"]
 
 	if !ok {
@@ -538,7 +481,6 @@ func NewReportNotificationsValue(attributeTypes map[string]attr.Type, attributes
 		Frequency:         frequencyVal,
 		Id:                idVal,
 		RecipientChannels: recipientChannelsVal,
-		RecipientEmails:   recipientEmailsVal,
 		Title:             titleVal,
 		Token:             tokenVal,
 		UserTokens:        userTokensVal,
@@ -619,7 +561,6 @@ type ReportNotificationsValue struct {
 	Frequency         basetypes.StringValue `tfsdk:"frequency"`
 	Id                basetypes.StringValue `tfsdk:"id"`
 	RecipientChannels basetypes.ListValue   `tfsdk:"recipient_channels"`
-	RecipientEmails   basetypes.ListValue   `tfsdk:"recipient_emails"`
 	Title             basetypes.StringValue `tfsdk:"title"`
 	Token             basetypes.StringValue `tfsdk:"token"`
 	UserTokens        basetypes.ListValue   `tfsdk:"user_tokens"`
@@ -627,7 +568,7 @@ type ReportNotificationsValue struct {
 }
 
 func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 9)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
@@ -637,9 +578,6 @@ func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes
 	attrTypes["frequency"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["recipient_channels"] = basetypes.ListType{
-		ElemType: types.StringType,
-	}.TerraformType(ctx)
-	attrTypes["recipient_emails"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
@@ -652,7 +590,7 @@ func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 9)
+		vals := make(map[string]tftypes.Value, 8)
 
 		val, err = v.Change.ToTerraformValue(ctx)
 
@@ -693,14 +631,6 @@ func (v ReportNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes
 		}
 
 		vals["recipient_channels"] = val
-
-		val, err = v.RecipientEmails.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["recipient_emails"] = val
 
 		val, err = v.Title.ToTerraformValue(ctx)
 
@@ -776,41 +706,6 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"recipient_emails": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"title": basetypes.StringType{},
-			"token": basetypes.StringType{},
-			"user_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-		}), diags
-	}
-
-	var recipientEmailsVal basetypes.ListValue
-	switch {
-	case v.RecipientEmails.IsUnknown():
-		recipientEmailsVal = types.ListUnknown(types.StringType)
-	case v.RecipientEmails.IsNull():
-		recipientEmailsVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		recipientEmailsVal, d = types.ListValue(types.StringType, v.RecipientEmails.Elements())
-		diags.Append(d...)
-	}
-
-	if diags.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"change":            basetypes.StringType{},
-			"cost_report_token": basetypes.StringType{},
-			"frequency":         basetypes.StringType{},
-			"id":                basetypes.StringType{},
-			"recipient_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"recipient_emails": basetypes.ListType{
-				ElemType: types.StringType,
-			},
 			"title": basetypes.StringType{},
 			"token": basetypes.StringType{},
 			"user_tokens": basetypes.ListType{
@@ -840,9 +735,6 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"recipient_emails": basetypes.ListType{
-				ElemType: types.StringType,
-			},
 			"title": basetypes.StringType{},
 			"token": basetypes.StringType{},
 			"user_tokens": basetypes.ListType{
@@ -857,9 +749,6 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 		"frequency":         basetypes.StringType{},
 		"id":                basetypes.StringType{},
 		"recipient_channels": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"recipient_emails": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"title": basetypes.StringType{},
@@ -885,7 +774,6 @@ func (v ReportNotificationsValue) ToObjectValue(ctx context.Context) (basetypes.
 			"frequency":          v.Frequency,
 			"id":                 v.Id,
 			"recipient_channels": recipientChannelsVal,
-			"recipient_emails":   recipientEmailsVal,
 			"title":              v.Title,
 			"token":              v.Token,
 			"user_tokens":        userTokensVal,
@@ -929,10 +817,6 @@ func (v ReportNotificationsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
-	if !v.RecipientEmails.Equal(other.RecipientEmails) {
-		return false
-	}
-
 	if !v.Title.Equal(other.Title) {
 		return false
 	}
@@ -963,9 +847,6 @@ func (v ReportNotificationsValue) AttributeTypes(ctx context.Context) map[string
 		"frequency":         basetypes.StringType{},
 		"id":                basetypes.StringType{},
 		"recipient_channels": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"recipient_emails": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"title": basetypes.StringType{},

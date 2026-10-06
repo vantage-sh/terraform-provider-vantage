@@ -64,8 +64,8 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 					Attributes: map[string]schema.Attribute{
 						"actual": schema.StringAttribute{
 							Computed:            true,
-							Description:         "Settled spend as a percent of the Budget amount for the month. For example, 114% means spend is 14% over the Budget.",
-							MarkdownDescription: "Settled spend as a percent of the Budget amount for the month. For example, 114% means spend is 14% over the Budget.",
+							Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
+							MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
 						},
 						"amount": schema.StringAttribute{
 							Computed:            true,
@@ -76,16 +76,6 @@ func BudgetResourceSchema(ctx context.Context) schema.Schema {
 							Computed:            true,
 							Description:         "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
 							MarkdownDescription: "The date and time, in UTC, the Budget was created. ISO 8601 Formatted.",
-						},
-						"type": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The type of Budget. One of: cost, usage.",
-							MarkdownDescription: "The type of Budget. One of: cost, usage.",
-						},
-						"unit": schema.StringAttribute{
-							Computed:            true,
-							Description:         "The usage unit for usage Budget performance amounts.",
-							MarkdownDescription: "The usage unit for usage Budget performance amounts.",
 						},
 					},
 					CustomType: PerformanceType{
@@ -263,53 +253,15 @@ func (t PerformanceType) ValueFromObject(ctx context.Context, in basetypes.Objec
 			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
 	}
 
-	typeAttribute, ok := attributes["type"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`type is missing from object`)
-
-		return nil, diags
-	}
-
-	typeVal, ok := typeAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`type expected to be basetypes.StringValue, was: %T`, typeAttribute))
-	}
-
-	unitAttribute, ok := attributes["unit"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`unit is missing from object`)
-
-		return nil, diags
-	}
-
-	unitVal, ok := unitAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`unit expected to be basetypes.StringValue, was: %T`, unitAttribute))
-	}
-
 	if diags.HasError() {
 		return nil, diags
 	}
 
 	return PerformanceValue{
-		Actual:          actualVal,
-		Amount:          amountVal,
-		Date:            dateVal,
-		PerformanceType: typeVal,
-		Unit:            unitVal,
-		state:           attr.ValueStateKnown,
+		Actual: actualVal,
+		Amount: amountVal,
+		Date:   dateVal,
+		state:  attr.ValueStateKnown,
 	}, diags
 }
 
@@ -430,53 +382,15 @@ func NewPerformanceValue(attributeTypes map[string]attr.Type, attributes map[str
 			fmt.Sprintf(`date expected to be basetypes.StringValue, was: %T`, dateAttribute))
 	}
 
-	typeAttribute, ok := attributes["type"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`type is missing from object`)
-
-		return NewPerformanceValueUnknown(), diags
-	}
-
-	typeVal, ok := typeAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`type expected to be basetypes.StringValue, was: %T`, typeAttribute))
-	}
-
-	unitAttribute, ok := attributes["unit"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`unit is missing from object`)
-
-		return NewPerformanceValueUnknown(), diags
-	}
-
-	unitVal, ok := unitAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`unit expected to be basetypes.StringValue, was: %T`, unitAttribute))
-	}
-
 	if diags.HasError() {
 		return NewPerformanceValueUnknown(), diags
 	}
 
 	return PerformanceValue{
-		Actual:          actualVal,
-		Amount:          amountVal,
-		Date:            dateVal,
-		PerformanceType: typeVal,
-		Unit:            unitVal,
-		state:           attr.ValueStateKnown,
+		Actual: actualVal,
+		Amount: amountVal,
+		Date:   dateVal,
+		state:  attr.ValueStateKnown,
 	}, diags
 }
 
@@ -548,16 +462,14 @@ func (t PerformanceType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = PerformanceValue{}
 
 type PerformanceValue struct {
-	Actual          basetypes.StringValue `tfsdk:"actual"`
-	Amount          basetypes.StringValue `tfsdk:"amount"`
-	Date            basetypes.StringValue `tfsdk:"date"`
-	PerformanceType basetypes.StringValue `tfsdk:"type"`
-	Unit            basetypes.StringValue `tfsdk:"unit"`
-	state           attr.ValueState
+	Actual basetypes.StringValue `tfsdk:"actual"`
+	Amount basetypes.StringValue `tfsdk:"amount"`
+	Date   basetypes.StringValue `tfsdk:"date"`
+	state  attr.ValueState
 }
 
 func (v PerformanceValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 5)
+	attrTypes := make(map[string]tftypes.Type, 3)
 
 	var val tftypes.Value
 	var err error
@@ -565,14 +477,12 @@ func (v PerformanceValue) ToTerraformValue(ctx context.Context) (tftypes.Value, 
 	attrTypes["actual"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["amount"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["date"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["type"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["unit"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 5)
+		vals := make(map[string]tftypes.Value, 3)
 
 		val, err = v.Actual.ToTerraformValue(ctx)
 
@@ -597,22 +507,6 @@ func (v PerformanceValue) ToTerraformValue(ctx context.Context) (tftypes.Value, 
 		}
 
 		vals["date"] = val
-
-		val, err = v.PerformanceType.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["type"] = val
-
-		val, err = v.Unit.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["unit"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -647,8 +541,6 @@ func (v PerformanceValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVa
 		"actual": basetypes.StringType{},
 		"amount": basetypes.StringType{},
 		"date":   basetypes.StringType{},
-		"type":   basetypes.StringType{},
-		"unit":   basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -665,8 +557,6 @@ func (v PerformanceValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVa
 			"actual": v.Actual,
 			"amount": v.Amount,
 			"date":   v.Date,
-			"type":   v.PerformanceType,
-			"unit":   v.Unit,
 		})
 
 	return objVal, diags
@@ -699,14 +589,6 @@ func (v PerformanceValue) Equal(o attr.Value) bool {
 		return false
 	}
 
-	if !v.PerformanceType.Equal(other.PerformanceType) {
-		return false
-	}
-
-	if !v.Unit.Equal(other.Unit) {
-		return false
-	}
-
 	return true
 }
 
@@ -723,8 +605,6 @@ func (v PerformanceValue) AttributeTypes(ctx context.Context) map[string]attr.Ty
 		"actual": basetypes.StringType{},
 		"amount": basetypes.StringType{},
 		"date":   basetypes.StringType{},
-		"type":   basetypes.StringType{},
-		"unit":   basetypes.StringType{},
 	}
 }
 

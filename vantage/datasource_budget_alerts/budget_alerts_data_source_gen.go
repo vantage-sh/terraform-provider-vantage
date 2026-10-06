@@ -61,8 +61,8 @@ func BudgetAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 						"recipient_emails": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
-							Description:         "The email addresses that receive the alert, including organization users, SSO-domain addresses, and approved third-party addresses.",
-							MarkdownDescription: "The email addresses that receive the alert, including organization users, SSO-domain addresses, and approved third-party addresses.",
+							Description:         "The email addresses that receive the alert, including organization users and verified-domain addresses.",
+							MarkdownDescription: "The email addresses that receive the alert, including organization users and verified-domain addresses.",
 						},
 						"threshold": schema.Int64Attribute{
 							Computed:            true,
@@ -80,8 +80,8 @@ func BudgetAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 						"user_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
-							Description:         "The tokens of organization users that receive the alert. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
-							MarkdownDescription: "The tokens of organization users that receive the alert. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
+							Description:         "The tokens of organization users that receive the alert. Freeform verified-domain emails are not included; see recipient_emails.",
+							MarkdownDescription: "The tokens of organization users that receive the alert. Freeform verified-domain emails are not included; see recipient_emails.",
 						},
 						"workspace_token": schema.StringAttribute{
 							Computed:            true,

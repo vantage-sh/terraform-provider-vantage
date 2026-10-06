@@ -100,26 +100,12 @@ func CostAlertsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
-			"q": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Search cost alerts by title.",
-				MarkdownDescription: "Search cost alerts by title.",
-			},
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The workspace token of the cost alerts to return.",
-				MarkdownDescription: "The workspace token of the cost alerts to return.",
-			},
 		},
 	}
 }
 
 type CostAlertsModel struct {
-	CostAlerts     types.List   `tfsdk:"cost_alerts"`
-	Q              types.String `tfsdk:"q"`
-	WorkspaceToken types.String `tfsdk:"workspace_token"`
+	CostAlerts types.List `tfsdk:"cost_alerts"`
 }
 
 var _ basetypes.ObjectTypable = CostAlertsType{}

@@ -88,8 +88,6 @@ Optional:
 
 Read-Only:
 
-- `actual` (String) Settled spend as a percent of the Budget amount for the month. For example, 114% means spend is 14% over the Budget.
+- `actual` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
 - `amount` (String) The amount of the Budget Period as a string to ensure precision.
 - `date` (String) The date and time, in UTC, the Budget was created. ISO 8601 Formatted.
-- `type` (String) The type of Budget. One of: cost, usage.
-- `unit` (String) The usage unit for usage Budget performance amounts.

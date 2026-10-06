@@ -58,8 +58,8 @@ func KubernetesEfficiencyReportsDataSourceSchema(ctx context.Context) schema.Sch
 						},
 						"groupings": schema.StringAttribute{
 							Computed:            true,
-							Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, region, labeled, category, pod, label:<label_name>.",
-							MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, region, labeled, category, pod, label:<label_name>.",
+							Description:         "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
+							MarkdownDescription: "Grouping values for aggregating costs on the KubernetesEfficiencyReport. Valid groupings: cluster_id, namespace, labeled, category, pod, label, label:<label_name>.",
 						},
 						"id": schema.StringAttribute{
 							Computed:            true,
@@ -98,19 +98,12 @@ func KubernetesEfficiencyReportsDataSourceSchema(ctx context.Context) schema.Sch
 				},
 				Computed: true,
 			},
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Filter by workspace token.",
-				MarkdownDescription: "Filter by workspace token.",
-			},
 		},
 	}
 }
 
 type KubernetesEfficiencyReportsModel struct {
-	KubernetesEfficiencyReports types.List   `tfsdk:"kubernetes_efficiency_reports"`
-	WorkspaceToken              types.String `tfsdk:"workspace_token"`
+	KubernetesEfficiencyReports types.List `tfsdk:"kubernetes_efficiency_reports"`
 }
 
 var _ basetypes.ObjectTypable = KubernetesEfficiencyReportsType{}

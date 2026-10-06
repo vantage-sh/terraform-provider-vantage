@@ -209,13 +209,21 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		}
 	}
 
+	// date_interval is a pointer with omitempty in the regenerated SDK. Always
+	// send a non-nil value so clearing the attribute still emits "" to the API,
+	// matching the previous non-omitempty string field behavior.
+	dateInterval := ""
+	if !m.DateInterval.IsNull() && !m.DateInterval.IsUnknown() {
+		dateInterval = m.DateInterval.ValueString()
+	}
+
 	payload := &modelsv2.UpdateDashboard{
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
 		Title:             m.Title.ValueString(),
 		Widgets:           widgets,
 		WorkspaceToken:    m.WorkspaceToken.ValueString(),
-		DateInterval:      m.DateInterval.ValueStringPointer(),
+		DateInterval:      &dateInterval,
 	}
 
 	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() && m.StartDate.ValueString() != "" &&

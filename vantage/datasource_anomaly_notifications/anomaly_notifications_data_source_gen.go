@@ -42,12 +42,6 @@ func AnomalyNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The channels that the notification is sent to.",
 							MarkdownDescription: "The channels that the notification is sent to.",
 						},
-						"recipient_emails": schema.ListAttribute{
-							ElementType:         types.StringType,
-							Computed:            true,
-							Description:         "The email addresses that receive the notification, including organization users, SSO-domain addresses, and approved third-party addresses.",
-							MarkdownDescription: "The email addresses that receive the notification, including organization users, SSO-domain addresses, and approved third-party addresses.",
-						},
 						"threshold": schema.Int64Attribute{
 							Computed:            true,
 							Description:         "The threshold amount that must be met for the notification to fire.",
@@ -64,8 +58,8 @@ func AnomalyNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 						"user_tokens": schema.ListAttribute{
 							ElementType:         types.StringType,
 							Computed:            true,
-							Description:         "The tokens of organization users that receive the notification. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
-							MarkdownDescription: "The tokens of organization users that receive the notification. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
+							Description:         "The tokens of the users that receive the notification.",
+							MarkdownDescription: "The tokens of the users that receive the notification.",
 						},
 					},
 					CustomType: AnomalyNotificationsType{
@@ -76,26 +70,12 @@ func AnomalyNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
-			"cost_report_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Filter by Cost Report token.",
-				MarkdownDescription: "Filter by Cost Report token.",
-			},
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Filter by workspace token.",
-				MarkdownDescription: "Filter by workspace token.",
-			},
 		},
 	}
 }
 
 type AnomalyNotificationsModel struct {
-	AnomalyNotifications types.List   `tfsdk:"anomaly_notifications"`
-	CostReportToken      types.String `tfsdk:"cost_report_token"`
-	WorkspaceToken       types.String `tfsdk:"workspace_token"`
+	AnomalyNotifications types.List `tfsdk:"anomaly_notifications"`
 }
 
 var _ basetypes.ObjectTypable = AnomalyNotificationsType{}
@@ -195,24 +175,6 @@ func (t AnomalyNotificationsType) ValueFromObject(ctx context.Context, in basety
 			fmt.Sprintf(`recipient_channels expected to be basetypes.ListValue, was: %T`, recipientChannelsAttribute))
 	}
 
-	recipientEmailsAttribute, ok := attributes["recipient_emails"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`recipient_emails is missing from object`)
-
-		return nil, diags
-	}
-
-	recipientEmailsVal, ok := recipientEmailsAttribute.(basetypes.ListValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`recipient_emails expected to be basetypes.ListValue, was: %T`, recipientEmailsAttribute))
-	}
-
 	thresholdAttribute, ok := attributes["threshold"]
 
 	if !ok {
@@ -294,7 +256,6 @@ func (t AnomalyNotificationsType) ValueFromObject(ctx context.Context, in basety
 		CreatedAt:         createdAtVal,
 		Id:                idVal,
 		RecipientChannels: recipientChannelsVal,
-		RecipientEmails:   recipientEmailsVal,
 		Threshold:         thresholdVal,
 		Token:             tokenVal,
 		UpdatedAt:         updatedAtVal,
@@ -438,24 +399,6 @@ func NewAnomalyNotificationsValue(attributeTypes map[string]attr.Type, attribute
 			fmt.Sprintf(`recipient_channels expected to be basetypes.ListValue, was: %T`, recipientChannelsAttribute))
 	}
 
-	recipientEmailsAttribute, ok := attributes["recipient_emails"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`recipient_emails is missing from object`)
-
-		return NewAnomalyNotificationsValueUnknown(), diags
-	}
-
-	recipientEmailsVal, ok := recipientEmailsAttribute.(basetypes.ListValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`recipient_emails expected to be basetypes.ListValue, was: %T`, recipientEmailsAttribute))
-	}
-
 	thresholdAttribute, ok := attributes["threshold"]
 
 	if !ok {
@@ -537,7 +480,6 @@ func NewAnomalyNotificationsValue(attributeTypes map[string]attr.Type, attribute
 		CreatedAt:         createdAtVal,
 		Id:                idVal,
 		RecipientChannels: recipientChannelsVal,
-		RecipientEmails:   recipientEmailsVal,
 		Threshold:         thresholdVal,
 		Token:             tokenVal,
 		UpdatedAt:         updatedAtVal,
@@ -618,7 +560,6 @@ type AnomalyNotificationsValue struct {
 	CreatedAt         basetypes.StringValue `tfsdk:"created_at"`
 	Id                basetypes.StringValue `tfsdk:"id"`
 	RecipientChannels basetypes.ListValue   `tfsdk:"recipient_channels"`
-	RecipientEmails   basetypes.ListValue   `tfsdk:"recipient_emails"`
 	Threshold         basetypes.Int64Value  `tfsdk:"threshold"`
 	Token             basetypes.StringValue `tfsdk:"token"`
 	UpdatedAt         basetypes.StringValue `tfsdk:"updated_at"`
@@ -627,7 +568,7 @@ type AnomalyNotificationsValue struct {
 }
 
 func (v AnomalyNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 9)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
@@ -636,9 +577,6 @@ func (v AnomalyNotificationsValue) ToTerraformValue(ctx context.Context) (tftype
 	attrTypes["created_at"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["recipient_channels"] = basetypes.ListType{
-		ElemType: types.StringType,
-	}.TerraformType(ctx)
-	attrTypes["recipient_emails"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
 	attrTypes["threshold"] = basetypes.Int64Type{}.TerraformType(ctx)
@@ -652,7 +590,7 @@ func (v AnomalyNotificationsValue) ToTerraformValue(ctx context.Context) (tftype
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 9)
+		vals := make(map[string]tftypes.Value, 8)
 
 		val, err = v.CostReportToken.ToTerraformValue(ctx)
 
@@ -685,14 +623,6 @@ func (v AnomalyNotificationsValue) ToTerraformValue(ctx context.Context) (tftype
 		}
 
 		vals["recipient_channels"] = val
-
-		val, err = v.RecipientEmails.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["recipient_emails"] = val
 
 		val, err = v.Threshold.ToTerraformValue(ctx)
 
@@ -775,41 +705,6 @@ func (v AnomalyNotificationsValue) ToObjectValue(ctx context.Context) (basetypes
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"recipient_emails": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"threshold":  basetypes.Int64Type{},
-			"token":      basetypes.StringType{},
-			"updated_at": basetypes.StringType{},
-			"user_tokens": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-		}), diags
-	}
-
-	var recipientEmailsVal basetypes.ListValue
-	switch {
-	case v.RecipientEmails.IsUnknown():
-		recipientEmailsVal = types.ListUnknown(types.StringType)
-	case v.RecipientEmails.IsNull():
-		recipientEmailsVal = types.ListNull(types.StringType)
-	default:
-		var d diag.Diagnostics
-		recipientEmailsVal, d = types.ListValue(types.StringType, v.RecipientEmails.Elements())
-		diags.Append(d...)
-	}
-
-	if diags.HasError() {
-		return types.ObjectUnknown(map[string]attr.Type{
-			"cost_report_token": basetypes.StringType{},
-			"created_at":        basetypes.StringType{},
-			"id":                basetypes.StringType{},
-			"recipient_channels": basetypes.ListType{
-				ElemType: types.StringType,
-			},
-			"recipient_emails": basetypes.ListType{
-				ElemType: types.StringType,
-			},
 			"threshold":  basetypes.Int64Type{},
 			"token":      basetypes.StringType{},
 			"updated_at": basetypes.StringType{},
@@ -839,9 +734,6 @@ func (v AnomalyNotificationsValue) ToObjectValue(ctx context.Context) (basetypes
 			"recipient_channels": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"recipient_emails": basetypes.ListType{
-				ElemType: types.StringType,
-			},
 			"threshold":  basetypes.Int64Type{},
 			"token":      basetypes.StringType{},
 			"updated_at": basetypes.StringType{},
@@ -856,9 +748,6 @@ func (v AnomalyNotificationsValue) ToObjectValue(ctx context.Context) (basetypes
 		"created_at":        basetypes.StringType{},
 		"id":                basetypes.StringType{},
 		"recipient_channels": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"recipient_emails": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"threshold":  basetypes.Int64Type{},
@@ -884,7 +773,6 @@ func (v AnomalyNotificationsValue) ToObjectValue(ctx context.Context) (basetypes
 			"created_at":         v.CreatedAt,
 			"id":                 v.Id,
 			"recipient_channels": recipientChannelsVal,
-			"recipient_emails":   recipientEmailsVal,
 			"threshold":          v.Threshold,
 			"token":              v.Token,
 			"updated_at":         v.UpdatedAt,
@@ -925,10 +813,6 @@ func (v AnomalyNotificationsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
-	if !v.RecipientEmails.Equal(other.RecipientEmails) {
-		return false
-	}
-
 	if !v.Threshold.Equal(other.Threshold) {
 		return false
 	}
@@ -962,9 +846,6 @@ func (v AnomalyNotificationsValue) AttributeTypes(ctx context.Context) map[strin
 		"created_at":        basetypes.StringType{},
 		"id":                basetypes.StringType{},
 		"recipient_channels": basetypes.ListType{
-			ElemType: types.StringType,
-		},
-		"recipient_emails": basetypes.ListType{
 			ElemType: types.StringType,
 		},
 		"threshold":  basetypes.Int64Type{},

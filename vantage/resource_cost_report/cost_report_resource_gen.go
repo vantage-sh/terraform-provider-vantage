@@ -109,13 +109,6 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 						Computed:            true,
 						Description:         "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
 						MarkdownDescription: "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
-						Validators: []validator.String{
-							stringvalidator.OneOf(
-								"cost",
-								"usage",
-								"count",
-							),
-						},
 					},
 				},
 				CustomType: ChartSettingsType{
@@ -264,16 +257,9 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 					"aggregate_by": schema.StringAttribute{
 						Optional:            true,
 						Computed:            true,
-						Description:         "Report will aggregate by cost, usage, or count.",
-						MarkdownDescription: "Report will aggregate by cost, usage, or count.",
-						Validators: []validator.String{
-							stringvalidator.OneOf(
-								"cost",
-								"usage",
-								"count",
-							),
-						},
-						Default: stringdefault.StaticString("cost"),
+						Description:         "Report will aggregate by cost or usage.",
+						MarkdownDescription: "Report will aggregate by cost or usage.",
+						Default:             stringdefault.StaticString("cost"),
 					},
 					"amortize": schema.BoolAttribute{
 						Optional:            true,
@@ -320,8 +306,8 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 					"show_previous_period": schema.BoolAttribute{
 						Optional:            true,
 						Computed:            true,
-						Description:         "Report will show previous period cost, usage, or count comparison.",
-						MarkdownDescription: "Report will show previous period cost, usage, or count comparison.",
+						Description:         "Report will show previous period costs or usage comparison.",
+						MarkdownDescription: "Report will show previous period costs or usage comparison.",
 						Default:             booldefault.StaticBool(true),
 					},
 					"unallocated": schema.BoolAttribute{

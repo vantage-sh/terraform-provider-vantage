@@ -98,19 +98,12 @@ func NetworkFlowReportsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
-			"workspace_token": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "Filter by workspace token.",
-				MarkdownDescription: "Filter by workspace token.",
-			},
 		},
 	}
 }
 
 type NetworkFlowReportsModel struct {
-	NetworkFlowReports types.List   `tfsdk:"network_flow_reports"`
-	WorkspaceToken     types.String `tfsdk:"workspace_token"`
+	NetworkFlowReports types.List `tfsdk:"network_flow_reports"`
 }
 
 var _ basetypes.ObjectTypable = NetworkFlowReportsType{}
