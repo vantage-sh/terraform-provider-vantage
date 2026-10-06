@@ -35,7 +35,7 @@ resource "vantage_dashboard_notification" "demo_notification" {
 
 - `recipient_emails` (List of String) Email addresses that receive the notification. Must be organization users, on the account's SSO domain, or an approved third-party service address.
 - `user_tokens` (List of String) The Users that receive the notification.
-- `workspace_token` (String) The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces.
+- `workspace_token` (String) The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces. Changing this forces a new resource.
 
 ### Read-Only
 

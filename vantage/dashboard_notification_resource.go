@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard_notification"
 	dashboardnotifsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboard_notifications"
 )
@@ -40,6 +42,7 @@ func (r *dashboardNotificationResource) Metadata(_ context.Context, req resource
 
 func (r *dashboardNotificationResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	s := resource_dashboard_notification.DashboardNotificationResourceSchema(ctx)
+	attrs := s.GetAttributes()
 
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
@@ -53,10 +56,34 @@ func (r *dashboardNotificationResource) Schema(ctx context.Context, _ resource.S
 	// workspace_token is create-only and not returned by the API.
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,
-		Description:         "The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces.",
-		MarkdownDescription: "The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces.",
+		Description:         "The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces. Changing this forces a new resource.",
+		MarkdownDescription: "The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces. Changing this forces a new resource.",
 		PlanModifiers: []planmodifier.String{
-			stringplanmodifier.UseStateForUnknown(),
+			stringplanmodifier.RequiresReplace(),
+		},
+	}
+
+	// user_tokens and recipient_emails are Optional+Computed and derived from each
+	// other by the API. Preserve the omitted sibling across plans so Terraform does
+	// not treat the API-filled list as drift or drop it as null on update.
+	s.Attributes["user_tokens"] = schema.ListAttribute{
+		ElementType:         types.StringType,
+		Optional:            true,
+		Computed:            true,
+		Description:         attrs["user_tokens"].GetDescription(),
+		MarkdownDescription: attrs["user_tokens"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.List{
+			planmodifiers.ListUseStateUnlessSiblingsChange(path.Root("recipient_emails")),
+		},
+	}
+	s.Attributes["recipient_emails"] = schema.ListAttribute{
+		ElementType:         types.StringType,
+		Optional:            true,
+		Computed:            true,
+		Description:         attrs["recipient_emails"].GetDescription(),
+		MarkdownDescription: attrs["recipient_emails"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.List{
+			planmodifiers.ListUseStateUnlessSiblingsChange(path.Root("user_tokens")),
 		},
 	}
 
