@@ -95,8 +95,7 @@ func (d *budgetAlertsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	payloads, err := fetchAllBudgetAlerts(d.client, data.BudgetToken.ValueStringPointer(), data.WorkspaceToken.ValueStringPointer())
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Get Vantage Budget Alerts", err.Error())
+	if handleAPIError("Read Budget Alerts", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

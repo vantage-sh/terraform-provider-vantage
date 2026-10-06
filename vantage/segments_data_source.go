@@ -57,11 +57,7 @@ func (d *segmentsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := segmentsv2.NewGetSegmentsParams()
 	out, err := d.client.V2.Segments.GetSegments(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Segments",
-			err.Error(),
-		)
+	if handleAPIError("Read Segments", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

@@ -53,11 +53,7 @@ func (r *resourceReportsDataSource) Read(ctx context.Context, req datasource.Rea
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := resourcereportsv2.NewGetResourceReportsParams()
 	out, err := r.client.V2.ResourceReports.GetResourceReports(params, r.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Resource Reports",
-			err.Error(),
-		)
+	if handleAPIError("Read Resource Reports", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

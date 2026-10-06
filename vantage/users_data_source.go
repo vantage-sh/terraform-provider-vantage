@@ -69,11 +69,7 @@ func (d *usersDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := usersv2.NewGetUsersParams()
 	out, err := d.client.V2.Users.GetUsers(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Users",
-			err.Error(),
-		)
+	if handleAPIError("Read Users", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

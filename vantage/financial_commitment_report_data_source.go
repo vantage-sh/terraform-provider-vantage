@@ -70,11 +70,7 @@ func (d *financialCommitmentReportsDataSource) Read(ctx context.Context, req dat
 
 	params := fcrv2.NewGetFinancialCommitmentReportsParams()
 	out, err := d.client.V2.FinancialCommitmentReports.GetFinancialCommitmentReports(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Financial Commitment Reports",
-			err.Error(),
-		)
+	if handleAPIError("Read Financial Commitment Reports", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

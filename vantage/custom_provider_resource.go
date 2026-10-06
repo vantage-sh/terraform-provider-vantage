@@ -10,9 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	integrationsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/integrations"
-	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 )
 
 var (
@@ -113,8 +113,7 @@ func (r *CustomProviderResource) Create(ctx context.Context, req resource.Create
 	params.WithCreateCustomProviderIntegration(payload)
 
 	out, err := r.client.V2.Integrations.CreateCustomProviderIntegration(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Custom Provider", &resp.Diagnostics, err)
+	if handleAPIError("Create Custom Provider", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -147,12 +146,9 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 	params.SetIntegrationToken(state.Token.ValueString())
 
 	out, err := r.client.V2.Integrations.GetIntegration(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*integrationsv2.GetIntegrationNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Read Custom Provider", &resp.Diagnostics, err)
+	if handleAPIError("Read Custom Provider", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -181,14 +177,12 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-//
 // To update name/description, the UI POSTs to /settings/custom_providers/${CUSTOM_PROVIDER_TOKEN}/update_details
 //
 // _method=patch
 // integrations_custom_provider_access[name]=${PROVIDER_NAME}
 // integrations_custom_provider_access[description]=${PROVIDER_DESCRIPTION}
 // commit=Update+Details
-//
 func (r *CustomProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// name and description are guarded by ImmutableAfterCreate plan modifiers,
 	// so they are always reverted to their state values before Update runs.
@@ -228,9 +222,10 @@ func (r *CustomProviderResource) Delete(ctx context.Context, req resource.Delete
 	params.SetIntegrationToken(state.Token.ValueString())
 
 	_, err := r.client.V2.Integrations.DeleteIntegration(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Custom Provider", &resp.Diagnostics, err)
+	if handleAPIError("Delete Custom Provider", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // applyWorkspaces calls the UpdateIntegration endpoint with the given workspace
@@ -259,8 +254,7 @@ func (r *CustomProviderResource) applyWorkspaces(ctx context.Context, integratio
 	})
 
 	out, err := r.client.V2.Integrations.UpdateIntegration(updateParams, r.client.Auth)
-	if err != nil {
-		handleError("Update Custom Provider Workspaces", diags, err)
+	if handleAPIError("Update Custom Provider Workspaces", diags, err, apiNotFoundError, nil) {
 		return workspaces
 	}
 
@@ -269,4 +263,3 @@ func (r *CustomProviderResource) applyWorkspaces(ctx context.Context, integratio
 	diags.Append(d...)
 	return result
 }
-

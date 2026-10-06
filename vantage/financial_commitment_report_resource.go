@@ -68,13 +68,7 @@ func (r *financialCommitmentReportResource) Create(ctx context.Context, req reso
 	params := fcrv2.NewCreateFinancialCommitmentReportParams().WithCreateFinancialCommitmentReport(model)
 	out, err := r.client.V2.FinancialCommitmentReports.CreateFinancialCommitmentReport(params, r.client.Auth)
 
-	if err != nil {
-		if e, ok := err.(*fcrv2.CreateFinancialCommitmentReportBadRequest); ok {
-			handleBadRequest("Create FinancialCommitmentReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create FinancialCommitmentReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Financial Commitment Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -111,14 +105,9 @@ func (r *financialCommitmentReportResource) Read(ctx context.Context, req resour
 	// Read API call logic
 	params := fcrv2.NewGetFinancialCommitmentReportParams().WithFinancialCommitmentReportToken(data.Token.ValueString())
 	out, err := r.client.V2.FinancialCommitmentReports.GetFinancialCommitmentReport(params, r.client.Auth)
-	if err != nil {
-
-		if _, ok := err.(*fcrv2.GetFinancialCommitmentReportNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Read FinancialCommitmentReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Financial Commitment Report", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -153,13 +142,7 @@ func (r *financialCommitmentReportResource) Update(ctx context.Context, req reso
 	params := fcrv2.NewUpdateFinancialCommitmentReportParams().WithUpdateFinancialCommitmentReport(model).WithFinancialCommitmentReportToken(data.Token.ValueString())
 
 	out, err := r.client.V2.FinancialCommitmentReports.UpdateFinancialCommitmentReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*fcrv2.UpdateFinancialCommitmentReportBadRequest); ok {
-			handleBadRequest("Update FinancialCommitmentReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update FinancialCommitmentReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Financial Commitment Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -190,7 +173,8 @@ func (r *financialCommitmentReportResource) Delete(ctx context.Context, req reso
 	params := fcrv2.NewDeleteFinancialCommitmentReportParams().WithFinancialCommitmentReportToken(data.Token.ValueString())
 
 	_, err := r.client.V2.FinancialCommitmentReports.DeleteFinancialCommitmentReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete FinancialCommitmentReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Financial Commitment Report", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }

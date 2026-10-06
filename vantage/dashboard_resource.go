@@ -153,12 +153,7 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 
 	params := dashboardsv2.NewCreateDashboardParams().WithCreateDashboard(body)
 	out, err := r.client.V2.Dashboards.CreateDashboard(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*dashboardsv2.CreateDashboardBadRequest); ok {
-			handleBadRequest("Create Dashboard Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Dashboard Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Dashboard", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -180,13 +175,9 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	params := dashboardsv2.NewGetDashboardParams().WithDashboardToken(state.Token.ValueString())
 	out, err := r.client.V2.Dashboards.GetDashboard(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*dashboardsv2.GetDashboardNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Dashboard Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Dashboard", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -219,12 +210,7 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 		WithUpdateDashboard(body)
 
 	out, err := r.client.V2.Dashboards.UpdateDashboard(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*dashboardsv2.UpdateDashboardBadRequest); ok {
-			handleBadRequest("Update Dashboard Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Dashboard Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Dashboard", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -246,9 +232,10 @@ func (r DashboardResource) Delete(ctx context.Context, req resource.DeleteReques
 	params := dashboardsv2.NewDeleteDashboardParams()
 	params.SetDashboardToken(state.Token.ValueString())
 	_, err := r.client.V2.Dashboards.DeleteDashboard(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Dashboard Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Dashboard", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

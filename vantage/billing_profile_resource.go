@@ -62,12 +62,7 @@ func (r BillingProfileResource) Create(ctx context.Context, req resource.CreateR
 
 	params := billingprofilesv2.NewCreateBillingProfileParams().WithCreateBillingProfile(body)
 	out, err := r.client.V2.BillingProfiles.CreateBillingProfile(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*billingprofilesv2.CreateBillingProfileBadRequest); ok {
-			handleBadRequest("Create Billing Profile Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Billing Profile Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Billing Profile", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -97,13 +92,9 @@ func (r BillingProfileResource) Read(ctx context.Context, req resource.ReadReque
 
 	params := billingprofilesv2.NewGetBillingProfileParams().WithBillingProfileToken(state.Token.ValueString())
 	out, err := r.client.V2.BillingProfiles.GetBillingProfile(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*billingprofilesv2.GetBillingProfileNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Billing Profile Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Billing Profile", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -137,12 +128,7 @@ func (r BillingProfileResource) Update(ctx context.Context, req resource.UpdateR
 		WithUpdateBillingProfile(body)
 
 	out, err := r.client.V2.BillingProfiles.UpdateBillingProfile(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*billingprofilesv2.UpdateBillingProfileBadRequest); ok {
-			handleBadRequest("Update Billing Profile Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update Billing Profile Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Billing Profile", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -165,9 +151,10 @@ func (r BillingProfileResource) Delete(ctx context.Context, req resource.DeleteR
 	params := billingprofilesv2.NewDeleteBillingProfileParams()
 	params.SetBillingProfileToken(state.Token.ValueString())
 	_, err := r.client.V2.BillingProfiles.DeleteBillingProfile(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Billing Profile Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Billing Profile", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

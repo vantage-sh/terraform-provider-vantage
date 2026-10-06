@@ -61,11 +61,7 @@ func (d *billingProfilesDataSource) Read(ctx context.Context, req datasource.Rea
 	// Call API to get billing profiles
 	params := billingprofilesv2.NewGetBillingProfilesParams()
 	result, err := d.client.V2.BillingProfiles.GetBillingProfiles(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Billing Profiles",
-			err.Error(),
-		)
+	if handleAPIError("Read Billing Profiles", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

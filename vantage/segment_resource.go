@@ -130,8 +130,7 @@ func (r SegmentResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	params.WithCreateSegment(body)
 	out, err := r.client.V2.Segments.CreateSegment(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Segment Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Segment", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -157,15 +156,12 @@ func (r SegmentResource) Read(ctx context.Context, req resource.ReadRequest, res
 	params := segmentsv2.NewGetSegmentParams()
 	params.SetSegmentToken(state.Token.ValueString())
 	out, err := r.client.V2.Segments.GetSegment(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*segmentsv2.GetSegmentNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Segment Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Segment", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
+
 	if out.Payload.Description != "" {
 		state.Description = types.StringValue(out.Payload.Description)
 	}
@@ -207,8 +203,7 @@ func (r SegmentResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	out, err := r.client.V2.Segments.UpdateSegment(params, r.client.Auth)
 
-	if err != nil {
-		handleError("Update Segment Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Segment", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -238,9 +233,10 @@ func (r SegmentResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	params := segmentsv2.NewDeleteSegmentParams()
 	params.SetSegmentToken(state.Token.ValueString())
 	_, err := r.client.V2.Segments.DeleteSegment(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Segment Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Segment", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

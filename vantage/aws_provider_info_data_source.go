@@ -77,11 +77,7 @@ func (d *awsProviderInfoDataSource) Read(ctx context.Context, req datasource.Rea
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	out, err := d.client.V1.Integrations.GetIntegrationsAWSInfo(nil, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Vantage AwsProviderInfo",
-			err.Error(),
-		)
+	if handleAPIError("Read AWS Provider Info", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

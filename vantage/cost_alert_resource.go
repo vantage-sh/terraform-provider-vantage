@@ -67,8 +67,7 @@ func (r *costAlertResource) Create(ctx context.Context, req resource.CreateReque
 
 	params := costalertsv2.NewCreateCostAlertParams().WithCreateCostAlert(input)
 	out, err := r.client.V2.CostAlerts.CreateCostAlert(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Cost Alert", &resp.Diagnostics, err)
+	if handleAPIError("Create Cost Alert", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -86,12 +85,9 @@ func (r *costAlertResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	params := costalertsv2.NewGetCostAlertParams().WithCostAlertToken(data.Token.ValueString())
 	out, err := r.client.V2.CostAlerts.GetCostAlert(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*costalertsv2.GetCostAlertNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Read Cost Alert", &resp.Diagnostics, err)
+	if handleAPIError("Read Cost Alert", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -117,8 +113,7 @@ func (r *costAlertResource) Update(ctx context.Context, req resource.UpdateReque
 		WithUpdateCostAlert(input)
 
 	out, err := r.client.V2.CostAlerts.UpdateCostAlert(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Cost Alert", &resp.Diagnostics, err)
+	if handleAPIError("Update Cost Alert", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -138,9 +133,10 @@ func (r *costAlertResource) Delete(ctx context.Context, req resource.DeleteReque
 		WithCostAlertToken(data.Token.ValueString())
 
 	_, err := r.client.V2.CostAlerts.DeleteCostAlert(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Cost Alert", &resp.Diagnostics, err)
+	if handleAPIError("Delete Cost Alert", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 func (r *costAlertResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -31,8 +31,8 @@ type integrationItemModel struct {
 }
 
 type integrationsDataSourceModel struct {
-	ProviderFilter  types.String              `tfsdk:"provider_filter"`
-	Integrations []integrationItemModel `tfsdk:"integrations"`
+	ProviderFilter types.String           `tfsdk:"provider_filter"`
+	Integrations   []integrationItemModel `tfsdk:"integrations"`
 }
 
 type integrationsDataSource struct {
@@ -116,8 +116,7 @@ func (d *integrationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	allIntegrations, err := fetchAllIntegrations(d.client, providerFilter)
-	if err != nil {
-		handleError("Read Integrations", &resp.Diagnostics, err)
+	if handleAPIError("Read Integrations", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

@@ -56,11 +56,7 @@ func (d *teamsDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := teamsv2.NewGetTeamsParams()
 	out, err := d.client.V2.Teams.GetTeams(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Teams",
-			err.Error(),
-		)
+	if handleAPIError("Read Teams", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

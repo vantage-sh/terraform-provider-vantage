@@ -49,9 +49,8 @@ func (d *costAlertsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	params := costalertsv2.NewGetCostAlertsParams()
 	out, err := d.client.V2.CostAlerts.GetCostAlerts(params, d.client.Auth)
 
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Get Vantage Cost Alerts", err.Error())
-        return
+	if handleAPIError("Read Cost Alerts", &resp.Diagnostics, err, apiNotFoundError, nil) {
+		return
 	}
 
 	var alerts []costAlertDataSourceValue

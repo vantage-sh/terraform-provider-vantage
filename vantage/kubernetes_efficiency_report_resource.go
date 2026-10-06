@@ -70,15 +70,10 @@ func (r *kubernetesEfficiencyReportResource) Create(ctx context.Context, req res
 	params := k8seffreportsv2.NewCreateKubernetesEfficiencyReportParams().WithCreateKubernetesEfficiencyReport(model)
 	out, err := r.client.V2.KubernetesEfficiencyReports.CreateKubernetesEfficiencyReport(params, r.client.Auth)
 
-	if err != nil {
-		if e, ok := err.(*k8seffreportsv2.CreateKubernetesEfficiencyReportBadRequest); ok {
-			handleBadRequest("Create KubernetesEfficiencyReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create KubernetesEfficiencyReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Kubernetes Efficiency Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
-
 	}
+
 	diag := data.applyPayload(ctx, out.Payload, false)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
@@ -111,14 +106,9 @@ func (r *kubernetesEfficiencyReportResource) Read(ctx context.Context, req resou
 	// Read API call logic
 	params := k8seffreportsv2.NewGetKubernetesEfficiencyReportParams().WithKubernetesEfficiencyReportToken(data.Token.ValueString())
 	out, err := r.client.V2.KubernetesEfficiencyReports.GetKubernetesEfficiencyReport(params, r.client.Auth)
-	if err != nil {
-
-		if _, ok := err.(*k8seffreportsv2.GetKubernetesEfficiencyReportNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Read KubernetesEfficiency Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Kubernetes Efficiency Report", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -153,13 +143,7 @@ func (r *kubernetesEfficiencyReportResource) Update(ctx context.Context, req res
 	params := k8seffreportsv2.NewUpdateKubernetesEfficiencyReportParams().WithUpdateKubernetesEfficiencyReport(model).WithKubernetesEfficiencyReportToken(data.Token.ValueString())
 
 	out, err := r.client.V2.KubernetesEfficiencyReports.UpdateKubernetesEfficiencyReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*k8seffreportsv2.UpdateKubernetesEfficiencyReportBadRequest); ok {
-			handleBadRequest("Update KubernetesEfficiencyReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update KubernetesEfficiencyReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Kubernetes Efficiency Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -190,7 +174,8 @@ func (r *kubernetesEfficiencyReportResource) Delete(ctx context.Context, req res
 	params := k8seffreportsv2.NewDeleteKubernetesEfficiencyReportParams().WithKubernetesEfficiencyReportToken(data.Token.ValueString())
 
 	_, err := r.client.V2.KubernetesEfficiencyReports.DeleteKubernetesEfficiencyReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete KubernetesEfficiencyReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Kubernetes Efficiency Report", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }

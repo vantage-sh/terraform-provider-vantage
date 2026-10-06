@@ -69,11 +69,7 @@ func (d *kubernetesEfficiencyReportsDataSource) Read(ctx context.Context, req da
 	}
 	params := kerv2.NewGetKubernetesEfficiencyReportsParams()
 	out, err := d.client.V2.KubernetesEfficiencyReports.GetKubernetesEfficiencyReports(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Kubernetes Efficiency Reports",
-			err.Error(),
-		)
+	if handleAPIError("Read Kubernetes Efficiency Reports", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

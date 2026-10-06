@@ -94,11 +94,7 @@ func (d *scenarioModelsDataSource) Read(ctx context.Context, req datasource.Read
 
 	params := scenariomodelsv2.NewGetScenarioModelsParams()
 	out, err := d.client.V2.ScenarioModels.GetScenarioModels(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Scenario Models",
-			err.Error(),
-		)
+	if handleAPIError("Read Scenario Models", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

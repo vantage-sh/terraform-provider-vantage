@@ -52,11 +52,7 @@ func (d *billingRulesDataSource) Read(ctx context.Context, req datasource.ReadRe
 	apiRes, err := d.client.V2.BillingRules.GetBillingRules(params, d.client.Auth)
 
 	// Example data value setting
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get Billing Rules",
-			err.Error(),
-		)
+	if handleAPIError("Read Billing Rules", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

@@ -68,13 +68,7 @@ func (r *networkFlowReportResource) Create(ctx context.Context, req resource.Cre
 	model := data.toCreateModel(ctx)
 	params := nfrv2.NewCreateNetworkFlowReportParams().WithCreateNetworkFlowReport(model)
 	out, err := r.client.V2.NetworkFlowReports.CreateNetworkFlowReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*nfrv2.CreateNetworkFlowReportBadRequest); ok {
-			handleBadRequest("Create NetworkFlowReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create NetworkFlowReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Network Flow Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -105,12 +99,9 @@ func (r *networkFlowReportResource) Read(ctx context.Context, req resource.ReadR
 
 	params := nfrv2.NewGetNetworkFlowReportParams().WithNetworkFlowReportToken(data.Token.ValueString())
 	out, err := r.client.V2.NetworkFlowReports.GetNetworkFlowReport(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*nfrv2.GetNetworkFlowReportNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get NetworkFlowReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Network Flow Report", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -142,13 +133,7 @@ func (r *networkFlowReportResource) Update(ctx context.Context, req resource.Upd
 	model := data.toUpdateModel(ctx)
 	params := nfrv2.NewUpdateNetworkFlowReportParams().WithNetworkFlowReportToken(data.Token.ValueString()).WithUpdateNetworkFlowReport(model)
 	out, err := r.client.V2.NetworkFlowReports.UpdateNetworkFlowReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*nfrv2.UpdateNetworkFlowReportBadRequest); ok {
-			handleBadRequest("Update NetworkFlowReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update NetworkFlowReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Network Flow Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -177,7 +162,8 @@ func (r *networkFlowReportResource) Delete(ctx context.Context, req resource.Del
 
 	params := nfrv2.NewDeleteNetworkFlowReportParams().WithNetworkFlowReportToken(data.Token.ValueString())
 	_, err := r.client.V2.NetworkFlowReports.DeleteNetworkFlowReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete NetworkFlowReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Network Flow Report", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }

@@ -50,12 +50,7 @@ func (d *resourceReportColumnsDataSource) Read(ctx context.Context, req datasour
 
 	params := resourcereportsv2.NewGetResourceReportColumnsParams().WithResourceType(resourceType)
 	out, err := d.client.V2.ResourceReports.GetResourceReportColumns(params, d.client.Auth)
-	if err != nil {
-		if e, ok := err.(*resourcereportsv2.GetResourceReportColumnsBadRequest); ok {
-			handleBadRequest("Get Resource Report Columns", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Get Resource Report Columns", &resp.Diagnostics, err)
+	if handleAPIError("Read Resource Report Columns", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

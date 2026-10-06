@@ -133,12 +133,7 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 
 	params := businessmetricsv2.NewCreateBusinessMetricParams().WithCreateBusinessMetric(model)
 	out, err := r.client.V2.BusinessMetrics.CreateBusinessMetric(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*businessmetricsv2.CreateBusinessMetricBadRequest); ok {
-			handleBadRequest("Create Business Metric", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Business Metric", &resp.Diagnostics, err)
+	if handleAPIError("Create Business Metric", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -266,12 +261,9 @@ func (r *businessMetricResource) Read(ctx context.Context, req resource.ReadRequ
 
 	params := businessmetricsv2.NewGetBusinessMetricParams().WithBusinessMetricToken(data.Token.ValueString())
 	out, err := r.client.V2.BusinessMetrics.GetBusinessMetric(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*businessmetricsv2.GetBusinessMetricNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get Business Metric", &resp.Diagnostics, err)
+	if handleAPIError("Read Business Metric", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -312,12 +304,7 @@ func (r *businessMetricResource) Update(ctx context.Context, req resource.Update
 	params := businessmetricsv2.NewUpdateBusinessMetricParams().WithBusinessMetricToken(data.Token.ValueString()).WithUpdateBusinessMetric(model)
 
 	out, err := r.client.V2.BusinessMetrics.UpdateBusinessMetric(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*businessmetricsv2.UpdateBusinessMetricBadRequest); ok {
-			handleBadRequest("Update Business Metric", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update Business Metric", &resp.Diagnostics, err)
+	if handleAPIError("Update Business Metric", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -364,8 +351,7 @@ func (r *businessMetricResource) Delete(ctx context.Context, req resource.Delete
 	params.SetBusinessMetricToken(data.Token.ValueString())
 
 	_, err := r.client.V2.BusinessMetrics.DeleteBusinessMetric(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Business Metric", &resp.Diagnostics, err)
+	if handleAPIError("Delete Business Metric", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
 

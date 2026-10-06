@@ -105,8 +105,7 @@ func (d *integrationByNameDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	allIntegrations, err := fetchAllIntegrations(d.client, providerFilter)
-	if err != nil {
-		handleError("Read Integration By Name", &resp.Diagnostics, err)
+	if handleAPIError("Read Integration By Name", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

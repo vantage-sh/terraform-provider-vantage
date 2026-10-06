@@ -155,11 +155,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	params := costsv2.NewGetCostReportsParams()
 	out, err := d.client.V2.Costs.GetCostReports(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Costs",
-			err.Error(),
-		)
+	if handleAPIError("Read Cost Reports", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

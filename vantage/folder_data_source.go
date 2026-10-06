@@ -76,8 +76,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	allFolders, err := fetchAllFolders(d.client)
-	if err != nil {
-		handleError("Read Folder", &resp.Diagnostics, err)
+	if handleAPIError("Read Folder", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

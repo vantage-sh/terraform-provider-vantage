@@ -49,7 +49,7 @@ func (r *managedAccountResource) Schema(ctx context.Context, req resource.Schema
 			stringplanmodifier.UseStateForUnknown(),
 		},
 	}
-	
+
 	resp.Schema = s
 }
 
@@ -70,12 +70,7 @@ func (r *managedAccountResource) Create(ctx context.Context, req resource.Create
 
 	params := managedaccountsv2.NewCreateManagedAccountParams().WithCreateManagedAccount(model)
 	out, err := r.client.V2.ManagedAccounts.CreateManagedAccount(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*managedaccountsv2.CreateManagedAccountBadRequest); ok {
-			handleBadRequest("Create Managed Account Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Managed Account Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Managed Account", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -100,13 +95,9 @@ func (r *managedAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 	params := managedaccountsv2.NewGetManagedAccountParams().WithManagedAccountToken(data.Token.ValueString())
 	out, err := r.client.V2.ManagedAccounts.GetManagedAccount(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*managedaccountsv2.GetManagedAccountNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Managed Account Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Managed Account", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -142,10 +133,10 @@ func (r *managedAccountResource) Update(ctx context.Context, req resource.Update
 
 	out, err := r.client.V2.ManagedAccounts.UpdateManagedAccount(params, r.client.Auth)
 
-	if err != nil {
-		handleError("Update Managed Account Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Managed Account", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
+
 	tflog.Debug(ctx, fmt.Sprintf("update payload: %v", out.Payload))
 	diag := data.applyPayload(ctx, out.Payload)
 
@@ -168,8 +159,8 @@ func (r *managedAccountResource) Delete(ctx context.Context, req resource.Delete
 		WithManagedAccountToken(data.Token.ValueString())
 
 	_, err := r.client.V2.ManagedAccounts.DeleteManagedAccount(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Managed Account Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Managed Account", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }

@@ -57,11 +57,7 @@ func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	out, err := d.client.V2.Dashboards.GetDashboards(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Dashboards",
-			err.Error(),
-		)
+	if handleAPIError("Read Dashboards", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

@@ -81,12 +81,7 @@ func (r WorkspaceResource) Create(ctx context.Context, req resource.CreateReques
 
 	params := workspacesv2.NewCreateWorkspaceParams().WithCreateWorkspace(body)
 	out, err := r.client.V2.Workspaces.CreateWorkspace(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*workspacesv2.CreateWorkspaceBadRequest); ok {
-			handleBadRequest("Create Workspace Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Workspace Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Workspace", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -104,12 +99,9 @@ func (r WorkspaceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	params := workspacesv2.NewGetWorkspaceParams()
 	params.SetWorkspaceToken(state.Token.ValueString())
 	out, err := r.client.V2.Workspaces.GetWorkspace(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*workspacesv2.GetWorkspaceNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Read Workspace Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Workspace", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -143,12 +135,7 @@ func (r WorkspaceResource) Update(ctx context.Context, req resource.UpdateReques
 	params.SetWorkspaceToken(data.Token.ValueString())
 	params.WithUpdateWorkspace(model)
 	out, err := r.client.V2.Workspaces.UpdateWorkspace(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*workspacesv2.UpdateWorkspaceBadRequest); ok {
-			handleBadRequest("Update Workspace Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update Workspace Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Workspace", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -166,9 +153,10 @@ func (r WorkspaceResource) Delete(ctx context.Context, req resource.DeleteReques
 	params := workspacesv2.NewDeleteWorkspaceParams()
 	params.SetWorkspaceToken(state.Token.ValueString())
 	_, err := r.client.V2.Workspaces.DeleteWorkspace(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Workspace Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Workspace", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 func (r WorkspaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

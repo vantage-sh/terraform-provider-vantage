@@ -70,8 +70,7 @@ func (r AwsProviderResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 	params.WithCreateIntegrationsAWS(model)
 	out, err := r.client.V1.Integrations.CreateIntegrationsAWS(params, r.client.Auth)
-	if err != nil {
-		handleError("Create AWS Integration", &resp.Diagnostics, err)
+	if handleAPIError("Create AWS Integration", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -92,10 +91,10 @@ func (r AwsProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 	params := integrationsv1.NewDeleteIntegrationsAWSParams()
 	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
 	_, err := r.client.V1.Integrations.DeleteIntegrationsAWS(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete AWS Integration", &resp.Diagnostics, err)
+	if handleAPIError("Delete AWS Integration", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }
 
 func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -109,12 +108,9 @@ func (r AwsProviderResource) Read(ctx context.Context, req resource.ReadRequest,
 	params := integrationsv1.NewGetIntegrationsAWSParams()
 	params.SetAccessCredentialID(int32(state.Id.ValueInt64()))
 	out, err := r.client.V1.Integrations.GetIntegrationsAWS(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*integrationsv1.GetIntegrationsAWSNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get AWS Integration", &resp.Diagnostics, err)
+	if handleAPIError("Read AWS Integration", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -152,10 +148,10 @@ func (r AwsProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 	params.WithPutIntegrationsAWS(m)
 	out, err := r.client.V1.Integrations.PutIntegrationsAWS(params, r.client.Auth)
-	if err != nil {
-		handleError("Update AWS Integration", &resp.Diagnostics, err)
+	if handleAPIError("Update AWS Integration", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
+
 	data.Id = types.Int64Value(int64(out.Payload.ID))
 
 	// Save data into Terraform state
