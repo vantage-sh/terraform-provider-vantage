@@ -67,6 +67,77 @@ func TestDashboardModel_applyPayload_kpiSettings(t *testing.T) {
 	if !settingsVal.KpiUsageUnit.IsNull() {
 		t.Fatalf("kpi_usage_unit = %v, want null", settingsVal.KpiUsageUnit)
 	}
+	if !settingsVal.Grid.IsNull() {
+		t.Fatalf("grid = %v, want null", settingsVal.Grid)
+	}
+}
+
+func TestDashboardModel_applyPayload_gridSettings(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	model := &dashboardModel{}
+	diags := model.applyPayload(ctx, &modelsv2.Dashboard{
+		Title:          "grid-dashboard",
+		Token:          "dshbrd_test",
+		WorkspaceToken: "wrkspc_test",
+		Widgets: []*modelsv2.DashboardWidget{
+			{
+				Title:           "Spend Chart",
+				Token:           "dshbrd_wdgt_test",
+				WidgetableToken: "rprt_test",
+				Settings: &modelsv2.DashboardWidgetSettings{
+					DisplayType: "chart",
+					Grid: &modelsv2.DashboardWidgetGridLayout{
+						X: 0,
+						Y: 2,
+						W: 6,
+						H: 4,
+					},
+				},
+			},
+		},
+	})
+	if diags.HasError() {
+		t.Fatalf("applyPayload diagnostics: %v", diags.Errors())
+	}
+
+	var widgets []resource_dashboard.WidgetsValue
+	if d := model.Widgets.ElementsAs(ctx, &widgets, false); d.HasError() {
+		t.Fatalf("ElementsAs diagnostics: %v", d.Errors())
+	}
+	if len(widgets) != 1 {
+		t.Fatalf("expected 1 widget, got %d", len(widgets))
+	}
+
+	settings, d := resource_dashboard.SettingsType{}.ValueFromObject(ctx, widgets[0].Settings)
+	if d.HasError() {
+		t.Fatalf("ValueFromObject diagnostics: %v", d.Errors())
+	}
+	settingsVal, ok := settings.(resource_dashboard.SettingsValue)
+	if !ok {
+		t.Fatalf("expected SettingsValue, got %T", settings)
+	}
+	grid, d := resource_dashboard.GridType{}.ValueFromObject(ctx, settingsVal.Grid)
+	if d.HasError() {
+		t.Fatalf("grid ValueFromObject diagnostics: %v", d.Errors())
+	}
+	gridVal, ok := grid.(resource_dashboard.GridValue)
+	if !ok {
+		t.Fatalf("expected GridValue, got %T", grid)
+	}
+	if got := gridVal.X.ValueInt64(); got != 0 {
+		t.Fatalf("grid.x = %d, want 0", got)
+	}
+	if got := gridVal.Y.ValueInt64(); got != 2 {
+		t.Fatalf("grid.y = %d, want 2", got)
+	}
+	if got := gridVal.W.ValueInt64(); got != 6 {
+		t.Fatalf("grid.w = %d, want 6", got)
+	}
+	if got := gridVal.H.ValueInt64(); got != 4 {
+		t.Fatalf("grid.h = %d, want 4", got)
+	}
 }
 
 func TestDashboardModel_toCreate_kpiSettings(t *testing.T) {
@@ -76,6 +147,7 @@ func TestDashboardModel_toCreate_kpiSettings(t *testing.T) {
 	settingsAttrTypes := resource_dashboard.SettingsValue{}.AttributeTypes(ctx)
 	settingsVal, d := resource_dashboard.NewSettingsValue(settingsAttrTypes, map[string]attr.Value{
 		"display_type":    types.StringValue("kpi"),
+		"grid":            types.ObjectNull(resource_dashboard.GridValue{}.AttributeTypes(ctx)),
 		"kpi_calculation": types.StringValue("average"),
 		"kpi_type":        types.StringValue("usage"),
 		"kpi_usage_unit":  types.StringValue("GB"),
@@ -92,6 +164,7 @@ func TestDashboardModel_toCreate_kpiSettings(t *testing.T) {
 	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
 		"settings":         settingsObj,
 		"title":            types.StringValue("Usage KPI"),
+		"token":            types.StringNull(),
 		"widgetable_token": types.StringValue("rprt_test"),
 	})
 	if d.HasError() {
@@ -133,6 +206,89 @@ func TestDashboardModel_toCreate_kpiSettings(t *testing.T) {
 	if got := settings.KpiUsageUnit; got != "GB" {
 		t.Fatalf("kpi_usage_unit = %q, want GB", got)
 	}
+	if settings.Grid != nil {
+		t.Fatalf("grid = %#v, want nil", settings.Grid)
+	}
+}
+
+func TestDashboardModel_toCreate_gridSettings(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	gridAttrTypes := resource_dashboard.GridValue{}.AttributeTypes(ctx)
+	gridVal, d := resource_dashboard.NewGridValue(gridAttrTypes, map[string]attr.Value{
+		"x": types.Int64Value(0),
+		"y": types.Int64Value(1),
+		"w": types.Int64Value(12),
+		"h": types.Int64Value(3),
+	})
+	if d.HasError() {
+		t.Fatalf("NewGridValue diagnostics: %v", d.Errors())
+	}
+	gridObj, d := gridVal.ToObjectValue(ctx)
+	if d.HasError() {
+		t.Fatalf("grid ToObjectValue diagnostics: %v", d.Errors())
+	}
+
+	settingsAttrTypes := resource_dashboard.SettingsValue{}.AttributeTypes(ctx)
+	settingsVal, d := resource_dashboard.NewSettingsValue(settingsAttrTypes, map[string]attr.Value{
+		"display_type":    types.StringValue("table"),
+		"grid":            gridObj,
+		"kpi_calculation": types.StringNull(),
+		"kpi_type":        types.StringNull(),
+		"kpi_usage_unit":  types.StringNull(),
+	})
+	if d.HasError() {
+		t.Fatalf("NewSettingsValue diagnostics: %v", d.Errors())
+	}
+	settingsObj, d := settingsVal.ToObjectValue(ctx)
+	if d.HasError() {
+		t.Fatalf("ToObjectValue diagnostics: %v", d.Errors())
+	}
+
+	widgetAttrTypes := resource_dashboard.WidgetsValue{}.AttributeTypes(ctx)
+	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+		"settings":         settingsObj,
+		"title":            types.StringValue("Table Widget"),
+		"token":            types.StringNull(),
+		"widgetable_token": types.StringValue("rprt_test"),
+	})
+	if d.HasError() {
+		t.Fatalf("NewWidgetsValue diagnostics: %v", d.Errors())
+	}
+
+	widgets, d := types.ListValueFrom(ctx, resource_dashboard.WidgetsValue{}.Type(ctx), []resource_dashboard.WidgetsValue{widgetVal})
+	if d.HasError() {
+		t.Fatalf("ListValueFrom diagnostics: %v", d.Errors())
+	}
+
+	model := &dashboardModel{
+		Title:          types.StringValue("grid-dashboard"),
+		WorkspaceToken: types.StringValue("wrkspc_test"),
+		Widgets:        widgets,
+	}
+
+	var diags diag.Diagnostics
+	payload := model.toCreate(ctx, &diags)
+	if diags.HasError() {
+		t.Fatalf("toCreate diagnostics: %v", diags.Errors())
+	}
+	if len(payload.Widgets) != 1 || payload.Widgets[0].Settings == nil || payload.Widgets[0].Settings.Grid == nil {
+		t.Fatal("expected widget grid settings")
+	}
+	grid := payload.Widgets[0].Settings.Grid
+	if got := *grid.X; got != 0 {
+		t.Fatalf("grid.x = %d, want 0", got)
+	}
+	if got := *grid.Y; got != 1 {
+		t.Fatalf("grid.y = %d, want 1", got)
+	}
+	if got := *grid.W; got != 12 {
+		t.Fatalf("grid.w = %d, want 12", got)
+	}
+	if got := *grid.H; got != 3 {
+		t.Fatalf("grid.h = %d, want 3", got)
+	}
 }
 
 func TestDashboardModel_toUpdate_kpiSettings(t *testing.T) {
@@ -142,6 +298,7 @@ func TestDashboardModel_toUpdate_kpiSettings(t *testing.T) {
 	settingsAttrTypes := resource_dashboard.SettingsValue{}.AttributeTypes(ctx)
 	settingsVal, d := resource_dashboard.NewSettingsValue(settingsAttrTypes, map[string]attr.Value{
 		"display_type":    types.StringValue("kpi"),
+		"grid":            types.ObjectNull(resource_dashboard.GridValue{}.AttributeTypes(ctx)),
 		"kpi_calculation": types.StringValue("sum"),
 		"kpi_type":        types.StringValue("cost"),
 		"kpi_usage_unit":  types.StringNull(),
@@ -158,6 +315,7 @@ func TestDashboardModel_toUpdate_kpiSettings(t *testing.T) {
 	widgetVal, d := resource_dashboard.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
 		"settings":         settingsObj,
 		"title":            types.StringValue("Spend KPI"),
+		"token":            types.StringNull(),
 		"widgetable_token": types.StringValue("rprt_test"),
 	})
 	if d.HasError() {
@@ -194,5 +352,8 @@ func TestDashboardModel_toUpdate_kpiSettings(t *testing.T) {
 	}
 	if got := settings.KpiUsageUnit; got != "" {
 		t.Fatalf("kpi_usage_unit = %q, want empty", got)
+	}
+	if settings.Grid != nil {
+		t.Fatalf("grid = %#v, want nil", settings.Grid)
 	}
 }

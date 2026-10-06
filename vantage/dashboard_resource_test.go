@@ -173,6 +173,112 @@ func TestAccDashboard_withCostReportWidget(t *testing.T) {
 
 }
 
+func TestAccDashboard_withWidgetGrid(t *testing.T) {
+	now := time.Now()
+	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	startDate := beginningOfCurrentMonth.AddDate(0, -1, 0).Format("2006-01-02")
+	endDate := beginningOfCurrentMonth.AddDate(0, 0, -1).Format("2006-01-02")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTfCostReport("test-grid-report") +
+					testAccDashboard_basicTf(
+						"test-grid-widget",
+						startDate,
+						endDate,
+						`widgets = [
+							{
+								settings = {
+									display_type = "chart"
+									grid = {
+										x = 0
+										y = 0
+										w = 6
+										h = 4
+									}
+								}
+								title = "Grid Chart"
+								widgetable_token = vantage_cost_report.test-grid-report.token
+							}
+						]`,
+					),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.#", "1"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.display_type", "chart"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.x", "0"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.y", "0"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.w", "6"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.h", "4"),
+				),
+			},
+			{
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTfCostReport("test-grid-report") +
+					testAccDashboard_basicTf(
+						"test-grid-widget",
+						startDate,
+						endDate,
+						`widgets = [
+							{
+								settings = {
+									display_type = "chart"
+									grid = {
+										x = 6
+										y = 2
+										w = 6
+										h = 5
+									}
+								}
+								title = "Grid Chart"
+								widgetable_token = vantage_cost_report.test-grid-report.token
+							}
+						]`,
+					),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.x", "6"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.y", "2"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.w", "6"),
+					resource.TestCheckResourceAttr("vantage_dashboard.test-grid-widget", "widgets.0.settings.grid.h", "5"),
+				),
+			},
+			{
+				ResourceName:      "vantage_dashboard.test-grid-widget",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccDashboard_basicTfDatasourceWorkspaces() +
+					testAccDashboard_basicTfCostReport("test-grid-report") +
+					testAccDashboard_basicTf(
+						"test-grid-widget",
+						startDate,
+						endDate,
+						`widgets = [
+							{
+								settings = {
+									display_type = "chart"
+									grid = {
+										x = 6
+										y = 2
+										w = 6
+										h = 5
+									}
+								}
+								title = "Grid Chart"
+								widgetable_token = vantage_cost_report.test-grid-report.token
+							}
+						]`,
+					),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccDashboard_withKpiWidget(t *testing.T) {
 	now := time.Now()
 	beginningOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)

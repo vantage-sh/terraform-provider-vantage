@@ -56,6 +56,7 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 		if widget.Settings != nil {
 			settingsAttrs := map[string]attr.Value{
 				"display_type":    types.StringValue(widget.Settings.DisplayType),
+				"grid":            dashboardWidgetGridObject(ctx, widget.Settings.Grid),
 				"kpi_calculation": types.StringPointerValue(widget.Settings.KpiCalculation),
 				"kpi_type":        types.StringPointerValue(widget.Settings.KpiType),
 				"kpi_usage_unit":  types.StringPointerValue(widget.Settings.KpiUsageUnit),
@@ -75,7 +76,8 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 		widgetAttrs := map[string]attr.Value{
 			"settings":         settingsObj,
 			"title":            types.StringValue(widget.Title),
-			"widgetable_token": types.StringValue(widget.WidgetableToken),
+			"token":            types.StringValue(widget.Token),
+			"widgetable_token": stringValueOrNull(widget.WidgetableToken),
 		}
 
 		tfWidget, diag := resource_dashboard.NewWidgetsValue(widgetAttrTypes, widgetAttrs)
@@ -116,7 +118,7 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		}
 		for _, w := range tfWidgets {
 			widget := &modelsv2.CreateDashboardWidgetsItems0{
-				WidgetableToken: w.WidgetableToken.ValueStringPointer(),
+				WidgetableToken: w.WidgetableToken.ValueString(),
 				Title:           w.Title.ValueString(),
 			}
 
@@ -133,7 +135,10 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 					return nil
 				}
 
-				widget.Settings = createDashboardWidgetSettings(tfSettingsTyped)
+				widget.Settings = createDashboardWidgetSettings(ctx, tfSettingsTyped, diags)
+				if diags.HasError() {
+					return nil
+				}
 			}
 
 			widgets = append(widgets, widget)
@@ -177,7 +182,7 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		}
 		for _, w := range tfWidgets {
 			widget := &modelsv2.UpdateDashboardWidgetsItems0{
-				WidgetableToken: w.WidgetableToken.ValueStringPointer(),
+				WidgetableToken: w.WidgetableToken.ValueString(),
 				Title:           w.Title.ValueString(),
 			}
 
@@ -194,14 +199,21 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 					return nil
 				}
 
-				widget.Settings = updateDashboardWidgetSettings(tfSettingsTyped)
+				widget.Settings = updateDashboardWidgetSettings(ctx, tfSettingsTyped, diags)
+				if diags.HasError() {
+					return nil
+				}
 			}
 
 			widgets = append(widgets, widget)
 		}
 	}
-	var dateInterval string
-	if !m.DateInterval.IsNull() {
+
+	// date_interval is a pointer with omitempty in the regenerated SDK. Always
+	// send a non-nil value so clearing the attribute still emits "" to the API,
+	// matching the previous non-omitempty string field behavior.
+	dateInterval := ""
+	if !m.DateInterval.IsNull() && !m.DateInterval.IsUnknown() {
 		dateInterval = m.DateInterval.ValueString()
 	}
 
@@ -211,20 +223,21 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		Title:             m.Title.ValueString(),
 		Widgets:           widgets,
 		WorkspaceToken:    m.WorkspaceToken.ValueString(),
-		DateInterval:      dateInterval,
+		DateInterval:      &dateInterval,
 	}
 
 	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() && m.StartDate.ValueString() != "" &&
 		!m.EndDate.IsNull() && !m.EndDate.IsUnknown() && m.EndDate.ValueString() != "" {
-		payload.StartDate = m.StartDate.ValueString()
-		payload.EndDate = m.EndDate.ValueString()
-		payload.DateInterval = "custom"
+		payload.StartDate = m.StartDate.ValueStringPointer()
+		payload.EndDate = m.EndDate.ValueStringPointer()
+		customInterval := "custom"
+		payload.DateInterval = &customInterval
 	}
 
 	return payload
 }
 
-func createDashboardWidgetSettings(s resource_dashboard.SettingsValue) *modelsv2.CreateDashboardWidgetsItems0Settings {
+func createDashboardWidgetSettings(ctx context.Context, s resource_dashboard.SettingsValue, diags *diag.Diagnostics) *modelsv2.CreateDashboardWidgetsItems0Settings {
 	settings := &modelsv2.CreateDashboardWidgetsItems0Settings{
 		DisplayType: s.DisplayType.ValueStringPointer(),
 	}
@@ -237,10 +250,14 @@ func createDashboardWidgetSettings(s resource_dashboard.SettingsValue) *modelsv2
 	if !s.KpiUsageUnit.IsNull() && !s.KpiUsageUnit.IsUnknown() {
 		settings.KpiUsageUnit = s.KpiUsageUnit.ValueString()
 	}
+	settings.Grid = createDashboardWidgetGrid(ctx, s.Grid, diags)
+	if diags.HasError() {
+		return nil
+	}
 	return settings
 }
 
-func updateDashboardWidgetSettings(s resource_dashboard.SettingsValue) *modelsv2.UpdateDashboardWidgetsItems0Settings {
+func updateDashboardWidgetSettings(ctx context.Context, s resource_dashboard.SettingsValue, diags *diag.Diagnostics) *modelsv2.UpdateDashboardWidgetsItems0Settings {
 	settings := &modelsv2.UpdateDashboardWidgetsItems0Settings{
 		DisplayType: s.DisplayType.ValueStringPointer(),
 	}
@@ -253,5 +270,94 @@ func updateDashboardWidgetSettings(s resource_dashboard.SettingsValue) *modelsv2
 	if !s.KpiUsageUnit.IsNull() && !s.KpiUsageUnit.IsUnknown() {
 		settings.KpiUsageUnit = s.KpiUsageUnit.ValueString()
 	}
+	settings.Grid = updateDashboardWidgetGrid(ctx, s.Grid, diags)
+	if diags.HasError() {
+		return nil
+	}
 	return settings
+}
+
+func createDashboardWidgetGrid(ctx context.Context, gridObj basetypes.ObjectValue, diags *diag.Diagnostics) *modelsv2.CreateDashboardWidgetsItems0SettingsGrid {
+	if gridObj.IsNull() || gridObj.IsUnknown() {
+		return nil
+	}
+
+	gridValuable, d := resource_dashboard.GridType{}.ValueFromObject(ctx, gridObj)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nil
+	}
+	grid, ok := gridValuable.(resource_dashboard.GridValue)
+	if !ok {
+		diags.AddError("Error converting widgets", "Error converting widget grid settings")
+		return nil
+	}
+
+	x := int32(grid.X.ValueInt64())
+	y := int32(grid.Y.ValueInt64())
+	w := int32(grid.W.ValueInt64())
+	h := int32(grid.H.ValueInt64())
+	return &modelsv2.CreateDashboardWidgetsItems0SettingsGrid{
+		X: &x,
+		Y: &y,
+		W: &w,
+		H: &h,
+	}
+}
+
+func updateDashboardWidgetGrid(ctx context.Context, gridObj basetypes.ObjectValue, diags *diag.Diagnostics) *modelsv2.UpdateDashboardWidgetsItems0SettingsGrid {
+	if gridObj.IsNull() || gridObj.IsUnknown() {
+		return nil
+	}
+
+	gridValuable, d := resource_dashboard.GridType{}.ValueFromObject(ctx, gridObj)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nil
+	}
+	grid, ok := gridValuable.(resource_dashboard.GridValue)
+	if !ok {
+		diags.AddError("Error converting widgets", "Error converting widget grid settings")
+		return nil
+	}
+
+	x := int32(grid.X.ValueInt64())
+	y := int32(grid.Y.ValueInt64())
+	w := int32(grid.W.ValueInt64())
+	h := int32(grid.H.ValueInt64())
+	return &modelsv2.UpdateDashboardWidgetsItems0SettingsGrid{
+		X: &x,
+		Y: &y,
+		W: &w,
+		H: &h,
+	}
+}
+
+func dashboardWidgetGridObject(ctx context.Context, grid *modelsv2.DashboardWidgetGridLayout) types.Object {
+	gridAttrTypes := resource_dashboard.GridValue{}.AttributeTypes(ctx)
+	if grid == nil {
+		return types.ObjectNull(gridAttrTypes)
+	}
+
+	gridVal, diags := resource_dashboard.NewGridValue(gridAttrTypes, map[string]attr.Value{
+		"x": types.Int64Value(int64(grid.X)),
+		"y": types.Int64Value(int64(grid.Y)),
+		"w": types.Int64Value(int64(grid.W)),
+		"h": types.Int64Value(int64(grid.H)),
+	})
+	if diags.HasError() {
+		return types.ObjectNull(gridAttrTypes)
+	}
+	obj, diags := gridVal.ToObjectValue(ctx)
+	if diags.HasError() {
+		return types.ObjectNull(gridAttrTypes)
+	}
+	return obj
+}
+
+func stringValueOrNull(value string) types.String {
+	if value == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(value)
 }
