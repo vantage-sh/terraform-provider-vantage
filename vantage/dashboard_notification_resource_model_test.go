@@ -43,6 +43,9 @@ func TestDashboardNotificationModel_toCreateAndApply(t *testing.T) {
 	if len(create.UserTokens) != 1 || create.UserTokens[0] != "usr_1" {
 		t.Fatalf("unexpected user tokens: %#v", create.UserTokens)
 	}
+	if create.RecipientEmails != nil {
+		t.Fatalf("omitted recipient emails should be nil, got %#v", create.RecipientEmails)
+	}
 
 	payload := &modelsv2.DashboardNotification{
 		Token:           "dbnotif_1",

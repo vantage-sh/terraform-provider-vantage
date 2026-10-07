@@ -25,13 +25,10 @@ func toCreateDashboardNotification(
 		payload.WorkspaceToken = m.WorkspaceToken.ValueString()
 	}
 
-	userTokens, d := stringSliceFromList(ctx, m.UserTokens)
-	diags.Append(d...)
-	payload.UserTokens = userTokens
-
-	recipientEmails, d := stringSliceFromList(ctx, m.RecipientEmails)
-	diags.Append(d...)
-	payload.RecipientEmails = recipientEmails
+	// Omit unset sibling recipient lists (nil) so the API can derive them; send
+	// an empty slice only when the config explicitly clears the list.
+	payload.UserTokens = stringListOrNil(ctx, m.UserTokens, &diags)
+	payload.RecipientEmails = stringListOrNil(ctx, m.RecipientEmails, &diags)
 
 	return payload, diags
 }
@@ -43,21 +40,11 @@ func toUpdateDashboardNotification(
 	var diags diag.Diagnostics
 
 	payload := &modelsv2.UpdateDashboardNotification{
-		Title:          m.Title.ValueString(),
-		DashboardToken: m.DashboardToken.ValueString(),
-		Frequency:      m.Frequency.ValueString(),
-	}
-
-	if !m.UserTokens.IsNull() && !m.UserTokens.IsUnknown() {
-		userTokens, d := stringSliceFromList(ctx, m.UserTokens)
-		diags.Append(d...)
-		payload.UserTokens = userTokens
-	}
-
-	if !m.RecipientEmails.IsNull() && !m.RecipientEmails.IsUnknown() {
-		recipientEmails, d := stringSliceFromList(ctx, m.RecipientEmails)
-		diags.Append(d...)
-		payload.RecipientEmails = recipientEmails
+		Title:           m.Title.ValueString(),
+		DashboardToken:  m.DashboardToken.ValueString(),
+		Frequency:       m.Frequency.ValueString(),
+		UserTokens:      stringListOrNil(ctx, m.UserTokens, &diags),
+		RecipientEmails: stringListOrNil(ctx, m.RecipientEmails, &diags),
 	}
 
 	return payload, diags
@@ -100,15 +87,4 @@ func applyDashboardNotificationPayload(
 	}
 
 	return diags
-}
-
-func stringSliceFromList(ctx context.Context, value types.List) ([]string, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	items := []string{}
-	if value.IsNull() || value.IsUnknown() {
-		return items, diags
-	}
-
-	diags.Append(value.ElementsAs(ctx, &items, false)...)
-	return items, diags
 }
