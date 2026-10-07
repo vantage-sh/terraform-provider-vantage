@@ -193,16 +193,78 @@ func TestTeamUserEmailsOrder(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				// Create a team with user_emails in reverse data-source order.
-				// If the API doesn't preserve input order, Terraform will error
-				// with "Provider produced inconsistent result after apply".
+				// Create with emails in reverse data-source order. Membership
+				// is order-insensitive; API join order must not fail apply.
 				Config: testAccTeamWithUserEmailsReversed(rName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
 					resource.TestCheckResourceAttr("vantage_team.team", "user_emails.#", "2"),
-					resource.TestCheckResourceAttrPair("vantage_team.team", "user_emails.0", "data.vantage_users.test", "users.1.email"),
-					resource.TestCheckResourceAttrPair("vantage_team.team", "user_emails.1", "data.vantage_users.test", "users.0.email"),
+					resource.TestCheckTypeSetElemAttrPair("vantage_team.team", "user_emails.*", "data.vantage_users.test", "users.0.email"),
+					resource.TestCheckTypeSetElemAttrPair("vantage_team.team", "user_emails.*", "data.vantage_users.test", "users.1.email"),
 				),
+			},
+			{
+				Config:             testAccTeamWithUserEmailsReversed(rName),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+// TestAccTeam_StateUpgradeV0toV1 applies with a published provider that stored
+// member collections as lists, then upgrades to the local provider and expects
+// a clean plan (list→set state upgrade with no drift).
+func TestAccTeam_StateUpgradeV0toV1(t *testing.T) {
+	rName := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.PreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vantage": {
+						Source:            "vantage-sh/vantage",
+						VersionConstraint: "0.3.22",
+					},
+				},
+				// Single email avoids list-order apply failures on the old provider.
+				Config: testAccTeamWithUserTokens(rName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_tokens.#", "1"),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccTeamWithUserTokens(rName, ""),
+				PlanOnly:                 true,
+				ExpectNonEmptyPlan:       false,
+			},
+		},
+	})
+}
+
+func TestTeamUserTokensOrder(t *testing.T) {
+	rName := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTeamWithUserTokensReversed(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_tokens.#", "2"),
+					resource.TestCheckTypeSetElemAttrPair("vantage_team.team", "user_tokens.*", "data.vantage_users.test", "users.0.token"),
+					resource.TestCheckTypeSetElemAttrPair("vantage_team.team", "user_tokens.*", "data.vantage_users.test", "users.1.token"),
+				),
+			},
+			{
+				Config:             testAccTeamWithUserTokensReversed(rName),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -215,6 +277,17 @@ resource "vantage_team" "team" {
 	name = %[1]q
 	description = ""
 	user_emails = [data.vantage_users.test.users[1].email, data.vantage_users.test.users[0].email]
+}
+`, title)
+}
+
+func testAccTeamWithUserTokensReversed(title string) string {
+	return fmt.Sprintf(`
+data "vantage_users" "test" {}
+resource "vantage_team" "team" {
+	name = %[1]q
+	description = ""
+	user_tokens = [data.vantage_users.test.users[1].token, data.vantage_users.test.users[0].token]
 }
 `, title)
 }
