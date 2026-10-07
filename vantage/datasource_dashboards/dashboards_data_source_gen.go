@@ -73,9 +73,44 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 						"widgets": schema.ListNestedAttribute{
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
+									"content": schema.StringAttribute{
+										Computed:            true,
+										Description:         "JSON-encoded TipTap document for a free text widget. Example: {\"type\":\"doc\",\"content\":[...]}",
+										MarkdownDescription: "JSON-encoded TipTap document for a free text widget. Example: {\"type\":\"doc\",\"content\":[...]}",
+									},
 									"settings": schema.SingleNestedAttribute{
 										Attributes: map[string]schema.Attribute{
 											"display_type": schema.StringAttribute{
+												Computed: true,
+											},
+											"grid": schema.SingleNestedAttribute{
+												Attributes: map[string]schema.Attribute{
+													"h": schema.Int64Attribute{
+														Computed:            true,
+														Description:         "The widget height in grid rows.",
+														MarkdownDescription: "The widget height in grid rows.",
+													},
+													"w": schema.Int64Attribute{
+														Computed:            true,
+														Description:         "The widget width in grid columns.",
+														MarkdownDescription: "The widget width in grid columns.",
+													},
+													"x": schema.Int64Attribute{
+														Computed:            true,
+														Description:         "The zero-based horizontal position in the 12-column grid.",
+														MarkdownDescription: "The zero-based horizontal position in the 12-column grid.",
+													},
+													"y": schema.Int64Attribute{
+														Computed:            true,
+														Description:         "The zero-based vertical position in the grid.",
+														MarkdownDescription: "The zero-based vertical position in the grid.",
+													},
+												},
+												CustomType: GridType{
+													ObjectType: types.ObjectType{
+														AttrTypes: GridValue{}.AttributeTypes(ctx),
+													},
+												},
 												Computed: true,
 											},
 											"kpi_calculation": schema.StringAttribute{
@@ -106,8 +141,20 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The title of the Widget.",
 										MarkdownDescription: "The title of the Widget.",
 									},
+									"token": schema.StringAttribute{
+										Computed:            true,
+										Description:         "The token of the Dashboard Widget.",
+										MarkdownDescription: "The token of the Dashboard Widget.",
+									},
 									"widgetable_token": schema.StringAttribute{
-										Computed: true,
+										Computed:            true,
+										Description:         "The token of the represented Resource.",
+										MarkdownDescription: "The token of the represented Resource.",
+									},
+									"widgetable_type": schema.StringAttribute{
+										Computed:            true,
+										Description:         "The widget type. Present instead of widgetable_token for free text widgets.",
+										MarkdownDescription: "The widget type. Present instead of widgetable_token for free text widgets.",
 									},
 								},
 								CustomType: WidgetsType{
@@ -116,7 +163,9 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 									},
 								},
 							},
-							Computed: true,
+							Computed:            true,
+							Description:         "The widgets displayed in the Dashboard. Report-backed widgets include widgetable_token and settings. Free text widgets include widgetable_type set to free_text and content, omit widgetable_token, and include settings when a grid layout is persisted.",
+							MarkdownDescription: "The widgets displayed in the Dashboard. Report-backed widgets include widgetable_token and settings. Free text widgets include widgetable_type set to free_text and content, omit widgetable_token, and include settings when a grid layout is persisted.",
 						},
 						"workspace_token": schema.StringAttribute{
 							Computed:            true,
@@ -1182,6 +1231,24 @@ func (t WidgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 
 	attributes := in.Attributes()
 
+	contentAttribute, ok := attributes["content"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`content is missing from object`)
+
+		return nil, diags
+	}
+
+	contentVal, ok := contentAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`content expected to be basetypes.StringValue, was: %T`, contentAttribute))
+	}
+
 	settingsAttribute, ok := attributes["settings"]
 
 	if !ok {
@@ -1218,6 +1285,24 @@ func (t WidgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 			fmt.Sprintf(`title expected to be basetypes.StringValue, was: %T`, titleAttribute))
 	}
 
+	tokenAttribute, ok := attributes["token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`token is missing from object`)
+
+		return nil, diags
+	}
+
+	tokenVal, ok := tokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
+	}
+
 	widgetableTokenAttribute, ok := attributes["widgetable_token"]
 
 	if !ok {
@@ -1236,14 +1321,35 @@ func (t WidgetsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 			fmt.Sprintf(`widgetable_token expected to be basetypes.StringValue, was: %T`, widgetableTokenAttribute))
 	}
 
+	widgetableTypeAttribute, ok := attributes["widgetable_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`widgetable_type is missing from object`)
+
+		return nil, diags
+	}
+
+	widgetableTypeVal, ok := widgetableTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`widgetable_type expected to be basetypes.StringValue, was: %T`, widgetableTypeAttribute))
+	}
+
 	if diags.HasError() {
 		return nil, diags
 	}
 
 	return WidgetsValue{
+		Content:         contentVal,
 		Settings:        settingsVal,
 		Title:           titleVal,
+		Token:           tokenVal,
 		WidgetableToken: widgetableTokenVal,
+		WidgetableType:  widgetableTypeVal,
 		state:           attr.ValueStateKnown,
 	}, diags
 }
@@ -1311,6 +1417,24 @@ func NewWidgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 		return NewWidgetsValueUnknown(), diags
 	}
 
+	contentAttribute, ok := attributes["content"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`content is missing from object`)
+
+		return NewWidgetsValueUnknown(), diags
+	}
+
+	contentVal, ok := contentAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`content expected to be basetypes.StringValue, was: %T`, contentAttribute))
+	}
+
 	settingsAttribute, ok := attributes["settings"]
 
 	if !ok {
@@ -1347,6 +1471,24 @@ func NewWidgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 			fmt.Sprintf(`title expected to be basetypes.StringValue, was: %T`, titleAttribute))
 	}
 
+	tokenAttribute, ok := attributes["token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`token is missing from object`)
+
+		return NewWidgetsValueUnknown(), diags
+	}
+
+	tokenVal, ok := tokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`token expected to be basetypes.StringValue, was: %T`, tokenAttribute))
+	}
+
 	widgetableTokenAttribute, ok := attributes["widgetable_token"]
 
 	if !ok {
@@ -1365,14 +1507,35 @@ func NewWidgetsValue(attributeTypes map[string]attr.Type, attributes map[string]
 			fmt.Sprintf(`widgetable_token expected to be basetypes.StringValue, was: %T`, widgetableTokenAttribute))
 	}
 
+	widgetableTypeAttribute, ok := attributes["widgetable_type"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`widgetable_type is missing from object`)
+
+		return NewWidgetsValueUnknown(), diags
+	}
+
+	widgetableTypeVal, ok := widgetableTypeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`widgetable_type expected to be basetypes.StringValue, was: %T`, widgetableTypeAttribute))
+	}
+
 	if diags.HasError() {
 		return NewWidgetsValueUnknown(), diags
 	}
 
 	return WidgetsValue{
+		Content:         contentVal,
 		Settings:        settingsVal,
 		Title:           titleVal,
+		Token:           tokenVal,
 		WidgetableToken: widgetableTokenVal,
+		WidgetableType:  widgetableTypeVal,
 		state:           attr.ValueStateKnown,
 	}, diags
 }
@@ -1445,29 +1608,43 @@ func (t WidgetsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = WidgetsValue{}
 
 type WidgetsValue struct {
+	Content         basetypes.StringValue `tfsdk:"content"`
 	Settings        basetypes.ObjectValue `tfsdk:"settings"`
 	Title           basetypes.StringValue `tfsdk:"title"`
+	Token           basetypes.StringValue `tfsdk:"token"`
 	WidgetableToken basetypes.StringValue `tfsdk:"widgetable_token"`
+	WidgetableType  basetypes.StringValue `tfsdk:"widgetable_type"`
 	state           attr.ValueState
 }
 
 func (v WidgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 3)
+	attrTypes := make(map[string]tftypes.Type, 6)
 
 	var val tftypes.Value
 	var err error
 
+	attrTypes["content"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["settings"] = basetypes.ObjectType{
 		AttrTypes: SettingsValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["title"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["widgetable_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["widgetable_type"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 3)
+		vals := make(map[string]tftypes.Value, 6)
+
+		val, err = v.Content.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["content"] = val
 
 		val, err = v.Settings.ToTerraformValue(ctx)
 
@@ -1485,6 +1662,14 @@ func (v WidgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 
 		vals["title"] = val
 
+		val, err = v.Token.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["token"] = val
+
 		val, err = v.WidgetableToken.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -1492,6 +1677,14 @@ func (v WidgetsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		}
 
 		vals["widgetable_token"] = val
+
+		val, err = v.WidgetableType.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["widgetable_type"] = val
 
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
@@ -1544,11 +1737,14 @@ func (v WidgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 	}
 
 	attributeTypes := map[string]attr.Type{
+		"content": basetypes.StringType{},
 		"settings": basetypes.ObjectType{
 			AttrTypes: SettingsValue{}.AttributeTypes(ctx),
 		},
 		"title":            basetypes.StringType{},
+		"token":            basetypes.StringType{},
 		"widgetable_token": basetypes.StringType{},
+		"widgetable_type":  basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -1562,9 +1758,12 @@ func (v WidgetsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
+			"content":          v.Content,
 			"settings":         settings,
 			"title":            v.Title,
+			"token":            v.Token,
 			"widgetable_token": v.WidgetableToken,
+			"widgetable_type":  v.WidgetableType,
 		})
 
 	return objVal, diags
@@ -1585,6 +1784,10 @@ func (v WidgetsValue) Equal(o attr.Value) bool {
 		return true
 	}
 
+	if !v.Content.Equal(other.Content) {
+		return false
+	}
+
 	if !v.Settings.Equal(other.Settings) {
 		return false
 	}
@@ -1593,7 +1796,15 @@ func (v WidgetsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.Token.Equal(other.Token) {
+		return false
+	}
+
 	if !v.WidgetableToken.Equal(other.WidgetableToken) {
+		return false
+	}
+
+	if !v.WidgetableType.Equal(other.WidgetableType) {
 		return false
 	}
 
@@ -1610,11 +1821,14 @@ func (v WidgetsValue) Type(ctx context.Context) attr.Type {
 
 func (v WidgetsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
+		"content": basetypes.StringType{},
 		"settings": basetypes.ObjectType{
 			AttrTypes: SettingsValue{}.AttributeTypes(ctx),
 		},
 		"title":            basetypes.StringType{},
+		"token":            basetypes.StringType{},
 		"widgetable_token": basetypes.StringType{},
+		"widgetable_type":  basetypes.StringType{},
 	}
 }
 
@@ -1659,6 +1873,24 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`display_type expected to be basetypes.StringValue, was: %T`, displayTypeAttribute))
+	}
+
+	gridAttribute, ok := attributes["grid"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`grid is missing from object`)
+
+		return nil, diags
+	}
+
+	gridVal, ok := gridAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`grid expected to be basetypes.ObjectValue, was: %T`, gridAttribute))
 	}
 
 	kpiCalculationAttribute, ok := attributes["kpi_calculation"]
@@ -1721,6 +1953,7 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 
 	return SettingsValue{
 		DisplayType:    displayTypeVal,
+		Grid:           gridVal,
 		KpiCalculation: kpiCalculationVal,
 		KpiType:        kpiTypeVal,
 		KpiUsageUnit:   kpiUsageUnitVal,
@@ -1809,6 +2042,24 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 			fmt.Sprintf(`display_type expected to be basetypes.StringValue, was: %T`, displayTypeAttribute))
 	}
 
+	gridAttribute, ok := attributes["grid"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`grid is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	gridVal, ok := gridAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`grid expected to be basetypes.ObjectValue, was: %T`, gridAttribute))
+	}
+
 	kpiCalculationAttribute, ok := attributes["kpi_calculation"]
 
 	if !ok {
@@ -1869,6 +2120,7 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 
 	return SettingsValue{
 		DisplayType:    displayTypeVal,
+		Grid:           gridVal,
 		KpiCalculation: kpiCalculationVal,
 		KpiType:        kpiTypeVal,
 		KpiUsageUnit:   kpiUsageUnitVal,
@@ -1945,6 +2197,7 @@ var _ basetypes.ObjectValuable = SettingsValue{}
 
 type SettingsValue struct {
 	DisplayType    basetypes.StringValue `tfsdk:"display_type"`
+	Grid           basetypes.ObjectValue `tfsdk:"grid"`
 	KpiCalculation basetypes.StringValue `tfsdk:"kpi_calculation"`
 	KpiType        basetypes.StringValue `tfsdk:"kpi_type"`
 	KpiUsageUnit   basetypes.StringValue `tfsdk:"kpi_usage_unit"`
@@ -1952,12 +2205,15 @@ type SettingsValue struct {
 }
 
 func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 4)
+	attrTypes := make(map[string]tftypes.Type, 5)
 
 	var val tftypes.Value
 	var err error
 
 	attrTypes["display_type"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["grid"] = basetypes.ObjectType{
+		AttrTypes: GridValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
 	attrTypes["kpi_calculation"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["kpi_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["kpi_usage_unit"] = basetypes.StringType{}.TerraformType(ctx)
@@ -1966,7 +2222,7 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 4)
+		vals := make(map[string]tftypes.Value, 5)
 
 		val, err = v.DisplayType.ToTerraformValue(ctx)
 
@@ -1975,6 +2231,14 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 		}
 
 		vals["display_type"] = val
+
+		val, err = v.Grid.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["grid"] = val
 
 		val, err = v.KpiCalculation.ToTerraformValue(ctx)
 
@@ -2029,8 +2293,32 @@ func (v SettingsValue) String() string {
 func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var grid basetypes.ObjectValue
+
+	if v.Grid.IsNull() {
+		grid = types.ObjectNull(
+			GridValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.Grid.IsUnknown() {
+		grid = types.ObjectUnknown(
+			GridValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.Grid.IsNull() && !v.Grid.IsUnknown() {
+		grid = types.ObjectValueMust(
+			GridValue{}.AttributeTypes(ctx),
+			v.Grid.Attributes(),
+		)
+	}
+
 	attributeTypes := map[string]attr.Type{
-		"display_type":    basetypes.StringType{},
+		"display_type": basetypes.StringType{},
+		"grid": basetypes.ObjectType{
+			AttrTypes: GridValue{}.AttributeTypes(ctx),
+		},
 		"kpi_calculation": basetypes.StringType{},
 		"kpi_type":        basetypes.StringType{},
 		"kpi_usage_unit":  basetypes.StringType{},
@@ -2048,6 +2336,7 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 		attributeTypes,
 		map[string]attr.Value{
 			"display_type":    v.DisplayType,
+			"grid":            grid,
 			"kpi_calculation": v.KpiCalculation,
 			"kpi_type":        v.KpiType,
 			"kpi_usage_unit":  v.KpiUsageUnit,
@@ -2072,6 +2361,10 @@ func (v SettingsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.DisplayType.Equal(other.DisplayType) {
+		return false
+	}
+
+	if !v.Grid.Equal(other.Grid) {
 		return false
 	}
 
@@ -2100,9 +2393,501 @@ func (v SettingsValue) Type(ctx context.Context) attr.Type {
 
 func (v SettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
-		"display_type":    basetypes.StringType{},
+		"display_type": basetypes.StringType{},
+		"grid": basetypes.ObjectType{
+			AttrTypes: GridValue{}.AttributeTypes(ctx),
+		},
 		"kpi_calculation": basetypes.StringType{},
 		"kpi_type":        basetypes.StringType{},
 		"kpi_usage_unit":  basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = GridType{}
+
+type GridType struct {
+	basetypes.ObjectType
+}
+
+func (t GridType) Equal(o attr.Type) bool {
+	other, ok := o.(GridType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t GridType) String() string {
+	return "GridType"
+}
+
+func (t GridType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	hAttribute, ok := attributes["h"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`h is missing from object`)
+
+		return nil, diags
+	}
+
+	hVal, ok := hAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`h expected to be basetypes.Int64Value, was: %T`, hAttribute))
+	}
+
+	wAttribute, ok := attributes["w"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`w is missing from object`)
+
+		return nil, diags
+	}
+
+	wVal, ok := wAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`w expected to be basetypes.Int64Value, was: %T`, wAttribute))
+	}
+
+	xAttribute, ok := attributes["x"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`x is missing from object`)
+
+		return nil, diags
+	}
+
+	xVal, ok := xAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`x expected to be basetypes.Int64Value, was: %T`, xAttribute))
+	}
+
+	yAttribute, ok := attributes["y"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`y is missing from object`)
+
+		return nil, diags
+	}
+
+	yVal, ok := yAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`y expected to be basetypes.Int64Value, was: %T`, yAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return GridValue{
+		H:     hVal,
+		W:     wVal,
+		X:     xVal,
+		Y:     yVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewGridValueNull() GridValue {
+	return GridValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewGridValueUnknown() GridValue {
+	return GridValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewGridValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (GridValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing GridValue Attribute Value",
+				"While creating a GridValue value, a missing attribute value was detected. "+
+					"A GridValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("GridValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid GridValue Attribute Type",
+				"While creating a GridValue value, an invalid attribute value was detected. "+
+					"A GridValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("GridValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("GridValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra GridValue Attribute Value",
+				"While creating a GridValue value, an extra attribute value was detected. "+
+					"A GridValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra GridValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewGridValueUnknown(), diags
+	}
+
+	hAttribute, ok := attributes["h"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`h is missing from object`)
+
+		return NewGridValueUnknown(), diags
+	}
+
+	hVal, ok := hAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`h expected to be basetypes.Int64Value, was: %T`, hAttribute))
+	}
+
+	wAttribute, ok := attributes["w"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`w is missing from object`)
+
+		return NewGridValueUnknown(), diags
+	}
+
+	wVal, ok := wAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`w expected to be basetypes.Int64Value, was: %T`, wAttribute))
+	}
+
+	xAttribute, ok := attributes["x"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`x is missing from object`)
+
+		return NewGridValueUnknown(), diags
+	}
+
+	xVal, ok := xAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`x expected to be basetypes.Int64Value, was: %T`, xAttribute))
+	}
+
+	yAttribute, ok := attributes["y"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`y is missing from object`)
+
+		return NewGridValueUnknown(), diags
+	}
+
+	yVal, ok := yAttribute.(basetypes.Int64Value)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`y expected to be basetypes.Int64Value, was: %T`, yAttribute))
+	}
+
+	if diags.HasError() {
+		return NewGridValueUnknown(), diags
+	}
+
+	return GridValue{
+		H:     hVal,
+		W:     wVal,
+		X:     xVal,
+		Y:     yVal,
+		state: attr.ValueStateKnown,
+	}, diags
+}
+
+func NewGridValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) GridValue {
+	object, diags := NewGridValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewGridValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t GridType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewGridValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewGridValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewGridValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewGridValueMust(GridValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t GridType) ValueType(ctx context.Context) attr.Value {
+	return GridValue{}
+}
+
+var _ basetypes.ObjectValuable = GridValue{}
+
+type GridValue struct {
+	H     basetypes.Int64Value `tfsdk:"h"`
+	W     basetypes.Int64Value `tfsdk:"w"`
+	X     basetypes.Int64Value `tfsdk:"x"`
+	Y     basetypes.Int64Value `tfsdk:"y"`
+	state attr.ValueState
+}
+
+func (v GridValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 4)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["h"] = basetypes.Int64Type{}.TerraformType(ctx)
+	attrTypes["w"] = basetypes.Int64Type{}.TerraformType(ctx)
+	attrTypes["x"] = basetypes.Int64Type{}.TerraformType(ctx)
+	attrTypes["y"] = basetypes.Int64Type{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 4)
+
+		val, err = v.H.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["h"] = val
+
+		val, err = v.W.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["w"] = val
+
+		val, err = v.X.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["x"] = val
+
+		val, err = v.Y.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["y"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v GridValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v GridValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v GridValue) String() string {
+	return "GridValue"
+}
+
+func (v GridValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"h": basetypes.Int64Type{},
+		"w": basetypes.Int64Type{},
+		"x": basetypes.Int64Type{},
+		"y": basetypes.Int64Type{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"h": v.H,
+			"w": v.W,
+			"x": v.X,
+			"y": v.Y,
+		})
+
+	return objVal, diags
+}
+
+func (v GridValue) Equal(o attr.Value) bool {
+	other, ok := o.(GridValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.H.Equal(other.H) {
+		return false
+	}
+
+	if !v.W.Equal(other.W) {
+		return false
+	}
+
+	if !v.X.Equal(other.X) {
+		return false
+	}
+
+	if !v.Y.Equal(other.Y) {
+		return false
+	}
+
+	return true
+}
+
+func (v GridValue) Type(ctx context.Context) attr.Type {
+	return GridType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v GridValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"h": basetypes.Int64Type{},
+		"w": basetypes.Int64Type{},
+		"x": basetypes.Int64Type{},
+		"y": basetypes.Int64Type{},
 	}
 }

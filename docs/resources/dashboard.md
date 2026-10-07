@@ -18,7 +18,15 @@ resource "vantage_dashboard" "demo_dashboard" {
   date_interval = "last_month"
   widgets = [
     {
-      settings         = { display_type = "chart" }
+      settings = {
+        display_type = "chart"
+        grid = {
+          x = 0
+          y = 0
+          w = 6
+          h = 4
+        }
+      }
       widgetable_token = "rprt_a2846903070824f4"
     },
     {
@@ -26,9 +34,33 @@ resource "vantage_dashboard" "demo_dashboard" {
         display_type    = "kpi"
         kpi_calculation = "sum"
         kpi_type        = "cost"
+        grid = {
+          x = 6
+          y = 0
+          w = 6
+          h = 4
+        }
       }
       title            = "Total Spend"
       widgetable_token = "rprt_a2846903070824f4"
+    },
+    {
+      title           = "Notes"
+      widgetable_type = "free_text"
+      content = jsonencode({
+        type = "doc"
+        content = [
+          {
+            type = "paragraph"
+            content = [
+              {
+                type = "text"
+                text = "Use free text widgets for dashboard context."
+              }
+            ]
+          }
+        ]
+      })
     }
   ]
   workspace_token = "wrkspc_47c3254c790e9351"
@@ -46,7 +78,7 @@ resource "vantage_dashboard" "demo_dashboard" {
 - `saved_filter_tokens` (List of String) The tokens of the Saved Filters used in the Dashboard.
 - `start_date` (String) The start date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
 - `title` (String) The title of the Dashboard.
-- `widgets` (Attributes List) The widgets to add to the Dashboard. Currently supports CostReport, ResourceReport, KubernetesEfficiencyReport, FinancialCommitmentReport, RecommendationView, and KPI widgets. (see [below for nested schema](#nestedatt--widgets))
+- `widgets` (Attributes List) The widgets to add to the Dashboard. Report-backed widgets use widgetable_token. Free text widgets use widgetable_type set to free_text and require content. (see [below for nested schema](#nestedatt--widgets))
 - `workspace_token` (String) The token of the Workspace to add the Dashboard to. Required if the API token is associated with multiple Workspaces.
 
 ### Read-Only
@@ -58,14 +90,17 @@ resource "vantage_dashboard" "demo_dashboard" {
 <a id="nestedatt--widgets"></a>
 ### Nested Schema for `widgets`
 
-Required:
-
-- `widgetable_token` (String) The token of the represented Resource.
-
 Optional:
 
-- `settings` (Attributes) The settings for the DashboardWidget. (see [below for nested schema](#nestedatt--widgets--settings))
-- `title` (String) The title of the Widget (defaults to the title of the Resource).
+- `content` (String) JSON-encoded TipTap document for a free text widget. Example: {"type":"doc","content":[...]}
+- `settings` (Attributes) The display and grid layout settings for the DashboardWidget. (see [below for nested schema](#nestedatt--widgets--settings))
+- `title` (String) The title of the Widget (defaults to the Resource title, or Free Text for a free text widget).
+- `widgetable_token` (String) The token of the represented Resource.
+- `widgetable_type` (String) The widget type. Use free_text for a free text widget.
+
+Read-Only:
+
+- `token` (String) The token of the Dashboard Widget.
 
 <a id="nestedatt--widgets--settings"></a>
 ### Nested Schema for `widgets.settings`
@@ -76,6 +111,17 @@ Required:
 
 Optional:
 
+- `grid` (Attributes) The widget's size and position in the dashboard's 12-column grid. (see [below for nested schema](#nestedatt--widgets--settings--grid))
 - `kpi_calculation` (String) The aggregation used when display_type is kpi.
 - `kpi_type` (String) The metric represented when display_type is kpi.
 - `kpi_usage_unit` (String) The usage unit represented when kpi_type is usage.
+
+<a id="nestedatt--widgets--settings--grid"></a>
+### Nested Schema for `widgets.settings.grid`
+
+Required:
+
+- `h` (Number) The widget height in grid rows.
+- `w` (Number) The widget width in grid columns.
+- `x` (Number) The zero-based horizontal position.
+- `y` (Number) The zero-based vertical position.

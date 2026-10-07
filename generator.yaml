@@ -22,6 +22,26 @@ resources:
             description: The token of the report alert
         aliases:
           anomaly_notification_token: token
+  dashboard_notification:
+    create:
+      path: /dashboard_notifications
+      method: POST
+    read:
+      path: /dashboard_notifications/{dashboard_notification_token}
+      method: GET
+    update:
+      path: /dashboard_notifications/{dashboard_notification_token}
+      method: PUT
+    delete:
+      path: /dashboard_notifications/{dashboard_notification_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the dashboard notification
+        aliases:
+          dashboard_notification_token: token
   billing_rule:
     create:
       path: /billing_rules
@@ -529,6 +549,16 @@ data_sources:
   managed_accounts:
     read:
       path: /managed_accounts
+      method: GET
+    schema:
+      ignores:
+        - limit
+        - links
+        - page
+        - q
+  dashboard_notifications:
+    read:
+      path: /dashboard_notifications
       method: GET
     schema:
       ignores:

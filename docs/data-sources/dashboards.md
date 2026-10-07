@@ -39,7 +39,7 @@ Read-Only:
 - `title` (String) The title of the Dashboard.
 - `token` (String)
 - `updated_at` (String) The date and time, in UTC, the Dashboard was created. ISO 8601 Formatted.
-- `widgets` (Attributes List) (see [below for nested schema](#nestedatt--dashboards--widgets))
+- `widgets` (Attributes List) The widgets displayed in the Dashboard. Report-backed widgets include widgetable_token and settings. Free text widgets include widgetable_type set to free_text and content, omit widgetable_token, and include settings when a grid layout is persisted. (see [below for nested schema](#nestedatt--dashboards--widgets))
 - `workspace_token` (String) The token for the Workspace the Dashboard is a part of.
 
 <a id="nestedatt--dashboards--widgets"></a>
@@ -47,9 +47,12 @@ Read-Only:
 
 Read-Only:
 
+- `content` (String) JSON-encoded TipTap document for a free text widget. Example: {"type":"doc","content":[...]}
 - `settings` (Attributes) (see [below for nested schema](#nestedatt--dashboards--widgets--settings))
 - `title` (String) The title of the Widget.
-- `widgetable_token` (String)
+- `token` (String) The token of the Dashboard Widget.
+- `widgetable_token` (String) The token of the represented Resource.
+- `widgetable_type` (String) The widget type. Present instead of widgetable_token for free text widgets.
 
 <a id="nestedatt--dashboards--widgets--settings"></a>
 ### Nested Schema for `dashboards.widgets.settings`
@@ -57,6 +60,17 @@ Read-Only:
 Read-Only:
 
 - `display_type` (String)
+- `grid` (Attributes) (see [below for nested schema](#nestedatt--dashboards--widgets--settings--grid))
 - `kpi_calculation` (String) The aggregation used when display_type is kpi.
 - `kpi_type` (String) The metric represented by the KPI.
 - `kpi_usage_unit` (String) The usage unit represented by the KPI.
+
+<a id="nestedatt--dashboards--widgets--settings--grid"></a>
+### Nested Schema for `dashboards.widgets.settings.grid`
+
+Read-Only:
+
+- `h` (Number) The widget height in grid rows.
+- `w` (Number) The widget width in grid columns.
+- `x` (Number) The zero-based horizontal position in the 12-column grid.
+- `y` (Number) The zero-based vertical position in the grid.

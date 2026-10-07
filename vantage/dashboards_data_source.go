@@ -132,6 +132,7 @@ func dashboardDataSourceWidgetsFromPayload(ctx context.Context, payload []*model
 		if widget.Settings != nil {
 			settingsVal, d := datasource_dashboards.NewSettingsValue(settingsAttrTypes, map[string]attr.Value{
 				"display_type":    types.StringValue(widget.Settings.DisplayType),
+				"grid":            dashboardDataSourceGridObject(ctx, widget.Settings.Grid),
 				"kpi_calculation": types.StringPointerValue(widget.Settings.KpiCalculation),
 				"kpi_type":        types.StringPointerValue(widget.Settings.KpiType),
 				"kpi_usage_unit":  types.StringPointerValue(widget.Settings.KpiUsageUnit),
@@ -150,9 +151,12 @@ func dashboardDataSourceWidgetsFromPayload(ctx context.Context, payload []*model
 		}
 
 		widgetVal, d := datasource_dashboards.NewWidgetsValue(widgetAttrTypes, map[string]attr.Value{
+			"content":          dashboardWidgetContentString(widget.Content),
 			"settings":         settingsObj,
 			"title":            types.StringValue(widget.Title),
-			"widgetable_token": types.StringValue(widget.WidgetableToken),
+			"token":            types.StringValue(widget.Token),
+			"widgetable_token": stringValueOrNull(widget.WidgetableToken),
+			"widgetable_type":  stringValueOrNull(widget.WidgetableType),
 		})
 		diags.Append(d...)
 		if diags.HasError() {
@@ -164,4 +168,26 @@ func dashboardDataSourceWidgetsFromPayload(ctx context.Context, payload []*model
 	list, d := types.ListValueFrom(ctx, datasource_dashboards.WidgetsValue{}.Type(ctx), tfWidgets)
 	diags.Append(d...)
 	return list, diags
+}
+
+func dashboardDataSourceGridObject(ctx context.Context, grid *modelsv2.DashboardWidgetGridLayout) types.Object {
+	gridAttrTypes := datasource_dashboards.GridValue{}.AttributeTypes(ctx)
+	if grid == nil {
+		return types.ObjectNull(gridAttrTypes)
+	}
+
+	gridVal, diags := datasource_dashboards.NewGridValue(gridAttrTypes, map[string]attr.Value{
+		"x": types.Int64Value(int64(grid.X)),
+		"y": types.Int64Value(int64(grid.Y)),
+		"w": types.Int64Value(int64(grid.W)),
+		"h": types.Int64Value(int64(grid.H)),
+	})
+	if diags.HasError() {
+		return types.ObjectNull(gridAttrTypes)
+	}
+	obj, diags := gridVal.ToObjectValue(ctx)
+	if diags.HasError() {
+		return types.ObjectNull(gridAttrTypes)
+	}
+	return obj
 }
