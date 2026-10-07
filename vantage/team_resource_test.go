@@ -235,6 +235,17 @@ func TestAccTeam_StateUpgradeV0toV1(t *testing.T) {
 					resource.TestCheckResourceAttr("vantage_team.team", "user_tokens.#", "1"),
 				),
 			},
+			// Apply before planning: only plan and apply run the state upgrader, so
+			// a plan-only step would leave version 0 state on disk for the version 1
+			// provider to choke on when the test framework reads it back.
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccTeamWithUserTokens(rName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vantage_team.team", "name", rName),
+					resource.TestCheckResourceAttr("vantage_team.team", "user_tokens.#", "1"),
+				),
+			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccTeamWithUserTokens(rName, ""),
