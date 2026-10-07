@@ -56,6 +56,11 @@ func DashboardNotificationsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The tokens of organization users that receive the notification. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
 							MarkdownDescription: "The tokens of organization users that receive the notification. Freeform SSO-domain and approved third-party emails are not included; see recipient_emails.",
 						},
+						"workspace_token": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The token for the Workspace the DashboardNotification is a part of.",
+							MarkdownDescription: "The token for the Workspace the DashboardNotification is a part of.",
+						},
 					},
 					CustomType: DashboardNotificationsType{
 						ObjectType: types.ObjectType{
@@ -224,6 +229,24 @@ func (t DashboardNotificationsType) ValueFromObject(ctx context.Context, in base
 			fmt.Sprintf(`user_tokens expected to be basetypes.ListValue, was: %T`, userTokensAttribute))
 	}
 
+	workspaceTokenAttribute, ok := attributes["workspace_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`workspace_token is missing from object`)
+
+		return nil, diags
+	}
+
+	workspaceTokenVal, ok := workspaceTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`workspace_token expected to be basetypes.StringValue, was: %T`, workspaceTokenAttribute))
+	}
+
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -236,6 +259,7 @@ func (t DashboardNotificationsType) ValueFromObject(ctx context.Context, in base
 		Title:           titleVal,
 		Token:           tokenVal,
 		UserTokens:      userTokensVal,
+		WorkspaceToken:  workspaceTokenVal,
 		state:           attr.ValueStateKnown,
 	}, diags
 }
@@ -429,6 +453,24 @@ func NewDashboardNotificationsValue(attributeTypes map[string]attr.Type, attribu
 			fmt.Sprintf(`user_tokens expected to be basetypes.ListValue, was: %T`, userTokensAttribute))
 	}
 
+	workspaceTokenAttribute, ok := attributes["workspace_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`workspace_token is missing from object`)
+
+		return NewDashboardNotificationsValueUnknown(), diags
+	}
+
+	workspaceTokenVal, ok := workspaceTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`workspace_token expected to be basetypes.StringValue, was: %T`, workspaceTokenAttribute))
+	}
+
 	if diags.HasError() {
 		return NewDashboardNotificationsValueUnknown(), diags
 	}
@@ -441,6 +483,7 @@ func NewDashboardNotificationsValue(attributeTypes map[string]attr.Type, attribu
 		Title:           titleVal,
 		Token:           tokenVal,
 		UserTokens:      userTokensVal,
+		WorkspaceToken:  workspaceTokenVal,
 		state:           attr.ValueStateKnown,
 	}, diags
 }
@@ -520,11 +563,12 @@ type DashboardNotificationsValue struct {
 	Title           basetypes.StringValue `tfsdk:"title"`
 	Token           basetypes.StringValue `tfsdk:"token"`
 	UserTokens      basetypes.ListValue   `tfsdk:"user_tokens"`
+	WorkspaceToken  basetypes.StringValue `tfsdk:"workspace_token"`
 	state           attr.ValueState
 }
 
 func (v DashboardNotificationsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 7)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
@@ -540,12 +584,13 @@ func (v DashboardNotificationsValue) ToTerraformValue(ctx context.Context) (tfty
 	attrTypes["user_tokens"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
+	attrTypes["workspace_token"] = basetypes.StringType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 7)
+		vals := make(map[string]tftypes.Value, 8)
 
 		val, err = v.DashboardToken.ToTerraformValue(ctx)
 
@@ -603,6 +648,14 @@ func (v DashboardNotificationsValue) ToTerraformValue(ctx context.Context) (tfty
 
 		vals["user_tokens"] = val
 
+		val, err = v.WorkspaceToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["workspace_token"] = val
+
 		if err := tftypes.ValidateValue(objectType, vals); err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
 		}
@@ -657,6 +710,7 @@ func (v DashboardNotificationsValue) ToObjectValue(ctx context.Context) (basetyp
 			"user_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"workspace_token": basetypes.StringType{},
 		}), diags
 	}
 
@@ -685,6 +739,7 @@ func (v DashboardNotificationsValue) ToObjectValue(ctx context.Context) (basetyp
 			"user_tokens": basetypes.ListType{
 				ElemType: types.StringType,
 			},
+			"workspace_token": basetypes.StringType{},
 		}), diags
 	}
 
@@ -700,6 +755,7 @@ func (v DashboardNotificationsValue) ToObjectValue(ctx context.Context) (basetyp
 		"user_tokens": basetypes.ListType{
 			ElemType: types.StringType,
 		},
+		"workspace_token": basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -720,6 +776,7 @@ func (v DashboardNotificationsValue) ToObjectValue(ctx context.Context) (basetyp
 			"title":            v.Title,
 			"token":            v.Token,
 			"user_tokens":      userTokensVal,
+			"workspace_token":  v.WorkspaceToken,
 		})
 
 	return objVal, diags
@@ -768,6 +825,10 @@ func (v DashboardNotificationsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.WorkspaceToken.Equal(other.WorkspaceToken) {
+		return false
+	}
+
 	return true
 }
 
@@ -792,5 +853,6 @@ func (v DashboardNotificationsValue) AttributeTypes(ctx context.Context) map[str
 		"user_tokens": basetypes.ListType{
 			ElemType: types.StringType,
 		},
+		"workspace_token": basetypes.StringType{},
 	}
 }

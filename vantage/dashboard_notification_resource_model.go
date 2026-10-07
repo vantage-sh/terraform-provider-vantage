@@ -75,6 +75,7 @@ func applyDashboardNotificationPayload(
 	data.Title = types.StringValue(payload.Title)
 	data.DashboardToken = types.StringValue(payload.DashboardToken)
 	data.Frequency = types.StringValue(payload.Frequency)
+	data.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
 
 	if payload.UserTokens != nil {
 		list, d := types.ListValueFrom(ctx, types.StringType, payload.UserTokens)
@@ -97,8 +98,6 @@ func applyDashboardNotificationPayload(
 	} else {
 		data.RecipientEmails = types.ListValueMust(types.StringType, nil)
 	}
-
-	// workspace_token is create-only and not returned by the API; preserve plan/state.
 
 	return diags
 }

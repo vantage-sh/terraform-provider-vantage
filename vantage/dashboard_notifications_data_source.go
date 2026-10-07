@@ -42,6 +42,7 @@ type dashboardNotificationDataSourceModel struct {
 	Title           types.String `tfsdk:"title"`
 	Token           types.String `tfsdk:"token"`
 	UserTokens      types.List   `tfsdk:"user_tokens"`
+	WorkspaceToken  types.String `tfsdk:"workspace_token"`
 }
 
 func (d *dashboardNotificationsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -88,6 +89,7 @@ func (d *dashboardNotificationsDataSource) Read(ctx context.Context, req datasou
 			Title:           types.StringValue(notification.Title),
 			Token:           types.StringValue(notification.Token),
 			UserTokens:      userTokens,
+			WorkspaceToken:  types.StringValue(notification.WorkspaceToken),
 		})
 	}
 

@@ -27,6 +27,7 @@ func TestAccVantageDashboardNotification_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "user_tokens.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttrSet(resourceName, "dashboard_token"),
+					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
 					resource.TestCheckResourceAttrSet(resourceName, "recipient_emails.#"),
 				),
 			},
@@ -37,6 +38,7 @@ func TestAccVantageDashboardNotification_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "frequency", "monthly"),
 					resource.TestCheckResourceAttr(resourceName, "user_tokens.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
+					resource.TestCheckResourceAttrSet(resourceName, "workspace_token"),
 				),
 			},
 			{
@@ -45,10 +47,9 @@ func TestAccVantageDashboardNotification_basic(t *testing.T) {
 				ExpectNonEmptyPlan: false,
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"workspace_token"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

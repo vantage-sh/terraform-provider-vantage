@@ -53,12 +53,15 @@ func (r *dashboardNotificationResource) Schema(ctx context.Context, _ resource.S
 		},
 	}
 
-	// workspace_token is create-only and not returned by the API.
+	// workspace_token is create-only; changing it forces replace. The API returns
+	// it on read, so Optional+Computed + UseStateForUnknown keeps import/plans stable.
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,
-		Description:         "The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces. Changing this forces a new resource.",
-		MarkdownDescription: "The token of the Workspace to add the DashboardNotification to. Required if the API token is associated with multiple Workspaces. Changing this forces a new resource.",
+		Computed:            true,
+		Description:         attrs["workspace_token"].GetDescription() + " Changing this forces a new resource.",
+		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription() + " Changing this forces a new resource.",
 		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
 			stringplanmodifier.RequiresReplace(),
 		},
 	}

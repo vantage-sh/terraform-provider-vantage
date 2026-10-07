@@ -49,6 +49,7 @@ func TestDashboardNotificationModel_toCreateAndApply(t *testing.T) {
 		Title:           "Weekly Dashboard",
 		DashboardToken:  "dshbrd_1",
 		Frequency:       "weekly",
+		WorkspaceToken:  "wrkspc_1",
 		UserTokens:      []string{"usr_1"},
 		RecipientEmails: []string{"user@example.com"},
 	}
@@ -61,7 +62,7 @@ func TestDashboardNotificationModel_toCreateAndApply(t *testing.T) {
 		t.Fatalf("token/id not applied: token=%s id=%s", model.Token.ValueString(), model.Id.ValueString())
 	}
 	if model.WorkspaceToken.ValueString() != "wrkspc_1" {
-		t.Fatalf("workspace token should be preserved, got %q", model.WorkspaceToken.ValueString())
+		t.Fatalf("workspace token not applied, got %q", model.WorkspaceToken.ValueString())
 	}
 	if model.RecipientEmails.IsNull() || len(model.RecipientEmails.Elements()) != 1 {
 		t.Fatalf("recipient emails not applied: %#v", model.RecipientEmails)
