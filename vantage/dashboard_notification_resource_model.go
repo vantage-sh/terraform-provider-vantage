@@ -62,7 +62,11 @@ func applyDashboardNotificationPayload(
 	data.Title = types.StringValue(payload.Title)
 	data.DashboardToken = types.StringValue(payload.DashboardToken)
 	data.Frequency = types.StringValue(payload.Frequency)
-	data.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
+	// Only overwrite when the API returns a value. An empty/omitted field must not
+	// clear a configured workspace_token or RequiresReplace will destroy the resource.
+	if payload.WorkspaceToken != "" {
+		data.WorkspaceToken = types.StringValue(payload.WorkspaceToken)
+	}
 
 	if payload.UserTokens != nil {
 		list, d := types.ListValueFrom(ctx, types.StringType, payload.UserTokens)

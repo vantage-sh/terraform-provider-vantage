@@ -70,6 +70,24 @@ func TestDashboardNotificationModel_toCreateAndApply(t *testing.T) {
 	if model.RecipientEmails.IsNull() || len(model.RecipientEmails.Elements()) != 1 {
 		t.Fatalf("recipient emails not applied: %#v", model.RecipientEmails)
 	}
+
+	// Empty API workspace_token must not clear a configured value.
+	model.WorkspaceToken = types.StringValue("wrkspc_1")
+	emptyWorkspacePayload := &modelsv2.DashboardNotification{
+		Token:           "dbnotif_1",
+		Title:           "Weekly Dashboard",
+		DashboardToken:  "dshbrd_1",
+		Frequency:       "weekly",
+		UserTokens:      []string{"usr_1"},
+		RecipientEmails: []string{"user@example.com"},
+	}
+	diags = applyDashboardNotificationPayload(ctx, emptyWorkspacePayload, model)
+	if diags.HasError() {
+		t.Fatalf("applyPayload empty workspace: %v", diags)
+	}
+	if model.WorkspaceToken.ValueString() != "wrkspc_1" {
+		t.Fatalf("empty API workspace token cleared configured value, got %q", model.WorkspaceToken.ValueString())
+	}
 }
 
 func TestDashboardNotificationModel_toUpdate(t *testing.T) {

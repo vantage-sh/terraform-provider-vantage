@@ -53,8 +53,9 @@ func (r *dashboardNotificationResource) Schema(ctx context.Context, _ resource.S
 		},
 	}
 
-	// workspace_token is create-only; changing it forces replace. The API returns
-	// it on read, so Optional+Computed + UseStateForUnknown keeps import/plans stable.
+	// workspace_token is create-only; changing a known value forces replace. After
+	// import, state may be null until the API value is applied, so only replace when
+	// prior state already had a different token.
 	s.Attributes["workspace_token"] = schema.StringAttribute{
 		Optional:            true,
 		Computed:            true,
@@ -62,7 +63,19 @@ func (r *dashboardNotificationResource) Schema(ctx context.Context, _ resource.S
 		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription() + " Changing this forces a new resource.",
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
-			stringplanmodifier.RequiresReplace(),
+			stringplanmodifier.RequiresReplaceIf(
+				func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+					if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
+						return
+					}
+					if req.PlanValue.Equal(req.StateValue) {
+						return
+					}
+					resp.RequiresReplace = true
+				},
+				"workspace_token is create-only and cannot be updated in place",
+				"workspace_token is create-only and cannot be updated in place",
+			),
 		},
 	}
 
