@@ -88,20 +88,7 @@ func (r *reportForecastResource) Create(ctx context.Context, req resource.Create
 
 	params := reportforecastsv2.NewCreateReportForecastParams().WithCreateReportForecast(model)
 	out, err := r.client.V2.ReportForecasts.CreateReportForecast(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*reportforecastsv2.CreateReportForecastUnprocessableEntity); ok {
-			handleBadRequest("Create Report Forecast", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if e, ok := err.(*reportforecastsv2.CreateReportForecastForbidden); ok {
-			handleForbidden("Create Report Forecast", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if e, ok := err.(*reportforecastsv2.CreateReportForecastNotFound); ok {
-			handleBadRequest("Create Report Forecast", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Report Forecast", &resp.Diagnostics, err)
+	if handleAPIError("Create Report Forecast", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -127,12 +114,9 @@ func (r *reportForecastResource) Read(ctx context.Context, req resource.ReadRequ
 	stateSetAsDefault := data.SetAsDefault
 	params := reportforecastsv2.NewGetReportForecastParams().WithReportForecastToken(data.Token.ValueString())
 	out, err := r.client.V2.ReportForecasts.GetReportForecast(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*reportforecastsv2.GetReportForecastNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get Report Forecast", &resp.Diagnostics, err)
+	if handleAPIError("Read Report Forecast", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -169,20 +153,7 @@ func (r *reportForecastResource) Update(ctx context.Context, req resource.Update
 		WithReportForecastToken(data.Token.ValueString()).
 		WithUpdateReportForecast(model)
 	out, err := r.client.V2.ReportForecasts.UpdateReportForecast(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*reportforecastsv2.UpdateReportForecastUnprocessableEntity); ok {
-			handleBadRequest("Update Report Forecast", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if e, ok := err.(*reportforecastsv2.UpdateReportForecastForbidden); ok {
-			handleForbidden("Update Report Forecast", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if _, ok := err.(*reportforecastsv2.UpdateReportForecastNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Update Report Forecast", &resp.Diagnostics, err)
+	if handleAPIError("Update Report Forecast", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -206,17 +177,10 @@ func (r *reportForecastResource) Delete(ctx context.Context, req resource.Delete
 
 	params := reportforecastsv2.NewDeleteReportForecastParams().WithReportForecastToken(data.Token.ValueString())
 	_, err := r.client.V2.ReportForecasts.DeleteReportForecast(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*reportforecastsv2.DeleteReportForecastNotFound); ok {
-			return
-		}
-		if e, ok := err.(*reportforecastsv2.DeleteReportForecastForbidden); ok {
-			handleForbidden("Delete Report Forecast", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Delete Report Forecast", &resp.Diagnostics, err)
+	if handleAPIError("Delete Report Forecast", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }
 
 func preserveReportForecastPlanCollections(data *reportForecastModel, plannedTokens types.List, plannedSetAsDefault types.Bool) {

@@ -199,12 +199,7 @@ func (r *budgetResource) Create(ctx context.Context, req resource.CreateRequest,
 	params := budgetsv2.NewCreateBudgetParams().WithCreateBudget(toCreateModel(ctx, &resp.Diagnostics, data))
 	out, err := r.client.V2.Budgets.CreateBudget(params, r.client.Auth)
 
-	if err != nil {
-		if e, ok := err.(*budgetsv2.CreateBudgetBadRequest); ok {
-			handleBadRequest("Create Budget", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Budget", &resp.Diagnostics, err)
+	if handleAPIError("Create Budget", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -242,14 +237,12 @@ func (r *budgetResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	params := budgetsv2.NewGetBudgetParams().WithBudgetToken(data.Token.ValueString()).WithIncludePerformance(&fBool)
 	out, err := r.client.V2.Budgets.GetBudget(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*budgetsv2.GetBudgetNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get Budget", &resp.Diagnostics, err)
+	if handleAPIError("Read Budget", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
+
 	tflog.Debug(ctx, "applyBudgetPayload read")
 	diag := applyBudgetPayload(ctx, false, out.Payload, &data)
 	if diag.HasError() {
@@ -289,14 +282,10 @@ func (r *budgetResource) Update(ctx context.Context, req resource.UpdateRequest,
 	params := budgetsv2.NewUpdateBudgetParams().WithUpdateBudget(toUpdateModel(ctx, &resp.Diagnostics, data, config.PeriodCadence)).WithBudgetToken(data.Token.ValueString())
 	out, err := r.client.V2.Budgets.UpdateBudget(params, r.client.Auth)
 
-	if err != nil {
-		if e, ok := err.(*budgetsv2.UpdateBudgetBadRequest); ok {
-			handleBadRequest("Update Budget", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update Budget", &resp.Diagnostics, err)
+	if handleAPIError("Update Budget", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
+
 	tflog.Debug(ctx, "applyBudgetPayload update")
 	diag := applyBudgetPayload(ctx, false, out.Payload, &data)
 	if diag.HasError() {
@@ -326,12 +315,7 @@ func (r *budgetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	params := budgetsv2.NewDeleteBudgetParams().WithBudgetToken(data.Token.ValueString())
 	_, err := r.client.V2.Budgets.DeleteBudget(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*budgetsv2.DeleteBudgetNotFound); ok {
-			handleBadRequest("Delete Budget", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Delete Budget", &resp.Diagnostics, err)
+	if handleAPIError("Delete Budget", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
 

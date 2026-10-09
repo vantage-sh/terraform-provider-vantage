@@ -84,13 +84,10 @@ func (d *budgetsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	params := budgetsv2.NewGetBudgetsParams()
 	out, err := d.client.V2.Budgets.GetBudgets(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Budgets",
-			err.Error(),
-		)
+	if handleAPIError("Read Budgets", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
+
 	budgets := []budgetModel{}
 	for _, budget := range out.Payload.Budgets {
 		model := budgetModel{}

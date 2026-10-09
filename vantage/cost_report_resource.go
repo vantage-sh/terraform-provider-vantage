@@ -230,12 +230,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 	params := costsv2.NewCreateCostReportParams().WithCreateCostReport(model)
 
 	out, err := r.client.V2.Costs.CreateCostReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*costsv2.CreateCostReportBadRequest); ok {
-			handleBadRequest("Create CostReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create CostReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Cost Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -250,14 +245,10 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 			WithCostReportToken(out.Payload.Token).
 			WithUpdateCostReport(updateModel)
 		updated, err := r.client.V2.Costs.UpdateCostReport(updateParams, r.client.Auth)
-		if err != nil {
-			if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
-				handleBadRequest("Set Default Forecast on CostReport Resource", &resp.Diagnostics, e.GetPayload())
-				return
-			}
-			handleError("Set Default Forecast on CostReport Resource", &resp.Diagnostics, err)
+		if handleAPIError("Set Default Forecast on Cost Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 			return
 		}
+
 		payload = updated.Payload
 	}
 
@@ -281,13 +272,9 @@ func (r CostReportResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	params := costsv2.NewGetCostReportParams().WithCostReportToken(data.Token.ValueString())
 	out, err := r.client.V2.Costs.GetCostReport(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*costsv2.GetCostReportNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Read CostReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Cost Report", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -319,13 +306,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	params := costsv2.NewUpdateCostReportParams().WithUpdateCostReport(model).WithCostReportToken(data.Token.ValueString())
 
 	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
-			handleBadRequest("Update CostReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update CostReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Cost Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -348,10 +329,10 @@ func (r CostReportResource) Delete(ctx context.Context, req resource.DeleteReque
 	params := costsv2.NewDeleteCostReportParams().WithCostReportToken(data.Token.ValueString())
 
 	_, err := r.client.V2.Costs.DeleteCostReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete CostReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Cost Report", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

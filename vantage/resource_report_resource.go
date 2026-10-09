@@ -124,12 +124,7 @@ func (r *resourceReportResource) Create(ctx context.Context, req resource.Create
 
 	params := resourcereportsv2.NewCreateResourceReportParams().WithCreateResourceReport(model)
 	out, err := r.client.V2.ResourceReports.CreateResourceReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*resourcereportsv2.CreateResourceReportBadRequest); ok {
-			handleBadRequest("Create ResourceReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create ResourceReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Resource Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -154,13 +149,9 @@ func (r *resourceReportResource) Read(ctx context.Context, req resource.ReadRequ
 
 	params := resourcereportsv2.NewGetResourceReportParams().WithResourceReportToken(data.Token.ValueString())
 	out, err := r.client.V2.ResourceReports.GetResourceReport(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*resourcereportsv2.GetResourceReportNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Read ResourceReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Resource Report", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -185,13 +176,7 @@ func (r *resourceReportResource) Update(ctx context.Context, req resource.Update
 	params := resourcereportsv2.NewUpdateResourceReportParams().WithUpdateResourceReport(model).WithResourceReportToken(data.Token.ValueString())
 
 	out, err := r.client.V2.ResourceReports.UpdateResourceReport(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*resourcereportsv2.UpdateResourceReportBadRequest); ok {
-			handleBadRequest("Update ResourceReport Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update ResourceReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Resource Report", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -216,8 +201,8 @@ func (r *resourceReportResource) Delete(ctx context.Context, req resource.Delete
 	params := resourcereportsv2.NewDeleteResourceReportParams().WithResourceReportToken(data.Token.ValueString())
 
 	_, err := r.client.V2.ResourceReports.DeleteResourceReport(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete ResourceReport Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Resource Report", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }

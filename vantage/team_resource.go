@@ -160,13 +160,7 @@ func (r TeamResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	params.WithCreateTeam(rt)
 	out, err := r.client.V2.Teams.CreateTeam(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*teamsv2.CreateTeamBadRequest); ok {
-			handleBadRequest("Create Team Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create Team Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Team", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -225,13 +219,9 @@ func (r TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	params := teamsv2.NewGetTeamParams()
 	params.SetTeamToken(state.Token.ValueString())
 	out, err := r.client.V2.Teams.GetTeam(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*teamsv2.GetTeamNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Team Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Team", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -347,8 +337,7 @@ func (r TeamResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	params.WithUpdateTeam(model)
 	out, err := r.client.V2.Teams.UpdateTeam(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Team Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Team", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -399,9 +388,10 @@ func (r TeamResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	params := teamsv2.NewDeleteTeamParams()
 	params.SetTeamToken(state.Token.ValueString())
 	_, err := r.client.V2.Teams.DeleteTeam(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Team Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Team", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

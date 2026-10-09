@@ -95,16 +95,7 @@ func (r *scenarioModelResource) Create(ctx context.Context, req resource.CreateR
 
 	params := scenariomodelsv2.NewCreateScenarioModelParams().WithCreateScenarioModel(model)
 	out, err := r.client.V2.ScenarioModels.CreateScenarioModel(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*scenariomodelsv2.CreateScenarioModelUnprocessableEntity); ok {
-			handleBadRequest("Create Scenario Model", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if e, ok := err.(*scenariomodelsv2.CreateScenarioModelForbidden); ok {
-			handleForbidden("Create Scenario Model", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Scenario Model", &resp.Diagnostics, err)
+	if handleAPIError("Create Scenario Model", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -131,12 +122,9 @@ func (r *scenarioModelResource) Read(ctx context.Context, req resource.ReadReque
 	statePeriods := data.Periods
 	params := scenariomodelsv2.NewGetScenarioModelParams().WithScenarioModelToken(data.Token.ValueString())
 	out, err := r.client.V2.ScenarioModels.GetScenarioModel(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*scenariomodelsv2.GetScenarioModelNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get Scenario Model", &resp.Diagnostics, err)
+	if handleAPIError("Read Scenario Model", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -174,20 +162,7 @@ func (r *scenarioModelResource) Update(ctx context.Context, req resource.UpdateR
 		WithScenarioModelToken(data.Token.ValueString()).
 		WithUpdateScenarioModel(model)
 	out, err := r.client.V2.ScenarioModels.UpdateScenarioModel(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*scenariomodelsv2.UpdateScenarioModelUnprocessableEntity); ok {
-			handleBadRequest("Update Scenario Model", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if e, ok := err.(*scenariomodelsv2.UpdateScenarioModelForbidden); ok {
-			handleForbidden("Update Scenario Model", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		if _, ok := err.(*scenariomodelsv2.UpdateScenarioModelNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Update Scenario Model", &resp.Diagnostics, err)
+	if handleAPIError("Update Scenario Model", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -213,15 +188,8 @@ func (r *scenarioModelResource) Delete(ctx context.Context, req resource.DeleteR
 
 	params := scenariomodelsv2.NewDeleteScenarioModelParams().WithScenarioModelToken(data.Token.ValueString())
 	_, err := r.client.V2.ScenarioModels.DeleteScenarioModel(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*scenariomodelsv2.DeleteScenarioModelNotFound); ok {
-			return
-		}
-		if e, ok := err.(*scenariomodelsv2.DeleteScenarioModelForbidden); ok {
-			handleForbidden("Delete Scenario Model", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Delete Scenario Model", &resp.Diagnostics, err)
+	if handleAPIError("Delete Scenario Model", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }

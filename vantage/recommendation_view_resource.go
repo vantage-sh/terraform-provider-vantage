@@ -69,13 +69,7 @@ func (r *recommendationViewResource) Create(ctx context.Context, req resource.Cr
 
 	params := recviewsv2.NewCreateRecommendationViewParams().WithCreateRecommendationView(model)
 	out, err := r.client.V2.RecommendationViews.CreateRecommendationView(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*recviewsv2.CreateRecommendationViewBadRequest); ok {
-			handleBadRequest("Create RecommendationView Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create RecommendationView Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Recommendation View", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -97,12 +91,9 @@ func (r *recommendationViewResource) Read(ctx context.Context, req resource.Read
 
 	params := recviewsv2.NewGetRecommendationViewParams().WithRecommendationViewToken(data.Token.ValueString())
 	out, err := r.client.V2.RecommendationViews.GetRecommendationView(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*recviewsv2.GetRecommendationViewNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Get RecommendationView Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Recommendation View", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -131,13 +122,7 @@ func (r *recommendationViewResource) Update(ctx context.Context, req resource.Up
 		WithRecommendationViewToken(data.Token.ValueString()).
 		WithUpdateRecommendationView(model)
 	out, err := r.client.V2.RecommendationViews.UpdateRecommendationView(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*recviewsv2.UpdateRecommendationViewBadRequest); ok {
-			handleBadRequest("Update RecommendationView Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update RecommendationView Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Recommendation View", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -159,7 +144,8 @@ func (r *recommendationViewResource) Delete(ctx context.Context, req resource.De
 
 	params := recviewsv2.NewDeleteRecommendationViewParams().WithRecommendationViewToken(data.Token.ValueString())
 	_, err := r.client.V2.RecommendationViews.DeleteRecommendationView(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete RecommendationView Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Recommendation View", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }

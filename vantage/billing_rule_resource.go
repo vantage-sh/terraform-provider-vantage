@@ -152,12 +152,7 @@ func (r *billingRuleResource) Create(ctx context.Context, req resource.CreateReq
 	// Create API call logic
 	params := billingrulesv2.NewCreateBillingRuleParams().WithCreateBillingRule(model)
 	out, err := r.client.V2.BillingRules.CreateBillingRule(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*billingrulesv2.CreateBillingRuleBadRequest); ok {
-			handleBadRequest("Create BillingRule Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create BillingRule Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Billing Rule", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -183,12 +178,9 @@ func (r *billingRuleResource) Read(ctx context.Context, req resource.ReadRequest
 	params := billingrulesv2.NewGetBillingRuleParams().WithBillingRuleToken(data.Token.ValueString())
 	out, err := r.client.V2.BillingRules.GetBillingRule(params, r.client.Auth)
 
-	if err != nil {
-		if _, ok := err.(*billingrulesv2.GetBillingRuleNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Read BillingRule Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Billing Rule", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -222,12 +214,7 @@ func (r *billingRuleResource) Update(ctx context.Context, req resource.UpdateReq
 
 	params := billingrulesv2.NewUpdateBillingRuleParams().WithUpdateBillingRule(model).WithBillingRuleToken(data.Token.ValueString())
 	out, err := r.client.V2.BillingRules.UpdateBillingRule(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*billingrulesv2.UpdateBillingRuleBadRequest); ok {
-			handleBadRequest("Update BillingRule Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update BillingRule Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Billing Rule", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -252,8 +239,7 @@ func (r *billingRuleResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	params := billingrulesv2.NewDeleteBillingRuleParams().WithBillingRuleToken(data.Token.ValueString())
 	_, err := r.client.V2.BillingRules.DeleteBillingRule(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete BillingRule Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Billing Rule", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
 

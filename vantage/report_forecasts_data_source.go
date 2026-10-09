@@ -55,15 +55,7 @@ func (d *reportForecastsDataSource) Read(ctx context.Context, req datasource.Rea
 	params := reportforecastsv2.NewGetReportForecastsParams().
 		WithCostReportToken(data.CostReportToken.ValueString())
 	out, err := d.client.V2.ReportForecasts.GetReportForecasts(params, d.client.Auth)
-	if err != nil {
-		if e, ok := err.(*reportforecastsv2.GetReportForecastsNotFound); ok {
-			handleBadRequest("Get Report Forecasts", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Report Forecasts",
-			err.Error(),
-		)
+	if handleAPIError("Read Report Forecasts", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

@@ -146,11 +146,7 @@ func (d *recommendationViewsDataSource) Read(ctx context.Context, req datasource
 
 	params := recviewsv2.NewGetRecommendationViewsParams()
 	out, err := d.client.V2.RecommendationViews.GetRecommendationViews(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get Recommendation Views",
-			err.Error(),
-		)
+	if handleAPIError("Read Recommendation Views", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

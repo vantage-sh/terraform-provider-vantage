@@ -96,13 +96,7 @@ func (r *anomalyNotificationResource) Create(ctx context.Context, req resource.C
 	params.WithCreateAnomalyNotification(createAnomalyNotification)
 	out, err := r.client.V2.AnomalyNotifications.CreateAnomalyNotification(params, r.client.Auth)
 
-	if err != nil {
-		if e, ok := err.(*anomalynotifsv2.CreateAnomalyNotificationBadRequest); ok {
-			handleBadRequest("Create Anomaly Notification", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create Anomaly Notification", &resp.Diagnostics, err)
+	if handleAPIError("Create Anomaly Notification", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -125,13 +119,9 @@ func (r *anomalyNotificationResource) Read(ctx context.Context, req resource.Rea
 	params := anomalynotifsv2.NewGetAnomalyNotificationParams()
 	params.SetAnomalyNotificationToken(data.Token.ValueString())
 	out, err := r.client.V2.AnomalyNotifications.GetAnomalyNotification(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*anomalynotifsv2.GetAnomalyNotificationNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Anomaly Notification", &resp.Diagnostics, err)
+	if handleAPIError("Read Anomaly Notification", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -183,8 +173,7 @@ func (r *anomalyNotificationResource) Update(ctx context.Context, req resource.U
 
 	params.WithUpdateAnomalyNotification(updateAnomalyNotification)
 	out, err := r.client.V2.AnomalyNotifications.UpdateAnomalyNotification(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Anomaly Notification", &resp.Diagnostics, err)
+	if handleAPIError("Update Anomaly Notification", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -205,15 +194,10 @@ func (r *anomalyNotificationResource) Delete(ctx context.Context, req resource.D
 	params.SetAnomalyNotificationToken(data.Token.ValueString())
 
 	_, err := r.client.V2.AnomalyNotifications.DeleteAnomalyNotification(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*anomalynotifsv2.GetAnomalyNotificationNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Anomaly Notification", &resp.Diagnostics, err)
+	if handleAPIError("Delete Anomaly Notification", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
+
 }
 
 func readPayloadIntoResourceModel(payload *modelsv2.AnomalyNotification, data *resource_anomaly_notification.AnomalyNotificationModel) {

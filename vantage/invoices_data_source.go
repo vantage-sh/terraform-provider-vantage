@@ -61,11 +61,7 @@ func (d *invoicesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	// Call API to get invoices
 	params := invoicesv2.NewGetInvoicesParams()
 	result, err := d.client.V2.Invoices.GetInvoices(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Invoices",
-			err.Error(),
-		)
+	if handleAPIError("Read Invoices", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

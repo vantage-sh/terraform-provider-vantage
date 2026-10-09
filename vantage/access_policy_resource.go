@@ -130,8 +130,7 @@ func (r AccessPolicyResource) Create(ctx context.Context, req resource.CreateReq
 
 	params := accesspoliciesv2.NewCreateAccessPolicyParams().WithCreateAccessPolicy(body)
 	out, err := r.client.V2.AccessPolicies.CreateAccessPolicy(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Access Policy Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Access Policy", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -154,10 +153,10 @@ func (r AccessPolicyResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	payload, found, err := findAccessPolicy(r.client, state.Token.ValueString())
-	if err != nil {
-		handleError("Read Access Policy Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Access Policy", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
+
 	if !found {
 		resp.State.RemoveResource(ctx)
 		return
@@ -212,8 +211,7 @@ func (r AccessPolicyResource) Update(ctx context.Context, req resource.UpdateReq
 			}
 		},
 	)
-	if err != nil {
-		handleError("Update Access Policy Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Access Policy", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -235,9 +233,10 @@ func (r AccessPolicyResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	params := accesspoliciesv2.NewDeleteAccessPolicyParams().WithAccessPolicyToken(state.Token.ValueString())
 	_, err := r.client.V2.AccessPolicies.DeleteAccessPolicy(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Access Policy Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Access Policy", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 func (r *AccessPolicyResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {

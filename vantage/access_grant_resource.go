@@ -100,8 +100,7 @@ func (r AccessGrantResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 	params.WithCreateAccessGrant(body)
 	out, err := r.client.V2.AccessGrants.CreateAccessGrant(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Access Grant Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Access Grant", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -126,13 +125,9 @@ func (r AccessGrantResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	params.SetAccessGrantToken(state.Token.ValueString())
 	out, err := r.client.V2.AccessGrants.GetAccessGrant(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*accessgrantsv2.GetAccessGrantNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Access Grant", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -165,8 +160,7 @@ func (r AccessGrantResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	params.WithUpdateAccessGrant(model)
 	out, err := r.client.V2.AccessGrants.UpdateAccessGrant(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Access Grant", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -188,9 +182,10 @@ func (r AccessGrantResource) Delete(ctx context.Context, req resource.DeleteRequ
 	params := accessgrantsv2.NewDeleteAccessGrantParams()
 	params.SetAccessGrantToken(state.Token.ValueString())
 	_, err := r.client.V2.AccessGrants.DeleteAccessGrant(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Access Grant", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

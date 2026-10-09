@@ -51,11 +51,7 @@ func (d *workspacesDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := workspacesv2.NewGetWorkspacesParams()
 	out, err := d.client.V2.Workspaces.GetWorkspaces(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Workspaces",
-			err.Error(),
-		)
+	if handleAPIError("Read Workspaces", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

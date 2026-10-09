@@ -75,11 +75,7 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	params := foldersv2.NewGetFoldersParams()
 	out, err := d.client.V2.Folders.GetFolders(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Folders",
-			err.Error(),
-		)
+	if handleAPIError("Read Folders", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

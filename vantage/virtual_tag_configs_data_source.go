@@ -55,11 +55,7 @@ func (d *virtualTagConfigsDataSource) Read(ctx context.Context, req datasource.R
 	// Read API call logic
 	params := vtagv2.NewGetVirtualTagConfigsParams()
 	apiRes, err := d.client.V2.VirtualTags.GetVirtualTagConfigs(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get Vantage Virtual Tag Configs",
-			err.Error(),
-		)
+	if handleAPIError("Read Virtual Tag Configs", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

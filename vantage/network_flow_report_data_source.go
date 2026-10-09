@@ -70,11 +70,7 @@ func (d *networkFlowReportDataSource) Read(ctx context.Context, req datasource.R
 
 	params := nfrv2.NewGetNetworkFlowReportsParams()
 	out, err := d.client.V2.NetworkFlowReports.GetNetworkFlowReports(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get Network Flow Reports",
-			err.Error(),
-		)
+	if handleAPIError("Read Network Flow Reports", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

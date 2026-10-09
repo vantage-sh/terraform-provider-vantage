@@ -171,12 +171,7 @@ func (r *budgetAlertResource) Create(ctx context.Context, req resource.CreateReq
 
 	params := budgetalertsv2.NewCreateBudgetAlertParams().WithCreateBudgetAlert(input)
 	out, err := r.client.V2.BudgetAlerts.CreateBudgetAlert(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*budgetalertsv2.CreateBudgetAlertBadRequest); ok {
-			handleBadRequest("Create Budget Alert", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Budget Alert", &resp.Diagnostics, err)
+	if handleAPIError("Create Budget Alert", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -196,12 +191,9 @@ func (r *budgetAlertResource) Read(ctx context.Context, req resource.ReadRequest
 
 	params := budgetalertsv2.NewGetBudgetAlertParams().WithBudgetAlertToken(data.Token.ValueString())
 	out, err := r.client.V2.BudgetAlerts.GetBudgetAlert(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*budgetalertsv2.GetBudgetAlertNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Read Budget Alert", &resp.Diagnostics, err)
+	if handleAPIError("Read Budget Alert", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -229,12 +221,7 @@ func (r *budgetAlertResource) Update(ctx context.Context, req resource.UpdateReq
 		WithUpdateBudgetAlert(input)
 
 	out, err := r.client.V2.BudgetAlerts.UpdateBudgetAlert(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*budgetalertsv2.UpdateBudgetAlertBadRequest); ok {
-			handleBadRequest("Update Budget Alert", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update Budget Alert", &resp.Diagnostics, err)
+	if handleAPIError("Update Budget Alert", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -253,8 +240,9 @@ func (r *budgetAlertResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	params := budgetalertsv2.NewDeleteBudgetAlertParams().WithBudgetAlertToken(data.Token.ValueString())
-	if _, err := r.client.V2.BudgetAlerts.DeleteBudgetAlert(params, r.client.Auth); err != nil {
-		handleError("Delete Budget Alert", &resp.Diagnostics, err)
+	_, err := r.client.V2.BudgetAlerts.DeleteBudgetAlert(params, r.client.Auth)
+	if handleAPIError("Delete Budget Alert", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
 }
 

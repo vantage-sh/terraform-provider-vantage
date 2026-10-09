@@ -55,11 +55,7 @@ func (d *accessGrantsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	params := accessgrantsv2.NewGetAccessGrantsParams()
 	out, err := d.client.V2.AccessGrants.GetAccessGrants(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Access Grants",
-			err.Error(),
-		)
+	if handleAPIError("Read Access Grants", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

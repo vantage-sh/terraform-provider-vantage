@@ -47,15 +47,7 @@ func (d *enrichmentSourceDataSource) Read(ctx context.Context, req datasource.Re
 	params := enrichmentsourcesv2.NewGetEnrichmentSourceParams().
 		WithEnrichmentSourceToken(data.Token.ValueString())
 	out, err := d.client.V2.EnrichmentSources.GetEnrichmentSource(params, d.client.Auth)
-	if err != nil {
-		if e, ok := err.(*enrichmentsourcesv2.GetEnrichmentSourceNotFound); ok {
-			handleBadRequest("Get Enrichment Source", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Enrichment Source",
-			err.Error(),
-		)
+	if handleAPIError("Read Enrichment Source", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

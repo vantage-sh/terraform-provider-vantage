@@ -84,9 +84,7 @@ func (r SavedFilterResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 	params.WithCreateSavedFilter(body)
 	out, err := r.client.V2.SavedFilters.CreateSavedFilter(params, r.client.Auth)
-	if err != nil {
-		//TODO(macb): Surface 400 errors more clearly.
-		handleError("Create Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Saved Filter", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -109,13 +107,9 @@ func (r SavedFilterResource) Read(ctx context.Context, req resource.ReadRequest,
 	params := filtersv2.NewGetSavedFilterParams()
 	params.SetSavedFilterToken(state.Token.ValueString())
 	out, err := r.client.V2.SavedFilters.GetSavedFilter(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*filtersv2.GetSavedFilterNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Saved Filter", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -146,8 +140,7 @@ func (r SavedFilterResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 	params.WithUpdateSavedFilter(model)
 	out, err := r.client.V2.SavedFilters.UpdateSavedFilter(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Saved Filter", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -170,9 +163,10 @@ func (r SavedFilterResource) Delete(ctx context.Context, req resource.DeleteRequ
 	params := filtersv2.NewDeleteSavedFilterParams()
 	params.SetSavedFilterToken(state.Token.ValueString())
 	_, err := r.client.V2.SavedFilters.DeleteSavedFilter(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Saved Filter Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Saved Filter", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

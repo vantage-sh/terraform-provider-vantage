@@ -88,12 +88,7 @@ func (r *canvasResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	params := canvasesv2.NewCreateCanvasParams().WithCreateCanvas(data.toCreate())
 	out, err := r.client.V2.Canvases.CreateCanvas(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*canvasesv2.CreateCanvasBadRequest); ok {
-			handleBadRequest("Create Canvas", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Canvas", &resp.Diagnostics, err)
+	if handleAPIError("Create Canvas", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -110,12 +105,9 @@ func (r *canvasResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	params := canvasesv2.NewGetCanvasParams().WithCanvasToken(data.Token.ValueString())
 	out, err := r.client.V2.Canvases.GetCanvas(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*canvasesv2.GetCanvasNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		handleError("Read Canvas", &resp.Diagnostics, err)
+	if handleAPIError("Read Canvas", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -135,12 +127,7 @@ func (r *canvasResource) Update(ctx context.Context, req resource.UpdateRequest,
 		WithUpdateCanvas(data.toUpdate())
 
 	out, err := r.client.V2.Canvases.UpdateCanvas(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*canvasesv2.UpdateCanvasBadRequest); ok {
-			handleBadRequest("Update Canvas", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Update Canvas", &resp.Diagnostics, err)
+	if handleAPIError("Update Canvas", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -157,9 +144,10 @@ func (r *canvasResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	params := canvasesv2.NewDeleteCanvasParams().WithCanvasToken(data.Token.ValueString())
 	_, err := r.client.V2.Canvases.DeleteCanvas(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Canvas", &resp.Diagnostics, err)
+	if handleAPIError("Delete Canvas", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 func (r *canvasResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

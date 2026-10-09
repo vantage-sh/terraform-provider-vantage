@@ -115,13 +115,7 @@ func (r *ReportNotificationResource) Create(ctx context.Context, req resource.Cr
 
 	params.WithCreateReportNotification(rp)
 	out, err := r.client.V2.ReportNotifications.CreateReportNotification(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*notifsv2.CreateReportNotificationBadRequest); ok {
-			handleBadRequest("Create Report Notification", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create Report Notification", &resp.Diagnostics, err)
+	if handleAPIError("Create Report Notification", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -156,13 +150,9 @@ func (r *ReportNotificationResource) Read(ctx context.Context, req resource.Read
 	params := notifsv2.NewGetReportNotificationParams()
 	params.SetReportNotificationToken(state.Token.ValueString())
 	out, err := r.client.V2.ReportNotifications.GetReportNotification(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*notifsv2.GetReportNotificationNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Report Notification", &resp.Diagnostics, err)
+	if handleAPIError("Read Report Notification", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -211,13 +201,7 @@ func (r *ReportNotificationResource) Update(ctx context.Context, req resource.Up
 
 	params.WithUpdateReportNotification(rp)
 	out, err := r.client.V2.ReportNotifications.UpdateReportNotification(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*notifsv2.UpdateReportNotificationBadRequest); ok {
-			handleBadRequest("Update Report Notification", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Update Report Notification", &resp.Diagnostics, err)
+	if handleAPIError("Update Report Notification", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -248,8 +232,7 @@ func (r *ReportNotificationResource) Delete(ctx context.Context, req resource.De
 	params := notifsv2.NewDeleteReportNotificationParams()
 	params.SetReportNotificationToken(state.Token.ValueString())
 	_, err := r.client.V2.ReportNotifications.DeleteReportNotification(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Report Notification", &resp.Diagnostics, err)
+	if handleAPIError("Delete Report Notification", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
 		return
 	}
 

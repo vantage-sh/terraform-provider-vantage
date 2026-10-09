@@ -63,11 +63,7 @@ func (d *anomalyNotificationsDataSource) Read(ctx context.Context, req datasourc
 
 	params := anomalynotifsv2.NewGetAnomalyNotificationsParams()
 	out, err := d.client.V2.AnomalyNotifications.GetAnomalyNotifications(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Report Alerts",
-			err.Error(),
-		)
+	if handleAPIError("Read Anomaly Notifications", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

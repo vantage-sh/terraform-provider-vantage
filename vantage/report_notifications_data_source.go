@@ -63,8 +63,7 @@ func (d *reportNotificationsDataSource) Read(ctx context.Context, req datasource
 
 	params := reportnotifsv2.NewGetReportNotificationsParams()
 	out, err := d.client.V2.ReportNotifications.GetReportNotifications(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Get Vantage Report Notifications", err.Error())
+	if handleAPIError("Read Report Notifications", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

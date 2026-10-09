@@ -64,8 +64,7 @@ func (d *workspaceLookupDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	allWorkspaces, err := fetchAllWorkspaces(d.client)
-	if err != nil {
-		handleError("Read Workspace", &resp.Diagnostics, err)
+	if handleAPIError("Read Workspace", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

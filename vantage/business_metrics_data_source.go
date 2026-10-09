@@ -53,11 +53,7 @@ func (d *businessMetricsDataSource) Read(ctx context.Context, req datasource.Rea
 	params := businessmetricsv2.NewGetBusinessMetricsParams()
 
 	out, err := d.client.V2.BusinessMetrics.GetBusinessMetrics(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Business Metrics",
-			err.Error(),
-		)
+	if handleAPIError("Read Business Metrics", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

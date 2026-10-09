@@ -134,8 +134,7 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	params.WithCreateFolder(rf)
 	out, err := r.client.V2.Folders.CreateFolder(params, r.client.Auth)
-	if err != nil {
-		handleError("Create Folder Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Folder", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -165,13 +164,9 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	params := foldersv2.NewGetFolderParams()
 	params.SetFolderToken(state.Token.ValueString())
 	out, err := r.client.V2.Folders.GetFolder(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*foldersv2.GetFolderNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Folder Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Folder", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -219,8 +214,7 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	params.WithUpdateFolder(model)
 	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
-	if err != nil {
-		handleError("Update Folder Resource", &resp.Diagnostics, err)
+	if handleAPIError("Update Folder", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -248,9 +242,10 @@ func (r FolderResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	params := foldersv2.NewDeleteFolderParams()
 	params.SetFolderToken(state.Token.ValueString())
 	_, err := r.client.V2.Folders.DeleteFolder(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Folder Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Folder", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.

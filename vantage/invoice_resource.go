@@ -60,12 +60,7 @@ func (r InvoiceResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	params := invoicesv2.NewCreateInvoiceParams().WithCreateInvoice(body)
 	out, err := r.client.V2.Invoices.CreateInvoice(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*invoicesv2.CreateInvoiceBadRequest); ok {
-			handleBadRequest("Create Invoice Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-		handleError("Create Invoice Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Invoice", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -87,13 +82,9 @@ func (r InvoiceResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	params := invoicesv2.NewGetInvoiceParams().WithInvoiceToken(state.Token.ValueString())
 	out, err := r.client.V2.Invoices.GetInvoice(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*invoicesv2.GetInvoiceNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Invoice Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Invoice", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 

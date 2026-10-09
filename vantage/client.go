@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -136,10 +137,11 @@ func handleError(action string, d *diag.Diagnostics, err error) {
 }
 
 func handleBadRequest(action string, d *diag.Diagnostics, mErr *modelsv2.Errors) {
-	d.AddError(
-		"Unable to "+action,
-		"One or more of your fields contained invalid input.\n"+strings.Join(mErr.Errors, "\n"),
-	)
+	detail := "One or more of your fields contained invalid input."
+	if mErr != nil {
+		detail += "\n" + strings.Join(mErr.Errors, "\n")
+	}
+	d.AddError("Unable to "+action, detail)
 }
 
 func handleForbidden(action string, d *diag.Diagnostics, mErr *modelsv2.Errors) {
@@ -148,6 +150,102 @@ func handleForbidden(action string, d *diag.Diagnostics, mErr *modelsv2.Errors) 
 		message = strings.Join(mErr.Errors, "\n")
 	}
 	d.AddError("Unable to "+action, message)
+}
+
+// apiNotFound selects how a 404 response is applied.
+type apiNotFound int
+
+const (
+	// apiNotFoundError records a not-found diagnostic and keeps state.
+	// Use this for create, update, and data source reads.
+	apiNotFoundError apiNotFound = iota
+	// apiNotFoundRemove drops the resource from state and records no diagnostic.
+	// Use this for resource reads.
+	apiNotFoundRemove
+	// apiNotFoundIgnore treats 404 as success. Use this for deletes.
+	apiNotFoundIgnore
+)
+
+type statusCoder interface {
+	Code() int
+}
+
+type errorsPayload interface {
+	GetPayload() *modelsv2.Errors
+}
+
+// handleAPIError classifies a Vantage API error and records one diagnostic.
+// It returns true when err is non-nil and the caller must stop.
+// remove runs only for apiNotFoundRemove.
+//
+// Every resource and data source uses this function so status codes mean the
+// same thing everywhere:
+//   - 400 and 422 are invalid input
+//   - 402, 403, and 406 keep the API message
+//   - 404 follows notFound
+//   - every other error stays a connection error
+func handleAPIError(action string, d *diag.Diagnostics, err error, notFound apiNotFound, remove func()) bool {
+	if err == nil {
+		return false
+	}
+
+	code, hasCode := apiErrorCode(err)
+	payload := apiErrorPayload(err)
+	switch code {
+	case http.StatusBadRequest, http.StatusUnprocessableEntity:
+		handleBadRequest(action, d, payload)
+	case http.StatusForbidden:
+		handleForbidden(action, d, payload)
+	case http.StatusPaymentRequired:
+		addAPIStatusError(action, d, "The API returned a 402 Payment Required response.", payload)
+	case http.StatusNotAcceptable:
+		addAPIStatusError(action, d, "The API returned a 406 Not Acceptable response.", payload)
+	case http.StatusNotFound:
+		switch notFound {
+		case apiNotFoundIgnore:
+			return true
+		case apiNotFoundRemove:
+			if remove != nil {
+				remove()
+				return true
+			}
+		}
+		addAPIStatusError(action, d, "The API returned a 404 Not Found response.", payload)
+	default:
+		if hasCode && code >= 400 && code < 500 && payload != nil && len(payload.Errors) > 0 {
+			addAPIStatusError(action, d, fmt.Sprintf("The API returned a %d response.", code), payload)
+			return true
+		}
+		handleError(action, d, err)
+	}
+	return true
+}
+
+func apiErrorCode(err error) (int, bool) {
+	var coder statusCoder
+	if errors.As(err, &coder) {
+		return coder.Code(), true
+	}
+	var apiErr *runtime.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.Code, true
+	}
+	return 0, false
+}
+
+func apiErrorPayload(err error) *modelsv2.Errors {
+	var payload errorsPayload
+	if errors.As(err, &payload) {
+		return payload.GetPayload()
+	}
+	return nil
+}
+
+func addAPIStatusError(action string, d *diag.Diagnostics, summary string, mErr *modelsv2.Errors) {
+	if mErr != nil && len(mErr.Errors) > 0 {
+		summary = strings.Join(mErr.Errors, "\n")
+	}
+	d.AddError("Unable to "+action, summary)
 }
 
 func toStringsValue(s []string) []basetypes.StringValue {

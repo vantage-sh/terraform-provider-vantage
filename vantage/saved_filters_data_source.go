@@ -70,11 +70,7 @@ func (d *savedFiltersDataSource) Read(ctx context.Context, req datasource.ReadRe
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	params := filtersv2.NewGetSavedFiltersParams()
 	out, err := d.client.V2.SavedFilters.GetSavedFilters(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage SavedFilters",
-			err.Error(),
-		)
+	if handleAPIError("Read Saved Filters", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

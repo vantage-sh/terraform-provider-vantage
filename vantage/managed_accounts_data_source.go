@@ -54,11 +54,7 @@ func (d *managedAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 	params := managedaccountsv2.NewGetManagedAccountsParams()
 	apiRes, err := d.client.V2.ManagedAccounts.GetManagedAccounts(params, d.client.Auth)
 
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get Managed Accounts",
-			err.Error(),
-		)
+	if handleAPIError("Read Managed Accounts", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 

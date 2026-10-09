@@ -130,8 +130,7 @@ func (r *CustomProviderCostsUploadResource) Create(ctx context.Context, req reso
 	}
 
 	out, err := r.client.V2.Integrations.CreateUserCostsUploadViaCsv(params, r.client.Auth, integrationsv2.WithContentTypeMultipartFormData)
-	if err != nil {
-		handleError("Create Custom Provider Costs Upload", &resp.Diagnostics, err)
+	if handleAPIError("Create Custom Provider Costs Upload", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -185,8 +184,9 @@ func (r *CustomProviderCostsUploadResource) Delete(ctx context.Context, req reso
 		AuthInfo: r.client.Auth,
 	}
 
-	if _, err := r.client.V2.Transport.Submit(op); err != nil {
-		handleError("Delete Custom Provider Costs Upload", &resp.Diagnostics, err)
+	_, err := r.client.V2.Transport.Submit(op)
+	if handleAPIError("Delete Custom Provider Costs Upload", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
 }
 
@@ -218,4 +218,3 @@ func (r *deleteUploadReader) ReadResponse(response runtime.ClientResponse, _ run
 		return nil, fmt.Errorf("unexpected status %d from delete costs upload", response.Code())
 	}
 }
-

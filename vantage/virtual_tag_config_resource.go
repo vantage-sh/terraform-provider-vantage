@@ -141,13 +141,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 
 	params := tagsv2.NewCreateVirtualTagConfigParams().WithCreateVirtualTagConfig(model)
 	out, err := r.client.V2.VirtualTags.CreateVirtualTagConfig(params, r.client.Auth)
-	if err != nil {
-		if e, ok := err.(*tagsv2.CreateVirtualTagConfigBadRequest); ok {
-			handleBadRequest("Create Virtual Tag Config Resource", &resp.Diagnostics, e.GetPayload())
-			return
-		}
-
-		handleError("Create Virtual Tag Config Resource", &resp.Diagnostics, err)
+	if handleAPIError("Create Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundError, nil) {
 		return
 	}
 
@@ -166,7 +160,7 @@ func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
-		handleError("Set Preferred Virtual Tag Config", &resp.Diagnostics, err)
+		handleAPIError("Set Preferred Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundError, nil)
 		return
 	}
 }
@@ -181,13 +175,9 @@ func (r VirtualTagConfigResource) Read(ctx context.Context, req resource.ReadReq
 
 	params := tagsv2.NewGetVirtualTagConfigParams().WithToken(state.Token.ValueString())
 	out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
-	if err != nil {
-		if _, ok := err.(*tagsv2.GetVirtualTagConfigNotFound); ok {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		handleError("Get Virtual Tag Config Resource", &resp.Diagnostics, err)
+	if handleAPIError("Read Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundRemove, func() {
+		resp.State.RemoveResource(ctx)
+	}) {
 		return
 	}
 
@@ -242,10 +232,10 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 			WithToken(data.Token.ValueString()).
 			WithUpdateVirtualTagConfig(model)
 		out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
-		if err != nil {
-			handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
+		if handleAPIError("Update Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundError, nil) {
 			return
 		}
+
 		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -264,7 +254,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		}
 		if preferredChanged || (keyChanged && !preferredToSync.IsNull() && !preferredToSync.IsUnknown() && preferredToSync.ValueBool()) {
 			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
-				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
+				handleAPIError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundError, nil)
 				return
 			}
 			data.Preferred = preferredToSync
@@ -276,10 +266,10 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	refreshState := func() {
 		params := tagsv2.NewGetVirtualTagConfigParams().WithToken(data.Token.ValueString())
 		out, err := r.client.V2.VirtualTags.GetVirtualTagConfig(params, r.client.Auth)
-		if err != nil {
-			handleError("Refresh Virtual Tag Config Resource", &resp.Diagnostics, err)
+		if handleAPIError("Refresh Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundError, nil) {
 			return
 		}
+
 		resp.Diagnostics.Append(data.applyPayload(ctx, out.Payload)...)
 		if !resp.Diagnostics.HasError() {
 			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -289,7 +279,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	if len(changes.creates) == 0 && len(changes.updates) == 0 && len(changes.deletes) == 0 {
 		if preferredChanged {
 			if err := r.syncPreferred(ctx, data.Key.ValueString(), preferredToSync); err != nil {
-				handleError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err)
+				handleAPIError("Update Preferred Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundError, nil)
 				return
 			}
 			refreshState()
@@ -313,7 +303,7 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	fail := func(title string, err error) {
 		data.Preferred = state.Preferred
 		refreshState()
-		handleError(title, &resp.Diagnostics, err)
+		handleAPIError(title, &resp.Diagnostics, err, apiNotFoundError, nil)
 	}
 
 	for i, value := range changes.updates {
@@ -376,9 +366,10 @@ func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.Delet
 	params := tagsv2.NewDeleteVirtualTagConfigParams()
 	params.SetToken(state.Token.ValueString())
 	_, err := r.client.V2.VirtualTags.DeleteVirtualTagConfig(params, r.client.Auth)
-	if err != nil {
-		handleError("Delete Virtual Tag Config Resource", &resp.Diagnostics, err)
+	if handleAPIError("Delete Virtual Tag Config", &resp.Diagnostics, err, apiNotFoundIgnore, nil) {
+		return
 	}
+
 }
 
 // Configure adds the provider configured client to the data source.
