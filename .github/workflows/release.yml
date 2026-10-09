@@ -33,6 +33,9 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       -
+        name: Gate schema-upgrade acceptance tests
+        run: go test -count=1 -run TestAccStepsPersistCurrentSchema ./vantage
+      -
         name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         id: import_gpg
