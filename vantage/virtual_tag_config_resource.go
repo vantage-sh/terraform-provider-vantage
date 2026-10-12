@@ -68,6 +68,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				"date_ranges":           generatedValuesAttrs["date_ranges"],
 				"display_name":          generatedValuesAttrs["display_name"],
 				"filter":                generatedValuesAttrs["filter"],
+				"label_filters":         generatedValuesAttrs["label_filters"],
 				"label_key":             generatedValuesAttrs["label_key"],
 				"label_transforms":      generatedValuesAttrs["label_transforms"],
 				"label_values":          generatedValuesAttrs["label_values"],

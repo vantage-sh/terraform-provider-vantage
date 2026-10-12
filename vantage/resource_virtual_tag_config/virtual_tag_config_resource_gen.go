@@ -170,6 +170,15 @@ func VirtualTagConfigResourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The filter query language to apply to the value. Additional documentation available at https://docs.vantage.sh/vql.",
 							MarkdownDescription: "The filter query language to apply to the value. Additional documentation available at https://docs.vantage.sh/vql.",
 						},
+						"label_filters": schema.MapAttribute{
+							ElementType: types.ListType{
+								ElemType: types.StringType,
+							},
+							Optional:            true,
+							Computed:            true,
+							Description:         "ClickHouse BusinessMetric row filters. Each key must match, and values within a key are alternatives. Cannot include the fan-out label_key. Send null or an empty object to clear.",
+							MarkdownDescription: "ClickHouse BusinessMetric row filters. Each key must match, and values within a key are alternatives. Cannot include the fan-out label_key. Send null or an empty object to clear.",
+						},
 						"label_key": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
@@ -861,6 +870,24 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 			fmt.Sprintf(`filter expected to be basetypes.StringValue, was: %T`, filterAttribute))
 	}
 
+	labelFiltersAttribute, ok := attributes["label_filters"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filters is missing from object`)
+
+		return nil, diags
+	}
+
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
+	}
+
 	labelKeyAttribute, ok := attributes["label_key"]
 
 	if !ok {
@@ -979,6 +1006,7 @@ func (t ValuesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValu
 		DateRanges:          dateRangesVal,
 		DisplayName:         displayNameVal,
 		Filter:              filterVal,
+		LabelFilters:        labelFiltersVal,
 		LabelKey:            labelKeyVal,
 		LabelTransforms:     labelTransformsVal,
 		LabelValues:         labelValuesVal,
@@ -1142,6 +1170,24 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 			fmt.Sprintf(`filter expected to be basetypes.StringValue, was: %T`, filterAttribute))
 	}
 
+	labelFiltersAttribute, ok := attributes["label_filters"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_filters is missing from object`)
+
+		return NewValuesValueUnknown(), diags
+	}
+
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
+	}
+
 	labelKeyAttribute, ok := attributes["label_key"]
 
 	if !ok {
@@ -1260,6 +1306,7 @@ func NewValuesValue(attributeTypes map[string]attr.Type, attributes map[string]a
 		DateRanges:          dateRangesVal,
 		DisplayName:         displayNameVal,
 		Filter:              filterVal,
+		LabelFilters:        labelFiltersVal,
 		LabelKey:            labelKeyVal,
 		LabelTransforms:     labelTransformsVal,
 		LabelValues:         labelValuesVal,
@@ -1343,6 +1390,7 @@ type ValuesValue struct {
 	DateRanges          basetypes.ListValue   `tfsdk:"date_ranges"`
 	DisplayName         basetypes.StringValue `tfsdk:"display_name"`
 	Filter              basetypes.StringValue `tfsdk:"filter"`
+	LabelFilters        basetypes.MapValue    `tfsdk:"label_filters"`
 	LabelKey            basetypes.StringValue `tfsdk:"label_key"`
 	LabelTransforms     basetypes.ListValue   `tfsdk:"label_transforms"`
 	LabelValues         basetypes.ListValue   `tfsdk:"label_values"`
@@ -1353,7 +1401,7 @@ type ValuesValue struct {
 }
 
 func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 11)
+	attrTypes := make(map[string]tftypes.Type, 12)
 
 	var val tftypes.Value
 	var err error
@@ -1367,6 +1415,11 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 	}.TerraformType(ctx)
 	attrTypes["display_name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["filter"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label_filters"] = basetypes.MapType{
+		ElemType: types.ListType{
+			ElemType: types.StringType,
+		},
+	}.TerraformType(ctx)
 	attrTypes["label_key"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["label_transforms"] = basetypes.ListType{
 		ElemType: LabelTransformsValue{}.Type(ctx),
@@ -1384,7 +1437,7 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 11)
+		vals := make(map[string]tftypes.Value, 12)
 
 		val, err = v.BusinessMetricToken.ToTerraformValue(ctx)
 
@@ -1425,6 +1478,14 @@ func (v ValuesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error
 		}
 
 		vals["filter"] = val
+
+		val, err = v.LabelFilters.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label_filters"] = val
 
 		val, err = v.LabelKey.ToTerraformValue(ctx)
 
@@ -1611,6 +1672,55 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		)
 	}
 
+	var labelFiltersVal basetypes.MapValue
+	switch {
+	case v.LabelFilters.IsUnknown():
+		labelFiltersVal = types.MapUnknown(types.ListType{
+			ElemType: types.StringType,
+		})
+	case v.LabelFilters.IsNull():
+		labelFiltersVal = types.MapNull(types.ListType{
+			ElemType: types.StringType,
+		})
+	default:
+		var d diag.Diagnostics
+		labelFiltersVal, d = types.MapValue(types.ListType{
+			ElemType: types.StringType,
+		}, v.LabelFilters.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"business_metric_token": basetypes.StringType{},
+			"cost_metric": basetypes.ObjectType{
+				AttrTypes: CostMetricValue{}.AttributeTypes(ctx),
+			},
+			"date_ranges": basetypes.ListType{
+				ElemType: DateRangesValue{}.Type(ctx),
+			},
+			"display_name": basetypes.StringType{},
+			"filter":       basetypes.StringType{},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			"label_key": basetypes.StringType{},
+			"label_transforms": basetypes.ListType{
+				ElemType: LabelTransformsValue{}.Type(ctx),
+			},
+			"label_values": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"name": basetypes.StringType{},
+			"percentages": basetypes.ListType{
+				ElemType: PercentagesValue{}.Type(ctx),
+			},
+			"token": basetypes.StringType{},
+		}), diags
+	}
+
 	var labelValuesVal basetypes.ListValue
 	switch {
 	case v.LabelValues.IsUnknown():
@@ -1634,7 +1744,12 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 			},
 			"display_name": basetypes.StringType{},
 			"filter":       basetypes.StringType{},
-			"label_key":    basetypes.StringType{},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			"label_key": basetypes.StringType{},
 			"label_transforms": basetypes.ListType{
 				ElemType: LabelTransformsValue{}.Type(ctx),
 			},
@@ -1659,7 +1774,12 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 		},
 		"display_name": basetypes.StringType{},
 		"filter":       basetypes.StringType{},
-		"label_key":    basetypes.StringType{},
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
+		},
+		"label_key": basetypes.StringType{},
 		"label_transforms": basetypes.ListType{
 			ElemType: LabelTransformsValue{}.Type(ctx),
 		},
@@ -1689,6 +1809,7 @@ func (v ValuesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, 
 			"date_ranges":           dateRanges,
 			"display_name":          v.DisplayName,
 			"filter":                v.Filter,
+			"label_filters":         labelFiltersVal,
 			"label_key":             v.LabelKey,
 			"label_transforms":      labelTransforms,
 			"label_values":          labelValuesVal,
@@ -1732,6 +1853,10 @@ func (v ValuesValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.Filter.Equal(other.Filter) {
+		return false
+	}
+
+	if !v.LabelFilters.Equal(other.LabelFilters) {
 		return false
 	}
 
@@ -1781,7 +1906,12 @@ func (v ValuesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		},
 		"display_name": basetypes.StringType{},
 		"filter":       basetypes.StringType{},
-		"label_key":    basetypes.StringType{},
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
+		},
+		"label_key": basetypes.StringType{},
 		"label_transforms": basetypes.ListType{
 			ElemType: LabelTransformsValue{}.Type(ctx),
 		},

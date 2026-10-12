@@ -27,6 +27,12 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
     # {
     #   filter                = "costs.provider = 'aws'"
     #   business_metric_token = "bsnss_mtrc_XXXXXXXX"
+    #   label_key             = "team"
+    #   # Keep rows for selected editions, then fan out one tag value per team.
+    #   # label_filters cannot include the fan-out label_key.
+    #   label_filters = {
+    #     edition = ["enterprise", "standard"]
+    #   }
     #   label_transforms = [
     #     { type = "split", delimiter = "&&&", index = 0 },
     #     { type = "format", template = "team-{0}" },

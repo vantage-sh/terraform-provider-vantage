@@ -552,6 +552,89 @@ func TestAccVantageVirtualTagConfig_withLabelTransforms(t *testing.T) {
 	})
 }
 
+func TestAccVantageVirtualTagConfig_labelFilters(t *testing.T) {
+	key := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	bmTitle := "tf-acc-bm-" + sdkacctest.RandStringFromCharSet(8, sdkacctest.CharSetAlphaNum)
+	now := time.Now()
+	backfillUntil := now.AddDate(0, -3, -now.Day()+1).Format("2006-01-02")
+	resourceName := "vantage_virtual_tag_config.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVantageVirtualTagConfig_labelFiltersTf(key, bmTitle, backfillUntil, `
+					label_filters = {
+						team = ["platform", "data"]
+					}
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "values.0.business_metric_token"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_key", "label"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.0", "platform"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.1", "data"),
+				),
+			},
+			{
+				Config: testAccVantageVirtualTagConfig_labelFiltersTf(key, bmTitle, backfillUntil, `
+					label_filters = {
+						team = ["finops"]
+					}
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.0", "finops"),
+				),
+			},
+			{
+				Config: testAccVantageVirtualTagConfig_labelFiltersTf(key, bmTitle, backfillUntil, `
+					label_filters = {
+						team = ["finops"]
+					}
+				`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func testAccVantageVirtualTagConfig_labelFiltersTf(key, bmTitle, backfillUntil, labelFiltersHCL string) string {
+	return fmt.Sprintf(`
+resource "vantage_business_metric" "test" {
+  title = %[2]q
+  values = [
+    {
+      date   = "2024-01-01"
+      amount = 1.0
+      label  = "platform"
+    },
+    {
+      date   = "2024-01-01"
+      amount = 2.0
+      label  = "data"
+    }
+  ]
+}
+
+resource "vantage_virtual_tag_config" "test" {
+  key            = %[1]q
+  overridable    = true
+  backfill_until = %[3]q
+  values = [
+    {
+      filter                = "costs.provider = 'gcp'"
+      business_metric_token = vantage_business_metric.test.token
+      label_key             = "label"
+      %[4]s
+    }
+  ]
+}
+`, key, bmTitle, backfillUntil, labelFiltersHCL)
+}
+
 func testAccVantageVirtualTagConfig_withLabelTransformsTf(key, bmTitle, backfillUntil, labelTransformsHCL string) string {
 	return fmt.Sprintf(`
 resource "vantage_business_metric" "test" {
