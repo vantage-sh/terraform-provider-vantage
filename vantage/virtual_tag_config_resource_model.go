@@ -3,6 +3,7 @@ package vantage
 import (
 	"context"
 	"slices"
+	"sort"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -155,6 +156,21 @@ func (v *virtualTagConfigValueModel) requiresParentUpdateFrom(state *virtualTagC
 func clearsList(plan, state types.List) bool {
 	return !state.IsNull() && !state.IsUnknown() && len(state.Elements()) > 0 &&
 		(plan.IsNull() || plan.IsUnknown() || len(plan.Elements()) == 0)
+}
+
+// sortedLabelFilters returns a copy of filters with each value list sorted.
+// The API treats the values as an unordered set and returns them sorted.
+func sortedLabelFilters(filters map[string][]string) map[string][]string {
+	if filters == nil {
+		return nil
+	}
+	normalized := make(map[string][]string, len(filters))
+	for key, values := range filters {
+		sorted := append([]string(nil), values...)
+		sort.Strings(sorted)
+		normalized[key] = sorted
+	}
+	return normalized
 }
 
 // clearsMap reports that a planned map removes stored filters. The value update
@@ -437,13 +453,13 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 
 	// Nil means the API omitted filters. Keep null so an omitted config does not
 	// drift against an empty map. A non-nil map, including an empty object, is
-	// stored as returned.
+	// stored with each value list sorted. The API does not preserve list order.
 	labelFiltersValue := types.MapNull(types.ListType{ElemType: types.StringType})
 	if v.LabelFilters != nil {
 		labelFiltersValue, d = types.MapValueFrom(
 			ctx,
 			types.ListType{ElemType: types.StringType},
-			v.LabelFilters,
+			sortedLabelFilters(v.LabelFilters),
 		)
 		if d.HasError() {
 			return basetypes.ObjectValue{}, d
@@ -832,7 +848,7 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 			diags.Append(d...)
 			return nil
 		}
-		data.LabelFilters = labelFilters
+		data.LabelFilters = sortedLabelFilters(labelFilters)
 	}
 
 	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {

@@ -99,7 +99,7 @@ Optional:
 - `cost_metric` (Attributes) (see [below for nested schema](#nestedatt--values--cost_metric))
 - `date_ranges` (Attributes List) Date ranges restricting when this value applies. Each range has optional start_date and end_date (inclusive, YYYY-MM-DD). (see [below for nested schema](#nestedatt--values--date_ranges))
 - `display_name` (String) The display name for an allocation value (cost_metric or percentages). Invalid when name is set.
-- `label_filters` (Map of List of String) ClickHouse BusinessMetric row filters. Each key must match, and values within a key are alternatives. Cannot include the fan-out label_key. Send null or an empty object to clear.
+- `label_filters` (Map of List of String) ClickHouse BusinessMetric row filters. Each key must match, and values within a key are alternatives. Cannot include the fan-out label_key. Send null or an empty object to clear. Value lists are stored in sorted order.
 - `label_key` (String) The business metric label key used for this virtual tag value.
 - `label_transforms` (Attributes List) Label transforms applied to business metric labels. (see [below for nested schema](#nestedatt--values--label_transforms))
 - `label_values` (List of String) Optional business metric label values. An empty array includes every value for the label key.
