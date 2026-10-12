@@ -381,17 +381,17 @@ func TestVirtualTagConfig_LabelFilters(t *testing.T) {
 			t.Fatalf("update label_filters = %#v; want %#v", updated.LabelFilters, filters)
 		}
 
-		parent := &virtualTagConfigModel{
-			resource_virtual_tag_config.VirtualTagConfigModel{
-				Token:         types.StringValue("vtag_test"),
-				Key:           types.StringValue("test-key"),
-				Overridable:   types.BoolValue(true),
-				BackfillUntil: types.StringValue("2025-01-01"),
-				Values:        labelFilterValuesList(t, ctx, filterValue),
-			},
+		parent := virtualTagConfigTestModel(ctx, "test-key", false)
+		parent.Overridable = types.BoolValue(true)
+		parent.BackfillUntil = types.StringValue("2025-01-01")
+		parent.Values = labelFilterValuesList(t, ctx, filterValue)
+		state := virtualTagConfigTestState(t, ctx, virtualTagConfigTestSchema(ctx), parent)
+		var roundTrip virtualTagConfigModel
+		if roundTripDiags := state.Get(ctx, &roundTrip); roundTripDiags.HasError() {
+			t.Fatalf("reading round-trip state: %v", roundTripDiags)
 		}
-		createPayload := parent.toCreate(ctx, &diags)
-		updatePayload := parent.toUpdate(ctx, &diags)
+		createPayload := roundTrip.toCreate(ctx, &diags)
+		updatePayload := roundTrip.toUpdate(ctx, &diags)
 		if diags.HasError() {
 			t.Fatalf("parent conversion errors: %v", diags)
 		}
@@ -467,7 +467,7 @@ func labelFilterValuesList(t *testing.T, ctx context.Context, labelFilters types
 	model := labelFilterValueModel(labelFilters)
 	attrs := map[string]attr.Value{
 		"business_metric_token": model.BusinessMetricToken,
-		"cost_metric":           model.CostMetric,
+		"cost_metric":           types.ObjectNull(resource_virtual_tag_config.CostMetricValue{}.AttributeTypes(ctx)),
 		"date_ranges":           types.ListValueMust(resource_virtual_tag_config.DateRangesValue{}.Type(ctx), []attr.Value{}),
 		"display_name":          model.DisplayName,
 		"filter":                model.Filter,
