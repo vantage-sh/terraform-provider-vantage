@@ -34,50 +34,6 @@ func (r *VirtualTagConfigResource) Metadata(_ context.Context, req resource.Meta
 	resp.TypeName = req.ProviderTypeName + "_virtual_tag_config"
 }
 
-// labelFiltersAttribute copies the generated map and sorts each value list in
-// the plan. The API returns those lists in sorted order. Without this, apply
-// fails when the configuration order differs from the sorted order.
-func labelFiltersAttribute(generated schema.Attribute) schema.Attribute {
-	attr := generated.(schema.MapAttribute)
-	attr.Description += " Value lists are stored in sorted order."
-	attr.MarkdownDescription += " Value lists are stored in sorted order."
-	attr.PlanModifiers = append(attr.PlanModifiers, labelFiltersOrderModifier{})
-	return attr
-}
-
-type labelFiltersOrderModifier struct{}
-
-func (m labelFiltersOrderModifier) Description(context.Context) string {
-	return "Sorts each label_filters value list so the plan matches the API response order."
-}
-
-func (m labelFiltersOrderModifier) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (m labelFiltersOrderModifier) PlanModifyMap(ctx context.Context, req planmodifier.MapRequest, resp *planmodifier.MapResponse) {
-	if req.PlanValue.IsNull() || req.PlanValue.IsUnknown() {
-		return
-	}
-
-	filters := map[string][]string{}
-	resp.Diagnostics.Append(req.PlanValue.ElementsAs(ctx, &filters, false)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	normalized, d := types.MapValueFrom(
-		ctx,
-		types.ListType{ElemType: types.StringType},
-		sortedLabelFilters(filters),
-	)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.PlanValue = normalized
-}
-
 func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// Because we generate our schema from a Swagger/OpenAPI v2 spec, we're unable to express some of the constraints we want to enforce.
 	// A major one is that name, business_metric_token, cost_metric, and percentages are all mutually exclusive,
@@ -112,7 +68,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 				"date_ranges":           generatedValuesAttrs["date_ranges"],
 				"display_name":          generatedValuesAttrs["display_name"],
 				"filter":                generatedValuesAttrs["filter"],
-				"label_filters":         labelFiltersAttribute(generatedValuesAttrs["label_filters"]),
+				"label_filters":         generatedValuesAttrs["label_filters"],
 				"label_key":             generatedValuesAttrs["label_key"],
 				"label_transforms":      generatedValuesAttrs["label_transforms"],
 				"label_values":          generatedValuesAttrs["label_values"],

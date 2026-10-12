@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
@@ -338,7 +337,18 @@ func TestVirtualTagConfig_LabelFilters(t *testing.T) {
 		t.Fatalf("building label_filters: %v", d)
 	}
 
-	t.Run("read sorts values", func(t *testing.T) {
+	t.Run("read keeps configuration order", func(t *testing.T) {
+		configured, d := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, map[string][]string{
+			"team": {"platform", "data"},
+		})
+		if d.HasError() {
+			t.Fatalf("building label_filters: %v", d)
+		}
+		m := &virtualTagConfigModel{
+			resource_virtual_tag_config.VirtualTagConfigModel{
+				Values: labelFilterValuesList(t, ctx, configured),
+			},
+		}
 		name := "allocation"
 		filter := "costs.provider = 'gcp'"
 		labelKey := "team"
@@ -354,17 +364,16 @@ func TestVirtualTagConfig_LabelFilters(t *testing.T) {
 					Filter:   &filter,
 					LabelKey: &labelKey,
 					LabelFilters: map[string][]string{
-						"team": {"platform", "data"},
+						"team": {"data", "platform", "finops"},
 					},
 				},
 			},
 		}
-		m := &virtualTagConfigModel{}
 		if diags := m.applyPayload(ctx, payload); diags.HasError() {
 			t.Fatalf("applyPayload returned errors: %v", diags)
 		}
 		got := labelFiltersFromState(t, ctx, m.Values.Elements()[0])
-		want := map[string][]string{"team": {"data", "platform"}}
+		want := map[string][]string{"team": {"platform", "data", "finops"}}
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("label_filters = %#v; want %#v", got, want)
 		}
@@ -446,28 +455,6 @@ func TestVirtualTagConfig_LabelFilters(t *testing.T) {
 		}
 		if created.LabelFilters != nil || updated.LabelFilters != nil {
 			t.Fatalf("omitted label_filters = %#v / %#v; want nil", created.LabelFilters, updated.LabelFilters)
-		}
-	})
-
-	t.Run("plan sorts values", func(t *testing.T) {
-		input, d := types.MapValueFrom(ctx, types.ListType{ElemType: types.StringType}, map[string][]string{
-			"team": {"platform", "data"},
-		})
-		if d.HasError() {
-			t.Fatalf("building label_filters: %v", d)
-		}
-		resp := &planmodifier.MapResponse{PlanValue: input}
-		labelFiltersOrderModifier{}.PlanModifyMap(ctx, planmodifier.MapRequest{PlanValue: input}, resp)
-		if resp.Diagnostics.HasError() {
-			t.Fatalf("plan modifier errors: %v", resp.Diagnostics)
-		}
-		got := map[string][]string{}
-		if d := resp.PlanValue.ElementsAs(ctx, &got, false); d.HasError() {
-			t.Fatalf("reading planned label_filters: %v", d)
-		}
-		want := map[string][]string{"team": {"data", "platform"}}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("planned label_filters = %#v; want %#v", got, want)
 		}
 	})
 

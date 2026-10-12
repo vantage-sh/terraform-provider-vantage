@@ -3,7 +3,6 @@ package vantage
 import (
 	"context"
 	"slices"
-	"sort"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -158,19 +157,44 @@ func clearsList(plan, state types.List) bool {
 		(plan.IsNull() || plan.IsUnknown() || len(plan.Elements()) == 0)
 }
 
-// sortedLabelFilters returns a copy of filters with each value list sorted.
-// The API treats the values as an unordered set and returns them sorted.
-func sortedLabelFilters(filters map[string][]string) map[string][]string {
-	if filters == nil {
-		return nil
+// preserveLabelFilterOrder keeps the prior list order when the API returns the
+// same values in a different order. Terraform requires the applied state to
+// match the configured order. New values keep the API order and are appended.
+func preserveLabelFilterOrder(api, prior []string) []string {
+	if len(prior) == 0 || len(api) == 0 {
+		return api
 	}
-	normalized := make(map[string][]string, len(filters))
-	for key, values := range filters {
-		sorted := append([]string(nil), values...)
-		sort.Strings(sorted)
-		normalized[key] = sorted
+	remaining := make(map[string]int, len(api))
+	for _, value := range api {
+		remaining[value]++
 	}
-	return normalized
+	ordered := make([]string, 0, len(api))
+	for _, value := range prior {
+		if remaining[value] == 0 {
+			continue
+		}
+		ordered = append(ordered, value)
+		remaining[value]--
+	}
+	for _, value := range api {
+		if remaining[value] == 0 {
+			continue
+		}
+		ordered = append(ordered, value)
+		remaining[value]--
+	}
+	return ordered
+}
+
+func preserveLabelFilters(api, prior map[string][]string) map[string][]string {
+	if api == nil || prior == nil {
+		return api
+	}
+	preserved := make(map[string][]string, len(api))
+	for key, values := range api {
+		preserved[key] = preserveLabelFilterOrder(values, prior[key])
+	}
+	return preserved
 }
 
 // clearsMap reports that a planned map removes stored filters. The value update
@@ -389,7 +413,7 @@ func buildDateRangesFromPayload(ctx context.Context, dateRanges []*modelsv2.Virt
 	return types.ListValueFrom(ctx, resource_virtual_tag_config.DateRangesValue{}.Type(ctx), tfDateRanges)
 }
 
-func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValue) (basetypes.ObjectValue, diag.Diagnostics) {
+func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValue, priorFilters map[string][]string) (basetypes.ObjectValue, diag.Diagnostics) {
 	// For optional string fields, use null if empty, otherwise use the value
 	var nameValue attr.Value
 	if v.Name == nil || *v.Name == "" {
@@ -452,14 +476,14 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 	}
 
 	// Nil means the API omitted filters. Keep null so an omitted config does not
-	// drift against an empty map. A non-nil map, including an empty object, is
-	// stored with each value list sorted. The API does not preserve list order.
+	// drift against an empty map. When the API returns the same values in a
+	// different order, keep the configured order.
 	labelFiltersValue := types.MapNull(types.ListType{ElemType: types.StringType})
 	if v.LabelFilters != nil {
 		labelFiltersValue, d = types.MapValueFrom(
 			ctx,
 			types.ListType{ElemType: types.StringType},
-			sortedLabelFilters(v.LabelFilters),
+			preserveLabelFilters(v.LabelFilters, priorFilters),
 		)
 		if d.HasError() {
 			return basetypes.ObjectValue{}, d
@@ -489,6 +513,50 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 	}
 
 	return value.ToObjectValue(ctx)
+}
+
+func (m *virtualTagConfigModel) priorLabelFilters(ctx context.Context) (map[string]map[string][]string, []map[string][]string) {
+	if m.Values.IsNull() || m.Values.IsUnknown() {
+		return nil, nil
+	}
+	byToken := map[string]map[string][]string{}
+	byIndex := make([]map[string][]string, 0, len(m.Values.Elements()))
+	for _, elem := range m.Values.Elements() {
+		attrs, ok := labelFilterElementAttributes(ctx, elem)
+		if !ok {
+			byIndex = append(byIndex, nil)
+			continue
+		}
+		var filters map[string][]string
+		if raw, exists := attrs["label_filters"]; exists {
+			if mv, isMap := raw.(basetypes.MapValue); isMap && !mv.IsNull() && !mv.IsUnknown() {
+				parsed := map[string][]string{}
+				if d := mv.ElementsAs(ctx, &parsed, false); !d.HasError() {
+					filters = parsed
+				}
+			}
+		}
+		byIndex = append(byIndex, filters)
+		if token, isString := attrs["token"].(basetypes.StringValue); isString && !token.IsNull() && !token.IsUnknown() && token.ValueString() != "" {
+			byToken[token.ValueString()] = filters
+		}
+	}
+	return byToken, byIndex
+}
+
+func labelFilterElementAttributes(ctx context.Context, elem attr.Value) (map[string]attr.Value, bool) {
+	switch value := elem.(type) {
+	case basetypes.ObjectValue:
+		return value.Attributes(), true
+	case basetypes.ObjectValuable:
+		obj, d := value.ToObjectValue(ctx)
+		if d.HasError() {
+			return nil, false
+		}
+		return obj.Attributes(), true
+	default:
+		return nil, false
+	}
 }
 
 func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *modelsv2.VirtualTagConfig) diag.Diagnostics {
@@ -534,9 +602,14 @@ func (m *virtualTagConfigModel) applyPayload(ctx context.Context, payload *model
 	m.CollapsedTagKeys = tfCollapsedTagKeysValue
 
 	if payload.Values != nil {
+		priorByToken, priorByIndex := m.priorLabelFilters(ctx)
 		tfValues := make([]basetypes.ObjectValue, 0, len(payload.Values))
-		for _, v := range payload.Values {
-			tfValue, diag := buildValueFromPayload(ctx, v)
+		for i, v := range payload.Values {
+			prior := priorByToken[v.Token]
+			if prior == nil && i < len(priorByIndex) {
+				prior = priorByIndex[i]
+			}
+			tfValue, diag := buildValueFromPayload(ctx, v, prior)
 			if diag.HasError() {
 				return diag
 			}
@@ -848,7 +921,7 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 			diags.Append(d...)
 			return nil
 		}
-		data.LabelFilters = sortedLabelFilters(labelFilters)
+		data.LabelFilters = labelFilters
 	}
 
 	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {

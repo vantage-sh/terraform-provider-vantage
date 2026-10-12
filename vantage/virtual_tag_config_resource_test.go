@@ -573,8 +573,8 @@ func TestAccVantageVirtualTagConfig_labelFilters(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "values.0.business_metric_token"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.label_key", "label"),
 					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.0", "data"),
-					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.1", "platform"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.0", "platform"),
+					resource.TestCheckResourceAttr(resourceName, "values.0.label_filters.team.1", "data"),
 				),
 			},
 			{
