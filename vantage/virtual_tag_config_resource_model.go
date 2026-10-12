@@ -23,6 +23,7 @@ type virtualTagConfigValueModel struct {
 	DateRanges          types.List                                  `tfsdk:"date_ranges"`
 	DisplayName         types.String                                `tfsdk:"display_name"`
 	Filter              types.String                                `tfsdk:"filter"`
+	LabelFilters        types.Map                                   `tfsdk:"label_filters"`
 	LabelKey            types.String                                `tfsdk:"label_key"`
 	LabelTransforms     types.List                                  `tfsdk:"label_transforms"`
 	LabelValues         types.List                                  `tfsdk:"label_values"`
@@ -74,6 +75,7 @@ type valueData struct {
 	BusinessMetricToken string
 	LabelKey            string
 	LabelValues         []string
+	LabelFilters        map[string][]string
 	CostMetric          *costMetricData
 	DateRanges          []dateRangeData
 	LabelTransforms     []labelTransformData
@@ -101,6 +103,7 @@ func (v *virtualTagConfigValueModel) equal(other *virtualTagConfigValueModel) bo
 		plannedValueEqual(v.DisplayName, other.DisplayName) &&
 		plannedValueEqual(v.Filter, other.Filter) &&
 		plannedValueEqual(v.LabelKey, other.LabelKey) &&
+		plannedValueEqual(v.LabelFilters, other.LabelFilters) &&
 		plannedValueEqual(v.LabelTransforms, other.LabelTransforms) &&
 		plannedValueEqual(v.LabelValues, other.LabelValues) &&
 		plannedValueEqual(v.Name, other.Name) &&
@@ -144,11 +147,20 @@ func (v *virtualTagConfigValueModel) requiresParentUpdateFrom(state *virtualTagC
 		clearsList(v.DateRanges, state.DateRanges) ||
 		clearsList(v.LabelTransforms, state.LabelTransforms) ||
 		clearsList(v.LabelValues, state.LabelValues) ||
+		clearsMap(v.LabelFilters, state.LabelFilters) ||
 		(!state.LabelKey.IsNull() && state.LabelKey.ValueString() != "" &&
 			(v.LabelKey.IsNull() || v.LabelKey.IsUnknown() || v.LabelKey.ValueString() == ""))
 }
 
 func clearsList(plan, state types.List) bool {
+	return !state.IsNull() && !state.IsUnknown() && len(state.Elements()) > 0 &&
+		(plan.IsNull() || plan.IsUnknown() || len(plan.Elements()) == 0)
+}
+
+// clearsMap reports that a planned map removes stored filters. The value update
+// endpoint ignores null and empty label_filters, so the parent update must send
+// the clear. A known non-empty map can use the value update endpoint.
+func clearsMap(plan, state types.Map) bool {
 	return !state.IsNull() && !state.IsUnknown() && len(state.Elements()) > 0 &&
 		(plan.IsNull() || plan.IsUnknown() || len(plan.Elements()) == 0)
 }
@@ -423,6 +435,21 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 		return basetypes.ObjectValue{}, d
 	}
 
+	// Nil means the API omitted filters. Keep null so an omitted config does not
+	// drift against an empty map. A non-nil map, including an empty object, is
+	// stored as returned.
+	labelFiltersValue := types.MapNull(types.ListType{ElemType: types.StringType})
+	if v.LabelFilters != nil {
+		labelFiltersValue, d = types.MapValueFrom(
+			ctx,
+			types.ListType{ElemType: types.StringType},
+			v.LabelFilters,
+		)
+		if d.HasError() {
+			return basetypes.ObjectValue{}, d
+		}
+	}
+
 	// Use the constructor to properly set the state field
 	value, diags := resource_virtual_tag_config.NewValuesValue(
 		resource_virtual_tag_config.ValuesValue{}.AttributeTypes(ctx),
@@ -433,6 +460,7 @@ func buildValueFromPayload(ctx context.Context, v *modelsv2.VirtualTagConfigValu
 			"cost_metric":           costMetricValue,
 			"date_ranges":           dateRangesValue,
 			"display_name":          displayNameValue,
+			"label_filters":         labelFiltersValue,
 			"label_key":             types.StringPointerValue(v.LabelKey),
 			"label_transforms":      labelTransformsValue,
 			"label_values":          labelValuesValue,
@@ -558,6 +586,7 @@ func (m *virtualTagConfigModel) toCreate(ctx context.Context, diags *diag.Diagno
 				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
+				LabelFilters:        data.LabelFilters,
 				LabelKey:            data.LabelKey,
 				LabelValues:         data.LabelValues,
 			}
@@ -672,6 +701,7 @@ func (m *virtualTagConfigModel) toUpdate(ctx context.Context, diags *diag.Diagno
 				DisplayName:         data.DisplayName,
 				Filter:              data.Filter,
 				BusinessMetricToken: data.BusinessMetricToken,
+				LabelFilters:        data.LabelFilters,
 				LabelKey:            data.LabelKey,
 				LabelValues:         data.LabelValues,
 			}
@@ -796,6 +826,15 @@ func (v *virtualTagConfigValueModel) toValueData(ctx context.Context, diags *dia
 		data.LabelValues = labelValues
 	}
 
+	if !v.LabelFilters.IsNull() && !v.LabelFilters.IsUnknown() {
+		labelFilters := map[string][]string{}
+		if d := v.LabelFilters.ElementsAs(ctx, &labelFilters, false); d.HasError() {
+			diags.Append(d...)
+			return nil
+		}
+		data.LabelFilters = labelFilters
+	}
+
 	if !v.CostMetric.IsNull() && !v.CostMetric.IsUnknown() {
 		data.CostMetric = &costMetricData{
 			Filter: v.CostMetric.Filter.ValueStringPointer(),
@@ -875,6 +914,7 @@ func (v *virtualTagConfigValueModel) toCreateValue(ctx context.Context, diags *d
 	value := &modelsv2.CreateVirtualTagConfigValue{
 		BusinessMetricToken: data.BusinessMetricToken,
 		Filter:              data.Filter,
+		LabelFilters:        data.LabelFilters,
 		LabelKey:            data.LabelKey,
 		LabelValues:         data.LabelValues,
 		Name:                data.Name,
@@ -927,6 +967,7 @@ func (v *virtualTagConfigValueModel) toUpdateValue(ctx context.Context, diags *d
 
 	value := &modelsv2.UpdateVirtualTagConfigValue{
 		BusinessMetricToken: data.BusinessMetricToken,
+		LabelFilters:        data.LabelFilters,
 		LabelKey:            data.LabelKey,
 		LabelValues:         data.LabelValues,
 		Name:                data.Name,
