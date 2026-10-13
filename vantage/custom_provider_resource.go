@@ -10,9 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
 	integrationsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/integrations"
-	"github.com/vantage-sh/terraform-provider-vantage/vantage/planmodifiers"
 )
 
 var (
@@ -191,14 +191,12 @@ func (r *CustomProviderResource) Read(ctx context.Context, req resource.ReadRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-//
 // To update name/description, the UI POSTs to /settings/custom_providers/${CUSTOM_PROVIDER_TOKEN}/update_details
 //
 // _method=patch
 // integrations_custom_provider_access[name]=${PROVIDER_NAME}
 // integrations_custom_provider_access[description]=${PROVIDER_DESCRIPTION}
 // commit=Update+Details
-//
 func (r *CustomProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// name and description are guarded by ImmutableAfterCreate plan modifiers,
 	// so they are always reverted to their state values before Update runs.
@@ -279,4 +277,3 @@ func (r *CustomProviderResource) applyWorkspaces(ctx context.Context, integratio
 	diags.Append(d...)
 	return result
 }
-

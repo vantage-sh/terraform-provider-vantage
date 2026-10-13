@@ -37,7 +37,7 @@ func TestAccCustomProviderResource_basic(t *testing.T) {
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
-				// Step 3: Import by token and verify all importable fields match.
+			// Step 3: Import by token and verify all importable fields match.
 			// description is write-only (not returned by the API) so it is excluded.
 			{
 				ResourceName:            resourceName,
