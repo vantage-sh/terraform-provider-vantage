@@ -7,15 +7,14 @@ import (
 )
 
 // UseStateWhenEmpty returns a planmodifier.Set that, when the attribute is
-// absent from config (null), preserves the prior state value only if that
-// state value is an empty set. If the state value is non-empty it is left
-// alone so the plan reflects a change, allowing the Update method to clear
-// the field by calling the API with an empty collection.
+// absent from config (null), preserves the prior state value — including a
+// non-empty set the API may have assigned. An explicit config value is planned
+// as-is.
 //
 // This gives Optional+Computed set fields the following behaviour:
-//   - User never sets the field → state stays empty, no perpetual drift.
-//   - User sets the field and later removes it from config → plan detects a
-//     change and the provider clears the value via the API.
+//   - User never sets the field → prior state (empty or API-assigned) is kept,
+//     so refresh/import of an auto-assigned workspace does not cause perpetual
+//     drift.
 //   - User sets the field to an explicit value → config value is used as-is.
 func UseStateWhenEmpty() planmodifier.Set {
 	return useStateWhenEmptyModifier{}
@@ -24,7 +23,7 @@ func UseStateWhenEmpty() planmodifier.Set {
 type useStateWhenEmptyModifier struct{}
 
 func (m useStateWhenEmptyModifier) Description(_ context.Context) string {
-	return "Preserves empty state when unset in config; allows non-empty state to be cleared when removed from config."
+	return "Preserves prior state when unset in config, including non-empty API-assigned sets."
 }
 
 func (m useStateWhenEmptyModifier) MarkdownDescription(ctx context.Context) string {
@@ -40,12 +39,7 @@ func (m useStateWhenEmptyModifier) PlanModifySet(_ context.Context, req planmodi
 	if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
 		return
 	}
-	// Prior state is a known, non-empty set. Leave the plan value alone so
-	// Terraform detects the change and calls Update, which will clear the field.
-	if len(req.StateValue.Elements()) > 0 {
-		return
-	}
-	// Prior state is an empty set and config is null — preserve it to avoid
-	// perpetual "known after apply" on resources that never set this field.
+	// Config omitted — preserve prior state (empty or non-empty) so an
+	// API-assigned workspace does not show up as perpetual drift.
 	resp.PlanValue = req.StateValue
 }

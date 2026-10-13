@@ -24,7 +24,7 @@ func TestAccIntegrationByNameDataSource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrPair(dataSourceName, "status", resourceName, "status"),
 					resource.TestCheckResourceAttr(dataSourceName, "name", providerName),
 					resource.TestCheckResourceAttrSet(dataSourceName, "created_at"),
-					resource.TestCheckResourceAttr(dataSourceName, "workspace_tokens.#", "0"),
+					resource.TestCheckResourceAttr(dataSourceName, "workspace_tokens.#", "1"),
 					resource.TestCheckResourceAttr(dataSourceName, "managed_account_tokens.#", "0"),
 				),
 			},

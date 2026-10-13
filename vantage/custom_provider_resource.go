@@ -122,15 +122,25 @@ func (r *CustomProviderResource) Create(ctx context.Context, req resource.Create
 	data.Id = types.StringValue(out.Payload.Token)
 	data.Status = types.StringValue(out.Payload.Status)
 
-	// Associate workspaces immediately after creation if specified;
-	// otherwise resolve to an empty set so the value is always known after apply.
+	// Associate workspaces immediately after creation if specified.
+	// When omitted, store whatever the API assigned (sole-workspace accounts
+	// get an automatic workspace; multi-workspace accounts stay unassigned).
 	if !data.Workspaces.IsNull() && !data.Workspaces.IsUnknown() {
 		data.Workspaces = r.applyWorkspaces(ctx, out.Payload.Token, data.Workspaces, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	} else {
-		data.Workspaces, _ = types.SetValueFrom(ctx, types.StringType, []string{})
+		tokens := out.Payload.WorkspaceTokens
+		if tokens == nil {
+			tokens = []string{}
+		}
+		workspaces, diags := types.SetValueFrom(ctx, types.StringType, tokens)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.Workspaces = workspaces
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

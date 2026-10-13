@@ -25,6 +25,8 @@ func TestAccCustomProviderResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "status"),
 					resource.TestCheckResourceAttrPair(resourceName, "id", resourceName, "token"),
+					// Sole-workspace accounts get an API-assigned workspace on create.
+					resource.TestCheckResourceAttr(resourceName, "workspaces.#", "1"),
 				),
 			},
 			// Step 2: Confirm no drift even though status is system-managed.
@@ -71,6 +73,8 @@ func TestAccCustomProviderResource_withDescription(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "description", "Initial description"),
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
 					resource.TestCheckResourceAttrSet(resourceName, "status"),
+					// Sole-workspace accounts get an API-assigned workspace on create.
+					resource.TestCheckResourceAttr(resourceName, "workspaces.#", "1"),
 				),
 			},
 			// Step 2: Confirm no drift. Verifies that system-managed status does
@@ -100,15 +104,16 @@ func TestAccCustomProviderResource_withWorkspaces(t *testing.T) {
 		PreCheck:                 func() { acctest.PreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: Create without workspaces; confirm workspaces is empty set.
+			// Step 1: Create without workspaces; sole-workspace accounts get one
+			// API-assigned workspace token on create.
 			{
 				Config: testAccCustomProviderConfig("Provider With Workspaces", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "token"),
-					resource.TestCheckResourceAttr(resourceName, "workspaces.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "workspaces.#", "1"),
 				),
 			},
-			// Step 2: Add the test workspace; confirm it appears in state without
+			// Step 2: Set an explicit workspace; confirm it appears in state without
 			// replacing the custom provider resource.
 			{
 				Config: testAccCustomProviderWorkspacesConfig("Provider With Workspaces", workspaceName),
