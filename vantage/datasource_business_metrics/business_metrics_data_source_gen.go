@@ -115,12 +115,9 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 										MarkdownDescription: "The labels that the BusinessMetric is filtered by within a particular CostReport.",
 									},
-									"label_filters": schema.SingleNestedAttribute{
-										Attributes: map[string]schema.Attribute{},
-										CustomType: LabelFiltersType{
-											ObjectType: types.ObjectType{
-												AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
-											},
+									"label_filters": schema.MapAttribute{
+										ElementType: types.ListType{
+											ElemType: types.StringType,
 										},
 										Computed:            true,
 										Description:         "The ClickHouse BusinessMetric label filters applied within a CostReport. Each key is required and values within a key are alternatives.",
@@ -2782,12 +2779,12 @@ func (t CostReportTokensWithMetadataType) ValueFromObject(ctx context.Context, i
 		return nil, diags
 	}
 
-	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.ObjectValue)
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filters expected to be basetypes.ObjectValue, was: %T`, labelFiltersAttribute))
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -2968,12 +2965,12 @@ func NewCostReportTokensWithMetadataValue(attributeTypes map[string]attr.Type, a
 		return NewCostReportTokensWithMetadataValueUnknown(), diags
 	}
 
-	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.ObjectValue)
+	labelFiltersVal, ok := labelFiltersAttribute.(basetypes.MapValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`label_filters expected to be basetypes.ObjectValue, was: %T`, labelFiltersAttribute))
+			fmt.Sprintf(`label_filters expected to be basetypes.MapValue, was: %T`, labelFiltersAttribute))
 	}
 
 	unitScaleAttribute, ok := attributes["unit_scale"]
@@ -3081,7 +3078,7 @@ type CostReportTokensWithMetadataValue struct {
 	CostReportToken basetypes.StringValue `tfsdk:"cost_report_token"`
 	Label           basetypes.StringValue `tfsdk:"label"`
 	LabelFilter     basetypes.ListValue   `tfsdk:"label_filter"`
-	LabelFilters    basetypes.ObjectValue `tfsdk:"label_filters"`
+	LabelFilters    basetypes.MapValue    `tfsdk:"label_filters"`
 	UnitScale       basetypes.StringValue `tfsdk:"unit_scale"`
 	state           attr.ValueState
 }
@@ -3098,8 +3095,10 @@ func (v CostReportTokensWithMetadataValue) ToTerraformValue(ctx context.Context)
 	attrTypes["label_filter"] = basetypes.ListType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
-	attrTypes["label_filters"] = basetypes.ObjectType{
-		AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
+	attrTypes["label_filters"] = basetypes.MapType{
+		ElemType: types.ListType{
+			ElemType: types.StringType,
+		},
 	}.TerraformType(ctx)
 	attrTypes["unit_scale"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -3186,27 +3185,6 @@ func (v CostReportTokensWithMetadataValue) String() string {
 func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var labelFilters basetypes.ObjectValue
-
-	if v.LabelFilters.IsNull() {
-		labelFilters = types.ObjectNull(
-			LabelFiltersValue{}.AttributeTypes(ctx),
-		)
-	}
-
-	if v.LabelFilters.IsUnknown() {
-		labelFilters = types.ObjectUnknown(
-			LabelFiltersValue{}.AttributeTypes(ctx),
-		)
-	}
-
-	if !v.LabelFilters.IsNull() && !v.LabelFilters.IsUnknown() {
-		labelFilters = types.ObjectValueMust(
-			LabelFiltersValue{}.AttributeTypes(ctx),
-			v.LabelFilters.Attributes(),
-		)
-	}
-
 	var labelFilterVal basetypes.ListValue
 	switch {
 	case v.LabelFilter.IsUnknown():
@@ -3227,8 +3205,45 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 			"label_filter": basetypes.ListType{
 				ElemType: types.StringType,
 			},
-			"label_filters": basetypes.ObjectType{
-				AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			"unit_scale": basetypes.StringType{},
+		}), diags
+	}
+
+	var labelFiltersVal basetypes.MapValue
+	switch {
+	case v.LabelFilters.IsUnknown():
+		labelFiltersVal = types.MapUnknown(types.ListType{
+			ElemType: types.StringType,
+		})
+	case v.LabelFilters.IsNull():
+		labelFiltersVal = types.MapNull(types.ListType{
+			ElemType: types.StringType,
+		})
+	default:
+		var d diag.Diagnostics
+		labelFiltersVal, d = types.MapValue(types.ListType{
+			ElemType: types.StringType,
+		}, v.LabelFilters.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"calculation_type":  basetypes.StringType{},
+			"cost_report_token": basetypes.StringType{},
+			"label":             basetypes.StringType{},
+			"label_filter": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"label_filters": basetypes.MapType{
+				ElemType: types.ListType{
+					ElemType: types.StringType,
+				},
 			},
 			"unit_scale": basetypes.StringType{},
 		}), diags
@@ -3241,8 +3256,10 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"label_filters": basetypes.ObjectType{
-			AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
 		},
 		"unit_scale": basetypes.StringType{},
 	}
@@ -3262,7 +3279,7 @@ func (v CostReportTokensWithMetadataValue) ToObjectValue(ctx context.Context) (b
 			"cost_report_token": v.CostReportToken,
 			"label":             v.Label,
 			"label_filter":      labelFilterVal,
-			"label_filters":     labelFilters,
+			"label_filters":     labelFiltersVal,
 			"unit_scale":        v.UnitScale,
 		})
 
@@ -3327,271 +3344,13 @@ func (v CostReportTokensWithMetadataValue) AttributeTypes(ctx context.Context) m
 		"label_filter": basetypes.ListType{
 			ElemType: types.StringType,
 		},
-		"label_filters": basetypes.ObjectType{
-			AttrTypes: LabelFiltersValue{}.AttributeTypes(ctx),
+		"label_filters": basetypes.MapType{
+			ElemType: types.ListType{
+				ElemType: types.StringType,
+			},
 		},
 		"unit_scale": basetypes.StringType{},
 	}
-}
-
-var _ basetypes.ObjectTypable = LabelFiltersType{}
-
-type LabelFiltersType struct {
-	basetypes.ObjectType
-}
-
-func (t LabelFiltersType) Equal(o attr.Type) bool {
-	other, ok := o.(LabelFiltersType)
-
-	if !ok {
-		return false
-	}
-
-	return t.ObjectType.Equal(other.ObjectType)
-}
-
-func (t LabelFiltersType) String() string {
-	return "LabelFiltersType"
-}
-
-func (t LabelFiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	return LabelFiltersValue{
-		state: attr.ValueStateKnown,
-	}, diags
-}
-
-func NewLabelFiltersValueNull() LabelFiltersValue {
-	return LabelFiltersValue{
-		state: attr.ValueStateNull,
-	}
-}
-
-func NewLabelFiltersValueUnknown() LabelFiltersValue {
-	return LabelFiltersValue{
-		state: attr.ValueStateUnknown,
-	}
-}
-
-func NewLabelFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (LabelFiltersValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
-	ctx := context.Background()
-
-	for name, attributeType := range attributeTypes {
-		attribute, ok := attributes[name]
-
-		if !ok {
-			diags.AddError(
-				"Missing LabelFiltersValue Attribute Value",
-				"While creating a LabelFiltersValue value, a missing attribute value was detected. "+
-					"A LabelFiltersValue must contain values for all attributes, even if null or unknown. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("LabelFiltersValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
-			)
-
-			continue
-		}
-
-		if !attributeType.Equal(attribute.Type(ctx)) {
-			diags.AddError(
-				"Invalid LabelFiltersValue Attribute Type",
-				"While creating a LabelFiltersValue value, an invalid attribute value was detected. "+
-					"A LabelFiltersValue must use a matching attribute type for the value. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("LabelFiltersValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
-					fmt.Sprintf("LabelFiltersValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
-			)
-		}
-	}
-
-	for name := range attributes {
-		_, ok := attributeTypes[name]
-
-		if !ok {
-			diags.AddError(
-				"Extra LabelFiltersValue Attribute Value",
-				"While creating a LabelFiltersValue value, an extra attribute value was detected. "+
-					"A LabelFiltersValue must not contain values beyond the expected attribute types. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("Extra LabelFiltersValue Attribute Name: %s", name),
-			)
-		}
-	}
-
-	if diags.HasError() {
-		return NewLabelFiltersValueUnknown(), diags
-	}
-
-	if diags.HasError() {
-		return NewLabelFiltersValueUnknown(), diags
-	}
-
-	return LabelFiltersValue{
-		state: attr.ValueStateKnown,
-	}, diags
-}
-
-func NewLabelFiltersValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) LabelFiltersValue {
-	object, diags := NewLabelFiltersValue(attributeTypes, attributes)
-
-	if diags.HasError() {
-		// This could potentially be added to the diag package.
-		diagsStrings := make([]string, 0, len(diags))
-
-		for _, diagnostic := range diags {
-			diagsStrings = append(diagsStrings, fmt.Sprintf(
-				"%s | %s | %s",
-				diagnostic.Severity(),
-				diagnostic.Summary(),
-				diagnostic.Detail()))
-		}
-
-		panic("NewLabelFiltersValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
-	}
-
-	return object
-}
-
-func (t LabelFiltersType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
-	if in.Type() == nil {
-		return NewLabelFiltersValueNull(), nil
-	}
-
-	if !in.Type().Equal(t.TerraformType(ctx)) {
-		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
-	}
-
-	if !in.IsKnown() {
-		return NewLabelFiltersValueUnknown(), nil
-	}
-
-	if in.IsNull() {
-		return NewLabelFiltersValueNull(), nil
-	}
-
-	attributes := map[string]attr.Value{}
-
-	val := map[string]tftypes.Value{}
-
-	err := in.As(&val)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range val {
-		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
-
-		if err != nil {
-			return nil, err
-		}
-
-		attributes[k] = a
-	}
-
-	return NewLabelFiltersValueMust(LabelFiltersValue{}.AttributeTypes(ctx), attributes), nil
-}
-
-func (t LabelFiltersType) ValueType(ctx context.Context) attr.Value {
-	return LabelFiltersValue{}
-}
-
-var _ basetypes.ObjectValuable = LabelFiltersValue{}
-
-type LabelFiltersValue struct {
-	state attr.ValueState
-}
-
-func (v LabelFiltersValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 0)
-
-	objectType := tftypes.Object{AttributeTypes: attrTypes}
-
-	switch v.state {
-	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 0)
-
-		if err := tftypes.ValidateValue(objectType, vals); err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		return tftypes.NewValue(objectType, vals), nil
-	case attr.ValueStateNull:
-		return tftypes.NewValue(objectType, nil), nil
-	case attr.ValueStateUnknown:
-		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
-	default:
-		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
-	}
-}
-
-func (v LabelFiltersValue) IsNull() bool {
-	return v.state == attr.ValueStateNull
-}
-
-func (v LabelFiltersValue) IsUnknown() bool {
-	return v.state == attr.ValueStateUnknown
-}
-
-func (v LabelFiltersValue) String() string {
-	return "LabelFiltersValue"
-}
-
-func (v LabelFiltersValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	attributeTypes := map[string]attr.Type{}
-
-	if v.IsNull() {
-		return types.ObjectNull(attributeTypes), diags
-	}
-
-	if v.IsUnknown() {
-		return types.ObjectUnknown(attributeTypes), diags
-	}
-
-	objVal, diags := types.ObjectValue(
-		attributeTypes,
-		map[string]attr.Value{})
-
-	return objVal, diags
-}
-
-func (v LabelFiltersValue) Equal(o attr.Value) bool {
-	other, ok := o.(LabelFiltersValue)
-
-	if !ok {
-		return false
-	}
-
-	if v.state != other.state {
-		return false
-	}
-
-	if v.state != attr.ValueStateKnown {
-		return true
-	}
-
-	return true
-}
-
-func (v LabelFiltersValue) Type(ctx context.Context) attr.Type {
-	return LabelFiltersType{
-		basetypes.ObjectType{
-			AttrTypes: v.AttributeTypes(ctx),
-		},
-	}
-}
-
-func (v LabelFiltersValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
-	return map[string]attr.Type{}
 }
 
 var _ basetypes.ObjectTypable = DatadogMetricFieldsType{}
