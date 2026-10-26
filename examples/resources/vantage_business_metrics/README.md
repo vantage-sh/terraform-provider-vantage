@@ -37,3 +37,17 @@ A change to `gcp_bigquery_metric_fields` replaces the resource. The Vantage API 
 See `clickhouse.tf` for a business metric imported from a ClickHouse query endpoint.
 
 A change to `clickhouse_metric_fields` replaces the resource. The Vantage API does not update that block in place.
+
+### Business Metric from Metronome
+
+See `metronome.tf` for revenue and usage metrics using a connected Metronome credential. Revenue defaults to `daily_revenue` with `ingest_alias` labels. Usage requires a billable metric UUID and display name and defaults to `customer_name` labels.
+
+Configuration edits update the metric in place. Omitting `cost_report_tokens_with_metadata` retains report attachments; setting it to `[]` clears them. Removing the Metronome block does not disconnect the integration. To switch usage to revenue, set `metric_kind = "revenue"` and `metric = "daily_revenue"`, and remove billable metric fields. Use an explicit label source when changing kinds. Terraform requires a concrete label source when configured; the raw API's empty-string reset is not supported.
+
+Import an existing metric by token, then use its current configuration in Terraform:
+
+```sh
+terraform import vantage_business_metric.metronome_revenue bsnss_mtrc_replace_me
+```
+
+Roll out Core support before publishing the generated Go client and releasing the Terraform provider.

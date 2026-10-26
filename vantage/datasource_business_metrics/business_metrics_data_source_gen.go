@@ -194,6 +194,41 @@ func BusinessMetricsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The Integration token used to import the BusinessMetric.",
 							MarkdownDescription: "The Integration token used to import the BusinessMetric.",
 						},
+						"metronome_metric_fields": schema.SingleNestedAttribute{
+							Attributes: map[string]schema.Attribute{
+								"billable_metric_id": schema.StringAttribute{
+									Computed:            true,
+									Description:         "Metronome billable metric UUID for usage metrics.",
+									MarkdownDescription: "Metronome billable metric UUID for usage metrics.",
+								},
+								"billable_metric_name": schema.StringAttribute{
+									Computed:            true,
+									Description:         "Metronome billable metric display name for usage metrics.",
+									MarkdownDescription: "Metronome billable metric display name for usage metrics.",
+								},
+								"label_source": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The source of labels for imported values.",
+									MarkdownDescription: "The source of labels for imported values.",
+								},
+								"metric": schema.StringAttribute{
+									Computed:            true,
+									Description:         "The selected Metronome metric.",
+									MarkdownDescription: "The selected Metronome metric.",
+								},
+								"metric_kind": schema.StringAttribute{
+									Computed:            true,
+									Description:         "Metronome metric kind.",
+									MarkdownDescription: "Metronome metric kind.",
+								},
+							},
+							CustomType: MetronomeMetricFieldsType{
+								ObjectType: types.ObjectType{
+									AttrTypes: MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+								},
+							},
+							Computed: true,
+						},
 						"snowflake_metric_fields": schema.SingleNestedAttribute{
 							Attributes: map[string]schema.Attribute{
 								"sql_query": schema.StringAttribute{
@@ -423,6 +458,24 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
 	}
 
+	metronomeMetricFieldsAttribute, ok := attributes["metronome_metric_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metronome_metric_fields is missing from object`)
+
+		return nil, diags
+	}
+
+	metronomeMetricFieldsVal, ok := metronomeMetricFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metronome_metric_fields expected to be basetypes.ObjectValue, was: %T`, metronomeMetricFieldsAttribute))
+	}
+
 	snowflakeMetricFieldsAttribute, ok := attributes["snowflake_metric_fields"]
 
 	if !ok {
@@ -491,6 +544,7 @@ func (t BusinessMetricsType) ValueFromObject(ctx context.Context, in basetypes.O
 		Id:                           idVal,
 		ImportType:                   importTypeVal,
 		IntegrationToken:             integrationTokenVal,
+		MetronomeMetricFields:        metronomeMetricFieldsVal,
 		SnowflakeMetricFields:        snowflakeMetricFieldsVal,
 		Title:                        titleVal,
 		Token:                        tokenVal,
@@ -723,6 +777,24 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
 	}
 
+	metronomeMetricFieldsAttribute, ok := attributes["metronome_metric_fields"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metronome_metric_fields is missing from object`)
+
+		return NewBusinessMetricsValueUnknown(), diags
+	}
+
+	metronomeMetricFieldsVal, ok := metronomeMetricFieldsAttribute.(basetypes.ObjectValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metronome_metric_fields expected to be basetypes.ObjectValue, was: %T`, metronomeMetricFieldsAttribute))
+	}
+
 	snowflakeMetricFieldsAttribute, ok := attributes["snowflake_metric_fields"]
 
 	if !ok {
@@ -791,6 +863,7 @@ func NewBusinessMetricsValue(attributeTypes map[string]attr.Type, attributes map
 		Id:                           idVal,
 		ImportType:                   importTypeVal,
 		IntegrationToken:             integrationTokenVal,
+		MetronomeMetricFields:        metronomeMetricFieldsVal,
 		SnowflakeMetricFields:        snowflakeMetricFieldsVal,
 		Title:                        titleVal,
 		Token:                        tokenVal,
@@ -875,6 +948,7 @@ type BusinessMetricsValue struct {
 	Id                           basetypes.StringValue `tfsdk:"id"`
 	ImportType                   basetypes.StringValue `tfsdk:"import_type"`
 	IntegrationToken             basetypes.StringValue `tfsdk:"integration_token"`
+	MetronomeMetricFields        basetypes.ObjectValue `tfsdk:"metronome_metric_fields"`
 	SnowflakeMetricFields        basetypes.ObjectValue `tfsdk:"snowflake_metric_fields"`
 	Title                        basetypes.StringValue `tfsdk:"title"`
 	Token                        basetypes.StringValue `tfsdk:"token"`
@@ -882,7 +956,7 @@ type BusinessMetricsValue struct {
 }
 
 func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 12)
+	attrTypes := make(map[string]tftypes.Type, 13)
 
 	var val tftypes.Value
 	var err error
@@ -906,6 +980,9 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["import_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["metronome_metric_fields"] = basetypes.ObjectType{
+		AttrTypes: MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+	}.TerraformType(ctx)
 	attrTypes["snowflake_metric_fields"] = basetypes.ObjectType{
 		AttrTypes: SnowflakeMetricFieldsValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
@@ -916,7 +993,7 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 12)
+		vals := make(map[string]tftypes.Value, 13)
 
 		val, err = v.ClickhouseMetricFields.ToTerraformValue(ctx)
 
@@ -989,6 +1066,14 @@ func (v BusinessMetricsValue) ToTerraformValue(ctx context.Context) (tftypes.Val
 		}
 
 		vals["integration_token"] = val
+
+		val, err = v.MetronomeMetricFields.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["metronome_metric_fields"] = val
 
 		val, err = v.SnowflakeMetricFields.ToTerraformValue(ctx)
 
@@ -1156,6 +1241,27 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		)
 	}
 
+	var metronomeMetricFields basetypes.ObjectValue
+
+	if v.MetronomeMetricFields.IsNull() {
+		metronomeMetricFields = types.ObjectNull(
+			MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if v.MetronomeMetricFields.IsUnknown() {
+		metronomeMetricFields = types.ObjectUnknown(
+			MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+		)
+	}
+
+	if !v.MetronomeMetricFields.IsNull() && !v.MetronomeMetricFields.IsUnknown() {
+		metronomeMetricFields = types.ObjectValueMust(
+			MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+			v.MetronomeMetricFields.Attributes(),
+		)
+	}
+
 	var snowflakeMetricFields basetypes.ObjectValue
 
 	if v.SnowflakeMetricFields.IsNull() {
@@ -1197,6 +1303,9 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 		"id":                basetypes.StringType{},
 		"import_type":       basetypes.StringType{},
 		"integration_token": basetypes.StringType{},
+		"metronome_metric_fields": basetypes.ObjectType{
+			AttrTypes: MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+		},
 		"snowflake_metric_fields": basetypes.ObjectType{
 			AttrTypes: SnowflakeMetricFieldsValue{}.AttributeTypes(ctx),
 		},
@@ -1224,6 +1333,7 @@ func (v BusinessMetricsValue) ToObjectValue(ctx context.Context) (basetypes.Obje
 			"id":                               v.Id,
 			"import_type":                      v.ImportType,
 			"integration_token":                v.IntegrationToken,
+			"metronome_metric_fields":          metronomeMetricFields,
 			"snowflake_metric_fields":          snowflakeMetricFields,
 			"title":                            v.Title,
 			"token":                            v.Token,
@@ -1283,6 +1393,10 @@ func (v BusinessMetricsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.MetronomeMetricFields.Equal(other.MetronomeMetricFields) {
+		return false
+	}
+
 	if !v.SnowflakeMetricFields.Equal(other.SnowflakeMetricFields) {
 		return false
 	}
@@ -1327,6 +1441,9 @@ func (v BusinessMetricsValue) AttributeTypes(ctx context.Context) map[string]att
 		"id":                basetypes.StringType{},
 		"import_type":       basetypes.StringType{},
 		"integration_token": basetypes.StringType{},
+		"metronome_metric_fields": basetypes.ObjectType{
+			AttrTypes: MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+		},
 		"snowflake_metric_fields": basetypes.ObjectType{
 			AttrTypes: SnowflakeMetricFieldsValue{}.AttributeTypes(ctx),
 		},
@@ -4053,6 +4170,550 @@ func (v GcpBigqueryMetricFieldsValue) AttributeTypes(ctx context.Context) map[st
 	return map[string]attr.Type{
 		"query_project_id": basetypes.StringType{},
 		"sql_query":        basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = MetronomeMetricFieldsType{}
+
+type MetronomeMetricFieldsType struct {
+	basetypes.ObjectType
+}
+
+func (t MetronomeMetricFieldsType) Equal(o attr.Type) bool {
+	other, ok := o.(MetronomeMetricFieldsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t MetronomeMetricFieldsType) String() string {
+	return "MetronomeMetricFieldsType"
+}
+
+func (t MetronomeMetricFieldsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	billableMetricIdAttribute, ok := attributes["billable_metric_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`billable_metric_id is missing from object`)
+
+		return nil, diags
+	}
+
+	billableMetricIdVal, ok := billableMetricIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`billable_metric_id expected to be basetypes.StringValue, was: %T`, billableMetricIdAttribute))
+	}
+
+	billableMetricNameAttribute, ok := attributes["billable_metric_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`billable_metric_name is missing from object`)
+
+		return nil, diags
+	}
+
+	billableMetricNameVal, ok := billableMetricNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`billable_metric_name expected to be basetypes.StringValue, was: %T`, billableMetricNameAttribute))
+	}
+
+	labelSourceAttribute, ok := attributes["label_source"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_source is missing from object`)
+
+		return nil, diags
+	}
+
+	labelSourceVal, ok := labelSourceAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_source expected to be basetypes.StringValue, was: %T`, labelSourceAttribute))
+	}
+
+	metricAttribute, ok := attributes["metric"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metric is missing from object`)
+
+		return nil, diags
+	}
+
+	metricVal, ok := metricAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metric expected to be basetypes.StringValue, was: %T`, metricAttribute))
+	}
+
+	metricKindAttribute, ok := attributes["metric_kind"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metric_kind is missing from object`)
+
+		return nil, diags
+	}
+
+	metricKindVal, ok := metricKindAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metric_kind expected to be basetypes.StringValue, was: %T`, metricKindAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return MetronomeMetricFieldsValue{
+		BillableMetricId:   billableMetricIdVal,
+		BillableMetricName: billableMetricNameVal,
+		LabelSource:        labelSourceVal,
+		Metric:             metricVal,
+		MetricKind:         metricKindVal,
+		state:              attr.ValueStateKnown,
+	}, diags
+}
+
+func NewMetronomeMetricFieldsValueNull() MetronomeMetricFieldsValue {
+	return MetronomeMetricFieldsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewMetronomeMetricFieldsValueUnknown() MetronomeMetricFieldsValue {
+	return MetronomeMetricFieldsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewMetronomeMetricFieldsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (MetronomeMetricFieldsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing MetronomeMetricFieldsValue Attribute Value",
+				"While creating a MetronomeMetricFieldsValue value, a missing attribute value was detected. "+
+					"A MetronomeMetricFieldsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("MetronomeMetricFieldsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid MetronomeMetricFieldsValue Attribute Type",
+				"While creating a MetronomeMetricFieldsValue value, an invalid attribute value was detected. "+
+					"A MetronomeMetricFieldsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("MetronomeMetricFieldsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("MetronomeMetricFieldsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra MetronomeMetricFieldsValue Attribute Value",
+				"While creating a MetronomeMetricFieldsValue value, an extra attribute value was detected. "+
+					"A MetronomeMetricFieldsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra MetronomeMetricFieldsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	billableMetricIdAttribute, ok := attributes["billable_metric_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`billable_metric_id is missing from object`)
+
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	billableMetricIdVal, ok := billableMetricIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`billable_metric_id expected to be basetypes.StringValue, was: %T`, billableMetricIdAttribute))
+	}
+
+	billableMetricNameAttribute, ok := attributes["billable_metric_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`billable_metric_name is missing from object`)
+
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	billableMetricNameVal, ok := billableMetricNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`billable_metric_name expected to be basetypes.StringValue, was: %T`, billableMetricNameAttribute))
+	}
+
+	labelSourceAttribute, ok := attributes["label_source"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`label_source is missing from object`)
+
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	labelSourceVal, ok := labelSourceAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`label_source expected to be basetypes.StringValue, was: %T`, labelSourceAttribute))
+	}
+
+	metricAttribute, ok := attributes["metric"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metric is missing from object`)
+
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	metricVal, ok := metricAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metric expected to be basetypes.StringValue, was: %T`, metricAttribute))
+	}
+
+	metricKindAttribute, ok := attributes["metric_kind"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`metric_kind is missing from object`)
+
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	metricKindVal, ok := metricKindAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`metric_kind expected to be basetypes.StringValue, was: %T`, metricKindAttribute))
+	}
+
+	if diags.HasError() {
+		return NewMetronomeMetricFieldsValueUnknown(), diags
+	}
+
+	return MetronomeMetricFieldsValue{
+		BillableMetricId:   billableMetricIdVal,
+		BillableMetricName: billableMetricNameVal,
+		LabelSource:        labelSourceVal,
+		Metric:             metricVal,
+		MetricKind:         metricKindVal,
+		state:              attr.ValueStateKnown,
+	}, diags
+}
+
+func NewMetronomeMetricFieldsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) MetronomeMetricFieldsValue {
+	object, diags := NewMetronomeMetricFieldsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewMetronomeMetricFieldsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t MetronomeMetricFieldsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewMetronomeMetricFieldsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewMetronomeMetricFieldsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewMetronomeMetricFieldsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewMetronomeMetricFieldsValueMust(MetronomeMetricFieldsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t MetronomeMetricFieldsType) ValueType(ctx context.Context) attr.Value {
+	return MetronomeMetricFieldsValue{}
+}
+
+var _ basetypes.ObjectValuable = MetronomeMetricFieldsValue{}
+
+type MetronomeMetricFieldsValue struct {
+	BillableMetricId   basetypes.StringValue `tfsdk:"billable_metric_id"`
+	BillableMetricName basetypes.StringValue `tfsdk:"billable_metric_name"`
+	LabelSource        basetypes.StringValue `tfsdk:"label_source"`
+	Metric             basetypes.StringValue `tfsdk:"metric"`
+	MetricKind         basetypes.StringValue `tfsdk:"metric_kind"`
+	state              attr.ValueState
+}
+
+func (v MetronomeMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 5)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["billable_metric_id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["billable_metric_name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["label_source"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["metric"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["metric_kind"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 5)
+
+		val, err = v.BillableMetricId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["billable_metric_id"] = val
+
+		val, err = v.BillableMetricName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["billable_metric_name"] = val
+
+		val, err = v.LabelSource.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["label_source"] = val
+
+		val, err = v.Metric.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["metric"] = val
+
+		val, err = v.MetricKind.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["metric_kind"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v MetronomeMetricFieldsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v MetronomeMetricFieldsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v MetronomeMetricFieldsValue) String() string {
+	return "MetronomeMetricFieldsValue"
+}
+
+func (v MetronomeMetricFieldsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"billable_metric_id":   basetypes.StringType{},
+		"billable_metric_name": basetypes.StringType{},
+		"label_source":         basetypes.StringType{},
+		"metric":               basetypes.StringType{},
+		"metric_kind":          basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"billable_metric_id":   v.BillableMetricId,
+			"billable_metric_name": v.BillableMetricName,
+			"label_source":         v.LabelSource,
+			"metric":               v.Metric,
+			"metric_kind":          v.MetricKind,
+		})
+
+	return objVal, diags
+}
+
+func (v MetronomeMetricFieldsValue) Equal(o attr.Value) bool {
+	other, ok := o.(MetronomeMetricFieldsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.BillableMetricId.Equal(other.BillableMetricId) {
+		return false
+	}
+
+	if !v.BillableMetricName.Equal(other.BillableMetricName) {
+		return false
+	}
+
+	if !v.LabelSource.Equal(other.LabelSource) {
+		return false
+	}
+
+	if !v.Metric.Equal(other.Metric) {
+		return false
+	}
+
+	if !v.MetricKind.Equal(other.MetricKind) {
+		return false
+	}
+
+	return true
+}
+
+func (v MetronomeMetricFieldsValue) Type(ctx context.Context) attr.Type {
+	return MetronomeMetricFieldsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v MetronomeMetricFieldsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"billable_metric_id":   basetypes.StringType{},
+		"billable_metric_name": basetypes.StringType{},
+		"label_source":         basetypes.StringType{},
+		"metric":               basetypes.StringType{},
+		"metric_kind":          basetypes.StringType{},
 	}
 }
 

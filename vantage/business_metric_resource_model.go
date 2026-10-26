@@ -27,6 +27,7 @@ type BusinessMetricPayloadApplier interface {
 	SetClickhouseMetricFields(clickhouseMetricFields resource_business_metric.ClickhouseMetricFieldsValue)
 	SetGcpBigqueryMetricFields(gcpBigqueryMetricFields resource_business_metric.GcpBigqueryMetricFieldsValue)
 	SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue)
+	SetMetronomeMetricFields(metronomeMetricFields resource_business_metric.MetronomeMetricFieldsValue)
 }
 
 type businessMetricResourceModel resource_business_metric.BusinessMetricModel
@@ -175,6 +176,26 @@ func (m *businessMetricResourceModel) SetGcpBigqueryMetricFields(gcpBigqueryMetr
 
 func (m *businessMetricResourceModel) SetSnowflakeMetricFields(snowflakeMetricFields resource_business_metric.SnowflakeMetricFieldsValue) {
 	m.SnowflakeMetricFields = snowflakeMetricFields
+}
+
+func (m *businessMetricResourceModel) SetMetronomeMetricFields(fields resource_business_metric.MetronomeMetricFieldsValue) {
+	m.MetronomeMetricFields = fields
+}
+
+func (m *businessMetricDataSourceValue) SetMetronomeMetricFields(fields resource_business_metric.MetronomeMetricFieldsValue) {
+	ctx := context.Background()
+	attrTypes := datasource_business_metrics.MetronomeMetricFieldsValue{}.AttributeTypes(ctx)
+	if fields.IsNull() {
+		m.MetronomeMetricFields = types.ObjectNull(attrTypes)
+		return
+	}
+	m.MetronomeMetricFields, _ = types.ObjectValue(attrTypes, map[string]attr.Value{
+		"metric_kind":          fields.MetricKind,
+		"metric":               fields.Metric,
+		"billable_metric_id":   fields.BillableMetricId,
+		"billable_metric_name": fields.BillableMetricName,
+		"label_source":         fields.LabelSource,
+	})
 }
 
 func (m *businessMetricDataSourceValue) SetTitle(title types.String) {
@@ -414,6 +435,12 @@ func applyPayload[T BusinessMetricPayloadApplier](ctx context.Context, m T, payl
 	}
 	m.SetSnowflakeMetricFields(tfSnowflakeMetricFields)
 
+	tfMetronomeMetricFields, d := metronomeMetricFieldsFromApiModel(ctx, payload.MetronomeMetricFields, payload.IntegrationToken)
+	if d.HasError() {
+		return d
+	}
+	m.SetMetronomeMetricFields(tfMetronomeMetricFields)
+
 	if payload.CostReportTokensWithMetadata != nil {
 		var costReportTokens types.List
 		var tokenDiags diag.Diagnostics
@@ -593,6 +620,17 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 		}
 	}
 
+	if !m.MetronomeMetricFields.IsNull() && !m.MetronomeMetricFields.IsUnknown() {
+		model.MetronomeMetricFields = &modelsv2.CreateBusinessMetricMetronomeMetricFields{
+			IntegrationToken:   m.MetronomeMetricFields.IntegrationToken.ValueStringPointer(),
+			MetricKind:         m.MetronomeMetricFields.MetricKind.ValueStringPointer(),
+			Metric:             m.MetronomeMetricFields.Metric.ValueStringPointer(),
+			BillableMetricID:   m.MetronomeMetricFields.BillableMetricId.ValueStringPointer(),
+			BillableMetricName: m.MetronomeMetricFields.BillableMetricName.ValueStringPointer(),
+			LabelSource:        m.MetronomeMetricFields.LabelSource.ValueStringPointer(),
+		}
+	}
+
 	if !m.Values.IsNull() && !m.Values.IsUnknown() {
 		tfValues := m.valuesFromTf(ctx, diags)
 		if diags.HasError() {
@@ -761,6 +799,17 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		model.SnowflakeMetricFields = &modelsv2.UpdateBusinessMetricSnowflakeMetricFields{
 			IntegrationToken: m.SnowflakeMetricFields.IntegrationToken.ValueString(),
 			SQLQuery:         m.SnowflakeMetricFields.SqlQuery.ValueString(),
+		}
+	}
+
+	if !m.MetronomeMetricFields.IsNull() && !m.MetronomeMetricFields.IsUnknown() {
+		model.MetronomeMetricFields = &modelsv2.UpdateBusinessMetricMetronomeMetricFields{
+			IntegrationToken:   m.MetronomeMetricFields.IntegrationToken.ValueStringPointer(),
+			MetricKind:         m.MetronomeMetricFields.MetricKind.ValueStringPointer(),
+			Metric:             m.MetronomeMetricFields.Metric.ValueStringPointer(),
+			BillableMetricID:   m.MetronomeMetricFields.BillableMetricId.ValueStringPointer(),
+			BillableMetricName: m.MetronomeMetricFields.BillableMetricName.ValueStringPointer(),
+			LabelSource:        m.MetronomeMetricFields.LabelSource.ValueStringPointer(),
 		}
 	}
 
@@ -1052,6 +1101,23 @@ func gcpBigqueryMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv
 	diags.Append(d...)
 
 	return tfValue, diags
+}
+
+func metronomeMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.MetronomeMetricFields, integrationToken *string) (resource_business_metric.MetronomeMetricFieldsValue, diag.Diagnostics) {
+	if apiFields == nil {
+		return resource_business_metric.NewMetronomeMetricFieldsValueNull(), nil
+	}
+	return resource_business_metric.NewMetronomeMetricFieldsValue(
+		resource_business_metric.MetronomeMetricFieldsValue{}.AttributeTypes(ctx),
+		map[string]attr.Value{
+			"integration_token":    types.StringPointerValue(integrationToken),
+			"metric_kind":          types.StringValue(apiFields.MetricKind),
+			"metric":               types.StringValue(apiFields.Metric),
+			"billable_metric_id":   types.StringPointerValue(apiFields.BillableMetricID),
+			"billable_metric_name": types.StringPointerValue(apiFields.BillableMetricName),
+			"label_source":         types.StringValue(apiFields.LabelSource),
+		},
+	)
 }
 
 func snowflakeMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.SnowflakeMetricFields, integrationToken *string) (resource_business_metric.SnowflakeMetricFieldsValue, diag.Diagnostics) {
