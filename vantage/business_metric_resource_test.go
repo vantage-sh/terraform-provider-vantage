@@ -1512,6 +1512,8 @@ func TestBusinessMetricGcpBigqueryFieldsPlan(t *testing.T) {
 	NewBusinessMetricResource().Schema(ctx, fwresource.SchemaRequest{}, schemaResp)
 	objType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
 	gcpType := objType.AttributeTypes["gcp_bigquery_metric_fields"].(tftypes.Object)
+	reportListType := objType.AttributeTypes["cost_report_tokens_with_metadata"].(tftypes.List)
+	reportType := reportListType.ElementType.(tftypes.Object)
 
 	buildObject := func(values map[string]tftypes.Value) tftypes.Value {
 		attrs := map[string]tftypes.Value{}
@@ -1585,15 +1587,46 @@ func TestBusinessMetricGcpBigqueryFieldsPlan(t *testing.T) {
 		}))
 	})
 
-	t.Run("changed block updates in place", func(t *testing.T) {
-		resp := plan(t,
-			buildObject(withIDs(existing("gcp", gcpValue("SELECT 1")))),
-			buildObject(existing("gcp", gcpValue("SELECT 2"))),
-		)
-		if requiresReplaceGcp(resp) {
-			t.Fatalf("expected in-place update, got %v", resp.RequiresReplace)
-		}
-	})
+	reportAttrs := map[string]tftypes.Value{}
+	for name, typ := range reportType.AttributeTypes {
+		reportAttrs[name] = tftypes.NewValue(typ, nil)
+	}
+	reportAttrs["cost_report_token"] = tftypes.NewValue(tftypes.String, "rprt_123")
+	reports := tftypes.NewValue(reportListType, []tftypes.Value{tftypes.NewValue(reportType, reportAttrs)})
+	emptyReports := tftypes.NewValue(reportListType, []tftypes.Value{})
+	for _, tc := range []struct {
+		name          string
+		configure     bool
+		configReports tftypes.Value
+		want          tftypes.Value
+	}{
+		{name: "omitted reports remain attached", want: reports},
+		{name: "explicit empty reports clear attachments", configure: true, configReports: emptyReports, want: emptyReports},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			prior := withIDs(existing("gcp", gcpValue("SELECT 1")))
+			prior["cost_report_tokens_with_metadata"] = reports
+			config := existing("gcp", gcpValue("SELECT 2"))
+			if tc.configure {
+				config["cost_report_tokens_with_metadata"] = tc.configReports
+			}
+			resp := plan(t, buildObject(prior), buildObject(config))
+			if requiresReplaceGcp(resp) {
+				t.Fatalf("expected in-place update, got %v", resp.RequiresReplace)
+			}
+			planned, err := resp.PlannedState.Unmarshal(objType)
+			if err != nil {
+				t.Fatalf("decoding planned state: %v", err)
+			}
+			var attrs map[string]tftypes.Value
+			if err := planned.As(&attrs); err != nil {
+				t.Fatalf("reading planned state: %v", err)
+			}
+			if got := attrs["cost_report_tokens_with_metadata"]; !got.Equal(tc.want) {
+				t.Fatalf("planned reports = %v, want %v", got, tc.want)
+			}
+		})
+	}
 
 	t.Run("unchanged block does not require replace", func(t *testing.T) {
 		resp := plan(t,

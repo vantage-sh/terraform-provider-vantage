@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -80,6 +81,7 @@ func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
 	if !ok {
 		return
 	}
+	attr.PlanModifiers = append(attr.PlanModifiers, listplanmodifier.UseStateForUnknown())
 
 	// Mutate in place so generated Validators (and other schema metadata) are preserved.
 	if calcAttr, ok := attr.NestedObject.Attributes["calculation_type"].(schema.StringAttribute); ok {
