@@ -21,12 +21,12 @@ description: |-
 
 ### Optional
 
-- `clickhouse_metric_fields` (Attributes) ClickHouse metric configuration fields. Changing this block replaces the business metric. (see [below for nested schema](#nestedatt--clickhouse_metric_fields))
+- `clickhouse_metric_fields` (Attributes) ClickHouse metric configuration fields. (see [below for nested schema](#nestedatt--clickhouse_metric_fields))
 - `cloudwatch_fields` (Attributes) Cloudwatch configuration fields. (see [below for nested schema](#nestedatt--cloudwatch_fields))
 - `cost_report_tokens_with_metadata` (Attributes List) The tokens for any CostReports that use the BusinessMetric, the unit scale, and label filter. (see [below for nested schema](#nestedatt--cost_report_tokens_with_metadata))
 - `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
 - `forecasted_values` (Attributes List) The dates, amounts, and (optional) labels for forecasted BusinessMetric values. (see [below for nested schema](#nestedatt--forecasted_values))
-- `gcp_bigquery_metric_fields` (Attributes) GCP BigQuery metric configuration fields. Changing this block replaces the business metric. (see [below for nested schema](#nestedatt--gcp_bigquery_metric_fields))
+- `gcp_bigquery_metric_fields` (Attributes) GCP BigQuery metric configuration fields. (see [below for nested schema](#nestedatt--gcp_bigquery_metric_fields))
 - `snowflake_metric_fields` (Attributes) Snowflake metric configuration fields. (see [below for nested schema](#nestedatt--snowflake_metric_fields))
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 

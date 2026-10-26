@@ -2,7 +2,10 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -1269,6 +1273,16 @@ func TestBusinessMetricGcpBigqueryFieldsPayload(t *testing.T) {
 		Token:                   types.StringValue("bmetr_test"),
 		GcpBigqueryMetricFields: gcpFields,
 	}
+	emptyValues, valueDiags := types.ListValue(resource_business_metric.ValuesValue{}.Type(ctx), []attr.Value{})
+	if valueDiags.HasError() {
+		t.Fatalf("failed to build empty values: %v", valueDiags)
+	}
+	emptyForecasts, forecastDiags := types.ListValue(resource_business_metric.ForecastedValuesValue{}.Type(ctx), []attr.Value{})
+	if forecastDiags.HasError() {
+		t.Fatalf("failed to build empty forecasts: %v", forecastDiags)
+	}
+	model.Values = emptyValues
+	model.ForecastedValues = emptyForecasts
 
 	var d diag.Diagnostics
 	payload := model.toCreate(ctx, &d)
@@ -1286,6 +1300,29 @@ func TestBusinessMetricGcpBigqueryFieldsPayload(t *testing.T) {
 	}
 	if payload.GcpBigqueryMetricFields.SQLQuery != "SELECT date, value FROM metrics" {
 		t.Fatalf("unexpected sql query: %q", payload.GcpBigqueryMetricFields.SQLQuery)
+	}
+
+	d = diag.Diagnostics{}
+	updatePayload := model.toUpdate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if updatePayload.GcpBigqueryMetricFields == nil || updatePayload.GcpBigqueryMetricFields.IntegrationToken != "accss_crdntl_gcp" || updatePayload.GcpBigqueryMetricFields.QueryProjectID != "my-query-project" || updatePayload.GcpBigqueryMetricFields.SQLQuery != "SELECT date, value FROM metrics" {
+		t.Fatalf("unexpected BigQuery update fields: %#v", updatePayload.GcpBigqueryMetricFields)
+	}
+	body, err := json.Marshal(updatePayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent map[string]json.RawMessage
+	if err := json.Unmarshal(body, &sent); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := sent["values"]; present {
+		t.Fatalf("import update must omit values: %s", body)
+	}
+	if _, present := sent["forecasted_values"]; present {
+		t.Fatalf("import update must omit forecasted values: %s", body)
 	}
 }
 
@@ -1321,6 +1358,15 @@ func TestBusinessMetricClickhouseFieldsPayload(t *testing.T) {
 	}
 	if payload.ClickhouseMetricFields.QueryEndpointID != "7c6a3a87-12fd-41f5-afdf-caa4697a2886" {
 		t.Fatalf("unexpected query endpoint id: %q", payload.ClickhouseMetricFields.QueryEndpointID)
+	}
+
+	d = diag.Diagnostics{}
+	updatePayload := model.toUpdate(ctx, &d)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", d)
+	}
+	if updatePayload.ClickhouseMetricFields == nil || updatePayload.ClickhouseMetricFields.IntegrationToken != "accss_crdntl_clickhouse" || updatePayload.ClickhouseMetricFields.QueryEndpointID != "7c6a3a87-12fd-41f5-afdf-caa4697a2886" {
+		t.Fatalf("unexpected ClickHouse update fields: %#v", updatePayload.ClickhouseMetricFields)
 	}
 }
 
@@ -1539,13 +1585,13 @@ func TestBusinessMetricGcpBigqueryFieldsPlan(t *testing.T) {
 		}))
 	})
 
-	t.Run("changed block requires replace", func(t *testing.T) {
+	t.Run("changed block updates in place", func(t *testing.T) {
 		resp := plan(t,
 			buildObject(withIDs(existing("gcp", gcpValue("SELECT 1")))),
 			buildObject(existing("gcp", gcpValue("SELECT 2"))),
 		)
-		if !requiresReplaceGcp(resp) {
-			t.Fatalf("expected gcp_bigquery_metric_fields change to require replace, got %v", resp.RequiresReplace)
+		if requiresReplaceGcp(resp) {
+			t.Fatalf("expected in-place update, got %v", resp.RequiresReplace)
 		}
 	})
 
@@ -1638,13 +1684,13 @@ func TestBusinessMetricClickhouseFieldsPlan(t *testing.T) {
 		}))
 	})
 
-	t.Run("changed block requires replace", func(t *testing.T) {
+	t.Run("changed block updates in place", func(t *testing.T) {
 		resp := plan(t,
 			buildObject(withIDs(existing("ch", clickhouseValue("7c6a3a87-12fd-41f5-afdf-caa4697a2886")))),
 			buildObject(existing("ch", clickhouseValue("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"))),
 		)
-		if !requiresReplaceClickhouse(resp) {
-			t.Fatalf("expected clickhouse_metric_fields change to require replace, got %v", resp.RequiresReplace)
+		if requiresReplaceClickhouse(resp) {
+			t.Fatalf("expected in-place update, got %v", resp.RequiresReplace)
 		}
 	})
 
@@ -1657,4 +1703,68 @@ func TestBusinessMetricClickhouseFieldsPlan(t *testing.T) {
 			t.Fatalf("expected no replace, got %v", resp.RequiresReplace)
 		}
 	})
+}
+
+func TestBusinessMetricFailedBigQueryUpdateKeepsState(t *testing.T) {
+	ctx := context.Background()
+	schemaResp := &fwresource.SchemaResponse{}
+	NewBusinessMetricResource().Schema(ctx, fwresource.SchemaRequest{}, schemaResp)
+	schema := schemaResp.Schema
+	objectType := schema.Type().TerraformType(ctx).(tftypes.Object)
+	gcpType := objectType.AttributeTypes["gcp_bigquery_metric_fields"].(tftypes.Object)
+	metric := func(query string) tftypes.Value {
+		attrs := make(map[string]tftypes.Value, len(objectType.AttributeTypes))
+		for name, typ := range objectType.AttributeTypes {
+			attrs[name] = tftypes.NewValue(typ, nil)
+		}
+		attrs["id"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		attrs["token"] = tftypes.NewValue(tftypes.String, "bsnss_mtrc_123")
+		attrs["title"] = tftypes.NewValue(tftypes.String, "Revenue")
+		attrs["gcp_bigquery_metric_fields"] = tftypes.NewValue(gcpType, map[string]tftypes.Value{
+			"integration_token": tftypes.NewValue(tftypes.String, "accss_crdntl_123"),
+			"query_project_id":  tftypes.NewValue(tftypes.String, "my-project"),
+			"sql_query":         tftypes.NewValue(tftypes.String, query),
+		})
+		return tftypes.NewValue(objectType, attrs)
+	}
+
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		requests++
+		if req.Method != http.MethodPut || req.URL.Path != "/v2/business_metrics/bsnss_mtrc_123" {
+			t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+		}
+		var body map[string]json.RawMessage
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			t.Errorf("decoding update request: %v", err)
+		}
+		if _, ok := body["gcp_bigquery_metric_fields"]; !ok {
+			t.Errorf("update omitted BigQuery configuration: %v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"errors":["invalid SQL"]}`))
+	}))
+	defer srv.Close()
+
+	prior := tfsdk.State{Raw: metric("SELECT date, value FROM revenue"), Schema: schema}
+	resp := fwresource.UpdateResponse{State: prior}
+	(&businessMetricResource{client: clientForServer(t, srv.URL)}).Update(
+		ctx,
+		fwresource.UpdateRequest{
+			Plan:  tfsdk.Plan{Raw: metric("INVALID SQL"), Schema: schema},
+			State: prior,
+		},
+		&resp,
+	)
+
+	if requests != 1 {
+		t.Fatalf("got %d requests, want one PUT", requests)
+	}
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("expected validation error")
+	}
+	if !resp.State.Raw.Equal(prior.Raw) {
+		t.Fatal("failed update changed Terraform state")
+	}
 }
