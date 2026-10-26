@@ -194,7 +194,6 @@ func (m *businessMetricDataSourceValue) SetMetronomeMetricFields(fields resource
 		"metric":               fields.Metric,
 		"billable_metric_id":   fields.BillableMetricId,
 		"billable_metric_name": fields.BillableMetricName,
-		"label_source":         fields.LabelSource,
 	})
 }
 
@@ -627,7 +626,6 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 			Metric:             m.MetronomeMetricFields.Metric.ValueStringPointer(),
 			BillableMetricID:   m.MetronomeMetricFields.BillableMetricId.ValueStringPointer(),
 			BillableMetricName: m.MetronomeMetricFields.BillableMetricName.ValueStringPointer(),
-			LabelSource:        m.MetronomeMetricFields.LabelSource.ValueStringPointer(),
 		}
 	}
 
@@ -809,7 +807,6 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 			Metric:             m.MetronomeMetricFields.Metric.ValueStringPointer(),
 			BillableMetricID:   m.MetronomeMetricFields.BillableMetricId.ValueStringPointer(),
 			BillableMetricName: m.MetronomeMetricFields.BillableMetricName.ValueStringPointer(),
-			LabelSource:        m.MetronomeMetricFields.LabelSource.ValueStringPointer(),
 		}
 	}
 
@@ -1115,7 +1112,6 @@ func metronomeMetricFieldsFromApiModel(ctx context.Context, apiFields *modelsv2.
 			"metric":               types.StringValue(apiFields.Metric),
 			"billable_metric_id":   types.StringPointerValue(apiFields.BillableMetricID),
 			"billable_metric_name": types.StringPointerValue(apiFields.BillableMetricName),
-			"label_source":         types.StringValue(apiFields.LabelSource),
 		},
 	)
 }

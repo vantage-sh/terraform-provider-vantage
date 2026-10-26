@@ -27,7 +27,7 @@ description: |-
 - `datadog_metric_fields` (Attributes) Datadog metric configuration fields (see [below for nested schema](#nestedatt--datadog_metric_fields))
 - `forecasted_values` (Attributes List) The dates, amounts, and (optional) labels for forecasted BusinessMetric values. (see [below for nested schema](#nestedatt--forecasted_values))
 - `gcp_bigquery_metric_fields` (Attributes) GCP BigQuery metric configuration fields. (see [below for nested schema](#nestedatt--gcp_bigquery_metric_fields))
-- `metronome_metric_fields` (Attributes) Metronome configuration. Omitted fields preserve existing values on update. Switching to revenue clears billable metric fields. (see [below for nested schema](#nestedatt--metronome_metric_fields))
+- `metronome_metric_fields` (Attributes) Metronome configuration. Customer ID, customer name, first ingest alias, and supported custom fields are imported automatically as label columns. Omitted fields preserve existing values on update. Switching to revenue clears billable metric fields. (see [below for nested schema](#nestedatt--metronome_metric_fields))
 - `snowflake_metric_fields` (Attributes) Snowflake metric configuration fields. (see [below for nested schema](#nestedatt--snowflake_metric_fields))
 - `values` (Attributes List) The dates, amounts, and (optional) labels for the BusinessMetric. (see [below for nested schema](#nestedatt--values))
 
@@ -127,7 +127,6 @@ Optional:
 - `billable_metric_id` (String) Metronome billable metric UUID for usage metrics.
 - `billable_metric_name` (String) Metronome billable metric display name for usage metrics.
 - `integration_token` (String)
-- `label_source` (String) The source of labels for imported values. Defaults to ingest_alias for revenue or customer_name for usage on creation. Omission on update preserves the existing value. Set a concrete source to change it; empty strings are not supported in Terraform.
 - `metric` (String) The selected Metronome metric.
 - `metric_kind` (String) Metronome metric kind.
 

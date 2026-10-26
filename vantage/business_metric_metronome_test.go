@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"regexp"
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -41,21 +41,51 @@ func metronomeTestValue(ctx context.Context, s schema.Schema, fields map[string]
 	return tftypes.NewValue(objectType, attrs)
 }
 
+func metronomeTestWithReports(t *testing.T, value tftypes.Value, filters map[string][]string) tftypes.Value {
+	t.Helper()
+	objectType := value.Type().(tftypes.Object)
+	listType := objectType.AttributeTypes["cost_report_tokens_with_metadata"].(tftypes.List)
+	reportType := listType.ElementType.(tftypes.Object)
+	report := make(map[string]tftypes.Value, len(reportType.AttributeTypes))
+	for name, typ := range reportType.AttributeTypes {
+		report[name] = tftypes.NewValue(typ, nil)
+	}
+	report["cost_report_token"] = tftypes.NewValue(tftypes.String, "rprt_metronome")
+	report["unit_scale"] = tftypes.NewValue(tftypes.String, "per_unit")
+	report["calculation_type"] = tftypes.NewValue(tftypes.String, "unit_cost")
+	filterType := reportType.AttributeTypes["label_filters"].(tftypes.Map)
+	filterValues := make(map[string]tftypes.Value, len(filters))
+	for key, values := range filters {
+		items := make([]tftypes.Value, len(values))
+		for i, item := range values {
+			items[i] = tftypes.NewValue(tftypes.String, item)
+		}
+		filterValues[key] = tftypes.NewValue(filterType.ElementType, items)
+	}
+	report["label_filters"] = tftypes.NewValue(filterType, filterValues)
+	var attrs map[string]tftypes.Value
+	if err := value.As(&attrs); err != nil {
+		t.Fatal(err)
+	}
+	attrs["cost_report_tokens_with_metadata"] = tftypes.NewValue(listType, []tftypes.Value{tftypes.NewValue(reportType, report)})
+	return tftypes.NewValue(objectType, attrs)
+}
+
 func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 	for _, kind := range []string{"revenue", "usage"} {
 		t.Run(kind, func(t *testing.T) {
 			ctx := context.Background()
 			fields := map[string]string{"integration_token": "accss_crdntl_metronome", "metric_kind": kind}
-			resolved := map[string]interface{}{"metric_kind": kind, "metric": "daily_revenue", "label_source": "ingest_alias", "billable_metric_id": nil, "billable_metric_name": nil}
+			resolved := map[string]interface{}{"metric_kind": kind, "metric": "daily_revenue", "billable_metric_id": nil, "billable_metric_name": nil}
 			if kind == "usage" {
 				fields["billable_metric_id"] = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 				fields["billable_metric_name"] = "API requests"
 				fields["metric"] = "usage"
 				resolved["metric"] = "usage"
-				resolved["label_source"] = "customer_name"
 				resolved["billable_metric_id"] = fields["billable_metric_id"]
 				resolved["billable_metric_name"] = fields["billable_metric_name"]
 			}
+			filters := map[string][]string{"customer_id": {"customer-one", "customer-two"}, "region": {"us-east-1"}}
 			requests := []string{}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				requests = append(requests, req.Method)
@@ -71,11 +101,16 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 					if !reflect.DeepEqual(got, fields) {
 						t.Errorf("configuration = %#v, want %#v", got, fields)
 					}
-					if req.Method == http.MethodPost {
-						if _, ok := got["label_source"]; ok {
-							t.Error("omitted server-default field was sent")
-						}
-					} else if req.URL.Path != "/v2/business_metrics/bsnss_mtrc_metronome" {
+					var attachments []struct {
+						LabelFilters map[string][]string `json:"label_filters"`
+					}
+					if err := json.Unmarshal(body["cost_report_tokens_with_metadata"], &attachments); err != nil {
+						t.Fatalf("decode report filters: %v", err)
+					}
+					if len(attachments) != 1 || !reflect.DeepEqual(attachments[0].LabelFilters, filters) {
+						t.Errorf("report filters = %#v, want %#v", attachments, filters)
+					}
+					if req.Method == http.MethodPut && req.URL.Path != "/v2/business_metrics/bsnss_mtrc_metronome" {
 						t.Errorf("update path = %s", req.URL.Path)
 					}
 				}
@@ -86,7 +121,9 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]interface{}{
 					"token": "bsnss_mtrc_metronome", "title": "Metronome", "import_type": "metronome_metrics",
 					"integration_token": fields["integration_token"], "metronome_metric_fields": resolved,
-					"cost_report_tokens_with_metadata": []interface{}{},
+					"cost_report_tokens_with_metadata": []interface{}{map[string]interface{}{
+						"cost_report_token": "rprt_metronome", "unit_scale": "per_unit", "calculation_type": "unit_cost", "label_filters": filters,
+					}},
 				})
 			}))
 			defer server.Close()
@@ -95,11 +132,11 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 			r.Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
 			s := schemaResp.Schema
 			create := fwresource.CreateResponse{State: tfsdk.State{Schema: s}}
-			r.Create(ctx, fwresource.CreateRequest{Plan: tfsdk.Plan{Raw: metronomeTestValue(ctx, s, fields), Schema: s}}, &create)
+			r.Create(ctx, fwresource.CreateRequest{Plan: tfsdk.Plan{Raw: metronomeTestWithReports(t, metronomeTestValue(ctx, s, fields), filters), Schema: s}}, &create)
 			if create.Diagnostics.HasError() {
 				t.Fatalf("create: %v", create.Diagnostics)
 			}
-			assertMetronomeState(t, ctx, create.State, fields, resolved["label_source"].(string))
+			assertMetronomeState(t, ctx, create.State, fields, filters)
 
 			imported := fwresource.ImportStateResponse{State: tfsdk.State{Raw: metronomeTestValue(ctx, s, nil), Schema: s}}
 			r.ImportState(ctx, fwresource.ImportStateRequest{ID: "bsnss_mtrc_metronome"}, &imported)
@@ -111,24 +148,23 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 			if read.Diagnostics.HasError() {
 				t.Fatalf("read imported configuration: %v", read.Diagnostics)
 			}
-			assertMetronomeState(t, ctx, read.State, fields, resolved["label_source"].(string))
+			assertMetronomeState(t, ctx, read.State, fields, filters)
 
-			fields["label_source"] = "customer_id"
+			fields["integration_token"] = "accss_crdntl_updated"
 			if kind == "usage" {
 				fields["billable_metric_id"] = "bbbbbbbb-cccc-dddd-eeee-ffffffffffff"
 				fields["billable_metric_name"] = "Output tokens"
 				resolved["billable_metric_id"] = fields["billable_metric_id"]
 				resolved["billable_metric_name"] = fields["billable_metric_name"]
 			}
-			resolved["label_source"] = "customer_id"
-			plan := tfsdk.Plan{Raw: metronomeTestValue(ctx, s, fields), Schema: s}
+			plan := tfsdk.Plan{Raw: metronomeTestWithReports(t, metronomeTestValue(ctx, s, fields), filters), Schema: s}
 			plan.Raw = metronomeTestWithIDs(t, plan.Raw)
 			update := fwresource.UpdateResponse{State: read.State}
 			r.Update(ctx, fwresource.UpdateRequest{Plan: plan, State: read.State}, &update)
 			if update.Diagnostics.HasError() {
 				t.Fatalf("update: %v", update.Diagnostics)
 			}
-			assertMetronomeState(t, ctx, update.State, fields, "customer_id")
+			assertMetronomeState(t, ctx, update.State, fields, filters)
 			if !reflect.DeepEqual(requests, []string{http.MethodPost, http.MethodGet, http.MethodPut}) {
 				t.Fatalf("requests = %v", requests)
 			}
@@ -136,7 +172,7 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 	}
 }
 
-func assertMetronomeState(t *testing.T, ctx context.Context, state tfsdk.State, expected map[string]string, label string) {
+func assertMetronomeState(t *testing.T, ctx context.Context, state tfsdk.State, expected map[string]string, filters map[string][]string) {
 	t.Helper()
 	var model businessMetricResourceModel
 	if d := state.Get(ctx, &model); d.HasError() {
@@ -145,8 +181,15 @@ func assertMetronomeState(t *testing.T, ctx context.Context, state tfsdk.State, 
 	if model.Token.ValueString() != "bsnss_mtrc_metronome" || model.Id != model.Token {
 		t.Fatalf("metric identity changed: %s %s", model.Token, model.Id)
 	}
+	var importedFilters map[string][]string
+	if d := state.GetAttribute(ctx, path.Root("cost_report_tokens_with_metadata").AtListIndex(0).AtName("label_filters"), &importedFilters); d.HasError() {
+		t.Fatalf("read report filters: %v", d)
+	}
+	if !reflect.DeepEqual(importedFilters, filters) {
+		t.Fatalf("report filters changed: %#v, want %#v", importedFilters, filters)
+	}
 	fields := model.MetronomeMetricFields
-	if fields.IntegrationToken.ValueString() != "accss_crdntl_metronome" || fields.MetricKind.ValueString() != expected["metric_kind"] || fields.LabelSource.ValueString() != label {
+	if fields.IntegrationToken.ValueString() != expected["integration_token"] || fields.MetricKind.ValueString() != expected["metric_kind"] {
 		t.Fatalf("unexpected configuration: %#v", fields)
 	}
 	if expected["metric_kind"] == "usage" && (fields.BillableMetricId.ValueString() != expected["billable_metric_id"] || fields.BillableMetricName.ValueString() != expected["billable_metric_name"]) {
@@ -187,13 +230,18 @@ func TestBusinessMetricMetronomePlan(t *testing.T) {
 				name = kind + "/clear_reports"
 			}
 			t.Run(name, func(t *testing.T) {
-				fields := map[string]string{"integration_token": "accss_crdntl_metronome", "metric_kind": kind, "metric": "daily_revenue", "label_source": "customer_name"}
+				fields := map[string]string{"integration_token": "accss_crdntl_metronome", "metric_kind": kind, "metric": "daily_revenue"}
+				if kind == "usage" {
+					fields["metric"] = "usage"
+					fields["billable_metric_id"] = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+					fields["billable_metric_name"] = "API requests"
+				}
 				prior := metronomeTestWithIDs(t, metronomeTestValue(ctx, s, fields))
 				var priorAttrs map[string]tftypes.Value
 				_ = prior.As(&priorAttrs)
 				priorAttrs["cost_report_tokens_with_metadata"] = reports
 				prior = tftypes.NewValue(objectType, priorAttrs)
-				fields["label_source"] = "customer_id"
+				fields["integration_token"] = "accss_crdntl_updated"
 				config := metronomeTestValue(ctx, s, fields)
 				if clearing {
 					var attrs map[string]tftypes.Value
@@ -290,19 +338,17 @@ func TestBusinessMetricMetronomeTerraform(t *testing.T) {
 					}
 					fields := body["metronome_metric_fields"].(map[string]interface{})
 					if req.Method == http.MethodPost {
-						label := "ingest_alias"
-						if kind == "usage" {
-							label = "customer_name"
-						}
 						stored = map[string]interface{}{
 							"token": "bsnss_mtrc_metronome", "title": "Metronome", "import_type": "metronome_metrics", "integration_token": "accss_crdntl_metronome",
-							"metronome_metric_fields":          map[string]interface{}{"metric_kind": kind, "metric": "daily_revenue", "label_source": label, "billable_metric_id": nil, "billable_metric_name": nil},
+							"metronome_metric_fields":          map[string]interface{}{"metric_kind": kind, "metric": "daily_revenue", "billable_metric_id": nil, "billable_metric_name": nil},
 							"cost_report_tokens_with_metadata": []interface{}{},
 						}
 					}
 					config := stored["metronome_metric_fields"].(map[string]interface{})
 					for k, v := range fields {
-						if k != "integration_token" {
+						if k == "integration_token" {
+							stored["integration_token"] = v
+						} else {
 							config[k] = v
 						}
 					}
@@ -320,15 +366,12 @@ func TestBusinessMetricMetronomeTerraform(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(stored)
 			}))
 			defer server.Close()
-			config := func(label string) string {
+			config := func(credential string) string {
 				selection := ""
 				if kind == "usage" {
 					selection = `metric = "usage"
 billable_metric_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 billable_metric_name = "API requests"`
-				}
-				if label != "" {
-					selection += fmt.Sprintf("\nlabel_source = %q", label)
 				}
 				return fmt.Sprintf(`provider "vantage" {
  host = %q
@@ -337,48 +380,22 @@ billable_metric_name = "API requests"`
 resource "vantage_business_metric" "test" {
  title = "Metronome"
  metronome_metric_fields = {
- integration_token = "accss_crdntl_metronome"
+ integration_token = %q
  metric_kind = %q
  %s
  }
-}`, server.URL, kind, selection)
+}`, server.URL, credential, kind, selection)
 			}
 			resource.UnitTest(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
-					{Config: config(""), Check: resource.TestCheckResourceAttr("vantage_business_metric.test", "metronome_metric_fields.metric_kind", kind)},
-					{Config: config(""), PlanOnly: true, ExpectNonEmptyPlan: false},
+					{Config: config("accss_crdntl_metronome"), Check: resource.TestCheckResourceAttr("vantage_business_metric.test", "metronome_metric_fields.metric_kind", kind)},
+					{Config: config("accss_crdntl_metronome"), PlanOnly: true, ExpectNonEmptyPlan: false},
 					{ResourceName: "vantage_business_metric.test", ImportState: true, ImportStateVerify: true},
-					{Config: config("customer_id"), Check: resource.TestCheckResourceAttr("vantage_business_metric.test", "metronome_metric_fields.label_source", "customer_id")},
-					{Config: config("customer_id"), PlanOnly: true, ExpectNonEmptyPlan: false},
+					{Config: config("accss_crdntl_updated"), Check: resource.TestCheckResourceAttr("vantage_business_metric.test", "metronome_metric_fields.integration_token", "accss_crdntl_updated")},
+					{Config: config("accss_crdntl_updated"), PlanOnly: true, ExpectNonEmptyPlan: false},
 				},
 			})
 		})
 	}
-}
-
-func TestBusinessMetricMetronomeEmptyLabelSourceRejected(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		t.Errorf("invalid label_source reached the API: %s %s", req.Method, req.URL.Path)
-		w.WriteHeader(http.StatusBadRequest)
-	}))
-	defer server.Close()
-	resource.UnitTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{{
-			Config: fmt.Sprintf(`provider "vantage" {
- host = %q
- api_token = "test"
-}
-resource "vantage_business_metric" "test" {
- title = "Metronome"
- metronome_metric_fields = {
- integration_token = "accss_crdntl_metronome"
- label_source = ""
- }
-}`, server.URL),
-			PlanOnly:    true,
-			ExpectError: regexp.MustCompile("(?s)label_source.*value must be one of"),
-		}},
-	})
 }

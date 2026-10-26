@@ -3,7 +3,6 @@ package vantage
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_business_metric"
 	businessmetricsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/business_metrics"
@@ -59,13 +57,6 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
 	applyCostReportTokenMetadataDefaults(s.Attributes)
-	metronome := s.Attributes["metronome_metric_fields"].(schema.SingleNestedAttribute)
-	labelSource := metronome.Attributes["label_source"].(schema.StringAttribute)
-	labelSource.Validators = []validator.String{stringvalidator.OneOf("customer_name", "ingest_alias", "customer_id")}
-	labelSource.Description = "The source of labels for imported values. Defaults to ingest_alias for revenue or customer_name for usage on creation. Omission on update preserves the existing value. Set a concrete source to change it; empty strings are not supported in Terraform."
-	labelSource.MarkdownDescription = labelSource.Description
-	metronome.Attributes["label_source"] = labelSource
-	s.Attributes["metronome_metric_fields"] = metronome
 	resp.Schema = s
 }
 

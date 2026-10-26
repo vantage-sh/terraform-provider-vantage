@@ -40,9 +40,9 @@ A change to `clickhouse_metric_fields` replaces the resource. The Vantage API do
 
 ### Business Metric from Metronome
 
-See `metronome.tf` for revenue and usage metrics using a connected Metronome credential. Revenue defaults to `daily_revenue` with `ingest_alias` labels. Usage requires a billable metric UUID and display name and defaults to `customer_name` labels.
+See `metronome.tf` for revenue and usage metrics using a connected Metronome credential. Revenue defaults to `daily_revenue`. Usage requires a billable metric UUID and display name. Both automatically import customer ID, customer name, first ingest alias, and supported customer custom fields as named label dimensions when available.
 
-Configuration edits update the metric in place. Omitting `cost_report_tokens_with_metadata` retains report attachments; setting it to `[]` clears them. Removing the Metronome block does not disconnect the integration. To switch usage to revenue, set `metric_kind = "revenue"` and `metric = "daily_revenue"`, and remove billable metric fields. Use an explicit label source when changing kinds. Terraform requires a concrete label source when configured; the raw API's empty-string reset is not supported.
+Configuration edits update the metric in place. Omitting `cost_report_tokens_with_metadata` retains report attachments; setting it to `[]` clears them. Removing the Metronome block does not disconnect the integration. To switch usage to revenue, set `metric_kind = "revenue"` and `metric = "daily_revenue"`, and remove billable metric fields. Use report attachment `label_filters` to filter by the imported dimensions.
 
 Import an existing metric by token, then use its current configuration in Terraform:
 

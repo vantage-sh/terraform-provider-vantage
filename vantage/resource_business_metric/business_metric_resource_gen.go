@@ -310,20 +310,6 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 						Optional: true,
 						Computed: true,
 					},
-					"label_source": schema.StringAttribute{
-						Optional:            true,
-						Computed:            true,
-						Description:         "Label source. An empty string resets the default for the metric kind.",
-						MarkdownDescription: "Label source. An empty string resets the default for the metric kind.",
-						Validators: []validator.String{
-							stringvalidator.OneOf(
-								"",
-								"customer_name",
-								"ingest_alias",
-								"customer_id",
-							),
-						},
-					},
 					"metric": schema.StringAttribute{
 						Optional:            true,
 						Computed:            true,
@@ -344,8 +330,8 @@ func BusinessMetricResourceSchema(ctx context.Context) schema.Schema {
 				},
 				Optional:            true,
 				Computed:            true,
-				Description:         "Metronome configuration. Omitted fields preserve existing values on update. Switching to revenue clears billable metric fields.",
-				MarkdownDescription: "Metronome configuration. Omitted fields preserve existing values on update. Switching to revenue clears billable metric fields.",
+				Description:         "Metronome configuration. Customer ID, customer name, first ingest alias, and supported custom fields are imported automatically as label columns. Omitted fields preserve existing values on update. Switching to revenue clears billable metric fields.",
+				MarkdownDescription: "Metronome configuration. Customer ID, customer name, first ingest alias, and supported custom fields are imported automatically as label columns. Omitted fields preserve existing values on update. Switching to revenue clears billable metric fields.",
 			},
 			"snowflake_metric_fields": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
@@ -3883,24 +3869,6 @@ func (t MetronomeMetricFieldsType) ValueFromObject(ctx context.Context, in baset
 			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
 	}
 
-	labelSourceAttribute, ok := attributes["label_source"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`label_source is missing from object`)
-
-		return nil, diags
-	}
-
-	labelSourceVal, ok := labelSourceAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`label_source expected to be basetypes.StringValue, was: %T`, labelSourceAttribute))
-	}
-
 	metricAttribute, ok := attributes["metric"]
 
 	if !ok {
@@ -3945,7 +3913,6 @@ func (t MetronomeMetricFieldsType) ValueFromObject(ctx context.Context, in baset
 		BillableMetricId:   billableMetricIdVal,
 		BillableMetricName: billableMetricNameVal,
 		IntegrationToken:   integrationTokenVal,
-		LabelSource:        labelSourceVal,
 		Metric:             metricVal,
 		MetricKind:         metricKindVal,
 		state:              attr.ValueStateKnown,
@@ -4069,24 +4036,6 @@ func NewMetronomeMetricFieldsValue(attributeTypes map[string]attr.Type, attribut
 			fmt.Sprintf(`integration_token expected to be basetypes.StringValue, was: %T`, integrationTokenAttribute))
 	}
 
-	labelSourceAttribute, ok := attributes["label_source"]
-
-	if !ok {
-		diags.AddError(
-			"Attribute Missing",
-			`label_source is missing from object`)
-
-		return NewMetronomeMetricFieldsValueUnknown(), diags
-	}
-
-	labelSourceVal, ok := labelSourceAttribute.(basetypes.StringValue)
-
-	if !ok {
-		diags.AddError(
-			"Attribute Wrong Type",
-			fmt.Sprintf(`label_source expected to be basetypes.StringValue, was: %T`, labelSourceAttribute))
-	}
-
 	metricAttribute, ok := attributes["metric"]
 
 	if !ok {
@@ -4131,7 +4080,6 @@ func NewMetronomeMetricFieldsValue(attributeTypes map[string]attr.Type, attribut
 		BillableMetricId:   billableMetricIdVal,
 		BillableMetricName: billableMetricNameVal,
 		IntegrationToken:   integrationTokenVal,
-		LabelSource:        labelSourceVal,
 		Metric:             metricVal,
 		MetricKind:         metricKindVal,
 		state:              attr.ValueStateKnown,
@@ -4209,14 +4157,13 @@ type MetronomeMetricFieldsValue struct {
 	BillableMetricId   basetypes.StringValue `tfsdk:"billable_metric_id"`
 	BillableMetricName basetypes.StringValue `tfsdk:"billable_metric_name"`
 	IntegrationToken   basetypes.StringValue `tfsdk:"integration_token"`
-	LabelSource        basetypes.StringValue `tfsdk:"label_source"`
 	Metric             basetypes.StringValue `tfsdk:"metric"`
 	MetricKind         basetypes.StringValue `tfsdk:"metric_kind"`
 	state              attr.ValueState
 }
 
 func (v MetronomeMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 6)
+	attrTypes := make(map[string]tftypes.Type, 5)
 
 	var val tftypes.Value
 	var err error
@@ -4224,7 +4171,6 @@ func (v MetronomeMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftyp
 	attrTypes["billable_metric_id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["billable_metric_name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["integration_token"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["label_source"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["metric"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["metric_kind"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -4232,7 +4178,7 @@ func (v MetronomeMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftyp
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 6)
+		vals := make(map[string]tftypes.Value, 5)
 
 		val, err = v.BillableMetricId.ToTerraformValue(ctx)
 
@@ -4257,14 +4203,6 @@ func (v MetronomeMetricFieldsValue) ToTerraformValue(ctx context.Context) (tftyp
 		}
 
 		vals["integration_token"] = val
-
-		val, err = v.LabelSource.ToTerraformValue(ctx)
-
-		if err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		vals["label_source"] = val
 
 		val, err = v.Metric.ToTerraformValue(ctx)
 
@@ -4315,7 +4253,6 @@ func (v MetronomeMetricFieldsValue) ToObjectValue(ctx context.Context) (basetype
 		"billable_metric_id":   basetypes.StringType{},
 		"billable_metric_name": basetypes.StringType{},
 		"integration_token":    basetypes.StringType{},
-		"label_source":         basetypes.StringType{},
 		"metric":               basetypes.StringType{},
 		"metric_kind":          basetypes.StringType{},
 	}
@@ -4334,7 +4271,6 @@ func (v MetronomeMetricFieldsValue) ToObjectValue(ctx context.Context) (basetype
 			"billable_metric_id":   v.BillableMetricId,
 			"billable_metric_name": v.BillableMetricName,
 			"integration_token":    v.IntegrationToken,
-			"label_source":         v.LabelSource,
 			"metric":               v.Metric,
 			"metric_kind":          v.MetricKind,
 		})
@@ -4369,10 +4305,6 @@ func (v MetronomeMetricFieldsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
-	if !v.LabelSource.Equal(other.LabelSource) {
-		return false
-	}
-
 	if !v.Metric.Equal(other.Metric) {
 		return false
 	}
@@ -4397,7 +4329,6 @@ func (v MetronomeMetricFieldsValue) AttributeTypes(ctx context.Context) map[stri
 		"billable_metric_id":   basetypes.StringType{},
 		"billable_metric_name": basetypes.StringType{},
 		"integration_token":    basetypes.StringType{},
-		"label_source":         basetypes.StringType{},
 		"metric":               basetypes.StringType{},
 		"metric_kind":          basetypes.StringType{},
 	}

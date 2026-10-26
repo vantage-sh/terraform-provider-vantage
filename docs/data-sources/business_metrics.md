@@ -105,7 +105,6 @@ Read-Only:
 
 - `billable_metric_id` (String) Metronome billable metric UUID for usage metrics.
 - `billable_metric_name` (String) Metronome billable metric display name for usage metrics.
-- `label_source` (String) The source of labels for imported values.
 - `metric` (String) The selected Metronome metric.
 - `metric_kind` (String) Metronome metric kind.
 
