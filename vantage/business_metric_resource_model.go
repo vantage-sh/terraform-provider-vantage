@@ -742,6 +742,21 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 		model.DatadogMetricFields = datadogMetricFields
 	}
 
+	if !m.ClickhouseMetricFields.IsNull() && !m.ClickhouseMetricFields.IsUnknown() {
+		model.ClickhouseMetricFields = &modelsv2.UpdateBusinessMetricClickhouseMetricFields{
+			IntegrationToken: m.ClickhouseMetricFields.IntegrationToken.ValueString(),
+			QueryEndpointID:  m.ClickhouseMetricFields.QueryEndpointId.ValueString(),
+		}
+	}
+
+	if !m.GcpBigqueryMetricFields.IsNull() && !m.GcpBigqueryMetricFields.IsUnknown() {
+		model.GcpBigqueryMetricFields = &modelsv2.UpdateBusinessMetricGcpBigqueryMetricFields{
+			IntegrationToken: m.GcpBigqueryMetricFields.IntegrationToken.ValueString(),
+			QueryProjectID:   m.GcpBigqueryMetricFields.QueryProjectId.ValueString(),
+			SQLQuery:         m.GcpBigqueryMetricFields.SqlQuery.ValueString(),
+		}
+	}
+
 	if !m.SnowflakeMetricFields.IsNull() && !m.SnowflakeMetricFields.IsUnknown() {
 		model.SnowflakeMetricFields = &modelsv2.UpdateBusinessMetricSnowflakeMetricFields{
 			IntegrationToken: m.SnowflakeMetricFields.IntegrationToken.ValueString(),
