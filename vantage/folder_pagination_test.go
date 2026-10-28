@@ -161,3 +161,36 @@ func TestFetchAllFolders_apiError(t *testing.T) {
 		t.Fatal("expected error from API, got nil")
 	}
 }
+
+func TestFetchFoldersByType_preservesFilterAcrossPages(t *testing.T) {
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if got := r.URL.Query().Get("type"); got != "DashboardFolder" {
+			t.Errorf("type filter = %q", got)
+		}
+		if got := r.URL.Query().Get("limit"); got != "1000" {
+			t.Errorf("limit = %q", got)
+		}
+		var links *modelsv2.Links
+		if requests == 1 {
+			next := fmt.Sprintf("http://%s/v2/folders?page=2", r.Host)
+			links = &modelsv2.Links{Next: &next}
+		} else if r.URL.Query().Get("page") != "2" {
+			t.Errorf("page = %q", r.URL.Query().Get("page"))
+		}
+		folder := mockFolder(fmt.Sprintf("fldr_%d", requests), "Dashboards", "wrkspc_test", nil)
+		folder.Type = "DashboardFolder"
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(foldersResponse{Folders: []*modelsv2.Folder{folder}, Links: links})
+	}))
+	defer srv.Close()
+	folderType := "DashboardFolder"
+	got, err := fetchFoldersByType(clientForServer(t, srv.URL), &folderType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requests != 2 || len(got) != 2 {
+		t.Fatalf("requests = %d, folders = %d, want 2 each", requests, len(got))
+	}
+}

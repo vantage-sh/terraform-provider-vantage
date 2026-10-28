@@ -2,6 +2,13 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/datasource_dashboards"
@@ -213,5 +220,65 @@ func TestDashboardDataSourceValueFromPayload_freeTextWidget(t *testing.T) {
 	}
 	if !widgets[0].Settings.IsNull() {
 		t.Fatalf("settings = %v, want null", widgets[0].Settings)
+	}
+}
+
+func TestDashboardDataSourceValueFromPayload_folderToken(t *testing.T) {
+	folder := "fldr_test"
+	for _, token := range []*string{nil, &folder} {
+		value, diags := dashboardDataSourceValueFromPayload(context.Background(), &modelsv2.Dashboard{FolderToken: token})
+		if diags.HasError() {
+			t.Fatalf("conversion diagnostics: %v", diags)
+		}
+		if !value.FolderToken.Equal(types.StringPointerValue(token)) {
+			t.Fatalf("folder_token = %v, want %v", value.FolderToken, token)
+		}
+	}
+}
+
+func TestDashboardsDataSource_folderTokenFilter(t *testing.T) {
+	ctx := context.Background()
+	folder := "fldr_test"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if got := req.URL.Query().Get("folder_token"); got != folder {
+			t.Errorf("folder_token filter = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(&modelsv2.Dashboards{Dashboards: []*modelsv2.Dashboard{
+			{Token: "dshbrd_a", FolderToken: &folder, Widgets: []*modelsv2.DashboardWidget{}, SavedFilterTokens: []string{}},
+			{Token: "dshbrd_b", FolderToken: &folder, Widgets: []*modelsv2.DashboardWidget{}, SavedFilterTokens: []string{}},
+		}})
+	}))
+	defer srv.Close()
+	dataSource := &dashboardsDataSource{client: clientForServer(t, srv.URL)}
+	var schemaResp datasource.SchemaResponse
+	dataSource.Schema(ctx, datasource.SchemaRequest{}, &schemaResp)
+	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	values := make(map[string]tftypes.Value)
+	for name, attributeType := range objectType.AttributeTypes {
+		values[name] = tftypes.NewValue(attributeType, nil)
+	}
+	values["folder_token"] = tftypes.NewValue(tftypes.String, folder)
+	config := tfsdk.Config{Schema: schemaResp.Schema, Raw: tftypes.NewValue(objectType, values)}
+	resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+	dataSource.Read(ctx, datasource.ReadRequest{Config: config}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatal(resp.Diagnostics)
+	}
+	var model datasource_dashboards.DashboardsModel
+	if d := resp.State.Get(ctx, &model); d.HasError() {
+		t.Fatal(d)
+	}
+	var dashboards []datasource_dashboards.DashboardsValue
+	if d := model.Dashboards.ElementsAs(ctx, &dashboards, false); d.HasError() {
+		t.Fatal(d)
+	}
+	if len(dashboards) != 2 {
+		t.Fatalf("dashboards = %d, want 2", len(dashboards))
+	}
+	for _, dashboard := range dashboards {
+		if dashboard.FolderToken.ValueString() != folder {
+			t.Errorf("folder_token = %v", dashboard.FolderToken)
+		}
 	}
 }

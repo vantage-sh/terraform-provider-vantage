@@ -22,6 +22,7 @@ Looks up a folder by title and returns its token. Use `workspace_token` and `par
 ### Optional
 
 - `parent_folder_token` (String) Filter folders by parent folder token. Set to an empty string (`""`) to match only root-level folders (those with no parent). Also populated as an output with the parent folder token of the matched folder.
+- `type` (String) Filter by folder type: CostFolder, DashboardFolder, or ProviderResourceFolder. Also returns the matched folder's type.
 - `workspace_token` (String) Filter folders by workspace token. If not specified, the first folder matching the title is returned. Also populated as an output with the workspace token of the matched folder.
 
 ### Read-Only

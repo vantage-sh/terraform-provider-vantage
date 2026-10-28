@@ -17,6 +17,7 @@ description: |-
 
 ### Optional
 
+- `folder_token` (String) The token of the Dashboard Folder to return dashboards from.
 - `q` (String) Search dashboards by title.
 - `workspace_token` (String) The workspace token of the dashboards to return.
 
@@ -33,6 +34,7 @@ Read-Only:
 - `date_bin` (String) Determines how to group costs in the Dashboard.
 - `date_interval` (String) Determines the date range for Reports in the Dashboard. Guaranteed to be set to 'custom' if 'start_date' and 'end_date' are set.
 - `end_date` (String) The end date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.
+- `folder_token` (String) The token for the Dashboard Folder containing the Dashboard, if any.
 - `id` (String) The id of the resource
 - `saved_filter_tokens` (List of String) The tokens of the Saved Filters used in the Dashboard.
 - `start_date` (String) The start date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.
