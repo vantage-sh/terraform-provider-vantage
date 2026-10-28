@@ -18,9 +18,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*FolderResource)(nil)
-	_ resource.ResourceWithConfigure   = (*FolderResource)(nil)
-	_ resource.ResourceWithImportState = (*FolderResource)(nil)
+	_ resource.Resource                   = (*FolderResource)(nil)
+	_ resource.ResourceWithConfigure      = (*FolderResource)(nil)
+	_ resource.ResourceWithImportState    = (*FolderResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*FolderResource)(nil)
 )
 
 type FolderResource struct {
@@ -52,11 +53,12 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Required:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "The type of the folder. The API defaults to `CostFolder`. Changing this value forces replacement.",
+				MarkdownDescription: "The type of the folder: `CostFolder`, `DashboardFolder`, or `ProviderResourceFolder`. The API defaults to `CostFolder`. When omitted, an existing folder keeps its current type. Changing this value forces replacement. Dashboard Folders require the account feature to be enabled.",
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(
+						modelsv2.CreateFolderTypeDashboardFolder,
 						modelsv2.CreateFolderTypeCostFolder,
 						modelsv2.CreateFolderTypeProviderResourceFolder,
 					),
@@ -67,12 +69,15 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				},
 			},
 			"parent_folder_token": schema.StringAttribute{
-				MarkdownDescription: "Token of the folder's parent folder",
+				MarkdownDescription: "Token of the parent folder, which must have the same type. Set to an empty string to move the folder to root. When omitted, the existing parent is preserved.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workspace_token": schema.StringAttribute{
-				MarkdownDescription: "Workspace token to add the cost report to.",
+				MarkdownDescription: "Workspace token to add the folder to.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -88,7 +93,7 @@ func (r FolderResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"saved_filter_tokens": schema.ListAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Tokens of the SavedFilters to apply to any Cost Report contained within the Folder.",
+				MarkdownDescription: "Tokens of the SavedFilters to apply to Cost Reports in a CostFolder. Must be empty or omitted for other folder types.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
@@ -142,7 +147,7 @@ func (r FolderResource) Create(ctx context.Context, req resource.CreateRequest, 
 	data.Token = types.StringValue(out.Payload.Token)
 	data.Title = types.StringPointerValue(out.Payload.Title)
 	data.Type = types.StringValue(out.Payload.Type)
-	data.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
+	data.ParentFolderToken = folderTokenState(data.ParentFolderToken, out.Payload.ParentFolderToken)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	savedFilterTokensValue, diag := types.ListValueFrom(ctx, types.StringType, out.Payload.SavedFilterTokens)
 	if diag.HasError() {
@@ -176,7 +181,7 @@ func (r FolderResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	state.Token = types.StringValue(out.Payload.Token)
-	state.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
+	state.ParentFolderToken = folderTokenState(state.ParentFolderToken, out.Payload.ParentFolderToken)
 	state.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
 	state.Title = types.StringPointerValue(out.Payload.Title)
 	state.Type = types.StringValue(out.Payload.Type)
@@ -213,18 +218,18 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	params := foldersv2.NewUpdateFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
 	model := &modelsv2.UpdateFolder{
-		ParentFolderToken: data.ParentFolderToken.ValueString(),
+		ParentFolderToken: folderTokenRequest(data.ParentFolderToken),
 		Title:             data.Title.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
 	}
 	params.WithUpdateFolder(model)
-	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth)
+	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth, updateFolderWithSavedFilterTokens(model))
 	if err != nil {
 		handleError("Update Folder Resource", &resp.Diagnostics, err)
 		return
 	}
 
-	data.ParentFolderToken = types.StringPointerValue(out.Payload.ParentFolderToken)
+	data.ParentFolderToken = folderTokenState(data.ParentFolderToken, out.Payload.ParentFolderToken)
 	data.Title = types.StringPointerValue(out.Payload.Title)
 	data.Type = types.StringValue(out.Payload.Type)
 	data.WorkspaceToken = types.StringValue(out.Payload.WorkspaceToken)
@@ -268,5 +273,17 @@ func (r *FolderResource) ConfigValidators(ctx context.Context) []resource.Config
 			path.MatchRoot("parent_folder_token"),
 			path.MatchRoot("workspace_token"),
 		),
+	}
+}
+
+func (r FolderResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data FolderResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !data.Type.IsNull() && !data.Type.IsUnknown() && data.Type.ValueString() != modelsv2.CreateFolderTypeCostFolder &&
+		!data.SavedFilterTokens.IsNull() && !data.SavedFilterTokens.IsUnknown() && len(data.SavedFilterTokens.Elements()) > 0 {
+		resp.Diagnostics.AddAttributeError(path.Root("saved_filter_tokens"), "Saved Filters Require a CostFolder", "saved_filter_tokens must be empty or omitted for DashboardFolder and ProviderResourceFolder because the API only applies saved filters to CostFolder.")
 	}
 }

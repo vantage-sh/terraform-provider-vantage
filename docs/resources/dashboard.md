@@ -13,9 +13,18 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Requires Dashboard Folders to be enabled for the account.
+resource "vantage_folder" "dashboards" {
+  title           = "Dashboards"
+  type            = "DashboardFolder"
+  workspace_token = "wrkspc_47c3254c790e9351"
+}
+
 resource "vantage_dashboard" "demo_dashboard" {
   title         = "Demo Dashboard"
   date_interval = "last_month"
+  # Remove folder_token to move the dashboard back to the workspace root.
+  folder_token = vantage_folder.dashboards.token
   widgets = [
     {
       settings = {
@@ -75,6 +84,7 @@ resource "vantage_dashboard" "demo_dashboard" {
 - `date_bin` (String) Determines how to group costs in the Dashboard.
 - `date_interval` (String) Determines the date range in the Dashboard. Incompatible with 'start_date' and 'end_date' parameters.
 - `end_date` (String) The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
+- `folder_token` (String) Token of the Dashboard Folder. Omit this attribute to keep the dashboard at the workspace root or move it back to root. Requires Dashboard Folders to be enabled for the account when a folder token is set.
 - `saved_filter_tokens` (List of String) The tokens of the Saved Filters used in the Dashboard.
 - `start_date` (String) The start date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.
 - `title` (String) The title of the Dashboard.
