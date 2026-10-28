@@ -3,6 +3,8 @@ package vantage
 import (
 	"context"
 
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,6 +22,7 @@ var (
 	_ resource.Resource                = (*VirtualTagConfigResource)(nil)
 	_ resource.ResourceWithConfigure   = (*VirtualTagConfigResource)(nil)
 	_ resource.ResourceWithImportState = (*VirtualTagConfigResource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*VirtualTagConfigResource)(nil)
 )
 
 type VirtualTagConfigResource struct {
@@ -43,6 +46,8 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 	//
 	// Here we modify the generated schema to make the nested attributes Optional instead of Required.
 	resp.Schema = resource_virtual_tag_config.VirtualTagConfigResourceSchema(ctx)
+	resp.Schema.MarkdownDescription = "Manages a virtual tag config.\n\n" +
+		"~> **Value ownership:** Manage values either inline with this resource's `values` attribute OR with separate `vantage_virtual_tag_config_value` resources, never both for the same config. When using separate resources, omit `values` entirely. Omitted values are read into state but are not modified or removed by parent updates. An explicit `values = []` manages the collection and removes its values."
 
 	resp.Schema.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
@@ -60,7 +65,7 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 		Optional:            generatedValues.Optional,
 		Computed:            generatedValues.Computed,
 		Description:         generatedValues.Description,
-		MarkdownDescription: generatedValues.MarkdownDescription,
+		MarkdownDescription: generatedValues.MarkdownDescription + " Omit this attribute when using separate `vantage_virtual_tag_config_value` resources. Setting it to `[]` removes all values; never combine inline and standalone value management for the same config.",
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				// Reuse generated attributes unchanged
@@ -125,6 +130,31 @@ func (r VirtualTagConfigResource) Schema(ctx context.Context, req resource.Schem
 		Default:             booldefault.StaticBool(false),
 		MarkdownDescription: "Whether this virtual tag key is marked as preferred in the Vantage UI.",
 	}
+}
+
+func (r VirtualTagConfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+	var config virtualTagConfigModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() || !config.Values.IsNull() {
+		return
+	}
+	var plan, state virtualTagConfigModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	metadataKnown := !config.Key.IsUnknown() && !config.Overridable.IsUnknown() &&
+		!config.BackfillUntil.IsUnknown() && !config.CollapsedTagKeys.IsUnknown() && !config.Preferred.IsUnknown()
+	if metadataKnown && plan.parentFieldsEqual(&state) && plannedValueEqual(plan.Preferred, state.Preferred) {
+		resp.Diagnostics.Append(resp.Plan.Set(ctx, &state)...)
+		return
+	}
+	plan.Values = state.Values
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 func (r VirtualTagConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -222,8 +252,14 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	preferredChanged := !plannedValueEqual(data.Preferred, state.Preferred)
 	preferredToSync := data.Preferred
 
-	changes := virtualTagConfigValueChanges{requiresParentUpdate: data.Values.IsNull() || data.Values.IsUnknown()}
-	if !changes.requiresParentUpdate {
+	var configuredValues types.List
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("values"), &configuredValues)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	managesValues := !configuredValues.IsNull()
+	changes := virtualTagConfigValueChanges{requiresParentUpdate: managesValues && (data.Values.IsNull() || data.Values.IsUnknown())}
+	if managesValues && !changes.requiresParentUpdate {
 		planValues := data.valuesFromTf(ctx, &resp.Diagnostics)
 		stateValues := state.valuesFromTf(ctx, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
@@ -233,7 +269,11 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	if !data.parentFieldsEqual(state) || changes.requiresParentUpdate {
-		model := data.toUpdate(ctx, &resp.Diagnostics)
+		updateData := *data
+		if !managesValues {
+			updateData.Values = types.ListNull(data.Values.ElementType(ctx))
+		}
+		model := updateData.toUpdate(ctx, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -242,7 +282,11 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 			NewUpdateVirtualTagConfigParams().
 			WithToken(data.Token.ValueString()).
 			WithUpdateVirtualTagConfig(model)
-		out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth)
+		var options []tagsv2.ClientOption
+		if !managesValues {
+			options = append(options, omitVirtualTagConfigValues(model))
+		}
+		out, _, err := r.client.V2.VirtualTags.UpdateVirtualTagConfig(params, r.client.Auth, options...)
 		if err != nil {
 			handleError("Update Virtual Tag Config Resource", &resp.Diagnostics, err)
 			return
@@ -356,6 +400,21 @@ func (r VirtualTagConfigResource) Update(ctx context.Context, req resource.Updat
 		}
 	}
 	refreshState()
+}
+
+func omitVirtualTagConfigValues(payload *modelsv2.UpdateVirtualTagConfig) tagsv2.ClientOption {
+	return func(operation *runtime.ClientOperation) {
+		original := operation.Params
+		operation.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, registry strfmt.Registry) error {
+			if err := original.WriteToRequest(req, registry); err != nil {
+				return err
+			}
+			return req.SetBodyParam(&struct {
+				*modelsv2.UpdateVirtualTagConfig
+				Values []*modelsv2.UpdateVirtualTagConfigValuesItems0 `json:"values,omitempty"`
+			}{UpdateVirtualTagConfig: payload})
+		})
+	}
 }
 
 func (r VirtualTagConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

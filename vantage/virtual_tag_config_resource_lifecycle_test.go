@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
@@ -74,6 +75,117 @@ func writeVirtualTagConfigResponseWithAttributes(t *testing.T, w http.ResponseWr
 		Values:           []*modelsv2.VirtualTagConfigValue{},
 	}); err != nil {
 		t.Errorf("encoding virtual tag config response: %v", err)
+	}
+}
+
+func TestVirtualTagConfigParentUpdateValueOwnership(t *testing.T) {
+	ctx := context.Background()
+	for _, managesValues := range []bool{false, true} {
+		t.Run(map[bool]string{false: "omitted_preserves_children", true: "explicit_empty_clears_children"}[managesValues], func(t *testing.T) {
+			gotUpdate := false
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if req.Method != http.MethodPut || req.URL.Path != "/v2/virtual_tag_configs/vtag_1" {
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+					http.NotFound(w, req)
+					return
+				}
+				gotUpdate = true
+				var body map[string]json.RawMessage
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Errorf("decoding parent update: %v", err)
+				}
+				values, present := body["values"]
+				if managesValues && (!present || string(values) != "[]") {
+					t.Errorf("explicit empty values = %s, present=%t; want []", values, present)
+				}
+				if !managesValues && present {
+					t.Errorf("unmanaged values must be omitted, got %s", values)
+				}
+				children := []*modelsv2.VirtualTagConfigValue{}
+				if !managesValues {
+					name, filter := "hosting", "costs.provider = 'aws'"
+					children = append(children, &modelsv2.VirtualTagConfigValue{Token: "vtag_val_1", Name: &name, Filter: &filter})
+				}
+				w.Header().Set("Content-Type", "application/json")
+				if err := json.NewEncoder(w).Encode(&modelsv2.VirtualTagConfig{
+					Token: "vtag_1", Key: "new-key", BackfillUntil: "2026-01-01", Values: children,
+					CollapsedTagKeys: []*modelsv2.VirtualTagConfigCollapsedTagKey{},
+				}); err != nil {
+					t.Errorf("encoding response: %v", err)
+				}
+			}))
+			defer server.Close()
+			schema := virtualTagConfigTestSchema(ctx)
+			stateModel := virtualTagConfigTestModel(ctx, "old-key", false)
+			stateModel.Values = virtualTagConfigTestValuesList(t, ctx, false)
+			planModel := virtualTagConfigTestModel(ctx, "new-key", false)
+			planModel.Values = stateModel.Values
+			if managesValues {
+				planModel.Values = types.ListValueMust(resource_virtual_tag_config.ValuesValue{}.Type(ctx), []attr.Value{})
+			}
+			plan := tfsdk.Plan{Schema: schema}
+			if diags := plan.Set(ctx, planModel); diags.HasError() {
+				t.Fatal(diags)
+			}
+			configState := virtualTagConfigTestState(t, ctx, schema, planModel)
+			if !managesValues {
+				if diags := configState.SetAttribute(ctx, path.Root("values"), types.ListNull(resource_virtual_tag_config.ValuesValue{}.Type(ctx))); diags.HasError() {
+					t.Fatal(diags)
+				}
+			}
+			resp := frameworkresource.UpdateResponse{State: tfsdk.State{Raw: plan.Raw, Schema: schema}}
+			valueResource := VirtualTagConfigResource{client: clientForServer(t, server.URL)}
+			valueResource.Update(ctx, frameworkresource.UpdateRequest{
+				Config: tfsdk.Config{Raw: configState.Raw, Schema: schema}, Plan: plan,
+				State: virtualTagConfigTestState(t, ctx, schema, stateModel),
+			}, &resp)
+			if resp.Diagnostics.HasError() || !gotUpdate {
+				t.Fatalf("update diagnostics: %v, gotUpdate=%t", resp.Diagnostics, gotUpdate)
+			}
+			var updated virtualTagConfigModel
+			if diags := resp.State.Get(ctx, &updated); diags.HasError() {
+				t.Fatal(diags)
+			}
+			wantCount := 1
+			if managesValues {
+				wantCount = 0
+			}
+			if len(updated.Values.Elements()) != wantCount {
+				t.Fatalf("value count = %d, want %d", len(updated.Values.Elements()), wantCount)
+			}
+		})
+	}
+}
+
+func TestVirtualTagConfigUnmanagedValuesPreservesUnknownMetadataPlan(t *testing.T) {
+	ctx := context.Background()
+	schema := virtualTagConfigTestSchema(ctx)
+	stateModel := virtualTagConfigTestModel(ctx, "key", false)
+	stateModel.Values = virtualTagConfigTestValuesList(t, ctx, false)
+	planModel := virtualTagConfigTestModel(ctx, "key", false)
+	planModel.Key = types.StringUnknown()
+	planModel.Values = types.ListUnknown(resource_virtual_tag_config.ValuesValue{}.Type(ctx))
+	plan := tfsdk.Plan{Schema: schema}
+	if diags := plan.Set(ctx, planModel); diags.HasError() {
+		t.Fatal(diags)
+	}
+	configModel := *planModel
+	configModel.Values = types.ListNull(resource_virtual_tag_config.ValuesValue{}.Type(ctx))
+	configState := virtualTagConfigTestState(t, ctx, schema, &configModel)
+	resp := frameworkresource.ModifyPlanResponse{Plan: plan}
+	VirtualTagConfigResource{}.ModifyPlan(ctx, frameworkresource.ModifyPlanRequest{
+		Config: tfsdk.Config{Schema: schema, Raw: configState.Raw}, Plan: plan,
+		State: virtualTagConfigTestState(t, ctx, schema, stateModel),
+	}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatal(resp.Diagnostics)
+	}
+	var result virtualTagConfigModel
+	if diags := resp.Plan.Get(ctx, &result); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !result.Key.IsUnknown() || result.Values.IsUnknown() || len(result.Values.Elements()) != 1 {
+		t.Fatalf("key = %s, values = %s; want unknown key and preserved observed value", result.Key, result.Values)
 	}
 }
 
@@ -382,8 +494,9 @@ func TestVirtualTagConfigUpdateTreatsUnsetPreferredAsFalse(t *testing.T) {
 	resource.Update(
 		ctx,
 		frameworkresource.UpdateRequest{
-			Plan:  plan,
-			State: state,
+			Config: tfsdk.Config{Raw: plan.Raw, Schema: schema},
+			Plan:   plan,
+			State:  state,
 		},
 		&resp,
 	)
