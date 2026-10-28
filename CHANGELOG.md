@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Features
+
+* Add the `vantage_virtual_tag_config_value` resource for managing individual virtual tag config values and the `vantage_virtual_tag_config_values` data source for listing and finding values within a config.
+* `vantage_virtual_tag_config`: preserve existing values when `values` is omitted. Manage values inline OR through standalone value resources, never both; `values = []` explicitly removes all values.
+
 ### Breaking Changes
 
 * `vantage_team`: `user_emails`, `user_tokens`, and `workspace_tokens` changed from **List** to **Set** of String (schema version `0` → `1`).
