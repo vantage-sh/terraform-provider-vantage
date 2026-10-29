@@ -103,6 +103,16 @@ func (r *businessMetricResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	var configuration businessMetricResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configuration)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.CostReportTokensWithMetadata = attachmentLabelFilterInputs(ctx, data.CostReportTokensWithMetadata, configuration.CostReportTokensWithMetadata, types.ListNull(data.CostReportTokensWithMetadata.ElementType(ctx)), "cost_report_token", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	oldValues := data.Values
 	oldForecastedValues := data.ForecastedValues
 	oldCostReportTokens := data.CostReportTokensWithMetadata
@@ -276,6 +286,21 @@ func (r *businessMetricResource) ImportState(ctx context.Context, req resource.I
 func (r *businessMetricResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data *businessMetricResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var configuration businessMetricResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configuration)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var prior businessMetricResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.CostReportTokensWithMetadata = attachmentLabelFilterInputs(ctx, data.CostReportTokensWithMetadata, configuration.CostReportTokensWithMetadata, prior.CostReportTokensWithMetadata, "cost_report_token", &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

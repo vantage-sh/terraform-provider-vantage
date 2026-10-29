@@ -124,7 +124,7 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	bmtElemType := types.ObjectType{
 		AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
 	}
-	if !m.BusinessMetricTokensWithMetadata.IsNull() && !m.BusinessMetricTokensWithMetadata.IsUnknown() {
+	if len(payload.BusinessMetricTokensWithMetadata) > 0 || (!m.BusinessMetricTokensWithMetadata.IsNull() && !m.BusinessMetricTokensWithMetadata.IsUnknown()) {
 		configuredBMTs := make(map[string]map[string]attr.Value, len(m.BusinessMetricTokensWithMetadata.Elements()))
 		for _, elem := range m.BusinessMetricTokensWithMetadata.Elements() {
 			attrs := businessMetricMetadataAttributes(elem, &diags)
@@ -155,14 +155,19 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 					return diags
 				}
 			}
+			configuredLegacy := types.ListNull(types.StringType)
+			configuredCanonical := types.MapNull(types.ListType{ElemType: types.StringType})
 			label := types.StringPointerValue(bmt.Label)
 			if configured, ok := configuredBMTs[bmt.BusinessMetricToken]; ok {
 				if configuredLabel := configured["label"]; configuredLabel.IsNull() || configuredLabel.IsUnknown() {
 					label = types.StringNull()
 				}
-				if configuredLabelFilter := configured["label_filter"]; configuredLabelFilter.IsNull() || configuredLabelFilter.IsUnknown() {
-					labelFilter = types.ListNull(types.StringType)
-				}
+				configuredLegacy = configured["label_filter"].(types.List)
+				configuredCanonical = configured["label_filters"].(types.Map)
+			}
+			labelFilter, labelFilters = attachmentLabelFiltersFromAPI(ctx, labelFilter, labelFilters, configuredLegacy, configuredCanonical, &diags)
+			if diags.HasError() {
+				return diags
 			}
 			objVal, d := types.ObjectValue(
 				resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx),
@@ -310,25 +315,9 @@ func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnos
 			if unitScale, ok := attrs["unit_scale"]; ok && !unitScale.IsNull() && !unitScale.IsUnknown() {
 				item.UnitScale = unitScale.(types.String).ValueStringPointer()
 			}
-			labelFilters, hasLabelFilters := attrs["label_filters"]
-			hasLabelFilters = hasLabelFilters && !labelFilters.IsNull() && !labelFilters.IsUnknown()
-			if lf, ok := attrs["label_filter"]; !hasLabelFilters && ok && !lf.IsNull() && !lf.IsUnknown() {
-				lfList := lf.(types.List)
-				items := []string{}
-				d := lfList.ElementsAs(ctx, &items, false)
-				diags.Append(d...)
-				item.LabelFilter = items
-			} else if !hasLabelFilters {
-				item.LabelFilter = []string{}
-			}
-			if hasLabelFilters {
-				items := map[string][]string{}
-				d := labelFilters.(types.Map).ElementsAs(ctx, &items, false)
-				diags.Append(d...)
-				if d.HasError() {
-					return create
-				}
-				item.LabelFilters = items
+			item.LabelFilters = attachmentLabelFiltersToAPI(ctx, attrs["label_filter"].(types.List), attrs["label_filters"].(types.Map), diags)
+			if diags.HasError() {
+				return nil
 			}
 			bmtItems = append(bmtItems, item)
 		}
@@ -463,25 +452,9 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 			if unitScale, ok := attrs["unit_scale"]; ok && !unitScale.IsNull() && !unitScale.IsUnknown() {
 				item.UnitScale = unitScale.(types.String).ValueStringPointer()
 			}
-			labelFilters, hasLabelFilters := attrs["label_filters"]
-			hasLabelFilters = hasLabelFilters && !labelFilters.IsNull() && !labelFilters.IsUnknown()
-			if lf, ok := attrs["label_filter"]; !hasLabelFilters && ok && !lf.IsNull() && !lf.IsUnknown() {
-				lfList := lf.(types.List)
-				items := []string{}
-				d := lfList.ElementsAs(ctx, &items, false)
-				diags.Append(d...)
-				item.LabelFilter = items
-			} else if !hasLabelFilters {
-				item.LabelFilter = []string{}
-			}
-			if hasLabelFilters {
-				items := map[string][]string{}
-				d := labelFilters.(types.Map).ElementsAs(ctx, &items, false)
-				diags.Append(d...)
-				if d.HasError() {
-					return update
-				}
-				item.LabelFilters = items
+			item.LabelFilters = attachmentLabelFiltersToAPI(ctx, attrs["label_filter"].(types.List), attrs["label_filters"].(types.Map), diags)
+			if diags.HasError() {
+				return nil
 			}
 			bmtItems = append(bmtItems, item)
 		}

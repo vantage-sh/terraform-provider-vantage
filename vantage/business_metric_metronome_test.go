@@ -132,7 +132,8 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 			r.Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
 			s := schemaResp.Schema
 			create := fwresource.CreateResponse{State: tfsdk.State{Schema: s}}
-			r.Create(ctx, fwresource.CreateRequest{Plan: tfsdk.Plan{Raw: metronomeTestWithReports(t, metronomeTestValue(ctx, s, fields), filters), Schema: s}}, &create)
+			createPlan := tfsdk.Plan{Raw: metronomeTestWithReports(t, metronomeTestValue(ctx, s, fields), filters), Schema: s}
+			r.Create(ctx, fwresource.CreateRequest{Plan: createPlan, Config: tfsdk.Config{Raw: createPlan.Raw, Schema: s}}, &create)
 			if create.Diagnostics.HasError() {
 				t.Fatalf("create: %v", create.Diagnostics)
 			}
@@ -160,7 +161,7 @@ func TestBusinessMetricMetronomeLifecycle(t *testing.T) {
 			plan := tfsdk.Plan{Raw: metronomeTestWithReports(t, metronomeTestValue(ctx, s, fields), filters), Schema: s}
 			plan.Raw = metronomeTestWithIDs(t, plan.Raw)
 			update := fwresource.UpdateResponse{State: read.State}
-			r.Update(ctx, fwresource.UpdateRequest{Plan: plan, State: read.State}, &update)
+			r.Update(ctx, fwresource.UpdateRequest{Plan: plan, State: read.State, Config: tfsdk.Config{Raw: plan.Raw, Schema: s}}, &update)
 			if update.Diagnostics.HasError() {
 				t.Fatalf("update: %v", update.Diagnostics)
 			}
@@ -306,7 +307,7 @@ func TestBusinessMetricMetronomeRejectedUpdatePreservesState(t *testing.T) {
 	defer server.Close()
 	plan := tfsdk.Plan{Raw: metronomeTestWithIDs(t, metronomeTestValue(ctx, s, map[string]string{"metric_kind": "usage", "billable_metric_id": "invalid"})), Schema: s}
 	resp := fwresource.UpdateResponse{State: prior}
-	(&businessMetricResource{client: clientForServer(t, server.URL)}).Update(ctx, fwresource.UpdateRequest{Plan: plan, State: prior}, &resp)
+	(&businessMetricResource{client: clientForServer(t, server.URL)}).Update(ctx, fwresource.UpdateRequest{Plan: plan, State: prior, Config: tfsdk.Config{Raw: plan.Raw, Schema: plan.Schema}}, &resp)
 	if !resp.Diagnostics.HasError() {
 		t.Fatal("expected update diagnostic")
 	}

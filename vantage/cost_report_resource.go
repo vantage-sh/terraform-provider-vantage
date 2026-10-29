@@ -222,6 +222,16 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	var configuration costReportModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configuration)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.BusinessMetricTokensWithMetadata = attachmentLabelFilterInputs(ctx, data.BusinessMetricTokensWithMetadata, configuration.BusinessMetricTokensWithMetadata, types.ListNull(data.BusinessMetricTokensWithMetadata.ElementType(ctx)), "business_metric_token", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	model := data.toCreateModel(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -307,6 +317,21 @@ func (r CostReportResource) ImportState(ctx context.Context, req resource.Import
 func (r CostReportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data costReportModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var configuration costReportModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configuration)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var prior costReportModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.BusinessMetricTokensWithMetadata = attachmentLabelFilterInputs(ctx, data.BusinessMetricTokensWithMetadata, configuration.BusinessMetricTokensWithMetadata, prior.BusinessMetricTokensWithMetadata, "business_metric_token", &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

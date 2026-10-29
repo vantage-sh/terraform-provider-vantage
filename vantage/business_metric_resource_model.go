@@ -479,6 +479,11 @@ func costReportTokensListForResource(ctx context.Context, payloadTokens []*model
 			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
 		}
 
+		labelFilter, labelFilters = attachmentLabelFiltersFromAPI(ctx, labelFilter, labelFilters, types.ListNull(types.StringType), emptyLabelFiltersMap(), &diags)
+		if diags.HasError() {
+			return types.ListNull(resourceCostReportTokenListType(ctx)), diags
+		}
+
 		tokenValue, d := resource_business_metric.NewCostReportTokensWithMetadataValue(
 			attrTypes,
 			map[string]attr.Value{
@@ -516,6 +521,11 @@ func costReportTokensListForDataSource(ctx context.Context, payloadTokens []*mod
 
 		labelFilters, d := labelFiltersMapFromAPI(ctx, costReportToken.LabelFilters)
 		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
+		}
+
+		labelFilter, labelFilters = attachmentLabelFiltersFromAPI(ctx, labelFilter, labelFilters, types.ListNull(types.StringType), emptyLabelFiltersMap(), &diags)
 		if diags.HasError() {
 			return types.ListNull(dataSourceCostReportTokenListType(ctx)), diags
 		}
@@ -666,22 +676,12 @@ func (m *businessMetricResourceModel) toCreate(ctx context.Context, diags *diag.
 
 		costReportTokens := make([]*modelsv2.CreateBusinessMetricCostReportTokensWithMetadataItems0, 0, len(tfCostReportTokens))
 		for _, v := range tfCostReportTokens {
-			tfLabelFilter := []string{}
-			if !v.LabelFilter.IsNull() && !v.LabelFilter.IsUnknown() {
-				tfLabelFilter = make([]string, 0, len(v.LabelFilter.Elements()))
-				diags.Append(v.LabelFilter.ElementsAs(ctx, &tfLabelFilter, false)...)
-				if diags.HasError() {
-					return nil
-				}
-			}
-
 			costReportToken := &modelsv2.CreateBusinessMetricCostReportTokensWithMetadataItems0{
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
 				CalculationType: calculationTypePointer(v.CalculationType),
 				Label:           costReportAttachmentLabelForAPI(v.Label),
-				LabelFilter:     tfLabelFilter,
-				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
+				LabelFilters:    attachmentLabelFiltersToAPI(ctx, v.LabelFilter, v.LabelFilters, diags),
 			}
 			if diags.HasError() {
 				return nil
@@ -847,21 +847,12 @@ func (m *businessMetricResourceModel) toUpdate(ctx context.Context, diags *diag.
 
 		costReportTokens := make([]*modelsv2.UpdateBusinessMetricCostReportTokensWithMetadataItems0, 0, len(tfCostReportTokens))
 		for _, v := range tfCostReportTokens {
-			tfLabelFilter := []string{}
-			if !v.LabelFilter.IsNull() && !v.LabelFilter.IsUnknown() {
-				tfLabelFilter = make([]string, 0, len(v.LabelFilter.Elements()))
-				diags.Append(v.LabelFilter.ElementsAs(ctx, &tfLabelFilter, false)...)
-				if diags.HasError() {
-					return nil
-				}
-			}
 			costReportToken := &modelsv2.UpdateBusinessMetricCostReportTokensWithMetadataItems0{
 				CostReportToken: v.CostReportToken.ValueStringPointer(),
 				UnitScale:       v.UnitScale.ValueStringPointer(),
 				CalculationType: calculationTypePointer(v.CalculationType),
 				Label:           costReportAttachmentLabelForAPI(v.Label),
-				LabelFilter:     tfLabelFilter,
-				LabelFilters:    labelFiltersToAPI(ctx, v.LabelFilters, diags),
+				LabelFilters:    attachmentLabelFiltersToAPI(ctx, v.LabelFilter, v.LabelFilters, diags),
 			}
 			if diags.HasError() {
 				return nil
@@ -958,17 +949,10 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 	for _, planToken := range planTokens {
 		tokenKey := planToken.CostReportToken.ValueString()
 		if apiToken, ok := apiTokenMap[tokenKey]; ok {
-			// Handle label_filter: if API returns null/unknown but plan had a known value, use plan's value
-			// This ensures empty lists stay as empty lists rather than becoming null
-			labelFilter := apiToken.LabelFilter
-			if (labelFilter.IsNull() || labelFilter.IsUnknown()) && !planToken.LabelFilter.IsNull() && !planToken.LabelFilter.IsUnknown() {
-				labelFilter = planToken.LabelFilter
+			labelFilter, labelFilters := attachmentLabelFiltersFromAPI(ctx, apiToken.LabelFilter, apiToken.LabelFilters, planToken.LabelFilter, planToken.LabelFilters, diags)
+			if diags.HasError() {
+				return
 			}
-			// If still null or unknown, ensure we use an empty list for consistency
-			if labelFilter.IsNull() || labelFilter.IsUnknown() {
-				labelFilter, _ = types.ListValueFrom(ctx, types.StringType, []string{})
-			}
-
 			calculationType := apiToken.CalculationType
 			if (calculationType.IsNull() || calculationType.IsUnknown()) && !planToken.CalculationType.IsNull() && !planToken.CalculationType.IsUnknown() {
 				calculationType = planToken.CalculationType
@@ -978,13 +962,6 @@ func assignCostReportTokens(ctx context.Context, data *businessMetricResourceMod
 			}
 
 			label := apiToken.Label
-
-			// Trust the API for label_filters so omitting them from config clears
-			// prior filters instead of re-sticking planned values into state.
-			labelFilters := apiToken.LabelFilters
-			if labelFilters.IsNull() || labelFilters.IsUnknown() {
-				labelFilters = emptyLabelFiltersMap()
-			}
 
 			// Use the plan's cost_report_token but take computed values from API
 			orderedTokens = append(orderedTokens, businessMetricResourceModelCostReportToken{

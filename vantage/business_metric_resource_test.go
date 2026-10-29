@@ -1785,8 +1785,9 @@ func TestBusinessMetricFailedBigQueryUpdateKeepsState(t *testing.T) {
 	(&businessMetricResource{client: clientForServer(t, srv.URL)}).Update(
 		ctx,
 		fwresource.UpdateRequest{
-			Plan:  tfsdk.Plan{Raw: metric("INVALID SQL"), Schema: schema},
-			State: prior,
+			Plan:   tfsdk.Plan{Raw: metric("INVALID SQL"), Schema: schema},
+			Config: tfsdk.Config{Raw: metric("INVALID SQL"), Schema: schema},
+			State:  prior,
 		},
 		&resp,
 	)
