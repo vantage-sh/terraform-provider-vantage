@@ -311,6 +311,26 @@ resources:
             description: The token of the team
         aliases:
           team_token: token
+  virtual_tag_config_value:
+    create:
+      path: /virtual_tag_configs/{virtual_tag_config_token}/values
+      method: POST
+    read:
+      path: /virtual_tag_configs/{virtual_tag_config_token}/values/{virtual_tag_config_value_token}
+      method: GET
+    update:
+      path: /virtual_tag_configs/{virtual_tag_config_token}/values/{virtual_tag_config_value_token}
+      method: PATCH
+    delete:
+      path: /virtual_tag_configs/{virtual_tag_config_token}/values/{virtual_tag_config_value_token}
+      method: DELETE
+    schema:
+      attributes:
+        overrides:
+          token:
+            description: The token of the virtual tag config value
+        aliases:
+          virtual_tag_config_value_token: token
   virtual_tag_config:
     create:
       path: /virtual_tag_configs
@@ -613,6 +633,22 @@ data_sources:
         - limit
         - links
         - page
+  virtual_tag_config_values:
+    read:
+      path: /virtual_tag_configs/{token}
+      method: GET
+    schema:
+      ignores:
+        - backfill_until
+        - collapsed_tag_keys
+        - created_by_token
+        - hidden
+        - key
+        - overridable
+        - preferred
+      attributes:
+        aliases:
+          token: virtual_tag_config_token
   virtual_tag_configs:
     read:
       path: /virtual_tag_configs

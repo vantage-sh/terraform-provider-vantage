@@ -1,0 +1,1 @@
+terraform import vantage_virtual_tag_config_value.engineering vtag_1234/vtag_val_5678

@@ -126,11 +126,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(ctx.resourceName, "values.2.percentages.2.value", "Support"),
 				),
 			},
-			// Update: not specifying values
-			// TODO(cp): I believe this is not working as intended - I'd expect the provider to support modifying a pre-existing virtual tag config
-			// without specifying values and have the values unchanged (the TF provider submits values as null).
-			//
-			// In the interest of changing as little as possible for now + supporting the test behavior, values are cleared in this scenario.
+			// Update: omitting values leaves existing values unchanged.
 			{
 				Config: testAccVantageVirtualTagConfig_basicTf(
 					"test",
@@ -142,7 +138,7 @@ func TestAccVantageVirtualTagConfig_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(ctx.resourceName, "key", ctx.keyV1),
 					resource.TestCheckResourceAttr(ctx.resourceName, "overridable", "false"),
-					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "0"),
+					resource.TestCheckResourceAttr(ctx.resourceName, "values.#", "3"),
 				),
 			},
 			// Update: set multiple values with filters
