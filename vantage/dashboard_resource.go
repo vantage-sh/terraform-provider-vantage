@@ -95,6 +95,11 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 	s := resource_dashboard.DashboardResourceSchema(ctx)
 	attrs := s.GetAttributes()
 
+	s.Attributes["folder_token"] = schema.StringAttribute{
+		Optional:            true,
+		MarkdownDescription: "Token of the Dashboard Folder. Omit this attribute to keep the dashboard at the workspace root or move it back to root. Requires Dashboard Folders to be enabled for the account when a folder token is set.",
+	}
+
 	s.Attributes["date_interval"] = schema.StringAttribute{
 		Optional: true,
 		Computed: true,
@@ -132,6 +137,17 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 	s.Attributes["token"] = schema.StringAttribute{
 		Computed:            true,
 		MarkdownDescription: attrs["token"].GetMarkdownDescription(),
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
+	}
+	// Keep the known workspace on update. Otherwise an unset workspace_token is
+	// omitted and the API falls back to a default Workspace, which fails for
+	// multi-workspace accounts when the dashboard is at root.
+	s.Attributes["workspace_token"] = schema.StringAttribute{
+		Optional:            true,
+		Computed:            true,
+		MarkdownDescription: attrs["workspace_token"].GetMarkdownDescription(),
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.UseStateForUnknown(),
 		},

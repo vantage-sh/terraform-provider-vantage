@@ -33,6 +33,7 @@ Read-Only:
 - `id` (String) The id of the BusinessMetric.
 - `import_type` (String) The type of import for the BusinessMetric.
 - `integration_token` (String) The Integration token used to import the BusinessMetric.
+- `metronome_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--metronome_metric_fields))
 - `snowflake_metric_fields` (Attributes) (see [below for nested schema](#nestedatt--business_metrics--snowflake_metric_fields))
 - `title` (String) The title of the BusinessMetric.
 - `token` (String) The token of the BusinessMetric.
@@ -95,6 +96,17 @@ Read-Only:
 
 - `query_project_id` (String) The GCP project in which the BigQuery job runs.
 - `sql_query` (String) The SQL query used to import GCP BigQuery metrics.
+
+
+<a id="nestedatt--business_metrics--metronome_metric_fields"></a>
+### Nested Schema for `business_metrics.metronome_metric_fields`
+
+Read-Only:
+
+- `billable_metric_id` (String) Metronome billable metric UUID for usage metrics.
+- `billable_metric_name` (String) Metronome billable metric display name for usage metrics.
+- `metric` (String) The selected Metronome metric.
+- `metric_kind` (String) Metronome metric kind.
 
 
 <a id="nestedatt--business_metrics--snowflake_metric_fields"></a>

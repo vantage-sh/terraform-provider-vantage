@@ -49,6 +49,9 @@ func (d *dashboardsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	params := dashboardsv2.NewGetDashboardsParams()
+	if !data.FolderToken.IsNull() && !data.FolderToken.IsUnknown() {
+		params.SetFolderToken(data.FolderToken.ValueStringPointer())
+	}
 	if !data.Q.IsNull() && !data.Q.IsUnknown() {
 		params.SetQ(data.Q.ValueStringPointer())
 	}
@@ -106,6 +109,7 @@ func dashboardDataSourceValueFromPayload(ctx context.Context, payload *modelsv2.
 			"created_at":          types.StringValue(payload.CreatedAt),
 			"date_bin":            types.StringPointerValue(payload.DateBin),
 			"date_interval":       types.StringPointerValue(payload.DateInterval),
+			"folder_token":        types.StringPointerValue(payload.FolderToken),
 			"end_date":            types.StringPointerValue(payload.EndDate),
 			"id":                  types.StringValue(payload.Token),
 			"saved_filter_tokens": savedFilters,

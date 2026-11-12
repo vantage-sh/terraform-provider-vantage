@@ -73,6 +73,12 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},
+			"folder_token": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The token of the Dashboard Folder to add the Dashboard to. Send null or an empty string to create the Dashboard at the root.",
+				MarkdownDescription: "The token of the Dashboard Folder to add the Dashboard to. Send null or an empty string to create the Dashboard at the root.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "The id of the dashboard",
@@ -259,6 +265,7 @@ type DashboardModel struct {
 	DateBin           types.String `tfsdk:"date_bin"`
 	DateInterval      types.String `tfsdk:"date_interval"`
 	EndDate           types.String `tfsdk:"end_date"`
+	FolderToken       types.String `tfsdk:"folder_token"`
 	Id                types.String `tfsdk:"id"`
 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
 	StartDate         types.String `tfsdk:"start_date"`

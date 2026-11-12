@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	foldersv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/folders"
 )
 
 var (
@@ -23,6 +22,7 @@ type foldersDataSource struct {
 }
 
 type folderDataSourceModel struct {
+	Type              types.String `tfsdk:"type"`
 	Token             types.String `tfsdk:"token"`
 	Title             types.String `tfsdk:"title"`
 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
@@ -31,6 +31,7 @@ type folderDataSourceModel struct {
 }
 
 type foldersDataSourceModel struct {
+	Type    types.String            `tfsdk:"type"`
 	Folders []folderDataSourceModel `tfsdk:"folders"`
 }
 
@@ -41,9 +42,14 @@ func (d *foldersDataSource) Metadata(_ context.Context, req datasource.MetadataR
 func (d *foldersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Filter folders by type: CostFolder, DashboardFolder, or ProviderResourceFolder.",
+			},
 			"folders": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{Computed: true},
 						"token": schema.StringAttribute{
 							Computed: true,
 						},
@@ -73,8 +79,10 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 
-	params := foldersv2.NewGetFoldersParams()
-	out, err := d.client.V2.Folders.GetFolders(params, d.client.Auth)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	allFolders, err := fetchFoldersByType(d.client, state.Type.ValueStringPointer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Get Vantage Folders",
@@ -85,13 +93,14 @@ func (d *foldersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	folders := []folderDataSourceModel{}
 
-	for _, f := range out.Payload.Folders {
+	for _, f := range allFolders {
 		savedFilterTokens, diag := types.ListValueFrom(ctx, types.StringType, f.SavedFilterTokens)
 		if diag.HasError() {
 			resp.Diagnostics.Append(diag...)
 			return
 		}
 		folders = append(folders, folderDataSourceModel{
+			Type:              types.StringValue(f.Type),
 			Title:             types.StringPointerValue(f.Title),
 			Token:             types.StringValue(f.Token),
 			ParentFolderToken: types.StringPointerValue(f.ParentFolderToken),

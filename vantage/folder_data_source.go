@@ -21,6 +21,7 @@ func NewFolderDataSource() datasource.DataSource {
 }
 
 type folderLookupModel struct {
+	Type              types.String `tfsdk:"type"`
 	Title             types.String `tfsdk:"title"`
 	Token             types.String `tfsdk:"token"`
 	ParentFolderToken types.String `tfsdk:"parent_folder_token"`
@@ -46,6 +47,11 @@ func (d *folderLookupDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Looks up a folder by title and returns its token. Use `workspace_token` and `parent_folder_token` to narrow the search.",
 		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Filter by folder type: CostFolder, DashboardFolder, or ProviderResourceFolder. Also returns the matched folder's type.",
+			},
 			"title": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "The title of the folder to find.",
@@ -75,7 +81,7 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	allFolders, err := fetchAllFolders(d.client)
+	allFolders, err := fetchFoldersByType(d.client, state.Type.ValueStringPointer())
 	if err != nil {
 		handleError("Read Folder", &resp.Diagnostics, err)
 		return
@@ -110,14 +116,18 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 			}
 		}
 
+		state.Type = types.StringValue(folder.Type)
 		state.Token = types.StringValue(folder.Token)
 		state.WorkspaceToken = types.StringValue(folder.WorkspaceToken)
-		state.ParentFolderToken = types.StringPointerValue(folder.ParentFolderToken)
+		state.ParentFolderToken = folderTokenState(state.ParentFolderToken, folder.ParentFolderToken)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
 
 	filters := ""
+	if !state.Type.IsNull() && !state.Type.IsUnknown() {
+		filters += fmt.Sprintf(" of type %q", state.Type.ValueString())
+	}
 	if filterByWorkspace {
 		filters += fmt.Sprintf(" in workspace %q", workspaceFilter)
 	}
@@ -133,6 +143,10 @@ func (d *folderLookupDataSource) Read(ctx context.Context, req datasource.ReadRe
 // fetchAllFolders pages through the Get All Folders endpoint until
 // links.next is nil, collecting every folder across all pages.
 func fetchAllFolders(client *Client) ([]*modelsv2.Folder, error) {
+	return fetchFoldersByType(client, nil)
+}
+
+func fetchFoldersByType(client *Client, folderType *string) ([]*modelsv2.Folder, error) {
 	limit := int32(1000)
 	var all []*modelsv2.Folder
 	var page *int32
@@ -140,6 +154,7 @@ func fetchAllFolders(client *Client) ([]*modelsv2.Folder, error) {
 	for {
 		params := foldersv2.NewGetFoldersParams()
 		params.SetLimit(&limit)
+		params.SetType(folderType)
 		if page != nil {
 			params.SetPage(page)
 		}

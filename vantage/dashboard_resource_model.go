@@ -19,6 +19,9 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 	planStartDate := m.StartDate
 	planEndDate := m.EndDate
 
+	// The API represents root with null. Preserve an explicitly configured empty
+	// string, but keep an omitted folder_token null in state (including imports).
+	m.FolderToken = folderTokenState(m.FolderToken, payload.FolderToken)
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
 	m.DateBin = types.StringPointerValue(payload.DateBin)
 	if payload.DateInterval != nil && *payload.DateInterval != "" {
@@ -154,6 +157,7 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		}
 	}
 	payload := &modelsv2.CreateDashboard{
+		FolderToken:       folderTokenRequest(m.FolderToken),
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
 		Title:             m.Title.ValueStringPointer(),
@@ -232,6 +236,7 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 	}
 
 	payload := &modelsv2.UpdateDashboard{
+		FolderToken:       folderTokenRequest(m.FolderToken),
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
 		Title:             m.Title.ValueString(),

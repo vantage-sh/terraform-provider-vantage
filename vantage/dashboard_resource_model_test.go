@@ -3,10 +3,13 @@ package vantage
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_dashboard"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
@@ -538,5 +541,84 @@ func TestDashboardWidgetContentString_preservesHTMLCharacters(t *testing.T) {
 	}
 	if bytes.Contains([]byte(got.ValueString()), []byte(`\u003c`)) {
 		t.Fatalf("content unexpectedly HTML-escaped: %q", got.ValueString())
+	}
+}
+
+func TestDashboardModel_folderTokenRequests(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value types.String
+		want  string
+	}{
+		{"folder", types.StringValue("fldr_test"), "fldr_test"},
+		{"omitted", types.StringNull(), ""},
+		{"explicit root", types.StringValue(""), ""},
+		{"unknown", types.StringUnknown(), ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			model := &dashboardModel{FolderToken: tc.value}
+			var diags diag.Diagnostics
+			create := model.toCreate(context.Background(), &diags)
+			update := model.toUpdate(context.Background(), &diags)
+			if diags.HasError() {
+				t.Fatalf("conversion diagnostics: %v", diags)
+			}
+			if create.SavedFilterTokens == nil || create.Widgets == nil || update.SavedFilterTokens == nil || update.Widgets == nil {
+				t.Fatal("array payload fields must default to empty slices")
+			}
+			for _, request := range []interface{}{create, update} {
+				body, err := json.Marshal(request)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var payload map[string]interface{}
+				if err := json.Unmarshal(body, &payload); err != nil {
+					t.Fatal(err)
+				}
+				if got, ok := payload["folder_token"]; !ok || got != tc.want {
+					t.Fatalf("folder_token in %T = %#v (present %v), want %q; body %s", request, got, ok, tc.want, body)
+				}
+			}
+		})
+	}
+}
+
+func TestDashboardModel_applyPayload_folderToken(t *testing.T) {
+	folder, empty := "fldr_test", ""
+	for _, tc := range []struct {
+		name     string
+		previous types.String
+		payload  *string
+		want     types.String
+	}{
+		{"folder", types.StringNull(), &folder, types.StringValue(folder)},
+		{"root", types.StringNull(), nil, types.StringNull()},
+		{"empty API root", types.StringNull(), &empty, types.StringNull()},
+		{"move to root", types.StringValue(folder), nil, types.StringNull()},
+		{"explicit empty root", types.StringValue(""), nil, types.StringValue("")},
+		{"unknown root", types.StringUnknown(), nil, types.StringNull()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			model := &dashboardModel{FolderToken: tc.previous}
+			diags := model.applyPayload(context.Background(), &modelsv2.Dashboard{FolderToken: tc.payload, Token: "dshbrd_test"})
+			if diags.HasError() {
+				t.Fatalf("applyPayload diagnostics: %v", diags)
+			}
+			if !model.FolderToken.Equal(tc.want) {
+				t.Fatalf("folder_token = %v, want %v", model.FolderToken, tc.want)
+			}
+			if model.Id.ValueString() != "dshbrd_test" || !model.Token.Equal(model.Id) {
+				t.Fatal("token/id must be populated on import/read")
+			}
+		})
+	}
+}
+
+func TestDashboardResource_folderTokenIsOptional(t *testing.T) {
+	var resp resource.SchemaResponse
+	DashboardResource{}.Schema(context.Background(), resource.SchemaRequest{}, &resp)
+	attribute := resp.Schema.Attributes["folder_token"].(schema.StringAttribute)
+	if !attribute.Optional || attribute.Computed {
+		t.Fatalf("folder_token must be optional without computed, so removing it plans a move to root: %#v", attribute)
 	}
 }

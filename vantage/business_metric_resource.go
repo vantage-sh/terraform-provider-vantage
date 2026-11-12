@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -56,29 +57,7 @@ func (r *businessMetricResource) Schema(ctx context.Context, req resource.Schema
 	applyEmptyLabelDefault(s.Attributes, "values")
 	applyEmptyLabelDefault(s.Attributes, "forecasted_values")
 	applyCostReportTokenMetadataDefaults(s.Attributes)
-	// The update API does not accept these import blocks. A change replaces the resource.
-	// The modifiers go on the nested attributes: an object plan modifier makes the framework call the
-	// generated ValueFromObject on unknown plan values, which fails when the block is omitted.
-	applyRequiresReplaceOnNestedStrings(s.Attributes, "clickhouse_metric_fields")
-	applyRequiresReplaceOnNestedStrings(s.Attributes, "gcp_bigquery_metric_fields")
-
 	resp.Schema = s
-}
-
-func applyRequiresReplaceOnNestedStrings(attrs map[string]schema.Attribute, attrName string) {
-	nestedAttr, ok := attrs[attrName].(schema.SingleNestedAttribute)
-	if !ok {
-		return
-	}
-	for name, nested := range nestedAttr.Attributes {
-		if strAttr, ok := nested.(schema.StringAttribute); ok {
-			strAttr.PlanModifiers = append(strAttr.PlanModifiers, stringplanmodifier.RequiresReplaceIfConfigured())
-			nestedAttr.Attributes[name] = strAttr
-		}
-	}
-	nestedAttr.Description = nestedAttr.Description + " Changing this block replaces the business metric."
-	nestedAttr.MarkdownDescription = nestedAttr.MarkdownDescription + " Changing this block replaces the business metric."
-	attrs[attrName] = nestedAttr
 }
 
 func applyEmptyLabelDefault(attrs map[string]schema.Attribute, attrName string) {
@@ -102,6 +81,7 @@ func applyCostReportTokenMetadataDefaults(attrs map[string]schema.Attribute) {
 	if !ok {
 		return
 	}
+	attr.PlanModifiers = append(attr.PlanModifiers, listplanmodifier.UseStateForUnknown())
 
 	// Mutate in place so generated Validators (and other schema metadata) are preserved.
 	if calcAttr, ok := attr.NestedObject.Attributes["calculation_type"].(schema.StringAttribute); ok {

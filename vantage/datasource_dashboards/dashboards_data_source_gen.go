@@ -41,6 +41,11 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The end date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.",
 							MarkdownDescription: "The end date for the date range for Reports in the Dashboard. ISO 8601 Formatted. Overwrites 'date_interval' if set.",
 						},
+						"folder_token": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The token for the Dashboard Folder containing the Dashboard, if any.",
+							MarkdownDescription: "The token for the Dashboard Folder containing the Dashboard, if any.",
+						},
 						"id": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The id of the resource",
@@ -181,6 +186,12 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed: true,
 			},
+			"folder_token": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The token of the Dashboard Folder to return dashboards from.",
+				MarkdownDescription: "The token of the Dashboard Folder to return dashboards from.",
+			},
 			"q": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -199,6 +210,7 @@ func DashboardsDataSourceSchema(ctx context.Context) schema.Schema {
 
 type DashboardsModel struct {
 	Dashboards     types.List   `tfsdk:"dashboards"`
+	FolderToken    types.String `tfsdk:"folder_token"`
 	Q              types.String `tfsdk:"q"`
 	WorkspaceToken types.String `tfsdk:"workspace_token"`
 }
@@ -298,6 +310,24 @@ func (t DashboardsType) ValueFromObject(ctx context.Context, in basetypes.Object
 		diags.AddError(
 			"Attribute Wrong Type",
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
+	}
+
+	folderTokenAttribute, ok := attributes["folder_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`folder_token is missing from object`)
+
+		return nil, diags
+	}
+
+	folderTokenVal, ok := folderTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`folder_token expected to be basetypes.StringValue, was: %T`, folderTokenAttribute))
 	}
 
 	idAttribute, ok := attributes["id"]
@@ -453,6 +483,7 @@ func (t DashboardsType) ValueFromObject(ctx context.Context, in basetypes.Object
 		DateBin:           dateBinVal,
 		DateInterval:      dateIntervalVal,
 		EndDate:           endDateVal,
+		FolderToken:       folderTokenVal,
 		Id:                idVal,
 		SavedFilterTokens: savedFilterTokensVal,
 		StartDate:         startDateVal,
@@ -600,6 +631,24 @@ func NewDashboardsValue(attributeTypes map[string]attr.Type, attributes map[stri
 			fmt.Sprintf(`end_date expected to be basetypes.StringValue, was: %T`, endDateAttribute))
 	}
 
+	folderTokenAttribute, ok := attributes["folder_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`folder_token is missing from object`)
+
+		return NewDashboardsValueUnknown(), diags
+	}
+
+	folderTokenVal, ok := folderTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`folder_token expected to be basetypes.StringValue, was: %T`, folderTokenAttribute))
+	}
+
 	idAttribute, ok := attributes["id"]
 
 	if !ok {
@@ -753,6 +802,7 @@ func NewDashboardsValue(attributeTypes map[string]attr.Type, attributes map[stri
 		DateBin:           dateBinVal,
 		DateInterval:      dateIntervalVal,
 		EndDate:           endDateVal,
+		FolderToken:       folderTokenVal,
 		Id:                idVal,
 		SavedFilterTokens: savedFilterTokensVal,
 		StartDate:         startDateVal,
@@ -837,6 +887,7 @@ type DashboardsValue struct {
 	DateBin           basetypes.StringValue `tfsdk:"date_bin"`
 	DateInterval      basetypes.StringValue `tfsdk:"date_interval"`
 	EndDate           basetypes.StringValue `tfsdk:"end_date"`
+	FolderToken       basetypes.StringValue `tfsdk:"folder_token"`
 	Id                basetypes.StringValue `tfsdk:"id"`
 	SavedFilterTokens basetypes.ListValue   `tfsdk:"saved_filter_tokens"`
 	StartDate         basetypes.StringValue `tfsdk:"start_date"`
@@ -849,7 +900,7 @@ type DashboardsValue struct {
 }
 
 func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 12)
+	attrTypes := make(map[string]tftypes.Type, 13)
 
 	var val tftypes.Value
 	var err error
@@ -858,6 +909,7 @@ func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 	attrTypes["date_bin"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["date_interval"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["end_date"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["folder_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["saved_filter_tokens"] = basetypes.ListType{
 		ElemType: types.StringType,
@@ -875,7 +927,7 @@ func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 12)
+		vals := make(map[string]tftypes.Value, 13)
 
 		val, err = v.CreatedAt.ToTerraformValue(ctx)
 
@@ -908,6 +960,14 @@ func (v DashboardsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, e
 		}
 
 		vals["end_date"] = val
+
+		val, err = v.FolderToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["folder_token"] = val
 
 		val, err = v.Id.ToTerraformValue(ctx)
 
@@ -1049,6 +1109,7 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"date_bin":      basetypes.StringType{},
 			"date_interval": basetypes.StringType{},
 			"end_date":      basetypes.StringType{},
+			"folder_token":  basetypes.StringType{},
 			"id":            basetypes.StringType{},
 			"saved_filter_tokens": basetypes.ListType{
 				ElemType: types.StringType,
@@ -1069,6 +1130,7 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 		"date_bin":      basetypes.StringType{},
 		"date_interval": basetypes.StringType{},
 		"end_date":      basetypes.StringType{},
+		"folder_token":  basetypes.StringType{},
 		"id":            basetypes.StringType{},
 		"saved_filter_tokens": basetypes.ListType{
 			ElemType: types.StringType,
@@ -1098,6 +1160,7 @@ func (v DashboardsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectVal
 			"date_bin":            v.DateBin,
 			"date_interval":       v.DateInterval,
 			"end_date":            v.EndDate,
+			"folder_token":        v.FolderToken,
 			"id":                  v.Id,
 			"saved_filter_tokens": savedFilterTokensVal,
 			"start_date":          v.StartDate,
@@ -1139,6 +1202,10 @@ func (v DashboardsValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.EndDate.Equal(other.EndDate) {
+		return false
+	}
+
+	if !v.FolderToken.Equal(other.FolderToken) {
 		return false
 	}
 
@@ -1191,6 +1258,7 @@ func (v DashboardsValue) AttributeTypes(ctx context.Context) map[string]attr.Typ
 		"date_bin":      basetypes.StringType{},
 		"date_interval": basetypes.StringType{},
 		"end_date":      basetypes.StringType{},
+		"folder_token":  basetypes.StringType{},
 		"id":            basetypes.StringType{},
 		"saved_filter_tokens": basetypes.ListType{
 			ElemType: types.StringType,
