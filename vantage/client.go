@@ -38,12 +38,73 @@ type timeoutTransport struct {
 func (t *timeoutTransport) Submit(operation *runtime.ClientOperation) (interface{}, error) {
 	originalParams := operation.Params
 	operation.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, reg strfmt.Registry) error {
-		if err := originalParams.WriteToRequest(req, reg); err != nil {
+		if err := originalParams.WriteToRequest(&requestBodyFixes{ClientRequest: req}, reg); err != nil {
 			return err
 		}
 		return req.SetTimeout(t.timeout)
 	})
 	return t.inner.Submit(operation)
+}
+
+// requestBodyFixes preserves API semantics where generated SDK JSON tags lose them.
+type requestBodyFixes struct{ runtime.ClientRequest }
+
+func (r *requestBodyFixes) SetBodyParam(body interface{}) error {
+	switch m := body.(type) {
+	case *modelsv2.CreateIngestToken:
+		type payload modelsv2.CreateIngestToken
+		var expiresAt *strfmt.DateTime
+		if !time.Time(m.ExpiresAt).IsZero() {
+			expiresAt = &m.ExpiresAt
+		}
+		body = struct {
+			*payload
+			ExpiresAt *strfmt.DateTime `json:"expires_at,omitempty"`
+		}{(*payload)(m), expiresAt}
+	case *modelsv2.UpdateFolder:
+		type payload modelsv2.UpdateFolder
+		body = struct {
+			*payload
+			SavedFilterTokens []string `json:"saved_filter_tokens"`
+		}{(*payload)(m), m.SavedFilterTokens}
+	case *modelsv2.UpdateVirtualTagConfig:
+		type payload modelsv2.UpdateVirtualTagConfig
+		body = struct {
+			*payload
+			CollapsedTagKeys []*modelsv2.UpdateVirtualTagConfigCollapsedTagKeysItems0 `json:"collapsed_tag_keys"`
+			Values           []*modelsv2.UpdateVirtualTagConfigValuesItems0           `json:"values"`
+		}{(*payload)(m), m.CollapsedTagKeys, m.Values}
+	case *modelsv2.UpdateDashboard:
+		type dashboard modelsv2.UpdateDashboard
+		type widget modelsv2.UpdateDashboardWidgetsItems0
+		type content modelsv2.UpdateDashboardWidgetsItems0Content
+		type fixedContent struct {
+			*content
+			Content []interface{} `json:"content"`
+		}
+		type fixedWidget struct {
+			*widget
+			Content *fixedContent `json:"content,omitempty"`
+		}
+		var widgets []*fixedWidget
+		if m.Widgets != nil {
+			widgets = make([]*fixedWidget, len(m.Widgets))
+			for i, w := range m.Widgets {
+				if w == nil {
+					continue
+				}
+				widgets[i] = &fixedWidget{widget: (*widget)(w)}
+				if w.Content != nil {
+					widgets[i].Content = &fixedContent{(*content)(w.Content), w.Content.Content}
+				}
+			}
+		}
+		body = struct {
+			*dashboard
+			Widgets []*fixedWidget `json:"widgets"`
+		}{(*dashboard)(m), widgets}
+	}
+	return r.ClientRequest.SetBodyParam(body)
 }
 
 func NewClient(host, token string, debug bool, timeout time.Duration) (*Client, error) {
