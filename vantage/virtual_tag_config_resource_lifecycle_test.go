@@ -593,3 +593,42 @@ func TestVirtualTagConfigPreferredOnlyUpdateRefreshesUnknownComputed(t *testing.
 		t.Fatal("values[0] is still unknown after apply")
 	}
 }
+
+func TestVirtualTagConfigParentUpdateSendsClearedValues(t *testing.T) {
+	ctx := context.Background()
+	for _, values := range []types.List{
+		types.ListNull(resource_virtual_tag_config.ValuesValue{}.Type(ctx)),
+		types.ListValueMust(resource_virtual_tag_config.ValuesValue{}.Type(ctx), []attr.Value{}),
+	} {
+		t.Run(values.String(), func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				var body map[string]json.RawMessage
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Error(err)
+				}
+				want := "[]"
+				if values.IsNull() {
+					want = "null"
+				}
+				if string(body["values"]) != want {
+					t.Errorf("values = %q; want %q", string(body["values"]), want)
+				}
+				writeVirtualTagConfigResponse(t, w, http.StatusOK, "updated")
+			}))
+			defer srv.Close()
+			schema := virtualTagConfigTestSchema(ctx)
+			model := virtualTagConfigTestModel(ctx, "updated", false)
+			model.Values = values
+			planState := virtualTagConfigTestState(t, ctx, schema, model)
+			state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "original", false))
+			resp := frameworkresource.UpdateResponse{State: planState}
+			r := VirtualTagConfigResource{client: clientForServer(t, srv.URL)}
+			r.Update(ctx, frameworkresource.UpdateRequest{
+				Plan: tfsdk.Plan{Raw: planState.Raw, Schema: schema}, State: state,
+			}, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+		})
+	}
+}
