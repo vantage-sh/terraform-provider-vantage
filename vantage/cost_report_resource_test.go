@@ -1268,3 +1268,37 @@ resource "vantage_cost_report" "test" {
 }
 `, title, sfTitle1, sfTitle2, sfTitle3, first, second, third)
 }
+
+func TestAccVantageCostReport_columnOrder(t *testing.T) {
+	title := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
+	config := func(order string) string {
+		return fmt.Sprintf(`
+data "vantage_workspaces" "test" {}
+resource "vantage_cost_report" "test" {
+  workspace_token = data.vantage_workspaces.test.workspaces[0].token
+  title = %q
+  filter = "costs.provider = 'aws'"
+  settings = { table_column_order = %s }
+}
+`, title, order)
+	}
+	initial := config(`["service", "provider", "costAmount"]`)
+	reordered := config(`["costAmount", "provider", "service"]`)
+	reset := config(`[]`)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: initial, Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("vantage_cost_report.test", "settings.table_column_order.#", "3"),
+				resource.TestCheckResourceAttr("vantage_cost_report.test", "settings.table_column_order.0", "service"),
+				resource.TestCheckResourceAttr("vantage_cost_report.test", "settings.table_column_order.1", "provider"),
+				resource.TestCheckResourceAttr("vantage_cost_report.test", "settings.table_column_order.2", "costAmount"),
+			)},
+			{Config: reordered, Check: resource.TestCheckResourceAttr("vantage_cost_report.test", "settings.table_column_order.0", "costAmount")},
+			{Config: reordered, PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: reset, Check: resource.TestCheckResourceAttr("vantage_cost_report.test", "settings.table_column_order.#", "0")},
+			{Config: reset, PlanOnly: true, ExpectNonEmptyPlan: false},
+		},
+	})
+}

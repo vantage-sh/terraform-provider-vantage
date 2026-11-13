@@ -249,7 +249,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		updateParams := costsv2.NewUpdateCostReportParams().
 			WithCostReportToken(out.Payload.Token).
 			WithUpdateCostReport(updateModel)
-		updated, err := r.client.V2.Costs.UpdateCostReport(updateParams, r.client.Auth)
+		updated, err := r.client.V2.Costs.UpdateCostReport(updateParams, r.client.Auth, updateCostReportWithColumnOrder(updateModel))
 		if err != nil {
 			if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
 				handleBadRequest("Set Default Forecast on CostReport Resource", &resp.Diagnostics, e.GetPayload())
@@ -318,7 +318,7 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 
 	params := costsv2.NewUpdateCostReportParams().WithUpdateCostReport(model).WithCostReportToken(data.Token.ValueString())
 
-	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
+	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth, updateCostReportWithColumnOrder(model))
 	if err != nil {
 		if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
 			handleBadRequest("Update CostReport Resource", &resp.Diagnostics, e.GetPayload())

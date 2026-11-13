@@ -23,6 +23,7 @@ resource "vantage_cost_report" "demo_report" {
   date_bin            = "day"  # Allowed: cumulative, day, week, month, quarter
 
   settings = {
+    table_column_order   = ["service", "provider", "costAmount"]
     include_credits      = true
     include_refunds      = true
     include_discounts    = true
@@ -92,7 +93,7 @@ Optional:
 Optional:
 
 - `x_axis_dimension` (List of String) The dimension used to group or label data along the x-axis (e.g., by date, region, or service). NOTE: Only one value is allowed at this time. Defaults to ['date'].
-- `y_axis_dimension` (String) The metric or measure displayed on the chart's y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
+- `y_axis_dimension` (String) The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.
 
 
 <a id="nestedatt--default_forecast"></a>
@@ -120,4 +121,5 @@ Optional:
 - `include_refunds` (Boolean) Report will include refunds.
 - `include_tax` (Boolean) Report will include tax.
 - `show_previous_period` (Boolean) Report will show previous period cost, usage, or count comparison.
+- `table_column_order` (List of String) Ordered list of CostReport table column keys. Send an empty array to reset to the default order.
 - `unallocated` (Boolean) Report will show unallocated costs.

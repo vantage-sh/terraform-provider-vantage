@@ -398,6 +398,8 @@ resources:
       path: /cost_reports/{cost_report_token}
       method: DELETE
     schema:
+      ignores:
+        - custom_calculation_tokens
       attributes:
         overrides:
           token:
