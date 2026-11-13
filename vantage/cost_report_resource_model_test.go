@@ -73,6 +73,7 @@ func TestApplyPayload_ClearsStaleChartSettingsAndSettings(t *testing.T) {
 			"include_refunds":      types.BoolValue(true),
 			"include_tax":          types.BoolValue(true),
 			"show_previous_period": types.BoolValue(true),
+			"table_column_order":   types.ListNull(types.StringType),
 			"unallocated":          types.BoolValue(true),
 		},
 	)
@@ -143,6 +144,7 @@ func TestApplyPayload_PopulatesChartSettingsAndSettingsFromAPI(t *testing.T) {
 			"include_refunds":      types.BoolValue(false),
 			"include_tax":          types.BoolValue(false),
 			"show_previous_period": types.BoolValue(false),
+			"table_column_order":   types.ListNull(types.StringType),
 			"unallocated":          types.BoolValue(false),
 		},
 	)

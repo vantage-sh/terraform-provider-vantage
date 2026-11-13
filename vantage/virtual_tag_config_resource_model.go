@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_virtual_tag_config"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
+	tagsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/virtual_tags"
 )
 
 type virtualTagConfigModel struct {
@@ -1102,4 +1104,20 @@ func (v *virtualTagConfigValueModel) toUpdateValue(ctx context.Context, diags *d
 		})
 	}
 	return value
+}
+
+// shortcut: the SDK omits null and empty values, remove this override when it preserves explicit clears.
+func updateVirtualTagConfigWithValues(model *modelsv2.UpdateVirtualTagConfig) tagsv2.ClientOption {
+	return func(operation *runtime.ClientOperation) {
+		original := operation.Params
+		operation.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, registry strfmt.Registry) error {
+			if err := original.WriteToRequest(req, registry); err != nil {
+				return err
+			}
+			return req.SetBodyParam(struct {
+				*modelsv2.UpdateVirtualTagConfig
+				Values []*modelsv2.UpdateVirtualTagConfigValuesItems0 `json:"values"`
+			}{model, model.Values})
+		})
+	}
 }

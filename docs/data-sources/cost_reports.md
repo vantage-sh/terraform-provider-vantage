@@ -35,6 +35,7 @@ Read-Only:
 - `previous_period_end_date` (String)
 - `previous_period_start_date` (String)
 - `saved_filter_tokens` (List of String)
+- `settings` (Attributes) (see [below for nested schema](#nestedatt--cost_reports--settings))
 - `start_date` (String)
 - `title` (String)
 - `token` (String)
@@ -47,3 +48,11 @@ Read-Only:
 
 - `x_axis_dimension` (List of String)
 - `y_axis_dimension` (String)
+
+
+<a id="nestedatt--cost_reports--settings"></a>
+### Nested Schema for `cost_reports.settings`
+
+Read-Only:
+
+- `table_column_order` (List of String) Ordered list of Cost Report table column keys. Empty or omitted uses the default order.
