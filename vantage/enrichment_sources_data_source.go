@@ -51,19 +51,18 @@ func (d *enrichmentSourcesDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	params := enrichmentsourcesv2.NewGetEnrichmentSourcesParams()
-	out, err := d.client.V2.EnrichmentSources.GetEnrichmentSources(params, d.client.Auth)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Get Vantage Enrichment Sources",
-			err.Error(),
-		)
-		return
-	}
-
-	sources := out.Payload.EnrichmentSources
-	if sources == nil {
-		sources = []*modelsv2.EnrichmentSource{}
+	sources := []*modelsv2.EnrichmentSource{}
+	for page := int32(1); ; page++ {
+		params := enrichmentsourcesv2.NewGetEnrichmentSourcesParamsWithContext(ctx).WithPage(&page)
+		out, err := d.client.V2.EnrichmentSources.GetEnrichmentSources(params, d.client.Auth)
+		if err != nil {
+			handleError("Get Enrichment Sources", &resp.Diagnostics, err)
+			return
+		}
+		sources = append(sources, out.Payload.EnrichmentSources...)
+		if out.Payload.Links == nil || out.Payload.Links.Next == nil || *out.Payload.Links.Next == "" {
+			break
+		}
 	}
 
 	elements := make([]attr.Value, 0, len(sources))

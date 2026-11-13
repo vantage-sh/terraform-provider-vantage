@@ -218,9 +218,12 @@ func (r FolderResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	params := foldersv2.NewUpdateFolderParams()
 	params.WithFolderToken(data.Token.ValueString())
 	model := &modelsv2.UpdateFolder{
-		ParentFolderToken: folderTokenRequest(data.ParentFolderToken),
 		Title:             data.Title.ValueString(),
 		SavedFilterTokens: fromStringsValue(sft),
+	}
+	if !data.ParentFolderToken.IsUnknown() {
+		parentFolderToken := data.ParentFolderToken.ValueString()
+		model.ParentFolderToken = &parentFolderToken
 	}
 	params.WithUpdateFolder(model)
 	out, err := r.client.V2.Folders.UpdateFolder(params, r.client.Auth, updateFolderWithSavedFilterTokens(model))
