@@ -48,6 +48,7 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 	}
 	m.SavedFilterTokens = saved_filters
 
+	m.Filter = types.StringPointerValue(payload.Filter)
 	m.Title = types.StringValue(payload.Title)
 	m.Token = types.StringValue(payload.Token)
 	m.Id = types.StringValue(payload.Token)
@@ -157,6 +158,7 @@ func (m *dashboardModel) toCreate(ctx context.Context, diags *diag.Diagnostics) 
 		}
 	}
 	payload := &modelsv2.CreateDashboard{
+		Filter:            m.Filter.ValueStringPointer(),
 		FolderToken:       folderTokenRequest(m.FolderToken),
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
@@ -235,7 +237,9 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 		dateInterval = m.DateInterval.ValueString()
 	}
 
+	filter := m.Filter.ValueString()
 	payload := &modelsv2.UpdateDashboard{
+		Filter:            &filter,
 		FolderToken:       folderTokenRequest(m.FolderToken),
 		DateBin:           m.DateBin.ValueString(),
 		SavedFilterTokens: fromStringsValue(savedFilterTokens),
@@ -449,4 +453,13 @@ func parseTipTapDocument(content types.String, diags *diag.Diagnostics) *tipTapD
 		return nil
 	}
 	return &doc
+}
+
+// Keep the configured spelling only while the API's last normalized value is unchanged.
+func dashboardFilterState(configured types.String, remote *string, previous []byte) types.String {
+	current, _ := json.Marshal(remote)
+	if len(previous) > 0 && bytes.Equal(previous, current) && !configured.IsUnknown() {
+		return configured
+	}
+	return types.StringPointerValue(remote)
 }

@@ -8,6 +8,7 @@ resource "vantage_folder" "dashboards" {
 resource "vantage_dashboard" "demo_dashboard" {
   title         = "Demo Dashboard"
   date_interval = "last_month"
+  filter        = "vantage.provider = 'aws' AND vantage.region IN ('us-east-1', 'us-west-2')"
   # Remove folder_token to move the dashboard back to the workspace root.
   folder_token = vantage_folder.dashboards.token
   widgets = [
