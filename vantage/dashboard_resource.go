@@ -2,6 +2,7 @@ package vantage
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -95,6 +96,11 @@ func (r DashboardResource) Schema(ctx context.Context, req resource.SchemaReques
 	s := resource_dashboard.DashboardResourceSchema(ctx)
 	attrs := s.GetAttributes()
 
+	s.Attributes["filter"] = schema.StringAttribute{
+		Optional:            true,
+		MarkdownDescription: "Stored universal VQL filter using vantage.* or tags.* in a single AND group with =, !=, IN, or NOT IN. Removing this attribute or setting an empty string clears the filter. Nonempty saved_filter_tokens take precedence; removing them reactivates this filter.",
+	}
+
 	s.Attributes["folder_token"] = schema.StringAttribute{
 		Optional:            true,
 		MarkdownDescription: "Token of the Dashboard Folder. Omit this attribute to keep the dashboard at the workspace root or move it back to root. Requires Dashboard Folders to be enabled for the account when a folder token is set.",
@@ -162,6 +168,7 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	configuredFilter := data.Filter
 	body := data.toCreate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -183,6 +190,16 @@ func (r DashboardResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	normalizedFilter, err := json.Marshal(out.Payload.Filter)
+	if err != nil {
+		resp.Diagnostics.AddError("Encode Dashboard filter", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, "dashboard_filter", normalizedFilter)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Filter = dashboardFilterState(configuredFilter, out.Payload.Filter, normalizedFilter)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -206,12 +223,28 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
+	configuredFilter := state.Filter
+	normalizedFilter, privateDiags := req.Private.GetKey(ctx, "dashboard_filter")
+	resp.Diagnostics.Append(privateDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	diag := state.applyPayload(ctx, out.Payload)
 	if diag.HasError() {
 		resp.Diagnostics.Append(diag...)
 		return
 	}
 
+	state.Filter = dashboardFilterState(configuredFilter, out.Payload.Filter, normalizedFilter)
+	currentFilter, err := json.Marshal(out.Payload.Filter)
+	if err != nil {
+		resp.Diagnostics.AddError("Encode Dashboard filter", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, "dashboard_filter", currentFilter)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -226,6 +259,7 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	configuredFilter := data.Filter
 	body := data.toUpdate(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -249,6 +283,16 @@ func (r DashboardResource) Update(ctx context.Context, req resource.UpdateReques
 		resp.Diagnostics.Append(diag...)
 		return
 	}
+	normalizedFilter, err := json.Marshal(out.Payload.Filter)
+	if err != nil {
+		resp.Diagnostics.AddError("Encode Dashboard filter", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, "dashboard_filter", normalizedFilter)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Filter = dashboardFilterState(configuredFilter, out.Payload.Filter, normalizedFilter)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

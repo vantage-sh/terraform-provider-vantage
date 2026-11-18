@@ -117,7 +117,17 @@ go generate ./...
 - Use `testAccProtoV6ProviderFactories` for provider factories
 - Test configs are helper functions returning HCL strings
 - **Write tests for list/array fields with multiple items** to catch schema bugs where lists are incorrectly generated as single objects
-- Use `t.Skip()` for tests requiring specific features (e.g., MSP invoicing)
+- Use `t.Skip()` for unavailable features only after checking whether Core test setup can enable them (e.g., MSP invoicing).
+
+### Acceptance-Test Prerequisites
+
+When an acceptance test depends on another API record, use this order:
+
+1. Create the prerequisite with a Terraform resource in the test HCL and reference its token.
+2. If Terraform or the API cannot create it, reuse or extend Core's `test:access_tokens:create` setup in `lib/tasks/test.rake`. Scope the fixture to the generated test account and workspace, with required settings and feature flags enabled. Discover it through a data source when supported; otherwise use a documented, stable public fixture token.
+3. Require an existing-record token through an environment variable only when both approaches are infeasible or the user explicitly requests it. Explain the limitation before adding the requirement or skipping coverage for a missing token.
+
+Acceptance CI runs against Core's local Rails test server and database, not production. Verify that fixture settings and feature flags are visible across the separate setup-task and API-server processes. Public fixture tokens identify records; they are not secret credentials. Authentication credentials such as `VANTAGE_API_TOKEN` remain normal environment variables.
 
 ### Testing New Fields
 
