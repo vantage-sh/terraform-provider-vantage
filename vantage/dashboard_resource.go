@@ -236,6 +236,15 @@ func (r DashboardResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	state.Filter = dashboardFilterState(configuredFilter, out.Payload.Filter, normalizedFilter)
+	currentFilter, err := json.Marshal(out.Payload.Filter)
+	if err != nil {
+		resp.Diagnostics.AddError("Encode Dashboard filter", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, "dashboard_filter", currentFilter)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
