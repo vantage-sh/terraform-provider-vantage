@@ -3,10 +3,11 @@ package vantage
 import (
 	"context"
 	"encoding/json"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	"testing"
 )
 
 func TestDashboardFilterRequests(t *testing.T) {
@@ -44,7 +45,7 @@ func TestDashboardFilterState(t *testing.T) {
 	normalized := `vantage.provider = 'aws'`
 	changed := `vantage.provider = 'gcp'`
 	baseline, _ := json.Marshal(normalized)
-	configured := types.StringValue(`(vantage.provider = "aws")`)
+	configured := types.StringValue(`(vantage.provider = 'aws')`)
 	for _, tc := range []struct {
 		name     string
 		remote   *string
