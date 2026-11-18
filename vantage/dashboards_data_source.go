@@ -112,6 +112,7 @@ func dashboardDataSourceValueFromPayload(ctx context.Context, payload *modelsv2.
 			"folder_token":        types.StringPointerValue(payload.FolderToken),
 			"end_date":            types.StringPointerValue(payload.EndDate),
 			"id":                  types.StringValue(payload.Token),
+			"filter":              types.StringPointerValue(payload.Filter),
 			"saved_filter_tokens": savedFilters,
 			"start_date":          types.StringPointerValue(payload.StartDate),
 			"title":               types.StringValue(payload.Title),

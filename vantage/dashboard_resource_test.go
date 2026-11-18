@@ -2,6 +2,10 @@ package vantage
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
+	dashboardsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/dashboards"
+	"os"
 	"testing"
 	"time"
 
@@ -706,4 +710,56 @@ func testAccDashboard_withDates() string {
 		end_date = "2023-01-31"
 	}
 `
+}
+
+func TestAccDashboard_universalFilter(t *testing.T) {
+	config := func(filter string) string {
+		return testAccDashboard_basicTfDatasourceWorkspaces() + fmt.Sprintf(`
+resource "vantage_dashboard" "universal_filter" {
+ title = "tf-universal-filter"
+ workspace_token = data.vantage_workspaces.test.workspaces[0].token
+ %s
+}
+data "vantage_dashboards" "universal_filter" {
+ q = vantage_dashboard.universal_filter.title
+ workspace_token = vantage_dashboard.universal_filter.workspace_token
+}
+`, filter)
+	}
+	var token string
+	captureToken := func(state *terraform.State) error {
+		token = state.RootModule().Resources["vantage_dashboard.universal_filter"].Primary.ID
+		return nil
+	}
+	changeRemote := func() {
+		client, err := NewClient(os.Getenv("VANTAGE_HOST"), os.Getenv("VANTAGE_API_TOKEN"), false, 30*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		filter := "vantage.provider = 'gcp'"
+		_, err = client.V2.Dashboards.UpdateDashboard(dashboardsv2.NewUpdateDashboardParams().WithDashboardToken(token).WithUpdateDashboard(&modelsv2.UpdateDashboard{Filter: &filter}), client.Auth)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	initial := config(`filter = "(vantage.provider = 'aws')"`)
+	updated := config(`filter = "vantage.provider = 'aws' AND vantage.region IN ('us-east-1', 'us-west-2')"`)
+	cleared := config("")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: initial, Check: resource.ComposeTestCheckFunc(captureToken, resource.TestCheckResourceAttr("vantage_dashboard.universal_filter", "filter", "(vantage.provider = 'aws')"), resource.TestCheckResourceAttr("data.vantage_dashboards.universal_filter", "dashboards.0.filter", "vantage.provider = 'aws'"))},
+			{Config: initial, PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: initial, PreConfig: changeRemote, PlanOnly: true, ExpectNonEmptyPlan: true},
+			{Config: initial, Check: resource.TestCheckResourceAttr("vantage_dashboard.universal_filter", "filter", "(vantage.provider = 'aws')")},
+			{Config: updated, Check: resource.TestCheckResourceAttr("vantage_dashboard.universal_filter", "filter", "vantage.provider = 'aws' AND vantage.region IN ('us-east-1', 'us-west-2')")},
+			{Config: updated, PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: config(`filter = ""`), Check: resource.TestCheckResourceAttr("vantage_dashboard.universal_filter", "filter", "")},
+			{Config: config(`filter = ""`), PlanOnly: true, ExpectNonEmptyPlan: false},
+			{Config: updated},
+			{Config: cleared, Check: resource.TestCheckNoResourceAttr("vantage_dashboard.universal_filter", "filter")},
+			{Config: cleared, PlanOnly: true, ExpectNonEmptyPlan: false},
+		},
+	})
 }
