@@ -610,8 +610,10 @@ func TestVirtualTagConfigParentUpdateSendsClearedValues(t *testing.T) {
 				if values.IsNull() {
 					want = "null"
 				}
-				if string(body["values"]) != want {
-					t.Errorf("values = %q; want %q", string(body["values"]), want)
+				for _, field := range []string{"values", "collapsed_tag_keys"} {
+					if string(body[field]) != want {
+						t.Errorf("%s = %q; want %q", field, string(body[field]), want)
+					}
 				}
 				writeVirtualTagConfigResponse(t, w, http.StatusOK, "updated")
 			}))
@@ -619,6 +621,9 @@ func TestVirtualTagConfigParentUpdateSendsClearedValues(t *testing.T) {
 			schema := virtualTagConfigTestSchema(ctx)
 			model := virtualTagConfigTestModel(ctx, "updated", false)
 			model.Values = values
+			if !values.IsNull() {
+				model.CollapsedTagKeys = types.ListValueMust(resource_virtual_tag_config.CollapsedTagKeysValue{}.Type(ctx), []attr.Value{})
+			}
 			planState := virtualTagConfigTestState(t, ctx, schema, model)
 			state := virtualTagConfigTestState(t, ctx, schema, virtualTagConfigTestModel(ctx, "original", false))
 			resp := frameworkresource.UpdateResponse{State: planState}
