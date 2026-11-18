@@ -109,6 +109,13 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 						Computed:            true,
 						Description:         "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
 						MarkdownDescription: "The metric or measure displayed on the chart’s y-axis. Possible values: 'cost', 'usage', 'count'. Defaults to 'cost'.",
+						Validators: []validator.String{
+							stringvalidator.OneOf(
+								"cost",
+								"usage",
+								"count",
+							),
+						},
 					},
 				},
 				CustomType: ChartSettingsType{
@@ -257,9 +264,16 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 					"aggregate_by": schema.StringAttribute{
 						Optional:            true,
 						Computed:            true,
-						Description:         "Report will aggregate by cost or usage.",
-						MarkdownDescription: "Report will aggregate by cost or usage.",
-						Default:             stringdefault.StaticString("cost"),
+						Description:         "Report will aggregate by cost, usage, or count.",
+						MarkdownDescription: "Report will aggregate by cost, usage, or count.",
+						Validators: []validator.String{
+							stringvalidator.OneOf(
+								"cost",
+								"usage",
+								"count",
+							),
+						},
+						Default: stringdefault.StaticString("cost"),
 					},
 					"amortize": schema.BoolAttribute{
 						Optional:            true,
@@ -306,9 +320,16 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 					"show_previous_period": schema.BoolAttribute{
 						Optional:            true,
 						Computed:            true,
-						Description:         "Report will show previous period costs or usage comparison.",
-						MarkdownDescription: "Report will show previous period costs or usage comparison.",
+						Description:         "Report will show previous period cost, usage, or count comparison.",
+						MarkdownDescription: "Report will show previous period cost, usage, or count comparison.",
 						Default:             booldefault.StaticBool(true),
+					},
+					"table_column_order": schema.ListAttribute{
+						ElementType:         types.StringType,
+						Optional:            true,
+						Computed:            true,
+						Description:         "Ordered list of CostReport table column keys. Send an empty array to reset to the default order.",
+						MarkdownDescription: "Ordered list of CostReport table column keys. Send an empty array to reset to the default order.",
 					},
 					"unallocated": schema.BoolAttribute{
 						Optional:            true,
@@ -2012,6 +2033,24 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 			fmt.Sprintf(`show_previous_period expected to be basetypes.BoolValue, was: %T`, showPreviousPeriodAttribute))
 	}
 
+	tableColumnOrderAttribute, ok := attributes["table_column_order"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`table_column_order is missing from object`)
+
+		return nil, diags
+	}
+
+	tableColumnOrderVal, ok := tableColumnOrderAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`table_column_order expected to be basetypes.ListValue, was: %T`, tableColumnOrderAttribute))
+	}
+
 	unallocatedAttribute, ok := attributes["unallocated"]
 
 	if !ok {
@@ -2043,6 +2082,7 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 		IncludeRefunds:     includeRefundsVal,
 		IncludeTax:         includeTaxVal,
 		ShowPreviousPeriod: showPreviousPeriodVal,
+		TableColumnOrder:   tableColumnOrderVal,
 		Unallocated:        unallocatedVal,
 		state:              attr.ValueStateKnown,
 	}, diags
@@ -2255,6 +2295,24 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 			fmt.Sprintf(`show_previous_period expected to be basetypes.BoolValue, was: %T`, showPreviousPeriodAttribute))
 	}
 
+	tableColumnOrderAttribute, ok := attributes["table_column_order"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`table_column_order is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	tableColumnOrderVal, ok := tableColumnOrderAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`table_column_order expected to be basetypes.ListValue, was: %T`, tableColumnOrderAttribute))
+	}
+
 	unallocatedAttribute, ok := attributes["unallocated"]
 
 	if !ok {
@@ -2286,6 +2344,7 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 		IncludeRefunds:     includeRefundsVal,
 		IncludeTax:         includeTaxVal,
 		ShowPreviousPeriod: showPreviousPeriodVal,
+		TableColumnOrder:   tableColumnOrderVal,
 		Unallocated:        unallocatedVal,
 		state:              attr.ValueStateKnown,
 	}, diags
@@ -2367,12 +2426,13 @@ type SettingsValue struct {
 	IncludeRefunds     basetypes.BoolValue   `tfsdk:"include_refunds"`
 	IncludeTax         basetypes.BoolValue   `tfsdk:"include_tax"`
 	ShowPreviousPeriod basetypes.BoolValue   `tfsdk:"show_previous_period"`
+	TableColumnOrder   basetypes.ListValue   `tfsdk:"table_column_order"`
 	Unallocated        basetypes.BoolValue   `tfsdk:"unallocated"`
 	state              attr.ValueState
 }
 
 func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 9)
+	attrTypes := make(map[string]tftypes.Type, 10)
 
 	var val tftypes.Value
 	var err error
@@ -2385,13 +2445,16 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 	attrTypes["include_refunds"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["include_tax"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["show_previous_period"] = basetypes.BoolType{}.TerraformType(ctx)
+	attrTypes["table_column_order"] = basetypes.ListType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
 	attrTypes["unallocated"] = basetypes.BoolType{}.TerraformType(ctx)
 
 	objectType := tftypes.Object{AttributeTypes: attrTypes}
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 9)
+		vals := make(map[string]tftypes.Value, 10)
 
 		val, err = v.AggregateBy.ToTerraformValue(ctx)
 
@@ -2457,6 +2520,14 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 
 		vals["show_previous_period"] = val
 
+		val, err = v.TableColumnOrder.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["table_column_order"] = val
+
 		val, err = v.Unallocated.ToTerraformValue(ctx)
 
 		if err != nil {
@@ -2494,6 +2565,35 @@ func (v SettingsValue) String() string {
 func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var tableColumnOrderVal basetypes.ListValue
+	switch {
+	case v.TableColumnOrder.IsUnknown():
+		tableColumnOrderVal = types.ListUnknown(types.StringType)
+	case v.TableColumnOrder.IsNull():
+		tableColumnOrderVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		tableColumnOrderVal, d = types.ListValue(types.StringType, v.TableColumnOrder.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"aggregate_by":         basetypes.StringType{},
+			"amortize":             basetypes.BoolType{},
+			"complete_period":      basetypes.BoolType{},
+			"include_credits":      basetypes.BoolType{},
+			"include_discounts":    basetypes.BoolType{},
+			"include_refunds":      basetypes.BoolType{},
+			"include_tax":          basetypes.BoolType{},
+			"show_previous_period": basetypes.BoolType{},
+			"table_column_order": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"unallocated": basetypes.BoolType{},
+		}), diags
+	}
+
 	attributeTypes := map[string]attr.Type{
 		"aggregate_by":         basetypes.StringType{},
 		"amortize":             basetypes.BoolType{},
@@ -2503,7 +2603,10 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 		"include_refunds":      basetypes.BoolType{},
 		"include_tax":          basetypes.BoolType{},
 		"show_previous_period": basetypes.BoolType{},
-		"unallocated":          basetypes.BoolType{},
+		"table_column_order": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"unallocated": basetypes.BoolType{},
 	}
 
 	if v.IsNull() {
@@ -2525,6 +2628,7 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 			"include_refunds":      v.IncludeRefunds,
 			"include_tax":          v.IncludeTax,
 			"show_previous_period": v.ShowPreviousPeriod,
+			"table_column_order":   tableColumnOrderVal,
 			"unallocated":          v.Unallocated,
 		})
 
@@ -2578,6 +2682,10 @@ func (v SettingsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.TableColumnOrder.Equal(other.TableColumnOrder) {
+		return false
+	}
+
 	if !v.Unallocated.Equal(other.Unallocated) {
 		return false
 	}
@@ -2603,6 +2711,9 @@ func (v SettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type 
 		"include_refunds":      basetypes.BoolType{},
 		"include_tax":          basetypes.BoolType{},
 		"show_previous_period": basetypes.BoolType{},
-		"unallocated":          basetypes.BoolType{},
+		"table_column_order": basetypes.ListType{
+			ElemType: types.StringType,
+		},
+		"unallocated": basetypes.BoolType{},
 	}
 }
