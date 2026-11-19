@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vantage-sh/terraform-provider-vantage/vantage/resource_cost_report"
 	modelsv2 "github.com/vantage-sh/vantage-go/vantagev2/models"
-	costsv2 "github.com/vantage-sh/vantage-go/vantagev2/vantage/costs"
 )
 
 type costReportModel resource_cost_report.CostReportModel
@@ -34,6 +31,7 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	m.ChartType = types.StringValue(payload.ChartType)
 	m.DateBin = types.StringValue(payload.DateBin)
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
+	m.CustomCalculationTokens = calculationTokenState(ctx, payload.CustomCalculationTokens, &diags)
 
 	savedFilterTokensValue, d := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
 	if d.HasError() {
@@ -213,8 +211,9 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 
 func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnostics) *modelsv2.CreateCostReport {
 	create := &modelsv2.CreateCostReport{
-		Title:  m.Title.ValueStringPointer(),
-		Filter: m.Filter.ValueString(),
+		CustomCalculationTokens: calculationTokenRequest(ctx, m.CustomCalculationTokens, diags),
+		Title:                   m.Title.ValueStringPointer(),
+		Filter:                  m.Filter.ValueString(),
 	}
 
 	// Optional fields
@@ -304,8 +303,9 @@ func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnos
 			s.Unallocated = m.Settings.Unallocated.ValueBoolPointer()
 		}
 		if !m.Settings.TableColumnOrder.IsNull() && !m.Settings.TableColumnOrder.IsUnknown() {
-			s.TableColumnOrder = []string{}
-			diags.Append(m.Settings.TableColumnOrder.ElementsAs(ctx, &s.TableColumnOrder, false)...)
+			order := []string{}
+			diags.Append(m.Settings.TableColumnOrder.ElementsAs(ctx, &order, false)...)
+			s.TableColumnOrder = &order
 		}
 		create.Settings = s
 	}
@@ -426,14 +426,8 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 		if !m.Settings.Amortize.IsNull() && !m.Settings.Amortize.IsUnknown() {
 			s.Amortize = m.Settings.Amortize.ValueBoolPointer()
 		}
-		// NOTE: vantage-go's UpdateCostReportSettings.CompletePeriod is a
-		// plain `bool` with `omitempty`, unlike the other bool fields which are
-		// `*bool`. That means an explicit `false` gets stripped from the JSON
-		// payload on update. This mirrors the same upstream quirk documented
-		// in the settings test and is a limitation of the SDK, not the
-		// provider. Only true→any transitions are round-trippable.
 		if !m.Settings.CompletePeriod.IsNull() && !m.Settings.CompletePeriod.IsUnknown() {
-			s.CompletePeriod = m.Settings.CompletePeriod.ValueBool()
+			s.CompletePeriod = m.Settings.CompletePeriod.ValueBoolPointer()
 		}
 		if !m.Settings.IncludeCredits.IsNull() && !m.Settings.IncludeCredits.IsUnknown() {
 			s.IncludeCredits = m.Settings.IncludeCredits.ValueBoolPointer()
@@ -454,8 +448,9 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 			s.Unallocated = m.Settings.Unallocated.ValueBoolPointer()
 		}
 		if !m.Settings.TableColumnOrder.IsNull() && !m.Settings.TableColumnOrder.IsUnknown() {
-			s.TableColumnOrder = []string{}
-			diags.Append(m.Settings.TableColumnOrder.ElementsAs(ctx, &s.TableColumnOrder, false)...)
+			order := []string{}
+			diags.Append(m.Settings.TableColumnOrder.ElementsAs(ctx, &order, false)...)
+			s.TableColumnOrder = &order
 		}
 		update.Settings = s
 	}
@@ -557,27 +552,5 @@ func businessMetricMetadataAttributes(elem attr.Value, diags *diag.Diagnostics) 
 			fmt.Sprintf("Expected business metric metadata object, got %T.", elem),
 		)
 		return nil
-	}
-}
-
-// shortcut: the SDK omits empty slices, remove this override when it preserves explicit empty arrays.
-func updateCostReportWithColumnOrder(model *modelsv2.UpdateCostReport) costsv2.ClientOption {
-	return func(operation *runtime.ClientOperation) {
-		if model.Settings == nil || model.Settings.TableColumnOrder == nil {
-			return
-		}
-		original := operation.Params
-		operation.Params = runtime.ClientRequestWriterFunc(func(req runtime.ClientRequest, registry strfmt.Registry) error {
-			if err := original.WriteToRequest(req, registry); err != nil {
-				return err
-			}
-			return req.SetBodyParam(struct {
-				*modelsv2.UpdateCostReport
-				Settings interface{} `json:"settings"`
-			}{model, struct {
-				*modelsv2.UpdateCostReportSettings
-				TableColumnOrder []string `json:"table_column_order"`
-			}{model.Settings, model.Settings.TableColumnOrder}})
-		})
 	}
 }

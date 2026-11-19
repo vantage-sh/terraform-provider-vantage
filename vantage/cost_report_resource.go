@@ -210,6 +210,10 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Description:         defaultForecast.GetDescription(),
 	}
 
+	calculations := attrs["custom_calculation_tokens"].(schema.SetAttribute)
+	calculations.MarkdownDescription = "The attached Custom Calculation tokens. Omit to leave attachments unmanaged or set an empty set to clear them. Manage a given attachment from only one resource."
+	s.Attributes["custom_calculation_tokens"] = calculations
+
 	s.MarkdownDescription = "Manages a CostReport."
 	resp.Schema = s
 }
@@ -249,7 +253,7 @@ func (r CostReportResource) Create(ctx context.Context, req resource.CreateReque
 		updateParams := costsv2.NewUpdateCostReportParams().
 			WithCostReportToken(out.Payload.Token).
 			WithUpdateCostReport(updateModel)
-		updated, err := r.client.V2.Costs.UpdateCostReport(updateParams, r.client.Auth, updateCostReportWithColumnOrder(updateModel))
+		updated, err := r.client.V2.Costs.UpdateCostReport(updateParams, r.client.Auth)
 		if err != nil {
 			if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
 				handleBadRequest("Set Default Forecast on CostReport Resource", &resp.Diagnostics, e.GetPayload())
@@ -312,13 +316,22 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	model := data.toUpdateModel(ctx, &resp.Diagnostics)
+	var configuredCalculations types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("custom_calculation_tokens"), &configuredCalculations)...)
+	if !configuredCalculations.IsNull() && !configuredCalculations.IsUnknown() {
+		var priorCalculations types.Set
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("custom_calculation_tokens"), &priorCalculations)...)
+		if !configuredCalculations.Equal(priorCalculations) {
+			model.CustomCalculationTokens = calculationTokenRequest(ctx, configuredCalculations, &resp.Diagnostics)
+		}
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	params := costsv2.NewUpdateCostReportParams().WithUpdateCostReport(model).WithCostReportToken(data.Token.ValueString())
 
-	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth, updateCostReportWithColumnOrder(model))
+	out, err := r.client.V2.Costs.UpdateCostReport(params, r.client.Auth)
 	if err != nil {
 		if e, ok := err.(*costsv2.UpdateCostReportBadRequest); ok {
 			handleBadRequest("Update CostReport Resource", &resp.Diagnostics, e.GetPayload())

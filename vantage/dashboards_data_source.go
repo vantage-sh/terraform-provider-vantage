@@ -136,11 +136,12 @@ func dashboardDataSourceWidgetsFromPayload(ctx context.Context, payload []*model
 		var settingsObj types.Object
 		if widget.Settings != nil {
 			settingsVal, d := datasource_dashboards.NewSettingsValue(settingsAttrTypes, map[string]attr.Value{
-				"display_type":    types.StringValue(widget.Settings.DisplayType),
-				"grid":            dashboardDataSourceGridObject(ctx, widget.Settings.Grid),
-				"kpi_calculation": types.StringPointerValue(widget.Settings.KpiCalculation),
-				"kpi_type":        types.StringPointerValue(widget.Settings.KpiType),
-				"kpi_usage_unit":  types.StringPointerValue(widget.Settings.KpiUsageUnit),
+				"display_type":                 types.StringValue(widget.Settings.DisplayType),
+				"grid":                         dashboardDataSourceGridObject(ctx, widget.Settings.Grid),
+				"kpi_calculation":              types.StringPointerValue(widget.Settings.KpiCalculation),
+				"kpi_type":                     types.StringPointerValue(widget.Settings.KpiType),
+				"kpi_custom_calculation_token": types.StringPointerValue(widget.Settings.KpiCustomCalculationToken),
+				"kpi_usage_unit":               types.StringPointerValue(widget.Settings.KpiUsageUnit),
 			})
 			diags.Append(d...)
 			if diags.HasError() {

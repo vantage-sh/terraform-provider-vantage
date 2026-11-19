@@ -768,11 +768,7 @@ resource "vantage_cost_report" "test" {
 `, title, amortize, includeCredits, includeTax)
 }
 
-// TestAccVantageCostReport_settingsCompletePeriod exercises the new
-// `complete_period` bool inside the settings nested block. It follows the
-// same false→true pattern as the other settings test because
-// UpdateCostReportSettings.CompletePeriod is a plain bool with omitempty in
-// vantage-go, so an explicit `false` is dropped from the update payload.
+// TestAccVantageCostReport_settingsCompletePeriod checks both update directions.
 func TestAccVantageCostReport_settingsCompletePeriod(t *testing.T) {
 	rTitle := sdkacctest.RandStringFromCharSet(10, sdkacctest.CharSetAlphaNum)
 	resourceName := "vantage_cost_report.test"
@@ -796,9 +792,14 @@ func TestAccVantageCostReport_settingsCompletePeriod(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "settings.complete_period", "true"),
 				),
 			},
-			// Step 3: Verify no drift.
+			// Step 3: Update true→false.
 			{
-				Config:             testAccCostReportConfig_completePeriod(rTitle, true),
+				Config: testAccCostReportConfig_completePeriod(rTitle, false),
+				Check:  resource.TestCheckResourceAttr(resourceName, "settings.complete_period", "false"),
+			},
+			// Step 4: Verify no drift.
+			{
+				Config:             testAccCostReportConfig_completePeriod(rTitle, false),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},

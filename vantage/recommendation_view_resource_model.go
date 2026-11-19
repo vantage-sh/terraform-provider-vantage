@@ -73,68 +73,68 @@ func (m *recommendationViewResourceModel) toCreateModel(ctx context.Context, dia
 
 	// Handle optional string fields
 	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() {
-		dst.StartDate = m.StartDate.ValueString()
+		dst.StartDate = m.StartDate.ValueStringPointer()
 	}
 
 	if !m.EndDate.IsNull() && !m.EndDate.IsUnknown() {
-		dst.EndDate = m.EndDate.ValueString()
+		dst.EndDate = m.EndDate.ValueStringPointer()
 	}
 
 	if !m.TagKey.IsNull() && !m.TagKey.IsUnknown() {
-		dst.TagKey = m.TagKey.ValueString()
+		dst.TagKey = m.TagKey.ValueStringPointer()
 	}
 
 	if !m.TagValue.IsNull() && !m.TagValue.IsUnknown() {
-		dst.TagValue = m.TagValue.ValueString()
+		dst.TagValue = m.TagValue.ValueStringPointer()
 	}
 
 	// Handle list fields - default to empty arrays per AGENTS.md guidelines
 	if !m.ProviderIds.IsNull() && !m.ProviderIds.IsUnknown() {
-		var providerIds []string
+		providerIds := []string{}
 		d := m.ProviderIds.ElementsAs(ctx, &providerIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.ProviderIds = providerIds
+		dst.ProviderIds = &providerIds
 	} else {
-		dst.ProviderIds = []string{}
+		dst.ProviderIds = &[]string{}
 	}
 
 	if !m.BillingAccountIds.IsNull() && !m.BillingAccountIds.IsUnknown() {
-		var billingAccountIds []string
+		billingAccountIds := []string{}
 		d := m.BillingAccountIds.ElementsAs(ctx, &billingAccountIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.BillingAccountIds = billingAccountIds
+		dst.BillingAccountIds = &billingAccountIds
 	} else {
-		dst.BillingAccountIds = []string{}
+		dst.BillingAccountIds = &[]string{}
 	}
 
 	if !m.AccountIds.IsNull() && !m.AccountIds.IsUnknown() {
-		var accountIds []string
+		accountIds := []string{}
 		d := m.AccountIds.ElementsAs(ctx, &accountIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.AccountIds = accountIds
+		dst.AccountIds = &accountIds
 	} else {
-		dst.AccountIds = []string{}
+		dst.AccountIds = &[]string{}
 	}
 
 	if !m.Regions.IsNull() && !m.Regions.IsUnknown() {
-		var regions []string
+		regions := []string{}
 		d := m.Regions.ElementsAs(ctx, &regions, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.Regions = regions
+		dst.Regions = &regions
 	} else {
-		dst.Regions = []string{}
+		dst.Regions = &[]string{}
 	}
 
 	return dst
@@ -147,68 +147,68 @@ func (m *recommendationViewResourceModel) toUpdateModel(ctx context.Context, dia
 
 	// Handle optional string fields
 	if !m.StartDate.IsNull() && !m.StartDate.IsUnknown() {
-		dst.StartDate = m.StartDate.ValueString()
+		dst.StartDate = m.StartDate.ValueStringPointer()
 	}
 
 	if !m.EndDate.IsNull() && !m.EndDate.IsUnknown() {
-		dst.EndDate = m.EndDate.ValueString()
+		dst.EndDate = m.EndDate.ValueStringPointer()
 	}
 
 	if !m.TagKey.IsNull() && !m.TagKey.IsUnknown() {
-		dst.TagKey = m.TagKey.ValueString()
+		dst.TagKey = m.TagKey.ValueStringPointer()
 	}
 
 	if !m.TagValue.IsNull() && !m.TagValue.IsUnknown() {
-		dst.TagValue = m.TagValue.ValueString()
+		dst.TagValue = m.TagValue.ValueStringPointer()
 	}
 
 	// Handle list fields - default to empty arrays per AGENTS.md guidelines
 	if !m.ProviderIds.IsNull() && !m.ProviderIds.IsUnknown() {
-		var providerIds []string
+		providerIds := []string{}
 		d := m.ProviderIds.ElementsAs(ctx, &providerIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.ProviderIds = providerIds
+		dst.ProviderIds = &providerIds
 	} else {
-		dst.ProviderIds = []string{}
+		dst.ProviderIds = &[]string{}
 	}
 
 	if !m.BillingAccountIds.IsNull() && !m.BillingAccountIds.IsUnknown() {
-		var billingAccountIds []string
+		billingAccountIds := []string{}
 		d := m.BillingAccountIds.ElementsAs(ctx, &billingAccountIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.BillingAccountIds = billingAccountIds
+		dst.BillingAccountIds = &billingAccountIds
 	} else {
-		dst.BillingAccountIds = []string{}
+		dst.BillingAccountIds = &[]string{}
 	}
 
 	if !m.AccountIds.IsNull() && !m.AccountIds.IsUnknown() {
-		var accountIds []string
+		accountIds := []string{}
 		d := m.AccountIds.ElementsAs(ctx, &accountIds, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.AccountIds = accountIds
+		dst.AccountIds = &accountIds
 	} else {
-		dst.AccountIds = []string{}
+		dst.AccountIds = &[]string{}
 	}
 
 	if !m.Regions.IsNull() && !m.Regions.IsUnknown() {
-		var regions []string
+		regions := []string{}
 		d := m.Regions.ElementsAs(ctx, &regions, false)
 		if d.HasError() {
 			diags.Append(d...)
 			return nil
 		}
-		dst.Regions = regions
+		dst.Regions = &regions
 	} else {
-		dst.Regions = []string{}
+		dst.Regions = &[]string{}
 	}
 
 	return dst

@@ -6,6 +6,8 @@ generate:
 	cat tmp-swagger.json | curl --header 'Content-Type: application/json' --data @'-' https://converter.swagger.io/api/convert | jq > tmp.json
 	@echo "Normalizing free-text widget content to a JSON string for Terraform codegen"
 	jq -f fix-dashboard-widget-content.jq tmp.json > tmp.json.fixed && mv tmp.json.fixed tmp.json
+	@echo "Normalizing custom calculation schemas for Terraform codegen"
+	jq -f fix-custom-calculation-schema.jq tmp.json > tmp.json.fixed && mv tmp.json.fixed tmp.json
 	@echo "Generating spec from OAS3 swagger file"
 	tfplugingen-openapi generate --config generator.yaml --output spec.json tmp.json
 	jq -f add-ids.jq spec.json > spec.json.tmp && mv spec.json.tmp spec.json

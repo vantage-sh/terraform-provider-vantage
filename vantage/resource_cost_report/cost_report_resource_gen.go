@@ -149,6 +149,13 @@ func CostReportResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The date and time, in UTC, the report was created. ISO 8601 Formatted.",
 				MarkdownDescription: "The date and time, in UTC, the report was created. ISO 8601 Formatted.",
 			},
+			"custom_calculation_tokens": schema.SetAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The CustomCalculation tokens to attach to the new CostReport. Omission, null, or an empty array creates a report without attachments.",
+				MarkdownDescription: "The CustomCalculation tokens to attach to the new CostReport. Omission, null, or an empty array creates a report without attachments.",
+			},
 			"date_bin": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -380,6 +387,7 @@ type CostReportModel struct {
 	ChartSettings                    ChartSettingsValue   `tfsdk:"chart_settings"`
 	ChartType                        types.String         `tfsdk:"chart_type"`
 	CreatedAt                        types.String         `tfsdk:"created_at"`
+	CustomCalculationTokens          types.Set            `tfsdk:"custom_calculation_tokens"`
 	DateBin                          types.String         `tfsdk:"date_bin"`
 	DateInterval                     types.String         `tfsdk:"date_interval"`
 	DefaultForecast                  DefaultForecastValue `tfsdk:"default_forecast"`

@@ -230,6 +230,7 @@ func (p *vantageProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewFolderResource,
 		NewSavedFilterResource,
 		NewCostReportResource,
+		NewCustomCalculationResource,
 		NewDashboardResource,
 		NewSegmentResource,
 		NewTeamResource,

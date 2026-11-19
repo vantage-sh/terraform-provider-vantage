@@ -61,11 +61,12 @@ func (m *dashboardModel) applyPayload(ctx context.Context, payload *modelsv2.Das
 
 		if widget.Settings != nil {
 			settingsAttrs := map[string]attr.Value{
-				"display_type":    types.StringValue(widget.Settings.DisplayType),
-				"grid":            dashboardWidgetGridObject(ctx, widget.Settings.Grid),
-				"kpi_calculation": types.StringPointerValue(widget.Settings.KpiCalculation),
-				"kpi_type":        types.StringPointerValue(widget.Settings.KpiType),
-				"kpi_usage_unit":  types.StringPointerValue(widget.Settings.KpiUsageUnit),
+				"display_type":                 types.StringValue(widget.Settings.DisplayType),
+				"grid":                         dashboardWidgetGridObject(ctx, widget.Settings.Grid),
+				"kpi_calculation":              types.StringPointerValue(widget.Settings.KpiCalculation),
+				"kpi_type":                     types.StringPointerValue(widget.Settings.KpiType),
+				"kpi_custom_calculation_token": types.StringPointerValue(widget.Settings.KpiCustomCalculationToken),
+				"kpi_usage_unit":               types.StringPointerValue(widget.Settings.KpiUsageUnit),
 			}
 			settingsVal, diag := resource_dashboard.NewSettingsValue(settingsAttrTypes, settingsAttrs)
 			if diag.HasError() {
@@ -262,7 +263,8 @@ func (m *dashboardModel) toUpdate(ctx context.Context, diags *diag.Diagnostics) 
 
 func createDashboardWidgetSettings(ctx context.Context, s resource_dashboard.SettingsValue, diags *diag.Diagnostics) *modelsv2.CreateDashboardWidgetsItems0Settings {
 	settings := &modelsv2.CreateDashboardWidgetsItems0Settings{
-		DisplayType: s.DisplayType.ValueStringPointer(),
+		DisplayType:               s.DisplayType.ValueStringPointer(),
+		KpiCustomCalculationToken: s.KpiCustomCalculationToken.ValueString(),
 	}
 	if !s.KpiCalculation.IsNull() && !s.KpiCalculation.IsUnknown() {
 		settings.KpiCalculation = s.KpiCalculation.ValueString()
@@ -282,7 +284,8 @@ func createDashboardWidgetSettings(ctx context.Context, s resource_dashboard.Set
 
 func updateDashboardWidgetSettings(ctx context.Context, s resource_dashboard.SettingsValue, diags *diag.Diagnostics) *modelsv2.UpdateDashboardWidgetsItems0Settings {
 	settings := &modelsv2.UpdateDashboardWidgetsItems0Settings{
-		DisplayType: s.DisplayType.ValueStringPointer(),
+		DisplayType:               s.DisplayType.ValueStringPointer(),
+		KpiCustomCalculationToken: s.KpiCustomCalculationToken.ValueString(),
 	}
 	if !s.KpiCalculation.IsNull() && !s.KpiCalculation.IsUnknown() {
 		settings.KpiCalculation = s.KpiCalculation.ValueString()

@@ -65,6 +65,7 @@ Read-Only:
 - `display_type` (String)
 - `grid` (Attributes) (see [below for nested schema](#nestedatt--dashboards--widgets--settings--grid))
 - `kpi_calculation` (String) The aggregation used when display_type is kpi. Custom calculation KPIs use the calculation's own operation instead.
+- `kpi_custom_calculation_token` (String) The token of the custom calculation assigned to the Cost Report represented by this KPI.
 - `kpi_type` (String) The metric represented by the KPI.
 - `kpi_usage_unit` (String) The usage unit represented by the KPI.
 

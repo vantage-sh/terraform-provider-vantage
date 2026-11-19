@@ -165,6 +165,27 @@ resources:
             description: The token of the cost alert
         aliases:
           cost_alert_token: token
+  custom_calculation:
+    create:
+      path: /custom_calculations
+      method: POST
+    read:
+      path: /custom_calculations/{custom_calculation_token}
+      method: GET
+    update:
+      path: /custom_calculations/{custom_calculation_token}
+      method: PUT
+    delete:
+      path: /custom_calculations/{custom_calculation_token}
+      method: DELETE
+    schema:
+      ignores:
+        - created_at
+        - updated_at
+        - is_read_only
+      attributes:
+        aliases:
+          custom_calculation_token: token
   dashboard:
     create:
       path: /dashboards
@@ -181,7 +202,6 @@ resources:
     schema:
       ignores:
         - updated_at
-        - widgets.settings.kpi_custom_calculation_token
       attributes:
         overrides:
           token:
@@ -399,12 +419,12 @@ resources:
       path: /cost_reports/{cost_report_token}
       method: DELETE
     schema:
-      ignores:
-        - custom_calculation_tokens
       attributes:
         overrides:
           token:
             description: The token of the cost report
+          settings.table_column_order:
+            description: Ordered list of CostReport table column keys. Send an empty array to reset to the default order.
         aliases:
           cost_report_token: token
   recommendation_view:
@@ -546,7 +566,6 @@ data_sources:
       method: GET
     schema:
       ignores:
-        - dashboards.widgets.settings.kpi_custom_calculation_token
         - limit
         - links
         - page

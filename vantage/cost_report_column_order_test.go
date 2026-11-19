@@ -52,7 +52,7 @@ func TestCostReportColumnOrderLifecycle(t *testing.T) {
 			}))
 			defer srv.Close()
 			client := clientForServer(t, srv.URL)
-			model := costReportModel{Token: types.StringValue("rprt_test"), Title: types.StringValue("Column order"), SavedFilterTokens: types.ListNull(types.StringType), BusinessMetricTokensWithMetadata: types.ListNull(resource_cost_report.BusinessMetricTokensWithMetadataType{ObjectType: types.ObjectType{AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx)}}), Settings: resource_cost_report.SettingsValue{}}
+			model := costReportModel{Token: types.StringValue("rprt_test"), Title: types.StringValue("Column order"), SavedFilterTokens: types.ListNull(types.StringType), BusinessMetricTokensWithMetadata: types.ListNull(resource_cost_report.BusinessMetricTokensWithMetadataType{ObjectType: types.ObjectType{AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx)}}), Settings: resource_cost_report.SettingsValue{}, CustomCalculationTokens: types.SetNull(types.StringType)}
 			var schemaResp resource.SchemaResponse
 			r := CostReportResource{client: client}
 			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
@@ -78,15 +78,19 @@ func TestCostReportColumnOrderLifecycle(t *testing.T) {
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
-			if !reflect.DeepEqual(create.Settings.TableColumnOrder, order) {
-				t.Fatalf("create order = %#v; want %#v", create.Settings.TableColumnOrder, order)
+			var createOrder *[]string
+			if order != nil {
+				createOrder = &order
+			}
+			if !reflect.DeepEqual(create.Settings.TableColumnOrder, createOrder) {
+				t.Fatalf("create order = %#v; want %#v", create.Settings.TableColumnOrder, createOrder)
 			}
 			state := tfsdk.State{Schema: schemaResp.Schema}
 			if d := state.Set(ctx, &model); d.HasError() {
 				t.Fatal(d)
 			}
 			resp := resource.UpdateResponse{State: state}
-			r.Update(ctx, resource.UpdateRequest{Plan: tfsdk.Plan{Schema: schemaResp.Schema, Raw: state.Raw}}, &resp)
+			r.Update(ctx, resource.UpdateRequest{Plan: tfsdk.Plan{Schema: schemaResp.Schema, Raw: state.Raw}, Config: tfsdk.Config{Schema: schemaResp.Schema, Raw: state.Raw}}, &resp)
 			if resp.Diagnostics.HasError() {
 				t.Fatal(resp.Diagnostics)
 			}
