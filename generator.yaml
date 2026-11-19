@@ -181,6 +181,7 @@ resources:
     schema:
       ignores:
         - updated_at
+        - widgets.settings.kpi_custom_calculation_token
       attributes:
         overrides:
           token:
@@ -398,6 +399,8 @@ resources:
       path: /cost_reports/{cost_report_token}
       method: DELETE
     schema:
+      ignores:
+        - custom_calculation_tokens
       attributes:
         overrides:
           token:
@@ -543,6 +546,7 @@ data_sources:
       method: GET
     schema:
       ignores:
+        - dashboards.widgets.settings.kpi_custom_calculation_token
         - limit
         - links
         - page

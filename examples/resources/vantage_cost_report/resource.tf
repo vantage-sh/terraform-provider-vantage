@@ -8,6 +8,7 @@ resource "vantage_cost_report" "demo_report" {
   date_bin            = "day"  # Allowed: cumulative, day, week, month, quarter
 
   settings = {
+    table_column_order   = ["service", "provider", "costAmount"]
     include_credits      = true
     include_refunds      = true
     include_discounts    = true

@@ -69,6 +69,7 @@ type costReportDataSourceModel struct {
 	ChartType               types.String `tfsdk:"chart_type"`
 	DateBin                 types.String `tfsdk:"date_bin"`
 	ChartSettings           types.Object `tfsdk:"chart_settings"`
+	Settings                types.Object `tfsdk:"settings"`
 }
 
 type costReportsDataSourceModel struct {
@@ -128,6 +129,16 @@ func (d *costReportsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						"date_bin": schema.StringAttribute{
 							Computed: true,
 						},
+						"settings": schema.SingleNestedAttribute{
+							Computed: true,
+							Attributes: map[string]schema.Attribute{
+								"table_column_order": schema.ListAttribute{
+									ElementType:         types.StringType,
+									Computed:            true,
+									MarkdownDescription: "Ordered list of Cost Report table column keys. Empty or omitted uses the default order.",
+								},
+							},
+						},
 						"chart_settings": schema.SingleNestedAttribute{
 							Computed: true,
 							Attributes: map[string]schema.Attribute{
@@ -176,6 +187,23 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			resp.Diagnostics.AddError("Error reading chart_settings", csErr.Error())
 			return
 		}
+		order := []string{}
+		if r.Settings != nil && r.Settings.TableColumnOrder != nil {
+			order = r.Settings.TableColumnOrder
+		}
+		orderValue, orderDiags := types.ListValueFrom(ctx, types.StringType, order)
+		resp.Diagnostics.Append(orderDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		settings, settingsDiags := types.ObjectValue(
+			map[string]attr.Type{"table_column_order": types.ListType{ElemType: types.StringType}},
+			map[string]attr.Value{"table_column_order": orderValue},
+		)
+		resp.Diagnostics.Append(settingsDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 		costReports = append(costReports, costReportDataSourceModel{
 			Title:                   types.StringValue(r.Title),
 			Token:                   types.StringValue(r.Token),
@@ -192,6 +220,7 @@ func (d *costReportsDataSource) Read(ctx context.Context, req datasource.ReadReq
 			ChartType:               types.StringValue(r.ChartType),
 			DateBin:                 types.StringValue(r.DateBin),
 			ChartSettings:           chartSettingsObj,
+			Settings:                settings,
 		})
 	}
 	state.CostReports = costReports

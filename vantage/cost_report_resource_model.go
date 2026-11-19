@@ -79,6 +79,19 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	// through to null otherwise. This fixes a bug where a non-null state
 	// combined with a nil API payload left stale data in state.
 	if payload.Settings != nil && !m.Settings.IsNull() && !m.Settings.IsUnknown() {
+		order := types.ListNull(types.StringType)
+		if payload.Settings.TableColumnOrder != nil || (!m.Settings.TableColumnOrder.IsNull() && !m.Settings.TableColumnOrder.IsUnknown()) {
+			items := payload.Settings.TableColumnOrder
+			if items == nil {
+				items = []string{}
+			}
+			var d diag.Diagnostics
+			order, d = types.ListValueFrom(ctx, types.StringType, items)
+			diags.Append(d...)
+			if diags.HasError() {
+				return diags
+			}
+		}
 		settingsValue, d := resource_cost_report.NewSettingsValue(
 			resource_cost_report.SettingsValue{}.AttributeTypes(ctx),
 			map[string]attr.Value{
@@ -90,6 +103,7 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 				"include_refunds":      types.BoolPointerValue(payload.Settings.IncludeRefunds),
 				"include_tax":          types.BoolPointerValue(payload.Settings.IncludeTax),
 				"show_previous_period": types.BoolPointerValue(payload.Settings.ShowPreviousPeriod),
+				"table_column_order":   order,
 				"unallocated":          types.BoolPointerValue(payload.Settings.Unallocated),
 			},
 		)
@@ -286,6 +300,11 @@ func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnos
 		if !m.Settings.Unallocated.IsNull() && !m.Settings.Unallocated.IsUnknown() {
 			s.Unallocated = m.Settings.Unallocated.ValueBoolPointer()
 		}
+		if !m.Settings.TableColumnOrder.IsNull() && !m.Settings.TableColumnOrder.IsUnknown() {
+			order := []string{}
+			diags.Append(m.Settings.TableColumnOrder.ElementsAs(ctx, &order, false)...)
+			s.TableColumnOrder = &order
+		}
 		create.Settings = s
 	}
 
@@ -425,6 +444,11 @@ func (m *costReportModel) toUpdateModel(ctx context.Context, diags *diag.Diagnos
 		}
 		if !m.Settings.Unallocated.IsNull() && !m.Settings.Unallocated.IsUnknown() {
 			s.Unallocated = m.Settings.Unallocated.ValueBoolPointer()
+		}
+		if !m.Settings.TableColumnOrder.IsNull() && !m.Settings.TableColumnOrder.IsUnknown() {
+			order := []string{}
+			diags.Append(m.Settings.TableColumnOrder.ElementsAs(ctx, &order, false)...)
+			s.TableColumnOrder = &order
 		}
 		update.Settings = s
 	}

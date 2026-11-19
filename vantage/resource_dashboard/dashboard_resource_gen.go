@@ -73,6 +73,12 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 				MarkdownDescription: "The end date for the date range for costs in the Dashboard. ISO 8601 Formatted. Incompatible with 'date_interval' parameter.",
 			},
+			"filter": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "The filter query language to apply to the Dashboard. Additional documentation available at https://docs.vantage.sh/vql. The stored inline filter. Use vantage.* or tags.* fields in a single AND filter group with =, !=, IN, or NOT IN comparisons. LIKE and NOT LIKE are not supported. Omit to preserve the filter on update; send null or an empty string to clear it. Saved Filters take precedence when saved_filter_tokens is nonempty. Removing Saved Filters reactivates the stored inline filter.",
+				MarkdownDescription: "The filter query language to apply to the Dashboard. Additional documentation available at https://docs.vantage.sh/vql. The stored inline filter. Use vantage.* or tags.* fields in a single AND filter group with =, !=, IN, or NOT IN comparisons. LIKE and NOT LIKE are not supported. Omit to preserve the filter on update; send null or an empty string to clear it. Saved Filters take precedence when saved_filter_tokens is nonempty. Removing Saved Filters reactivates the stored inline filter.",
+			},
 			"folder_token": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -170,8 +176,8 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 								"kpi_calculation": schema.StringAttribute{
 									Optional:            true,
 									Computed:            true,
-									Description:         "The aggregation used when display_type is kpi.",
-									MarkdownDescription: "The aggregation used when display_type is kpi.",
+									Description:         "The aggregation used for standard KPI widgets. Custom calculation widgets use the operation defined by the referenced calculation.",
+									MarkdownDescription: "The aggregation used for standard KPI widgets. Custom calculation widgets use the operation defined by the referenced calculation.",
 									Validators: []validator.String{
 										stringvalidator.OneOf(
 											"sum",
@@ -190,6 +196,7 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 											"usage",
 											"count",
 											"business_metric",
+											"custom_calculation",
 										),
 									},
 								},
@@ -265,6 +272,7 @@ type DashboardModel struct {
 	DateBin           types.String `tfsdk:"date_bin"`
 	DateInterval      types.String `tfsdk:"date_interval"`
 	EndDate           types.String `tfsdk:"end_date"`
+	Filter            types.String `tfsdk:"filter"`
 	FolderToken       types.String `tfsdk:"folder_token"`
 	Id                types.String `tfsdk:"id"`
 	SavedFilterTokens types.List   `tfsdk:"saved_filter_tokens"`
