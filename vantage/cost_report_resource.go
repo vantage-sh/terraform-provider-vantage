@@ -210,6 +210,10 @@ func (r CostReportResource) Schema(ctx context.Context, req resource.SchemaReque
 		Description:         defaultForecast.GetDescription(),
 	}
 
+	calculations := attrs["custom_calculation_tokens"].(schema.SetAttribute)
+	calculations.MarkdownDescription = "The attached Custom Calculation tokens. Omit to leave attachments unmanaged or set an empty set to clear them. Manage a given attachment from only one resource."
+	s.Attributes["custom_calculation_tokens"] = calculations
+
 	s.MarkdownDescription = "Manages a CostReport."
 	resp.Schema = s
 }
@@ -312,6 +316,15 @@ func (r CostReportResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	model := data.toUpdateModel(ctx, &resp.Diagnostics)
+	var configuredCalculations types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("custom_calculation_tokens"), &configuredCalculations)...)
+	if !configuredCalculations.IsNull() && !configuredCalculations.IsUnknown() {
+		var priorCalculations types.Set
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("custom_calculation_tokens"), &priorCalculations)...)
+		if !configuredCalculations.Equal(priorCalculations) {
+			model.CustomCalculationTokens = calculationTokenRequest(ctx, configuredCalculations, &resp.Diagnostics)
+		}
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}

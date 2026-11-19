@@ -185,6 +185,12 @@ func DashboardResourceSchema(ctx context.Context) schema.Schema {
 										),
 									},
 								},
+								"kpi_custom_calculation_token": schema.StringAttribute{
+									Optional:            true,
+									Computed:            true,
+									Description:         "The token of a custom calculation assigned to the selected Cost Report. Required for custom calculation KPI widgets.",
+									MarkdownDescription: "The token of a custom calculation assigned to the selected Cost Report. Required for custom calculation KPI widgets.",
+								},
 								"kpi_type": schema.StringAttribute{
 									Optional:            true,
 									Computed:            true,
@@ -988,6 +994,24 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 			fmt.Sprintf(`kpi_calculation expected to be basetypes.StringValue, was: %T`, kpiCalculationAttribute))
 	}
 
+	kpiCustomCalculationTokenAttribute, ok := attributes["kpi_custom_calculation_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_custom_calculation_token is missing from object`)
+
+		return nil, diags
+	}
+
+	kpiCustomCalculationTokenVal, ok := kpiCustomCalculationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_custom_calculation_token expected to be basetypes.StringValue, was: %T`, kpiCustomCalculationTokenAttribute))
+	}
+
 	kpiTypeAttribute, ok := attributes["kpi_type"]
 
 	if !ok {
@@ -1029,12 +1053,13 @@ func (t SettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectVa
 	}
 
 	return SettingsValue{
-		DisplayType:    displayTypeVal,
-		Grid:           gridVal,
-		KpiCalculation: kpiCalculationVal,
-		KpiType:        kpiTypeVal,
-		KpiUsageUnit:   kpiUsageUnitVal,
-		state:          attr.ValueStateKnown,
+		DisplayType:               displayTypeVal,
+		Grid:                      gridVal,
+		KpiCalculation:            kpiCalculationVal,
+		KpiCustomCalculationToken: kpiCustomCalculationTokenVal,
+		KpiType:                   kpiTypeVal,
+		KpiUsageUnit:              kpiUsageUnitVal,
+		state:                     attr.ValueStateKnown,
 	}, diags
 }
 
@@ -1155,6 +1180,24 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 			fmt.Sprintf(`kpi_calculation expected to be basetypes.StringValue, was: %T`, kpiCalculationAttribute))
 	}
 
+	kpiCustomCalculationTokenAttribute, ok := attributes["kpi_custom_calculation_token"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`kpi_custom_calculation_token is missing from object`)
+
+		return NewSettingsValueUnknown(), diags
+	}
+
+	kpiCustomCalculationTokenVal, ok := kpiCustomCalculationTokenAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`kpi_custom_calculation_token expected to be basetypes.StringValue, was: %T`, kpiCustomCalculationTokenAttribute))
+	}
+
 	kpiTypeAttribute, ok := attributes["kpi_type"]
 
 	if !ok {
@@ -1196,12 +1239,13 @@ func NewSettingsValue(attributeTypes map[string]attr.Type, attributes map[string
 	}
 
 	return SettingsValue{
-		DisplayType:    displayTypeVal,
-		Grid:           gridVal,
-		KpiCalculation: kpiCalculationVal,
-		KpiType:        kpiTypeVal,
-		KpiUsageUnit:   kpiUsageUnitVal,
-		state:          attr.ValueStateKnown,
+		DisplayType:               displayTypeVal,
+		Grid:                      gridVal,
+		KpiCalculation:            kpiCalculationVal,
+		KpiCustomCalculationToken: kpiCustomCalculationTokenVal,
+		KpiType:                   kpiTypeVal,
+		KpiUsageUnit:              kpiUsageUnitVal,
+		state:                     attr.ValueStateKnown,
 	}, diags
 }
 
@@ -1273,16 +1317,17 @@ func (t SettingsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = SettingsValue{}
 
 type SettingsValue struct {
-	DisplayType    basetypes.StringValue `tfsdk:"display_type"`
-	Grid           basetypes.ObjectValue `tfsdk:"grid"`
-	KpiCalculation basetypes.StringValue `tfsdk:"kpi_calculation"`
-	KpiType        basetypes.StringValue `tfsdk:"kpi_type"`
-	KpiUsageUnit   basetypes.StringValue `tfsdk:"kpi_usage_unit"`
-	state          attr.ValueState
+	DisplayType               basetypes.StringValue `tfsdk:"display_type"`
+	Grid                      basetypes.ObjectValue `tfsdk:"grid"`
+	KpiCalculation            basetypes.StringValue `tfsdk:"kpi_calculation"`
+	KpiCustomCalculationToken basetypes.StringValue `tfsdk:"kpi_custom_calculation_token"`
+	KpiType                   basetypes.StringValue `tfsdk:"kpi_type"`
+	KpiUsageUnit              basetypes.StringValue `tfsdk:"kpi_usage_unit"`
+	state                     attr.ValueState
 }
 
 func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 5)
+	attrTypes := make(map[string]tftypes.Type, 6)
 
 	var val tftypes.Value
 	var err error
@@ -1292,6 +1337,7 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 		AttrTypes: GridValue{}.AttributeTypes(ctx),
 	}.TerraformType(ctx)
 	attrTypes["kpi_calculation"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["kpi_custom_calculation_token"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["kpi_type"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["kpi_usage_unit"] = basetypes.StringType{}.TerraformType(ctx)
 
@@ -1299,7 +1345,7 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 5)
+		vals := make(map[string]tftypes.Value, 6)
 
 		val, err = v.DisplayType.ToTerraformValue(ctx)
 
@@ -1324,6 +1370,14 @@ func (v SettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, err
 		}
 
 		vals["kpi_calculation"] = val
+
+		val, err = v.KpiCustomCalculationToken.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["kpi_custom_calculation_token"] = val
 
 		val, err = v.KpiType.ToTerraformValue(ctx)
 
@@ -1396,9 +1450,10 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 		"grid": basetypes.ObjectType{
 			AttrTypes: GridValue{}.AttributeTypes(ctx),
 		},
-		"kpi_calculation": basetypes.StringType{},
-		"kpi_type":        basetypes.StringType{},
-		"kpi_usage_unit":  basetypes.StringType{},
+		"kpi_calculation":              basetypes.StringType{},
+		"kpi_custom_calculation_token": basetypes.StringType{},
+		"kpi_type":                     basetypes.StringType{},
+		"kpi_usage_unit":               basetypes.StringType{},
 	}
 
 	if v.IsNull() {
@@ -1412,11 +1467,12 @@ func (v SettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
-			"display_type":    v.DisplayType,
-			"grid":            grid,
-			"kpi_calculation": v.KpiCalculation,
-			"kpi_type":        v.KpiType,
-			"kpi_usage_unit":  v.KpiUsageUnit,
+			"display_type":                 v.DisplayType,
+			"grid":                         grid,
+			"kpi_calculation":              v.KpiCalculation,
+			"kpi_custom_calculation_token": v.KpiCustomCalculationToken,
+			"kpi_type":                     v.KpiType,
+			"kpi_usage_unit":               v.KpiUsageUnit,
 		})
 
 	return objVal, diags
@@ -1449,6 +1505,10 @@ func (v SettingsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.KpiCustomCalculationToken.Equal(other.KpiCustomCalculationToken) {
+		return false
+	}
+
 	if !v.KpiType.Equal(other.KpiType) {
 		return false
 	}
@@ -1474,9 +1534,10 @@ func (v SettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type 
 		"grid": basetypes.ObjectType{
 			AttrTypes: GridValue{}.AttributeTypes(ctx),
 		},
-		"kpi_calculation": basetypes.StringType{},
-		"kpi_type":        basetypes.StringType{},
-		"kpi_usage_unit":  basetypes.StringType{},
+		"kpi_calculation":              basetypes.StringType{},
+		"kpi_custom_calculation_token": basetypes.StringType{},
+		"kpi_type":                     basetypes.StringType{},
+		"kpi_usage_unit":               basetypes.StringType{},
 	}
 }
 

@@ -51,6 +51,7 @@ resource "vantage_cost_report" "demo_report" {
 - `business_metric_tokens_with_metadata` (Attributes List) The tokens for any BusinessMetrics to attach to the CostReport, and the unit scale. (see [below for nested schema](#nestedatt--business_metric_tokens_with_metadata))
 - `chart_settings` (Attributes) Report chart settings. (see [below for nested schema](#nestedatt--chart_settings))
 - `chart_type` (String) The chart type of the CostReport.
+- `custom_calculation_tokens` (Set of String) The attached Custom Calculation tokens. Omit to leave attachments unmanaged or set an empty set to clear them. Manage a given attachment from only one resource.
 - `date_bin` (String) The date bin of the CostReport.
 - `date_interval` (String) The date interval of the CostReport. Incompatible with 'start_date' and 'end_date' parameters. Defaults to 'this_month' if start_date and end_date are not provided.
 - `default_forecast` (Attributes) (see [below for nested schema](#nestedatt--default_forecast))

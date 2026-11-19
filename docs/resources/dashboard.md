@@ -125,6 +125,7 @@ Optional:
 
 - `grid` (Attributes) The widget's size and position in the dashboard's 12-column grid. (see [below for nested schema](#nestedatt--widgets--settings--grid))
 - `kpi_calculation` (String) The aggregation used for standard KPI widgets. Custom calculation widgets use the operation defined by the referenced calculation.
+- `kpi_custom_calculation_token` (String) The token of a custom calculation assigned to the selected Cost Report. Required for custom calculation KPI widgets.
 - `kpi_type` (String) The metric represented when display_type is kpi.
 - `kpi_usage_unit` (String) The usage unit represented when kpi_type is usage.
 

@@ -52,7 +52,7 @@ func TestCostReportColumnOrderLifecycle(t *testing.T) {
 			}))
 			defer srv.Close()
 			client := clientForServer(t, srv.URL)
-			model := costReportModel{Token: types.StringValue("rprt_test"), Title: types.StringValue("Column order"), SavedFilterTokens: types.ListNull(types.StringType), BusinessMetricTokensWithMetadata: types.ListNull(resource_cost_report.BusinessMetricTokensWithMetadataType{ObjectType: types.ObjectType{AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx)}}), Settings: resource_cost_report.SettingsValue{}}
+			model := costReportModel{Token: types.StringValue("rprt_test"), Title: types.StringValue("Column order"), SavedFilterTokens: types.ListNull(types.StringType), BusinessMetricTokensWithMetadata: types.ListNull(resource_cost_report.BusinessMetricTokensWithMetadataType{ObjectType: types.ObjectType{AttrTypes: resource_cost_report.BusinessMetricTokensWithMetadataValue{}.AttributeTypes(ctx)}}), Settings: resource_cost_report.SettingsValue{}, CustomCalculationTokens: types.SetNull(types.StringType)}
 			var schemaResp resource.SchemaResponse
 			r := CostReportResource{client: client}
 			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
@@ -90,7 +90,7 @@ func TestCostReportColumnOrderLifecycle(t *testing.T) {
 				t.Fatal(d)
 			}
 			resp := resource.UpdateResponse{State: state}
-			r.Update(ctx, resource.UpdateRequest{Plan: tfsdk.Plan{Schema: schemaResp.Schema, Raw: state.Raw}}, &resp)
+			r.Update(ctx, resource.UpdateRequest{Plan: tfsdk.Plan{Schema: schemaResp.Schema, Raw: state.Raw}, Config: tfsdk.Config{Schema: schemaResp.Schema, Raw: state.Raw}}, &resp)
 			if resp.Diagnostics.HasError() {
 				t.Fatal(resp.Diagnostics)
 			}

@@ -31,6 +31,7 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 	m.ChartType = types.StringValue(payload.ChartType)
 	m.DateBin = types.StringValue(payload.DateBin)
 	m.CreatedAt = types.StringValue(payload.CreatedAt)
+	m.CustomCalculationTokens = calculationTokenState(ctx, payload.CustomCalculationTokens, &diags)
 
 	savedFilterTokensValue, d := types.ListValueFrom(ctx, types.StringType, payload.SavedFilterTokens)
 	if d.HasError() {
@@ -210,8 +211,9 @@ func (m *costReportModel) applyPayload(ctx context.Context, payload *modelsv2.Co
 
 func (m *costReportModel) toCreateModel(ctx context.Context, diags *diag.Diagnostics) *modelsv2.CreateCostReport {
 	create := &modelsv2.CreateCostReport{
-		Title:  m.Title.ValueStringPointer(),
-		Filter: m.Filter.ValueString(),
+		CustomCalculationTokens: calculationTokenRequest(ctx, m.CustomCalculationTokens, diags),
+		Title:                   m.Title.ValueStringPointer(),
+		Filter:                  m.Filter.ValueString(),
 	}
 
 	// Optional fields
