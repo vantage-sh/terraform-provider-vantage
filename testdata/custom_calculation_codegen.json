@@ -1,0 +1,470 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Custom Calculation codegen fixture",
+    "version": "1"
+  },
+  "paths": {
+    "/custom_calculations": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createCustomCalculation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomCalculation"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomCalculations"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom_calculations/{custom_calculation_token}": {
+      "parameters": [
+        {
+          "name": "custom_calculation_token",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomCalculation"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/updateCustomCalculation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomCalculation"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/cost_reports": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createCostReport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cost_reports/{cost_report_token}": {
+      "parameters": [
+        {
+          "name": "cost_report_token",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostReport"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/updateCostReport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostReport"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CustomCalculationFilter": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "filter": {
+            "type": "string",
+            "description": "Aggregate VQL."
+          },
+          "filter_numerator": {
+            "type": "string"
+          },
+          "filter_denominator": {
+            "type": "string"
+          },
+          "usage_unit": {
+            "type": "object",
+            "nullable": true,
+            "description": "Usage units for aggregate calculations.",
+            "example": [
+              "GB",
+              "GiB"
+            ],
+            "x-oneOf": [
+              {
+                "type": "string",
+                "nullable": true
+              },
+              {
+                "type": "array",
+                "description": "Array branch description.",
+                "items": {
+                  "type": "string",
+                  "pattern": "\\S",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "maxItems": 5
+              }
+            ]
+          },
+          "usage_unit_numerator": {
+            "type": "object",
+            "nullable": true,
+            "description": "Usage units for the numerator.",
+            "x-oneOf": [
+              {
+                "type": "string",
+                "nullable": true
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "\\S"
+                },
+                "minItems": 1
+              }
+            ]
+          },
+          "usage_unit_denominator": {
+            "type": "object",
+            "nullable": true,
+            "description": "Usage units for the denominator.",
+            "x-oneOf": [
+              {
+                "type": "string",
+                "nullable": true
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "\\S"
+                },
+                "minItems": 1
+              }
+            ]
+          }
+        }
+      },
+      "CustomCalculation": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/CustomCalculationFilter"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "display_as": {
+            "type": "string"
+          },
+          "unit_scale": {
+            "type": "integer"
+          },
+          "cost_report_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Attached reports.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        },
+        "required": [
+          "token",
+          "title",
+          "filter",
+          "operation",
+          "display_as",
+          "unit_scale",
+          "cost_report_tokens"
+        ]
+      },
+      "createCustomCalculation": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/CustomCalculationFilter"
+          },
+          "operation": {
+            "type": "string",
+            "default": "sum"
+          },
+          "display_as": {
+            "type": "string",
+            "default": "ratio"
+          },
+          "unit_scale": {
+            "type": "integer",
+            "default": 1
+          },
+          "cost_report_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Attach reports on create.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        },
+        "required": [
+          "title",
+          "filter"
+        ]
+      },
+      "updateCustomCalculation": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/CustomCalculationFilter"
+          },
+          "cost_report_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Replace attached reports.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        }
+      },
+      "CustomCalculations": {
+        "type": "object",
+        "properties": {
+          "custom_calculations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomCalculation"
+            }
+          }
+        },
+        "required": [
+          "custom_calculations"
+        ]
+      },
+      "CostReport": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "custom_calculation_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Attached calculations.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        },
+        "required": [
+          "token",
+          "title",
+          "custom_calculation_tokens"
+        ]
+      },
+      "createCostReport": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "custom_calculation_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Attach calculations on create.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "updateCostReport": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "custom_calculation_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Replace attached calculations.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        }
+      },
+      "Unrelated": {
+        "type": "object",
+        "properties": {
+          "usage_unit": {
+            "type": "string"
+          },
+          "cost_report_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keep this list.",
+            "nullable": true,
+            "x-omitempty": false
+          },
+          "custom_calculation_tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keep this list too.",
+            "nullable": true,
+            "x-omitempty": false
+          }
+        }
+      }
+    }
+  }
+}
