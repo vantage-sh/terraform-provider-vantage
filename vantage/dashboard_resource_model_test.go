@@ -625,3 +625,39 @@ func TestDashboardResource_folderTokenIsOptional(t *testing.T) {
 		t.Fatalf("folder_token must be optional without computed, so removing it plans a move to root: %#v", attribute)
 	}
 }
+
+func TestDashboardWidgetCalculationTokenJSON(t *testing.T) {
+	ctx := context.Background()
+	for _, test := range []struct {
+		name  string
+		token types.String
+		want  string
+	}{
+		{name: "null", token: types.StringNull()},
+		{name: "unknown", token: types.StringUnknown()},
+		{name: "known", token: types.StringValue("calc_test"), want: `"calc_test"`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			settings := resource_dashboard.SettingsValue{KpiCustomCalculationToken: test.token}
+			var diags diag.Diagnostics
+			create := createDashboardWidgetSettings(ctx, settings, &diags)
+			update := updateDashboardWidgetSettings(ctx, settings, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			for _, payload := range []any{create, update} {
+				wire, err := json.Marshal(payload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var fields map[string]json.RawMessage
+				if err := json.Unmarshal(wire, &fields); err != nil {
+					t.Fatal(err)
+				}
+				if got := string(fields["kpi_custom_calculation_token"]); got != test.want {
+					t.Errorf("%T token JSON = %q, want %q", payload, got, test.want)
+				}
+			}
+		})
+	}
+}

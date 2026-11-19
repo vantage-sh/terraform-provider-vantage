@@ -53,6 +53,12 @@ func TestAccVantageCustomCalculation_Lifecycle(t *testing.T) {
 			if req.Method == http.MethodPost {
 				prior = map[string]any{"token": token}
 			}
+			if kind == "cost_reports" && req.Method == http.MethodPut && body["title"] == "Renamed report" {
+				// Match Core's contract: null preserves attachments; an empty array clears them.
+				if tokens, exists := body["custom_calculation_tokens"]; !exists || tokens != nil {
+					t.Errorf("unmanaged calculation tokens must encode as null, got %#v (present: %t)", tokens, exists)
+				}
+			}
 			for key, value := range body {
 				if value != nil {
 					prior[key] = value
@@ -180,6 +186,18 @@ func TestCustomCalculationDivisionRoundTrip(t *testing.T) {
 	rename := plan.toUpdateModel(ctx, prior, types.SetNull(types.StringType), &diags)
 	if rename.Title != "Renamed" || rename.Filter != nil || rename.CostReportTokens != nil || diags.HasError() {
 		t.Fatalf("Rename must preserve the definition and unmanaged reports: %#v, %v", rename, diags)
+	}
+
+	renameWire, err := json.Marshal(rename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var renameBody map[string]json.RawMessage
+	if err := json.Unmarshal(renameWire, &renameBody); err != nil {
+		t.Fatal(err)
+	}
+	if string(renameBody["cost_report_tokens"]) != "null" {
+		t.Fatalf("unmanaged report tokens must encode as null: %s", renameWire)
 	}
 
 	plan.Filter.UsageUnitDenominator, _ = types.ListValueFrom(ctx, types.StringType, []string{"Requests", "requests"})
