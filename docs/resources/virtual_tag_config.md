@@ -3,12 +3,15 @@
 page_title: "vantage_virtual_tag_config Resource - terraform-provider-vantage"
 subcategory: ""
 description: |-
-  
+  Manages a virtual tag config.
+  ~> Value ownership: Manage values either inline with this resource's values attribute OR with separate vantage_virtual_tag_config_value resources, never both for the same config. When using separate resources, omit values entirely. Omitted values are read into state but are not modified or removed by parent updates. An explicit values = [] manages the collection and removes its values.
 ---
 
 # vantage_virtual_tag_config (Resource)
 
+Manages a virtual tag config.
 
+~> **Value ownership:** Manage values either inline with this resource's `values` attribute OR with separate `vantage_virtual_tag_config_value` resources, never both for the same config. When using separate resources, omit `values` entirely. Omitted values are read into state but are not modified or removed by parent updates. An explicit `values = []` manages the collection and removes its values.
 
 ## Example Usage
 
@@ -42,6 +45,12 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
     # {
     #   filter                = "costs.provider = 'aws'"
     #   business_metric_token = "bsnss_mtrc_XXXXXXXX"
+    #   label_key             = "team"
+    #   # Keep rows for selected editions, then fan out one tag value per team.
+    #   # label_filters cannot include the fan-out label_key.
+    #   label_filters = {
+    #     edition = ["enterprise", "standard"]
+    #   }
     #   label_transforms = [
     #     { type = "split", delimiter = "&&&", index = 0 },
     #     { type = "format", template = "team-{0}" },
@@ -64,7 +73,7 @@ resource "vantage_virtual_tag_config" "demo_virtual_tag_config" {
 - `backfill_until` (String) The earliest month the VirtualTagConfig should be backfilled to.
 - `collapsed_tag_keys` (Attributes List) Tag keys to collapse values for. (see [below for nested schema](#nestedatt--collapsed_tag_keys))
 - `preferred` (Boolean) Whether this virtual tag key is marked as preferred in the Vantage UI.
-- `values` (Attributes List) Values for the VirtualTagConfig, with match precedence determined by order in the list. (see [below for nested schema](#nestedatt--values))
+- `values` (Attributes List) Values for the VirtualTagConfig, with match precedence determined by order in the list. Omit this attribute when using separate `vantage_virtual_tag_config_value` resources. Setting it to `[]` removes all values; never combine inline and standalone value management for the same config. (see [below for nested schema](#nestedatt--values))
 
 ### Read-Only
 
